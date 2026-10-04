@@ -179,7 +179,7 @@ test("U.S. Current renders exact profile, DailyVolume default sort, zero/missing
   await expect(page.getByRole("region", { name: "אבחון תפעולי" })).toContainText("רץ");
   await expect(page.getByRole("region", { name: "אבחון תפעולי" })).toContainText("48");
 
-  await page.evaluate(() => {
+  const restoredViewState = await page.evaluate(() => {
     const content = document.querySelector(".market-scope-current-content");
     content.style.width = "180px";
     content.style.height = "60px";
@@ -189,6 +189,7 @@ test("U.S. Current renders exact profile, DailyVolume default sort, zero/missing
       scrollLeft: 40,
       scrollTop: 10
     });
+    return globalThis.__usCurrent.captureViewState();
   });
   await expect(table.getByRole("columnheader", { name: /Price/ })).toHaveAttribute("aria-sort", "ascending");
 
@@ -201,10 +202,11 @@ test("U.S. Current renders exact profile, DailyVolume default sort, zero/missing
   });
 
   await expect(table.getByRole("columnheader", { name: /Price/ })).toHaveAttribute("aria-sort", "ascending");
-  await expect.poll(() => page.evaluate(() => globalThis.__usCurrent.captureViewState())).toMatchObject({
+  const refreshedViewState = await page.evaluate(() => globalThis.__usCurrent.captureViewState());
+  expect(refreshedViewState).toMatchObject({
     sort: { key: "Price", direction: "asc" },
-    scrollLeft: 40,
-    scrollTop: 10
+    scrollLeft: restoredViewState.scrollLeft,
+    scrollTop: restoredViewState.scrollTop
   });
 
   await zeroRow.click();
@@ -248,8 +250,8 @@ test("U.S. Detail renders summary/history, preserves 500 rows across retry, supp
   await expect(table.locator("tbody tr")).toHaveCount(500);
   await expect(page.getByText("Alpha Inc", { exact: true })).toBeVisible();
   await expect(page.getByTestId("detail-price")).toHaveText("0");
-  await expect(page.getByText("1.2%", { exact: true })).toBeVisible();
-  await expect(page.getByText("2026-10-04T19:00:00", { exact: true })).toBeVisible();
+  await expect(page.locator(".market-scope-detail-summary").getByText("1.2%", { exact: true })).toBeVisible();
+  await expect(page.locator(".market-scope-detail-summary").getByText("2026-10-04T19:00:00", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "טען ישנים יותר" }).click();
   await expect(table.locator("tbody tr")).toHaveCount(500);
