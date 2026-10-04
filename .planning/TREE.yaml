@@ -343,7 +343,7 @@ nodes:
   "6.2":
     status: approved
     strategy: "Diagnostics and the SHA-bound bounded live-verification harness understand the U.S. acquisition path without exposing private session data."
-    tactic: "Adapt provider checkpoints/messages/report identity and live harness from MapHeat/chunk acquisition to a bounded three-cycle ScreenerHulPaging3 repeatability run while preserving Support Snapshot and safe CLI fallback."
+    tactic: "Adapt provider checkpoints/messages/report identity and live harness from MapHeat/chunk acquisition to a bounded sustained ScreenerHulPaging3 run of at least 20 complete cycles spanning at least 60 seconds while preserving Support Snapshot and safe CLI fallback."
     parallel_assumptions:
       - "The imported diagnostic tracker and bounded live-gate structure remain valid; only U.S. provider steps/branding change."
     necessary_assumptions:
@@ -412,7 +412,7 @@ nodes:
   "7.2":
     status: approved
     strategy: "The release candidate works through the real authenticated Bank Leumi U.S. provider boundary without weakening security or authority semantics."
-    tactic: "Run the SHA-bound bounded live gate for three consecutive complete cycles at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
+    tactic: "Run the SHA-bound bounded live gate for at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
     parallel_assumptions:
       - "The live gate is the smallest safe way to prove provider shape, current one-request completeness and browser loopback compatibility."
     necessary_assumptions:
@@ -420,7 +420,7 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - "Sanitized report is SHA-bound and overall PASS."
-      - "Report proves three consecutive complete U.S. cycles, revision handling, COMMIT ACK for every cycle, final Current, Security, History containing the live cycles, Scanner, ownership and clean stop."
+      - "Report proves the bounded sustained U.S. run, revision handling, COMMIT ACK for every cycle, final Current, Security, History containing the live cycles, Scanner, ownership and clean stop."
       - "No credential/session/private response material is committed."
     depends_on: ["7.1"]
     children: []
