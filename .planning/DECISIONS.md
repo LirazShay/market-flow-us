@@ -251,7 +251,7 @@ Keep the real loopback HTTP fake, normal runtime, deterministic scenarios and on
 
 No GitHub credentials/live bank CI.
 
-The final authenticated-browser gate verifies **three consecutive complete U.S. cycles** at the candidate collection cadence through commit, Current, Detail/History, Scanner, ownership and clean stop. This is a bounded repeatability proof, not a long-running load test or provider SLA claim.
+The final authenticated-browser gate verifies a bounded sustained run of **at least 20 consecutive complete U.S. cycles spanning at least 60 seconds** at the candidate collection cadence through commit, Current, Detail/History, Scanner, ownership and clean stop. This proves short-run continuous operation without pretending to establish a long-duration provider SLA.
 
 Only that gate may declare the external provider boundary PASS.
 
