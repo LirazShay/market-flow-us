@@ -341,6 +341,24 @@ export const MARKET_FLOW_US_PRODUCER_ADAPTER = Object.freeze({
   upsertSecurity: upsertUsSecurity
 });
 
+function selectProducerAdapter(universe) {
+  const firstSecurity = Array.isArray(universe?.securities) ? universe.securities[0] : null;
+  return Object.hasOwn(firstSecurity ?? {}, "rawSource")
+    ? MARKET_FLOW_US_PRODUCER_ADAPTER
+    : LEGACY_PRODUCER_ADAPTER;
+}
+
+function assertProducerAdapter(adapter) {
+  if (
+    !adapter ||
+    typeof adapter.sanitizeConfig !== "function" ||
+    typeof adapter.validateUniverse !== "function" ||
+    typeof adapter.upsertSecurity !== "function"
+  ) {
+    throw new TypeError("producerAdapter is invalid");
+  }
+}
+
 async function queryRows(connection, sql, values) {
   const reader = values === undefined
     ? await connection.runAndReadAll(sql)
@@ -373,7 +391,7 @@ export function createProducerPersistence({
   now = () => Date.now(),
   createSessionId = () => randomUUID(),
   persistenceFault = null,
-  producerAdapter = LEGACY_PRODUCER_ADAPTER
+  producerAdapter = null
 }) {
   if (!writer || typeof writer.enqueue !== "function") {
     throw new TypeError("serialized writer is required");
@@ -384,14 +402,7 @@ export function createProducerPersistence({
   if (typeof createSessionId !== "function") {
     throw new TypeError("createSessionId must be a function");
   }
-  if (
-    !producerAdapter ||
-    typeof producerAdapter.sanitizeConfig !== "function" ||
-    typeof producerAdapter.validateUniverse !== "function" ||
-    typeof producerAdapter.upsertSecurity !== "function"
-  ) {
-    throw new TypeError("producerAdapter is invalid");
-  }
+  if (producerAdapter !== null) assertProducerAdapter(producerAdapter);
 
   async function startSession({ producerInstanceId, startedAtMs, config }) {
     if (typeof producerInstanceId !== "string" || producerInstanceId.length === 0) {
@@ -399,7 +410,8 @@ export function createProducerPersistence({
     }
     assertSafeInteger(startedAtMs);
 
-    const sanitizedConfig = producerAdapter.sanitizeConfig(config);
+    const configAdapter = producerAdapter ?? LEGACY_PRODUCER_ADAPTER;
+    const sanitizedConfig = configAdapter.sanitizeConfig(config);
     const sessionId = createSessionId();
     const acceptedAtMs = now();
     assertSafeInteger(acceptedAtMs);
@@ -523,11 +535,12 @@ export function createProducerPersistence({
   }
 
   async function replaceUniverse({ sessionId, universe }) {
+    const activeAdapter = producerAdapter ?? selectProducerAdapter(universe);
     return await writer.enqueue(async (connection) => {
       await connection.run("BEGIN TRANSACTION");
 
       try {
-        const validated = producerAdapter.validateUniverse(universe);
+        const validated = activeAdapter.validateUniverse(universe);
         await assertRunningSession(connection, sessionId);
 
         const revisionRows = await queryRows(
@@ -545,7 +558,7 @@ export function createProducerPersistence({
 
         for (let index = 0; index < validated.securities.length; index++) {
           const security = validated.securities[index];
-          await producerAdapter.upsertSecurity(connection, {
+          await activeAdapter.upsertSecurity(connection, {
             security,
             universeRevision,
             loadedAtMs: validated.loadedAtMs
