@@ -166,8 +166,8 @@ Those remain explicit evidence gaps.
 The exhaustive migration audit classified all 124 branch files:
 
 ```text
-KEEP              17
-ADAPT             87
+KEEP              16
+ADAPT             88
 REPLACE            8
 PLANNING_REPLACE   9
 DROP               3
