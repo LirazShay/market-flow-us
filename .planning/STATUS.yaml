@@ -1,7 +1,7 @@
 version: 2
 plan_state: active
-current_stage: "contracts_and_decisions"
+current_stage: "st_tree_design"
 current_node: null
 blockers: []
-next_action: "Use docs/US_MIGRATION_AUDIT.md and docs/US_MIGRATION_FILE_MAP.md to rewrite the durable U.S. contracts and decisions. Build the replacement TREE only after contract review."
-last_review: "US-AUDIT-001"
+next_action: "Build the replacement Market Flow US S&T TREE from docs/US_MIGRATION_AUDIT.md plus the reviewed durable U.S. contracts. Do not allocate EXECUTION chats until TREE review/freeze passes."
+last_review: "US-CONTRACT-001"
