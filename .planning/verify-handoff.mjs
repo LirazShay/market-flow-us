@@ -24,9 +24,14 @@ for (let index = 0; index < ids.length; index += 1) {
 }
 
 function parseList(section, field) {
-  const match = section.match(new RegExp(`    ${field}: \\\\[([^\\\\]]*)\\\\]`));
-  if (!match || !match[1].trim()) return [];
-  return match[1].split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
+  const marker = `    ${field}: [`;
+  const line = section.split("\n").find((candidate) => candidate.startsWith(marker));
+  if (!line || !line.endsWith("]")) {
+    throw new Error(`TREE node is missing parseable ${field}`);
+  }
+  const inner = line.slice(marker.length, -1).trim();
+  if (!inner) return [];
+  return inner.split(",").map((value) => value.trim().replace(/^"|"$/g, ""));
 }
 
 const children = Object.fromEntries(ids.map((id) => [id, parseList(sections[id], "children")]));
@@ -143,7 +148,7 @@ for (const node of ordered) {
 
 const inProgress = ordered.filter((node) => node.state === "in_progress");
 if (inProgress.length > 1) {
-  throw new Error(`Only one execution node may be in_progress; found ${inProgress.map((n) => n.id).join(", ")}`);
+  throw new Error(`Only one execution node may be in_progress; found ${inProgress.map((node) => node.id).join(", ")}`);
 }
 
 const states = new Map(ordered.map((node) => [node.id, node.state]));
