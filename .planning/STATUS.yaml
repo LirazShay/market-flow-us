@@ -1,7 +1,7 @@
 version: 2
 plan_state: active
-current_stage: "final_planning_review"
+current_stage: "st_tree_review_reopen"
 current_node: "0"
 blockers: []
-next_action: "Run Final Planning Review across GOAL, durable contracts, approved TREE, planning artifacts, planning CI/static guards and executor handoff readiness. Freeze only after all inconsistencies are repaired."
+next_action: "Repair second-pass findings: stale planning infrastructure and incorrect file dispositions; then rerun whole-plan necessity/sufficiency/KISS/file-to-node coverage review."
 last_review: "R-US-001"
