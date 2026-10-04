@@ -1,12 +1,12 @@
 schema_version: 2
-phase: implementation
-overall_status: ready
+phase: planning
+overall_status: blocked
 
 current:
   chat: 1
   node: "1.1"
-  title: "U.S. ScreenerHulPaging3 provider adapter and exact full-response validation"
-  status: in_progress
+  title: "Execution reopen: U.S. provider cutover sequencing vs Browser CI"
+  status: blocked
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -21,10 +21,10 @@ planning_completion:
   st_tree_review: pass
   second_pass_adversarial_review: pass
   final_planning_review: pass
-  plan_freeze: pass
-  execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: pass
+  plan_freeze: reopen_required
+  execution_allocation: reopen_required
+  handoff_verification: reopen_required
+  implementation_authorization: blocked
 
 execution:
   chats_total: 9
