@@ -1,7 +1,8 @@
 version: 2
-plan_state: frozen
-current_stage: "implementation"
+plan_state: active
+current_stage: "execution_reopen"
 current_node: "1.1"
-blockers: []
-next_action: "Chat 1 executes TREE nodes 1.1 then 1.2 from fresh main after this planning PR is merged and main CI is green."
+blockers:
+  - "Browser CI is required for product-code changes, but node 1.1 currently cuts the runtime provider to ScreenerHulPaging3 before the U.S. service/schema and Fake Market boundaries are migrated, making Browser CI structurally red. Reopen the smallest cutover/sequencing area before coding forward."
+next_action: "Repair the smallest affected TREE/verification/allocation area so U.S. acquisition can be implemented without violating the keep-tests-green and Browser-CI contracts; review, re-freeze, repair allocation, then resume Chat 1."
 last_review: "R-US-FINAL"
