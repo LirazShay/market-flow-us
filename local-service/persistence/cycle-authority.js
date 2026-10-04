@@ -378,6 +378,29 @@ export const MARKET_FLOW_US_CYCLE_ADAPTER = Object.freeze({
   insertMarketRowSql: US_INSERT_MARKET_ROW_SQL
 });
 
+function selectCycleAdapter(cycle) {
+  const firstSecurity = Array.isArray(cycle?.securities) ? cycle.securities[0] : null;
+  const firstChunk = Array.isArray(cycle?.chunks) ? cycle.chunks[0] : null;
+  return Object.hasOwn(firstSecurity ?? {}, "sourceMetadata") ||
+    Object.hasOwn(firstChunk ?? {}, "sourceMetadata")
+    ? MARKET_FLOW_US_CYCLE_ADAPTER
+    : LEGACY_CYCLE_ADAPTER;
+}
+
+function assertCycleAdapter(adapter) {
+  if (
+    !adapter ||
+    typeof adapter.validateCycleShape !== "function" ||
+    typeof adapter.validateChunkMetadata !== "function" ||
+    typeof adapter.validateSecurityIdentity !== "function" ||
+    typeof adapter.metadataJson !== "function" ||
+    typeof adapter.projectionParams !== "function" ||
+    typeof adapter.insertMarketRowSql !== "string"
+  ) {
+    throw new TypeError("cycleAdapter is invalid");
+  }
+}
+
 function validateChunk(chunk, expectedIndex, adapter) {
   if (!isPlainObject(chunk)) fail(ERROR_CODES.CYCLE_INVALID);
 
@@ -599,7 +622,7 @@ export function createCycleAuthorityPersistence({
   writer,
   now = () => Date.now(),
   persistenceFault = null,
-  cycleAdapter = LEGACY_CYCLE_ADAPTER
+  cycleAdapter = null
 }) {
   if (!writer || typeof writer.enqueue !== "function") {
     throw new TypeError("serialized writer is required");
@@ -607,24 +630,15 @@ export function createCycleAuthorityPersistence({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function");
   }
-  if (
-    !cycleAdapter ||
-    typeof cycleAdapter.validateCycleShape !== "function" ||
-    typeof cycleAdapter.validateChunkMetadata !== "function" ||
-    typeof cycleAdapter.validateSecurityIdentity !== "function" ||
-    typeof cycleAdapter.metadataJson !== "function" ||
-    typeof cycleAdapter.projectionParams !== "function" ||
-    typeof cycleAdapter.insertMarketRowSql !== "string"
-  ) {
-    throw new TypeError("cycleAdapter is invalid");
-  }
+  if (cycleAdapter !== null) assertCycleAdapter(cycleAdapter);
 
   async function commitCycle({ sessionId, universeRevision, cycle }) {
     assertSafeInteger(universeRevision, {
       min: 1,
       code: ERROR_CODES.UNIVERSE_REVISION_MISMATCH
     });
-    const validated = validateCompleteCycle(cycle, cycleAdapter);
+    const activeAdapter = cycleAdapter ?? selectCycleAdapter(cycle);
+    const validated = validateCompleteCycle(cycle, activeAdapter);
 
     return await writer.enqueue(async (connection) => {
       await assertRunningSession(connection, sessionId);
@@ -706,7 +720,7 @@ export function createCycleAuthorityPersistence({
         persistenceFault?.hit?.("F1");
 
         for (let index = 0; index < validated.securities.length; index++) {
-          const params = cycleAdapter.projectionParams({
+          const params = activeAdapter.projectionParams({
             cycleId,
             sessionId,
             universeRevision,
@@ -714,7 +728,7 @@ export function createCycleAuthorityPersistence({
             item: validated.securities[index]
           });
           await connection.run(
-            `INSERT INTO history ${cycleAdapter.insertMarketRowSql}`,
+            `INSERT INTO history ${activeAdapter.insertMarketRowSql}`,
             params
           );
           if (index === 0) persistenceFault?.hit?.("F2");
@@ -724,7 +738,7 @@ export function createCycleAuthorityPersistence({
         persistenceFault?.hit?.("F3");
 
         for (let index = 0; index < validated.securities.length; index++) {
-          const params = cycleAdapter.projectionParams({
+          const params = activeAdapter.projectionParams({
             cycleId,
             sessionId,
             universeRevision,
@@ -732,7 +746,7 @@ export function createCycleAuthorityPersistence({
             item: validated.securities[index]
           });
           await connection.run(
-            `INSERT INTO latest ${cycleAdapter.insertMarketRowSql}`,
+            `INSERT INTO latest ${activeAdapter.insertMarketRowSql}`,
             params
           );
           if (index === 0) persistenceFault?.hit?.("F4");
