@@ -3,210 +3,113 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const SCREENER_HUL_PATH = "/lti/lti-app/api/Market/ScreenerHulPaging3";
+export const MAP_HEAT_PATH = "/lti/lti-app/api/MarketFast/MapHeat2";
+export const SECURITIES_PATH = "/lti/lti-app/api/SecuritiesFast/GetSecuritiesData";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const DEFAULT_RUNTIME_PATH = path.join(ROOT, "dist", "browser", "market-scope.runtime.js");
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 const SCENARIOS = new Set(Array.from({ length: 16 }, (_, index) => `FM-${String(index + 1).padStart(2, "0")}`));
-const ADVANCING_SCENARIOS = new Set([
-  "FM-01", "FM-02", "FM-03", "FM-04", "FM-08", "FM-11", "FM-12", "FM-13", "FM-14", "FM-15", "FM-16"
-]);
+const ADVANCING_SCENARIOS = new Set(["FM-01", "FM-02", "FM-13", "FM-14", "FM-15", "FM-16"]);
 
-const REQUIRED_QUERY = Object.freeze({
-  region: "1",
-  Country: "2",
-  indexIdArray: "0",
-  paperType: "1",
-  sectorIdArray: "0",
-  subSectorIdArray: "0",
-  changePercentFrom: "-999999999",
-  changePercentTo: "999999999",
-  volumeFrom: "-999999999",
-  volumeTo: "999999999",
-  marketCapFrom: "-999999999999999",
-  marketCapTo: "999999999999999",
-  beginYearChangePercentFrom: "-999999999",
-  beginYearChangePercentTo: "999999999",
-  month12ChangePercentFrom: "-999999999",
-  month12ChangePercentTo: "999999999",
-  month36ChangePercentFrom: "-999999999",
-  month36ChangePercentTo: "999999999",
-  EsdRatingModeSelected: "0",
-  EsdRatingModeValueSelected: "0",
-  page: "1",
-  pageCount: "5000",
-  orderFieldName: "DailyVolume",
-  orderDir: "DESC",
-  rt: "true"
+const FULL_UNIVERSE = Object.freeze(["1001", "1002", "1003", "1004"]);
+
+const MAP_RECORDS = Object.freeze({
+  "1001": Object.freeze({ PaperId: 1001, PaperName: "Fixture Alpha", DateChange: 1.2 }),
+  "1002": Object.freeze({ PaperId: 1002, PaperName: "Fixture Beta", DateChange: -0.4 }),
+  "1003": Object.freeze({ PaperId: 1003, PaperName: "Fixture Gamma" }),
+  "1004": Object.freeze({ PaperId: 1004, PaperName: "Fixture Delta", DateChange: null })
 });
-
-const BASE_UNIVERSE = Object.freeze(["1001", "1002", "1003", "1004"]);
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function rowFor(id, cycle) {
+function securityFor(id, cycle) {
   if (id === "1001") {
     return {
-      Id: 501,
-      PaperId: 1001,
-      PaperNameEng: "Fixture Alpha US",
-      PaperNameHeb: "Fixture Alpha",
-      Symbol: "ALFA",
-      ExchangeName: "Fixture Exchange A",
-      PaperIdYatab: 9001,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 101.25 + cycle,
-      ChangePercent: 1.2 + cycle * 0.1,
-      DailyHigh: 103 + cycle,
-      DailyLow: 99.5,
-      YearHigh: 130,
-      YearLow: 80,
-      DailyVolume: 100000 + cycle * 1000,
-      BeginYearChangePercent: 8.5,
-      Month12ChangePercent: 12.5,
-      Month36ChangePercent: 31.5,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 101.5 + cycle,
-      BidRate: 101 + cycle,
-      YesterdayRate: 100,
-      PaperMarketCap: 500000000 + cycle * 10000,
-      ESGRatingId: 3,
-      ESGScope: 1,
-      ExtraSyntheticField: `alpha-${cycle}`
+      Key: 1001,
+      LastKnownRate: 1234 + cycle * 2,
+      BaseRateChangePercentage: 1.2 + cycle * 0.1,
+      BuyLimit1: 1230 + cycle * 2,
+      BuyVolume1: 10 + cycle,
+      SellLimit1: 1240 + cycle * 2,
+      SellVolume1: 12 + cycle,
+      DailyDealsQuantity: 100 + cycle * 3,
+      LastDealVolume: 4 + cycle,
+      DailyTurnover: 100000 + cycle * 1000,
+      DailyNISRevenue: 200000 + cycle * 1500,
+      DailyLowestRate: 1200,
+      DailyHighestRate: 1260 + cycle * 2,
+      LastDealTimeOnly: `10:00:${String(cycle % 60).padStart(2, "0")}`
     };
   }
 
   if (id === "1002") {
     return {
-      Id: 502,
-      PaperId: 1002,
-      PaperNameEng: "Fixture Beta US",
-      PaperNameHeb: "Fixture Beta",
-      Symbol: "BETA",
-      ExchangeName: "Fixture Exchange B",
-      PaperIdYatab: 9002,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 0,
-      ChangePercent: -0.4 - cycle * 0.05,
-      DailyHigh: 10 + cycle,
-      DailyLow: 0,
-      YearHigh: 15,
-      YearLow: 0,
-      DailyVolume: 0,
-      BeginYearChangePercent: null,
-      Month12ChangePercent: 0,
-      Month36ChangePercent: -4,
-      TradeDateTime: null,
-      AskRate: null,
-      BidRate: 0,
-      YesterdayRate: 0,
-      PaperMarketCap: null,
-      ESGRatingId: null,
-      ESGScope: 0
+      Key: 1002,
+      LastKnownRate: 0,
+      BaseRateChangePercentage: -0.4 - cycle * 0.1,
+      BuyLimit1: null,
+      BuyVolume1: 0,
+      SellLimit1: 10 + cycle,
+      SellVolume1: 0,
+      DailyDealsQuantity: 50 + cycle,
+      LastDealVolume: 0,
+      DailyTurnover: 0,
+      DailyNISRevenue: null,
+      DailyLowestRate: 0,
+      DailyHighestRate: 10 + cycle,
+      LastDealTimeOnly: null
     };
   }
 
   if (id === "1003") {
     return {
-      Id: 503,
-      PaperId: 1003,
-      PaperNameEng: "Fixture Gamma US",
-      Symbol: "GAMA",
-      ExchangeName: "Fixture Exchange A",
-      CountryId: 2,
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: null,
-      ChangePercent: 0,
-      DailyHigh: 51 + cycle,
-      DailyLow: 48,
-      YearHigh: 65,
-      YearLow: 40,
-      DailyVolume: 25000 + cycle * 250,
-      Month12ChangePercent: null,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 50.5 + cycle,
-      YesterdayRate: 50,
-      PaperMarketCap: 125000000
+      Key: 1003,
+      LastKnownRate: null,
+      BaseRateChangePercentage: 0,
+      BuyLimit1: 990 + cycle,
+      BuyVolume1: 3 + cycle,
+      SellLimit1: null,
+      DailyDealsQuantity: 20 + cycle * 2,
+      LastDealVolume: null,
+      DailyTurnover: 15000 + cycle * 100,
+      DailyNISRevenue: 22000 + cycle * 100,
+      DailyLowestRate: 980,
+      DailyHighestRate: 1010 + cycle
     };
   }
 
   if (id === "1004") {
     return {
-      Id: 504,
-      PaperId: 1004,
-      PaperNameEng: "Fixture Delta US",
-      PaperNameHeb: "Fixture Delta",
-      Symbol: "DLTA",
-      ExchangeName: "Fixture Exchange C",
-      PaperIdYatab: 9004,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 72.75 + cycle * 0.5,
-      ChangePercent: 0.8 + cycle * 0.05,
-      DailyHigh: 74 + cycle,
-      DailyLow: 70,
-      YearHigh: 90,
-      YearLow: 60,
-      DailyVolume: 60000 + cycle * 700,
-      BeginYearChangePercent: 5,
-      Month12ChangePercent: 9,
-      Month36ChangePercent: 22,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 73 + cycle * 0.5,
-      BidRate: 72.5 + cycle * 0.5,
-      YesterdayRate: 72,
-      PaperMarketCap: 300000000 + cycle * 5000,
-      ESGRatingId: 2,
-      ESGScope: 1
+      Key: 1004,
+      LastKnownRate: 4567 + cycle * 5,
+      BaseRateChangePercentage: 0.8 + cycle * 0.05,
+      BuyLimit1: 4550 + cycle * 5,
+      BuyVolume1: 5 + cycle,
+      SellLimit1: 4580 + cycle * 5,
+      SellVolume1: 7 + cycle,
+      DailyDealsQuantity: 75 + cycle * 4,
+      LastDealVolume: 2 + cycle,
+      DailyTurnover: 80000 + cycle * 700,
+      DailyNISRevenue: 95000 + cycle * 900,
+      DailyLowestRate: 4500,
+      DailyHighestRate: 4600 + cycle * 5,
+      LastDealTimeOnly: `10:01:${String(cycle % 60).padStart(2, "0")}`
     };
   }
 
-  if (id === "1005") {
-    return {
-      Id: 505,
-      PaperId: 1005,
-      PaperNameEng: "Fixture Epsilon US",
-      PaperNameHeb: "Fixture Epsilon",
-      Symbol: "EPSI",
-      ExchangeName: "Fixture Exchange B",
-      PaperIdYatab: 9005,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 33 + cycle,
-      ChangePercent: 2.4,
-      DailyHigh: 34 + cycle,
-      DailyLow: 30,
-      YearHigh: 40,
-      YearLow: 20,
-      DailyVolume: 90000 + cycle * 500,
-      BeginYearChangePercent: 15,
-      Month12ChangePercent: 20,
-      Month36ChangePercent: 45,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 33.2 + cycle,
-      BidRate: 32.8 + cycle,
-      YesterdayRate: 32,
-      PaperMarketCap: 175000000,
-      ESGRatingId: 4,
-      ESGScope: 2
-    };
-  }
-
-  throw new Error(`Unknown synthetic security ${id}`);
+  return {
+    Key: Number(id),
+    LastKnownRate: 1,
+    BaseRateChangePercentage: 0,
+    BuyLimit1: 1,
+    BuyVolume1: 1,
+    SellLimit1: 1,
+    SellVolume1: 1,
+    DailyDealsQuantity: 1
+  };
 }
 
 function json(response, statusCode, body) {
@@ -244,136 +147,225 @@ async function readJsonBody(request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
-function hasRequiredQuery(searchParams) {
-  return Object.entries(REQUIRED_QUERY).every(([key, value]) => searchParams.get(key) === value);
+function requiredMapHeatQuery(searchParams) {
+  return searchParams.get("indexIdArray") === "0"
+    && searchParams.get("sectorIdAndTatSectorArray") === "0;0"
+    && searchParams.get("showOnlyDual") === "0"
+    && searchParams.get("page") === "1"
+    && searchParams.get("orderFieldName") === "DailyNumDeals"
+    && searchParams.get("order") === "DESC"
+    && searchParams.get("rt") === "true";
+}
+
+function validSecuritiesQuery(searchParams) {
+  return searchParams.get("responseType") === "1"
+    && searchParams.get("is_gto") === "true"
+    && searchParams.get("force") === "false";
+}
+
+function mapRecordsFor(state) {
+  if (state.scenario === "FM-03") {
+    return [
+      clone(MAP_RECORDS["1001"]),
+      clone(MAP_RECORDS["1002"]),
+      { PaperId: 1001, PaperName: "Fixture Duplicate" },
+      clone(MAP_RECORDS["1004"])
+    ];
+  }
+
+  if (state.scenario === "FM-04") {
+    return [
+      clone(MAP_RECORDS["1001"]),
+      { PaperName: "Fixture Missing Id" },
+      clone(MAP_RECORDS["1003"]),
+      clone(MAP_RECORDS["1004"])
+    ];
+  }
+
+  return state.currentUniverse.map((id) => clone(MAP_RECORDS[id]));
 }
 
 function createInitialState() {
   return {
     scenario: "FM-01",
     logicalCycleIndex: 0,
+    servedSecurityIdsForCurrentCycle: new Set(),
+    currentUniverse: [...FULL_UNIVERSE],
     requestLog: [],
-    activeScreenerRequests: 0,
-    maxActiveScreenerRequests: 0
+    activeSecuritiesRequests: 0,
+    maxActiveSecuritiesRequests: 0
   };
-}
-
-function universeFor(state) {
-  if (state.scenario === "FM-03" && state.logicalCycleIndex >= 1) {
-    return [...BASE_UNIVERSE, "1005"];
-  }
-  if (state.scenario === "FM-04" && state.logicalCycleIndex >= 1) {
-    return BASE_UNIVERSE.slice(0, 3);
-  }
-  if (state.scenario === "FM-14" && state.logicalCycleIndex >= 2) {
-    return BASE_UNIVERSE.slice(0, 3);
-  }
-  return [...BASE_UNIVERSE];
 }
 
 function snapshot(state) {
   return {
     scenario: state.scenario,
     logicalCycleIndex: state.logicalCycleIndex,
-    currentUniverse: universeFor(state),
+    servedSecurityIdsForCurrentCycle: [...state.servedSecurityIdsForCurrentCycle].sort(),
+    currentUniverse: [...state.currentUniverse],
     requestLog: clone(state.requestLog),
-    activeScreenerRequests: state.activeScreenerRequests,
-    maxActiveScreenerRequests: state.maxActiveScreenerRequests
+    activeSecuritiesRequests: state.activeSecuritiesRequests,
+    maxActiveSecuritiesRequests: state.maxActiveSecuritiesRequests
   };
 }
 
 function resetState(state, scenario = "FM-01") {
   state.scenario = scenario;
   state.logicalCycleIndex = 0;
+  state.servedSecurityIdsForCurrentCycle.clear();
+  state.currentUniverse = [...FULL_UNIVERSE];
   state.requestLog = [];
-  state.activeScreenerRequests = 0;
-  state.maxActiveScreenerRequests = 0;
+  state.activeSecuritiesRequests = 0;
+  state.maxActiveSecuritiesRequests = 0;
 }
 
-function screenerPayload(records, recordCount, cycle) {
-  return {
-    data: {
-      ScreenerHulPaging: {
-        recordCount,
-        maxDateChange: `fixture-cycle-${cycle}`,
-        records: clone(records)
-      }
-    },
-    resultCode: 0,
-    rsCount: recordCount,
-    rtIsr: false,
-    rtUsa: true,
-    logtm: `fixture-log-${cycle}`,
-    reqtm: `fixture-req-${cycle}`,
-    responsetm: `fixture-response-${cycle}`,
-    serverId: "fixture-server",
-    version: "fixture-v1"
-  };
-}
+function advanceIfComplete(state, requestedIds) {
+  if (!ADVANCING_SCENARIOS.has(state.scenario)) return;
 
-function rowsFor(state) {
-  const cycle = state.logicalCycleIndex;
-  let records = universeFor(state).map((id) => rowFor(id, cycle));
-
-  if (state.scenario === "FM-02") {
-    records = records.reverse();
-  } else if (state.scenario === "FM-05") {
-    records = [records[0], records[1], { ...clone(records[0]), PaperNameEng: "Fixture Duplicate US" }, records[3]];
-  } else if (state.scenario === "FM-06") {
-    const missing = clone(records[1]);
-    delete missing.PaperId;
-    records = [records[0], missing, records[2], records[3]];
+  for (const id of requestedIds) {
+    state.servedSecurityIdsForCurrentCycle.add(id);
   }
 
-  return records;
-}
-
-async function handleScreener(request, response, url, state) {
-  state.requestLog.push({
-    endpoint: "ScreenerHulPaging3",
-    method: request.method,
-    query: Object.fromEntries(url.searchParams.entries())
-  });
-
-  if (!hasRequiredQuery(url.searchParams)) {
-    json(response, 400, { error: "invalid-screener-query" });
+  if (state.servedSecurityIdsForCurrentCycle.size !== state.currentUniverse.length) {
     return;
   }
 
-  state.activeScreenerRequests += 1;
-  state.maxActiveScreenerRequests = Math.max(state.maxActiveScreenerRequests, state.activeScreenerRequests);
+  const served = new Set(state.servedSecurityIdsForCurrentCycle);
+  if (!state.currentUniverse.every((id) => served.has(id))) {
+    return;
+  }
+
+  state.servedSecurityIdsForCurrentCycle.clear();
+  state.logicalCycleIndex += 1;
+
+  if (state.scenario === "FM-14" && state.logicalCycleIndex >= 2) {
+    state.currentUniverse = ["1001", "1002", "1003"];
+  }
+}
+
+function securitiesPayload(records, cycle) {
+  return {
+    data: {
+      SecuritiesData: {
+        Table: {
+          AsOfDate: `fixture-cycle-${cycle}`,
+          Security: clone(records)
+        }
+      }
+    }
+  };
+}
+
+async function handleMapHeat(request, response, url, state) {
+  state.requestLog.push({
+    endpoint: "MapHeat2",
+    method: request.method,
+    pageCount: url.searchParams.get("pageCount"),
+    page: url.searchParams.get("page"),
+    orderFieldName: url.searchParams.get("orderFieldName"),
+    order: url.searchParams.get("order"),
+    rt: url.searchParams.get("rt")
+  });
+
+  if (state.scenario === "FM-06") {
+    json(response, 503, { error: "synthetic-mapheat-error" });
+    return;
+  }
+
+  if (state.scenario === "FM-07") {
+    json(response, 200, { data: {} });
+    return;
+  }
+
+  if (!requiredMapHeatQuery(url.searchParams)) {
+    json(response, 400, { error: "invalid-mapheat-query" });
+    return;
+  }
+
+  const pageCount = Number(url.searchParams.get("pageCount"));
+  const expectedCount = state.currentUniverse.length;
+  if (!Number.isInteger(pageCount) || pageCount <= 0 || (pageCount !== 1 && pageCount !== expectedCount)) {
+    json(response, 400, { error: "invalid-mapheat-page-count" });
+    return;
+  }
+
+  const allRecords = mapRecordsFor(state);
+  const records = pageCount === 1 ? allRecords.slice(0, 1) : allRecords;
+  const recordCount = state.scenario === "FM-05" && pageCount !== 1
+    ? expectedCount + 1
+    : expectedCount;
+
+  json(response, 200, {
+    data: {
+      MapHeat: {
+        recordCount,
+        maxDateChange: null,
+        records
+      }
+    }
+  });
+}
+
+async function handleSecurities(request, response, url, state) {
+  const securityIdsValue = url.searchParams.get("securityIds") ?? "";
+  const requestedIds = securityIdsValue.split(",").filter(Boolean);
+
+  state.requestLog.push({
+    endpoint: "GetSecuritiesData",
+    method: request.method,
+    securityIds: securityIdsValue,
+    responseType: url.searchParams.get("responseType"),
+    isGto: url.searchParams.get("is_gto"),
+    force: url.searchParams.get("force")
+  });
+
+  if (!validSecuritiesQuery(url.searchParams)
+      || requestedIds.length === 0
+      || new Set(requestedIds).size !== requestedIds.length
+      || requestedIds.some((id) => !state.currentUniverse.includes(id))) {
+    json(response, 400, { error: "invalid-securities-query" });
+    return;
+  }
+
+  state.activeSecuritiesRequests += 1;
+  state.maxActiveSecuritiesRequests = Math.max(
+    state.maxActiveSecuritiesRequests,
+    state.activeSecuritiesRequests
+  );
 
   try {
-    if (state.scenario === "FM-11") {
+    if (state.scenario === "FM-13") {
       await new Promise((resolve) => setTimeout(resolve, 25));
     }
 
-    if (state.scenario === "FM-10") {
-      json(response, 503, { error: "synthetic-screener-error" });
-      return;
-    }
-
-    if (state.scenario === "FM-13" && state.logicalCycleIndex === 0) {
-      state.logicalCycleIndex = 1;
-      json(response, 503, { error: "synthetic-recoverable-screener-error" });
+    if (state.scenario === "FM-08") {
+      json(response, 500, { error: "synthetic-securities-error" });
       return;
     }
 
     if (state.scenario === "FM-09") {
-      json(response, 200, { data: {} });
+      json(response, 200, { data: { SecuritiesData: {} } });
       return;
     }
 
     const cycle = state.logicalCycleIndex;
-    const records = rowsFor(state);
-    const recordCount = state.scenario === "FM-07" ? records.length + 1 : records.length;
-    json(response, 200, screenerPayload(records, recordCount, cycle));
+    let records = requestedIds.map((id) => securityFor(id, cycle)).reverse();
 
-    if (ADVANCING_SCENARIOS.has(state.scenario)) {
-      state.logicalCycleIndex += 1;
+    if (state.scenario === "FM-10") {
+      records = records.slice(1);
+    } else if (state.scenario === "FM-11" && records.length > 0) {
+      records = [...records, clone(records[0])];
+    } else if (state.scenario === "FM-12") {
+      records = [...records, securityFor("9999", cycle)];
+    }
+
+    json(response, 200, securitiesPayload(records, cycle));
+
+    if (!["FM-10", "FM-11", "FM-12"].includes(state.scenario)) {
+      advanceIfComplete(state, requestedIds);
     }
   } finally {
-    state.activeScreenerRequests -= 1;
+    state.activeSecuritiesRequests -= 1;
   }
 }
 
@@ -412,8 +404,13 @@ export async function startFakeMarket({
         return;
       }
 
-      if (request.method === "GET" && url.pathname === SCREENER_HUL_PATH) {
-        await handleScreener(request, response, url, state);
+      if (request.method === "GET" && url.pathname === MAP_HEAT_PATH) {
+        await handleMapHeat(request, response, url, state);
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === SECURITIES_PATH) {
+        await handleSecurities(request, response, url, state);
         return;
       }
 
