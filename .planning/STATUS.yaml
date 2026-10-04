@@ -1,7 +1,7 @@
 version: 2
 plan_state: active
-current_stage: "st_tree_review"
+current_stage: "final_planning_review"
 current_node: "0"
 blockers: []
-next_action: "Review .planning/TREE.yaml against GOAL, US_MIGRATION_AUDIT and durable contracts using necessity, sufficiency, KISS, dependency and whole-goal coverage checks. Keep EXECUTION unallocated."
-last_review: "US-CONTRACT-001"
+next_action: "Run Final Planning Review across GOAL, durable contracts, approved TREE, planning artifacts, planning CI/static guards and executor handoff readiness. Freeze only after all inconsistencies are repaired."
+last_review: "R-US-001"
