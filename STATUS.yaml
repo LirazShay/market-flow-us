@@ -1,13 +1,12 @@
 schema_version: 2
-phase: planning
-overall_status: active
+phase: implementation
+overall_status: ready
 
 current:
-  stage: "us_execution_allocation"
-  title: "Allocate frozen U.S. implementation leaves to numbered execution chats"
+  chat: 1
+  node: "1.1"
+  title: "U.S. ScreenerHulPaging3 provider adapter and exact full-response validation"
   status: ready
-  previous: "R-US-FINAL Final Planning Review PASS; plan_state frozen."
-  next: "Populate EXECUTION.yaml with all 19 implementation leaves exactly once, verify dependency/chat order and handoff. Keep phase planning until allocation verification passes."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -15,7 +14,7 @@ authority:
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
 
-planning_sequence:
+planning_completion:
   file_audit_and_change_summary: pass
   durable_us_contracts_and_decisions: pass
   new_st_tree: pass
@@ -23,5 +22,12 @@ planning_sequence:
   second_pass_adversarial_review: pass
   final_planning_review: pass
   plan_freeze: pass
-  execution_allocation: ready
-  implementation_authorization: pending
+  execution_allocation: pass
+  handoff_verification: pass
+  implementation_authorization: pass
+
+execution:
+  chats_total: 9
+  implementation_leaves_total: 19
+  current_chat: 1
+  current_node: "1.1"
