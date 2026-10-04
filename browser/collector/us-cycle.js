@@ -1,4 +1,5 @@
 import { fetchValidatedSnapshot } from "../provider/us-screener.js";
+import { buildUniverseFromSnapshot } from "../provider/us-universe.js";
 
 function tagCollectionPhase(error, phase) {
   const normalized = error instanceof Error ? error : new Error(String(error));
@@ -75,7 +76,15 @@ export function buildUsCompleteCycle({ snapshot }) {
   });
 }
 
-export async function collectUsCompleteCycle({
+export function buildUsCollectionCandidate(snapshot) {
+  assertValidatedSnapshot(snapshot);
+  return Object.freeze({
+    universe: buildUniverseFromSnapshot(snapshot),
+    cycle: buildUsCompleteCycle({ snapshot })
+  });
+}
+
+export async function collectUsCollectionCandidate({
   fetchSnapshot = () => fetchValidatedSnapshot()
 } = {}) {
   if (typeof fetchSnapshot !== "function") throw new TypeError("fetchSnapshot must be a function.");
@@ -88,8 +97,12 @@ export async function collectUsCompleteCycle({
   }
 
   try {
-    return buildUsCompleteCycle({ snapshot });
+    return buildUsCollectionCandidate(snapshot);
   } catch (error) {
     throw tagCollectionPhase(error, "cycle-validation");
   }
+}
+
+export async function collectUsCompleteCycle(options = {}) {
+  return (await collectUsCollectionCandidate(options)).cycle;
 }
