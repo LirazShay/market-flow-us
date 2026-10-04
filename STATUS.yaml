@@ -3,11 +3,11 @@ phase: planning
 overall_status: active
 
 current:
-  stage: "us_contracts_and_decisions"
-  title: "Rewrite durable U.S. contracts from completed migration audit"
+  stage: "us_st_tree_design"
+  title: "Build replacement U.S. S&T tree from audited contracts"
   status: ready
-  previous: "124/124 imported baseline files audited and classified; exact map stored in docs/US_MIGRATION_FILE_MAP.md."
-  next: "Rewrite PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, SOURCE_EXTRACTION and DECISIONS. Do not build TREE until the contracts are coherent."
+  previous: "U.S. durable contracts and decisions completed; docs/US_CONTRACT_REVIEW.md = PASS."
+  next: "Construct the new S&T TREE from the migration audit/contracts, then run necessity/sufficiency/KISS review. Do not allocate chats yet."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -24,8 +24,8 @@ baseline:
 
 planning_sequence:
   file_audit_and_change_summary: pass
-  durable_us_contracts_and_decisions: ready
-  new_st_tree: pending
+  durable_us_contracts_and_decisions: pass
+  new_st_tree: ready
   final_planning_review: pending
   execution_allocation: pending
   implementation_authorization: pending
