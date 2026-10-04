@@ -3,7 +3,7 @@ version: 2
 chats:
   "1":
     nodes:
-      "1.1": { state: blocked, result: "Execution reopened: Browser CI is required for product-code changes, but cutting the runtime provider to ScreenerHulPaging3 before U.S. service/schema and Fake Market migration makes Browser CI structurally red." }
+      "1.1": { state: pending, result: null }
       "1.2": { state: pending, result: null }
 
   "2":
