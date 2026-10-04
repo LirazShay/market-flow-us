@@ -28,7 +28,35 @@ export const CURRENT_COLUMNS = Object.freeze([
   Object.freeze({ key: "collectedAtMs", label: "נאסף בשעה", kind: "timestamp" })
 ]);
 
-const columnsByKey = new Map(CURRENT_COLUMNS.map((column) => [column.key, column]));
+export const US_CURRENT_COLUMNS = Object.freeze([
+  Object.freeze({ key: "paperName", label: "שם נייר", kind: "string" }),
+  Object.freeze({ key: "Symbol", label: "Symbol", kind: "string" }),
+  Object.freeze({ key: "ExchangeName", label: "בורסה", kind: "string" }),
+  Object.freeze({ key: "securityId", label: "PaperId", kind: "string" }),
+  Object.freeze({ key: "Price", label: "Price", kind: "number" }),
+  Object.freeze({ key: "ChangePercent", label: "ChangePercent", kind: "percentage" }),
+  Object.freeze({ key: "BidRate", label: "BidRate", kind: "number" }),
+  Object.freeze({ key: "AskRate", label: "AskRate", kind: "number" }),
+  Object.freeze({ key: "DailyVolume", label: "DailyVolume", kind: "number" }),
+  Object.freeze({ key: "DailyLow", label: "DailyLow", kind: "number" }),
+  Object.freeze({ key: "DailyHigh", label: "DailyHigh", kind: "number" }),
+  Object.freeze({ key: "YesterdayRate", label: "YesterdayRate", kind: "number" }),
+  Object.freeze({ key: "PaperMarketCap", label: "PaperMarketCap", kind: "number" }),
+  Object.freeze({ key: "TradeDateTime", label: "TradeDateTime", kind: "string" }),
+  Object.freeze({ key: "collectedAtMs", label: "נאסף בשעה", kind: "timestamp" })
+]);
+
+export const LEGACY_CURRENT_PROFILE = Object.freeze({
+  columns: CURRENT_COLUMNS,
+  initialSortKey: "DailyDealsQuantity",
+  identityTieBreakOnly: false
+});
+
+export const US_CURRENT_PROFILE = Object.freeze({
+  columns: US_CURRENT_COLUMNS,
+  initialSortKey: "DailyVolume",
+  identityTieBreakOnly: true
+});
 
 const HEALTH_LABELS = Object.freeze({
   UNKNOWN: "לא ידוע",
@@ -37,6 +65,17 @@ const HEALTH_LABELS = Object.freeze({
   STOPPED: "נעצר",
   ERROR: "שגיאה"
 });
+
+function profileColumns(profile) {
+  if (!profile || !Array.isArray(profile.columns) || profile.columns.length === 0) {
+    throw new TypeError("Current profile must expose columns.");
+  }
+  return profile.columns;
+}
+
+function columnsByKey(profile) {
+  return new Map(profileColumns(profile).map((column) => [column.key, column]));
+}
 
 function missingRank(value) {
   if (value === null) return 1;
@@ -88,8 +127,9 @@ function compareWithMissing(left, right, comparePresent) {
   return comparePresent(left, right);
 }
 
-function assertSort(sort) {
-  if (!sort || !columnsByKey.has(sort.key) || !["asc", "desc"].includes(sort.direction)) {
+function assertSort(sort, profile) {
+  const byKey = columnsByKey(profile);
+  if (!sort || !byKey.has(sort.key) || !["asc", "desc"].includes(sort.direction)) {
     throw new TypeError("Invalid Current sort state.");
   }
 }
@@ -147,16 +187,20 @@ export function createCurrentModel(response) {
   });
 }
 
-export function createInitialCurrentSort() {
+export function createInitialCurrentSort(profile = LEGACY_CURRENT_PROFILE) {
+  const byKey = columnsByKey(profile);
+  if (!byKey.has(profile.initialSortKey)) {
+    throw new TypeError("Current profile initialSortKey is not a visible column.");
+  }
   return Object.freeze({
-    key: "DailyDealsQuantity",
+    key: profile.initialSortKey,
     direction: "desc"
   });
 }
 
-export function nextCurrentSort(currentSort, selectedKey) {
-  assertSort(currentSort);
-  const column = columnsByKey.get(selectedKey);
+export function nextCurrentSort(currentSort, selectedKey, profile = LEGACY_CURRENT_PROFILE) {
+  assertSort(currentSort, profile);
+  const column = columnsByKey(profile).get(selectedKey);
   if (!column) {
     throw new TypeError(`Unknown Current column: ${selectedKey}`);
   }
@@ -174,13 +218,13 @@ export function nextCurrentSort(currentSort, selectedKey) {
   });
 }
 
-export function sortCurrentRows(rows, sort) {
+export function sortCurrentRows(rows, sort, profile = LEGACY_CURRENT_PROFILE) {
   if (!Array.isArray(rows)) {
     throw new TypeError("Current rows must be an array.");
   }
-  assertSort(sort);
+  assertSort(sort, profile);
 
-  const column = columnsByKey.get(sort.key);
+  const column = columnsByKey(profile).get(sort.key);
   const direction = sort.direction === "asc" ? 1 : -1;
 
   return [...rows].sort((left, right) => {
@@ -195,19 +239,21 @@ export function sortCurrentRows(rows, sort) {
       return leftMissing !== rightMissing ? selected : selected * direction;
     }
 
-    const paperName = compareWithMissing(
-      left?.paperName,
-      right?.paperName,
-      compareLocaleStrings
-    );
-    if (paperName !== 0) return paperName;
+    if (profile.identityTieBreakOnly !== true) {
+      const paperName = compareWithMissing(
+        left?.paperName,
+        right?.paperName,
+        compareLocaleStrings
+      );
+      if (paperName !== 0) return paperName;
+    }
 
     return compareStrings(String(left?.securityId ?? ""), String(right?.securityId ?? ""));
   });
 }
 
-export function formatCurrentCell(key, value) {
-  const column = columnsByKey.get(key);
+export function formatCurrentCell(key, value, profile = LEGACY_CURRENT_PROFILE) {
+  const column = columnsByKey(profile).get(key);
   if (!column) {
     throw new TypeError(`Unknown Current column: ${key}`);
   }

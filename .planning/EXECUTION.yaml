@@ -14,9 +14,9 @@ chats:
 
   "3":
     nodes:
-      "3.1": { state: pending, result: null }
-      "3.2": { state: pending, result: null }
-      "3.3": { state: pending, result: null }
+      "3.1": { state: done, result: "Schema-v3 trusted reads expose exact U.S. Current/Security/History projections with display-name fallback, historical-only identity, unchanged status semantics and 500-row cursor-bound keyset paging; real-service proof and required CI are green." }
+      "3.2": { state: done, result: "The explicit pre-cutover U.S. Current profile exposes the exact U.S. columns, DailyVolume DESC with canonical identity tie-break, zero/missing formatting, diagnostics and sort/viewport restoration while normal legacy composition remains unchanged; unit/Chromium proof is green." }
+      "3.3": { state: done, result: "The explicit pre-cutover U.S. Detail profile exposes exact summary/history fields, 500-row continuation with retry, historical-only securities and Back return-state preservation while normal legacy composition remains unchanged; unit/Chromium proof is green." }
 
   "4":
     nodes:

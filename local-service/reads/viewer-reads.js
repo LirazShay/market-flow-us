@@ -2,6 +2,7 @@ import {
   ERROR_CODES,
   ProtocolValidationError
 } from "../../shared/protocol/index.js";
+import { MARKET_FLOW_US_SCHEMA_VERSION } from "../database/schema.js";
 
 function asSafeInteger(value, name, { nullable = false } = {}) {
   if (value === null || value === undefined) {
@@ -68,7 +69,23 @@ function deriveHealth({ sessionStatus, lastHeartbeatAtMs, lastError, nowMs, stal
   return "RUNNING";
 }
 
-function shapeCurrentRow(row) {
+function firstNonEmptyString(...values) {
+  for (const value of values) {
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+function usDisplayName(row, securityId) {
+  return firstNonEmptyString(
+    row.PaperNameEng,
+    row.PaperNameHeb,
+    row.Symbol,
+    securityId
+  );
+}
+
+function shapeLegacyCurrentRow(row) {
   return {
     paperName: row.paperName ?? null,
     securityId: String(row.securityId),
@@ -85,6 +102,27 @@ function shapeCurrentRow(row) {
     DailyLowestRate: row.DailyLowestRate ?? null,
     DailyHighestRate: row.DailyHighestRate ?? null,
     LastDealTimeOnly: row.LastDealTimeOnly ?? null,
+    collectedAtMs: asSafeInteger(row.collectedAtMs, "collectedAtMs")
+  };
+}
+
+function shapeUsCurrentRow(row) {
+  const securityId = String(row.securityId);
+  return {
+    paperName: usDisplayName(row, securityId),
+    Symbol: row.Symbol ?? null,
+    ExchangeName: row.ExchangeName ?? null,
+    securityId,
+    Price: row.Price ?? null,
+    ChangePercent: row.ChangePercent ?? null,
+    BidRate: row.BidRate ?? null,
+    AskRate: row.AskRate ?? null,
+    DailyVolume: row.DailyVolume ?? null,
+    DailyLow: row.DailyLow ?? null,
+    DailyHigh: row.DailyHigh ?? null,
+    YesterdayRate: row.YesterdayRate ?? null,
+    PaperMarketCap: row.PaperMarketCap ?? null,
+    TradeDateTime: row.TradeDateTime ?? null,
     collectedAtMs: asSafeInteger(row.collectedAtMs, "collectedAtMs")
   };
 }
@@ -141,7 +179,7 @@ function decodeCursor(cursor, securityId) {
   }
 }
 
-function shapeHistoryRow(row) {
+function shapeLegacyHistoryRow(row) {
   return {
     collectedAtMs: asSafeInteger(row.collectedAtMs, "collectedAtMs"),
     cycleId: asSafeInteger(row.cycleId, "cycleId"),
@@ -161,11 +199,134 @@ function shapeHistoryRow(row) {
   };
 }
 
+function shapeUsHistoryRow(row) {
+  return {
+    collectedAtMs: asSafeInteger(row.collectedAtMs, "collectedAtMs"),
+    cycleId: asSafeInteger(row.cycleId, "cycleId"),
+    Price: row.Price ?? null,
+    ChangePercent: row.ChangePercent ?? null,
+    BidRate: row.BidRate ?? null,
+    AskRate: row.AskRate ?? null,
+    DailyVolume: row.DailyVolume ?? null,
+    DailyLow: row.DailyLow ?? null,
+    DailyHigh: row.DailyHigh ?? null,
+    YesterdayRate: row.YesterdayRate ?? null,
+    PaperMarketCap: row.PaperMarketCap ?? null,
+    TradeDateTime: row.TradeDateTime ?? null
+  };
+}
+
+const LEGACY_CURRENT_SQL = `SELECT
+   u.paper_name AS paperName,
+   l.security_id AS securityId,
+   l.LastKnownRate,
+   l.BaseRateChangePercentage,
+   l.BuyLimit1,
+   l.BuyVolume1,
+   l.SellLimit1,
+   l.SellVolume1,
+   l.DailyDealsQuantity,
+   l.LastDealVolume,
+   l.DailyTurnover,
+   l.DailyNISRevenue,
+   l.DailyLowestRate,
+   l.DailyHighestRate,
+   l.LastDealTimeOnly,
+   l.collected_at_ms AS collectedAtMs,
+   l.cycle_id AS _cycleId
+ FROM latest AS l
+ LEFT JOIN universe AS u
+   ON u.security_id = l.security_id
+ ORDER BY l.security_id`;
+
+const US_CURRENT_SQL = `SELECT
+   l.security_id AS securityId,
+   l.Symbol,
+   l.PaperNameEng,
+   l.PaperNameHeb,
+   l.ExchangeName,
+   l.Price,
+   l.ChangePercent,
+   l.BidRate,
+   l.AskRate,
+   l.DailyVolume,
+   l.DailyLow,
+   l.DailyHigh,
+   l.YesterdayRate,
+   l.PaperMarketCap,
+   l.TradeDateTime,
+   l.collected_at_ms AS collectedAtMs,
+   l.cycle_id AS _cycleId
+ FROM latest AS l
+ LEFT JOIN universe AS u
+   ON u.security_id = l.security_id AND u.is_current = true
+ ORDER BY l.security_id`;
+
+const LEGACY_SECURITY_SQL = `SELECT
+   EXISTS(SELECT 1 FROM latest WHERE security_id = $securityId) AS hasLatest,
+   EXISTS(SELECT 1 FROM universe WHERE security_id = $securityId) AS hasUniverse,
+   EXISTS(SELECT 1 FROM history WHERE security_id = $securityId) AS hasHistory,
+   u.paper_name AS paperName,
+   l.security_id AS securityId,
+   l.LastKnownRate,
+   l.BaseRateChangePercentage,
+   l.BuyLimit1,
+   l.BuyVolume1,
+   l.SellLimit1,
+   l.SellVolume1,
+   l.DailyDealsQuantity,
+   l.LastDealVolume,
+   l.DailyTurnover,
+   l.DailyNISRevenue,
+   l.DailyLowestRate,
+   l.DailyHighestRate,
+   l.LastDealTimeOnly,
+   l.collected_at_ms AS collectedAtMs
+ FROM (SELECT 1) AS seed
+ LEFT JOIN latest AS l
+   ON l.security_id = $securityId
+ LEFT JOIN universe AS u
+   ON u.security_id = $securityId`;
+
+const US_SECURITY_SQL = `SELECT
+   EXISTS(SELECT 1 FROM latest WHERE security_id = $securityId) AS hasLatest,
+   EXISTS(SELECT 1 FROM universe WHERE security_id = $securityId) AS hasUniverse,
+   EXISTS(SELECT 1 FROM history WHERE security_id = $securityId) AS hasHistory,
+   COALESCE(NULLIF(l.PaperNameEng, ''), NULLIF(h.PaperNameEng, ''), NULLIF(u.PaperNameEng, '')) AS PaperNameEng,
+   COALESCE(NULLIF(l.PaperNameHeb, ''), NULLIF(h.PaperNameHeb, ''), NULLIF(u.PaperNameHeb, '')) AS PaperNameHeb,
+   COALESCE(NULLIF(l.Symbol, ''), NULLIF(h.Symbol, ''), NULLIF(u.Symbol, '')) AS Symbol,
+   l.ExchangeName,
+   l.security_id AS securityId,
+   l.Price,
+   l.ChangePercent,
+   l.BidRate,
+   l.AskRate,
+   l.DailyVolume,
+   l.DailyLow,
+   l.DailyHigh,
+   l.YesterdayRate,
+   l.PaperMarketCap,
+   l.TradeDateTime,
+   l.collected_at_ms AS collectedAtMs
+ FROM (SELECT 1) AS seed
+ LEFT JOIN latest AS l
+   ON l.security_id = $securityId
+ LEFT JOIN universe AS u
+   ON u.security_id = $securityId
+ LEFT JOIN (
+   SELECT Symbol, PaperNameEng, PaperNameHeb
+   FROM history
+   WHERE security_id = $securityId
+   ORDER BY collected_at_ms DESC, cycle_id DESC
+   LIMIT 1
+ ) AS h ON true`;
+
 export function createViewerReads({
   connection,
   now = () => Date.now(),
   staleAfterMs = 15000,
-  historyPageSize = 500
+  historyPageSize = 500,
+  schemaVersion = null
 }) {
   if (!connection || typeof connection.runAndReadAll !== "function") {
     throw new TypeError("viewer read connection is required");
@@ -180,31 +341,36 @@ export function createViewerReads({
     throw new TypeError("historyPageSize must be a positive safe integer");
   }
 
-  async function current() {
+  let resolvedUsProjection = schemaVersion === null
+    ? null
+    : schemaVersion === MARKET_FLOW_US_SCHEMA_VERSION;
+
+  async function usesUsProjection() {
+    if (resolvedUsProjection !== null) return resolvedUsProjection;
+
     const rows = await queryRows(
       connection,
-      `SELECT
-         u.paper_name AS paperName,
-         l.security_id AS securityId,
-         l.LastKnownRate,
-         l.BaseRateChangePercentage,
-         l.BuyLimit1,
-         l.BuyVolume1,
-         l.SellLimit1,
-         l.SellVolume1,
-         l.DailyDealsQuantity,
-         l.LastDealVolume,
-         l.DailyTurnover,
-         l.DailyNISRevenue,
-         l.DailyLowestRate,
-         l.DailyHighestRate,
-         l.LastDealTimeOnly,
-         l.collected_at_ms AS collectedAtMs,
-         l.cycle_id AS _cycleId
-       FROM latest AS l
-       LEFT JOIN universe AS u
-         ON u.security_id = l.security_id
-       ORDER BY l.security_id`
+      "SELECT schema_version AS schemaVersion FROM schema_info"
+    );
+    if (rows.length !== 1) {
+      throw new Error("Schema authority query did not return exactly one row.");
+    }
+
+    const persistedSchemaVersion = Number(rows[0].schemaVersion);
+    if (!Number.isSafeInteger(persistedSchemaVersion) || persistedSchemaVersion < 1) {
+      throw new Error("Persisted schema version is invalid.");
+    }
+
+    resolvedUsProjection = persistedSchemaVersion === MARKET_FLOW_US_SCHEMA_VERSION;
+    return resolvedUsProjection;
+  }
+
+  async function current() {
+    const useUsProjection = await usesUsProjection();
+    const shapeCurrentRow = useUsProjection ? shapeUsCurrentRow : shapeLegacyCurrentRow;
+    const rows = await queryRows(
+      connection,
+      useUsProjection ? US_CURRENT_SQL : LEGACY_CURRENT_SQL
     );
 
     let lastCycleId = null;
@@ -325,33 +491,11 @@ export function createViewerReads({
   }
 
   async function security(securityId) {
+    const useUsProjection = await usesUsProjection();
+    const shapeCurrentRow = useUsProjection ? shapeUsCurrentRow : shapeLegacyCurrentRow;
     const rows = await queryRows(
       connection,
-      `SELECT
-         EXISTS(SELECT 1 FROM latest WHERE security_id = $securityId) AS hasLatest,
-         EXISTS(SELECT 1 FROM universe WHERE security_id = $securityId) AS hasUniverse,
-         EXISTS(SELECT 1 FROM history WHERE security_id = $securityId) AS hasHistory,
-         u.paper_name AS paperName,
-         l.security_id AS securityId,
-         l.LastKnownRate,
-         l.BaseRateChangePercentage,
-         l.BuyLimit1,
-         l.BuyVolume1,
-         l.SellLimit1,
-         l.SellVolume1,
-         l.DailyDealsQuantity,
-         l.LastDealVolume,
-         l.DailyTurnover,
-         l.DailyNISRevenue,
-         l.DailyLowestRate,
-         l.DailyHighestRate,
-         l.LastDealTimeOnly,
-         l.collected_at_ms AS collectedAtMs
-       FROM (SELECT 1) AS seed
-       LEFT JOIN latest AS l
-         ON l.security_id = $securityId
-       LEFT JOIN universe AS u
-         ON u.security_id = $securityId`,
+      useUsProjection ? US_SECURITY_SQL : LEGACY_SECURITY_SQL,
       { securityId }
     );
 
@@ -366,13 +510,19 @@ export function createViewerReads({
     return {
       found,
       securityId,
-      paperName: row.paperName ?? null,
+      paperName: found
+        ? useUsProjection
+          ? usDisplayName(row, securityId)
+          : row.paperName ?? null
+        : null,
       isCurrent: hasLatest,
       currentRow: hasLatest ? shapeCurrentRow(row) : null
     };
   }
 
   async function historyPage(securityId, cursor) {
+    const useUsProjection = await usesUsProjection();
+    const shapeHistoryRow = useUsProjection ? shapeUsHistoryRow : shapeLegacyHistoryRow;
     const decoded = cursor === null ? null : decodeCursor(cursor, securityId);
     const continuation = decoded === null
       ? ""
@@ -392,10 +542,20 @@ export function createViewerReads({
           cursorCycleId: decoded.cycleId
         };
 
-    const rows = await queryRows(
-      connection,
-      `SELECT
-         collected_at_ms AS collectedAtMs,
+    const projection = useUsProjection
+      ? `collected_at_ms AS collectedAtMs,
+         cycle_id AS cycleId,
+         Price,
+         ChangePercent,
+         BidRate,
+         AskRate,
+         DailyVolume,
+         DailyLow,
+         DailyHigh,
+         YesterdayRate,
+         PaperMarketCap,
+         TradeDateTime`
+      : `collected_at_ms AS collectedAtMs,
          cycle_id AS cycleId,
          chunk_index AS chunkIndex,
          LastKnownRate,
@@ -409,7 +569,12 @@ export function createViewerReads({
          DailyTurnover,
          DailyNISRevenue,
          LastDealTimeOnly,
-         server_as_of_date_json AS serverAsOfDateJson
+         server_as_of_date_json AS serverAsOfDateJson`;
+
+    const rows = await queryRows(
+      connection,
+      `SELECT
+         ${projection}
        FROM history
        WHERE security_id = $securityId
        ${continuation}
