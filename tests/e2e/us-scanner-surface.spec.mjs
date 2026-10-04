@@ -192,7 +192,7 @@ test("U.S. staged built-in loads as Draft only and securityId results navigate t
   await expect(savedQuery).toBeEnabled();
   await savedQuery.selectOption("builtin:staged-candidate-ranking");
 
-  await expect(page.getByLabel("SQL")).toContainText("stage_reached");
+  await expect(page.getByLabel("SQL")).toHaveValue(/stage_reached/);
   await expect(page.getByText("שאילתה מובנית לקריאה בלבד; אפשר לערוך טיוטה ולשמור בשם חדש.")).toBeVisible();
   await expect.poll(() => page.evaluate(() => globalThis.__scannerCalls.length)).toBe(0);
 
