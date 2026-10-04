@@ -20,9 +20,9 @@ The architecture, operational model, Scanner, saved queries, diagnostics, Fake M
 
 ## Current state
 
-The repository contains an exact green MarketScope implementation baseline and a frozen U.S. conversion plan. Production U.S. conversion is executed serially from `.planning/EXECUTION.yaml`.
+The repository contains an exact green MarketScope implementation baseline and a frozen U.S. conversion plan. Execution allocation is created only after freeze; once allocated, production U.S. conversion proceeds serially from `.planning/EXECUTION.yaml`.
 
-Read `STATUS.yaml` for the current chat/node.
+Read `STATUS.yaml` for the current phase/pointer.
 
 Do not treat the imported Israel provider path as the final U.S. product until the corresponding migration nodes are completed.
 
@@ -58,6 +58,9 @@ The imported tree matched byte-for-byte and passed Planning, Fast and Browser CI
 
 - `docs/US_PRODUCT_DIRECTION.md`
 - `docs/US_SOURCE_EVIDENCE.md`
+- `docs/US_MIGRATION_AUDIT.md`
+- `docs/US_MIGRATION_FILE_MAP.md`
+- `docs/US_CONTRACT_REVIEW.md`
 - `docs/PRODUCT_REQUIREMENTS.md`
 - `docs/PRODUCT_SPEC.md`
 - `docs/DATA_CONTRACT.md`
