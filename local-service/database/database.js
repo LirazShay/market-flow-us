@@ -6,6 +6,9 @@ import {
   CREATE_SCHEMA_STATEMENTS,
   LEGACY_SCHEMA_VERSION,
   LEGACY_V1_REQUIRED_TABLES,
+  MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS,
+  MARKET_FLOW_US_REQUIRED_TABLES,
+  MARKET_FLOW_US_SCHEMA_VERSION,
   REQUIRED_TABLES,
   SCHEMA_VERSION
 } from "./schema.js";
@@ -151,7 +154,7 @@ async function validateOrMigrateExistingSchema(
   );
 }
 
-async function bootstrapSchema(
+async function bootstrapLegacySchema(
   connection,
   { createdAtMs, productVersion, migrationFault = null }
 ) {
@@ -191,6 +194,54 @@ async function bootstrapSchema(
   }
 }
 
+async function bootstrapMarketFlowUsSchema(
+  connection,
+  { createdAtMs, productVersion }
+) {
+  const existingTables = new Set(await tableNames(connection));
+
+  if (existingTables.has("schema_info")) {
+    const present = [...existingTables];
+    const info = await readSchemaInfo(connection);
+    if (info.schemaVersion !== MARKET_FLOW_US_SCHEMA_VERSION) {
+      throw new DatabaseSchemaUnsupportedError(
+        `Unsupported schema version ${info.schemaVersion}; Market Flow US requires schema v${MARKET_FLOW_US_SCHEMA_VERSION}`
+      );
+    }
+    assertRequiredTables(
+      present,
+      MARKET_FLOW_US_REQUIRED_TABLES,
+      MARKET_FLOW_US_SCHEMA_VERSION
+    );
+    return;
+  }
+
+  if (existingTables.size > 0) {
+    throw new DatabaseSchemaUnsupportedError(
+      "Database is non-empty but has no Market Flow US schema_info table"
+    );
+  }
+
+  await connection.run("BEGIN TRANSACTION");
+  try {
+    for (const statement of MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS) {
+      await connection.run(statement);
+    }
+    await connection.run(
+      "INSERT INTO schema_info VALUES ($schemaVersion, $createdAtMs, $productVersion)",
+      {
+        schemaVersion: MARKET_FLOW_US_SCHEMA_VERSION,
+        createdAtMs,
+        productVersion
+      }
+    );
+    await connection.run("COMMIT");
+  } catch (error) {
+    await rollbackPreservingOriginal(connection);
+    throw error;
+  }
+}
+
 async function recoverStaleSessions(connection, nowMs) {
   await connection.run(
     `UPDATE sessions
@@ -212,11 +263,12 @@ async function ensureParentDirectory(dbPath) {
   await mkdir(path.dirname(path.resolve(dbPath)), { recursive: true });
 }
 
-export async function openMarketScopeDatabase({
+async function openDatabase({
   dbPath,
-  productVersion = "0.1.0",
-  now = () => Date.now(),
-  migrationFault = null
+  productVersion,
+  now,
+  schemaVersion,
+  bootstrap
 }) {
   if (typeof dbPath !== "string" || dbPath.length === 0) {
     throw new TypeError("dbPath is required");
@@ -231,10 +283,9 @@ export async function openMarketScopeDatabase({
   let closed = false;
 
   try {
-    await bootstrapSchema(writerConnection, {
+    await bootstrap(writerConnection, {
       createdAtMs: now(),
-      productVersion,
-      migrationFault
+      productVersion
     });
     await recoverStaleSessions(writerConnection, now());
     await lockConfiguration(writerConnection);
@@ -271,7 +322,7 @@ export async function openMarketScopeDatabase({
     viewerReadConnection,
     scannerConnection,
     ready: true,
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion,
     async close() {
       if (closed) return;
       closed = true;
@@ -281,4 +332,36 @@ export async function openMarketScopeDatabase({
       instance.closeSync();
     }
   };
+}
+
+export async function openMarketScopeDatabase({
+  dbPath,
+  productVersion = "0.1.0",
+  now = () => Date.now(),
+  migrationFault = null
+}) {
+  return await openDatabase({
+    dbPath,
+    productVersion,
+    now,
+    schemaVersion: SCHEMA_VERSION,
+    bootstrap: (connection, options) => bootstrapLegacySchema(connection, {
+      ...options,
+      migrationFault
+    })
+  });
+}
+
+export async function openMarketFlowUsDatabase({
+  dbPath,
+  productVersion = "0.1.0",
+  now = () => Date.now()
+}) {
+  return await openDatabase({
+    dbPath,
+    productVersion,
+    now,
+    schemaVersion: MARKET_FLOW_US_SCHEMA_VERSION,
+    bootstrap: bootstrapMarketFlowUsSchema
+  });
 }
