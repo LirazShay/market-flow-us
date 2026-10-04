@@ -4,8 +4,8 @@ overall_status: ready
 
 current:
   chat: 4
-  node: "4.1"
-  title: "U.S. Scanner built-ins and staged candidate ranking"
+  node: "4.2"
+  title: "U.S. Scanner regression, saved-query and Detail navigation"
   status: in_progress
 
 authority:
@@ -30,4 +30,4 @@ execution:
   chats_total: 9
   implementation_leaves_total: 19
   current_chat: 4
-  current_node: "4.1"
+  current_node: "4.2"
