@@ -1,37 +1,56 @@
-export const SCREENER_HUL_ENDPOINT = "/lti/lti-app/api/Market/ScreenerHulPaging3";
-
-const SCREENER_PARAMS = Object.freeze({
-  region: "1",
-  Country: "2",
-  indexIdArray: "0",
-  paperType: "1",
-  sectorIdArray: "0",
-  subSectorIdArray: "0",
-  changePercentFrom: "-999999999",
-  changePercentTo: "999999999",
-  volumeFrom: "-999999999",
-  volumeTo: "999999999",
-  marketCapFrom: "-999999999999999",
-  marketCapTo: "999999999999999",
-  beginYearChangePercentFrom: "-999999999",
-  beginYearChangePercentTo: "999999999",
-  month12ChangePercentFrom: "-999999999",
-  month12ChangePercentTo: "999999999",
-  month36ChangePercentFrom: "-999999999",
-  month36ChangePercentTo: "999999999",
-  EsdRatingModeSelected: "0",
-  EsdRatingModeValueSelected: "0",
-  page: "1",
-  pageCount: "5000",
-  orderFieldName: "DailyVolume",
-  orderDir: "DESC",
-  rt: "true"
-});
+const GET_SECURITIES_ENDPOINT = "/lti/lti-app/api/SecuritiesFast/GetSecuritiesData";
 
 function assertNonNegativeFinite(value, name) {
   if (!Number.isFinite(value) || value < 0) {
     throw new TypeError(`${name} must be a non-negative finite number.`);
   }
+}
+
+export function normalizeSecurityIds(securityIds) {
+  if (!Array.isArray(securityIds) || securityIds.length === 0) {
+    throw new TypeError("securityIds must be a non-empty array.");
+  }
+
+  const normalized = securityIds.map((value, index) => {
+    if (value === null || value === undefined || value === "") {
+      throw new TypeError(`securityIds contains an invalid value at index ${index}.`);
+    }
+    return String(value);
+  });
+
+  const unique = new Set(normalized);
+  if (unique.size !== normalized.length) {
+    throw new Error(
+      `securityIds contains duplicates after canonicalization. Total=${normalized.length}, unique=${unique.size}.`
+    );
+  }
+
+  return Object.freeze(normalized);
+}
+
+export function buildGetSecuritiesDataUrl(securityIds) {
+  const normalized = normalizeSecurityIds(securityIds);
+  const encodedIds = normalized.map((securityId) => encodeURIComponent(securityId));
+
+  return (
+    `${GET_SECURITIES_ENDPOINT}?securityIds=${encodedIds.join(",")}` +
+    "&responseType=1&is_gto=true&force=false"
+  );
+}
+
+function extractSecuritiesTable(responseJson) {
+  const table = responseJson?.data?.SecuritiesData?.Table;
+  if (!table || typeof table !== "object") {
+    throw new Error(
+      "GetSecuritiesData response structure is invalid: missing data.SecuritiesData.Table."
+    );
+  }
+  if (!Array.isArray(table.Security)) {
+    throw new Error(
+      "GetSecuritiesData response structure is invalid: Security must be an array."
+    );
+  }
+  return table;
 }
 
 function validateTiming(timing) {
@@ -60,128 +79,76 @@ function validateTiming(timing) {
   });
 }
 
-function canonicalPaperId(row, index) {
-  if (!row || typeof row !== "object" || Array.isArray(row)) {
-    throw new Error(`ScreenerHulPaging3 contains invalid row at index ${index}.`);
-  }
-
-  const value = row.PaperId;
-  if (value === null || value === undefined || value === "") {
-    throw new Error(`ScreenerHulPaging3 contains row without PaperId at index ${index}.`);
-  }
-
-  const securityId = String(value);
-  if (securityId.trim().length === 0) {
-    throw new Error(`ScreenerHulPaging3 contains row without PaperId at index ${index}.`);
-  }
-  return securityId;
-}
-
-function buildSourceMetadata(responseJson, screener) {
-  return Object.freeze({
-    maxDateChange: screener.maxDateChange ?? null,
-    rsCount: responseJson.rsCount ?? null,
-    rtIsr: responseJson.rtIsr ?? null,
-    rtUsa: responseJson.rtUsa ?? null,
-    logtm: responseJson.logtm ?? null,
-    reqtm: responseJson.reqtm ?? null,
-    responsetm: responseJson.responsetm ?? null,
-    serverId: responseJson.serverId ?? null,
-    version: responseJson.version ?? null,
-    resultCode: responseJson.resultCode ?? null
-  });
-}
-
-function buildWarnings(records, responseJson) {
-  const warnings = [];
-
-  for (let index = 0; index < records.length; index++) {
-    const symbol = records[index]?.Symbol;
-    if (symbol === null || symbol === undefined || symbol === "") {
-      warnings.push(`ScreenerHulPaging3 row ${index} is missing Symbol.`);
-    }
-  }
-
-  if (responseJson?.rtUsa !== true) {
-    warnings.push("ScreenerHulPaging3 rtUsa is false or absent.");
-  }
-
-  return Object.freeze(warnings);
-}
-
-export function buildScreenerHulUrl() {
-  return `${SCREENER_HUL_ENDPOINT}?${new URLSearchParams(SCREENER_PARAMS).toString()}`;
-}
-
-export function buildValidatedSnapshot({
-  responseJson,
-  timing,
-  httpStatus = 200
-}) {
-  if (!Number.isInteger(httpStatus) || httpStatus < 200 || httpStatus >= 300) {
-    throw new Error(`ScreenerHulPaging3 failed: HTTP ${httpStatus}.`);
-  }
-
-  if (!responseJson || typeof responseJson !== "object" || Array.isArray(responseJson)) {
-    throw new Error("ScreenerHulPaging3 response payload must be an object.");
-  }
-
-  const screener = responseJson.data?.ScreenerHulPaging;
-  if (!screener || typeof screener !== "object" || Array.isArray(screener)) {
-    throw new Error("ScreenerHulPaging3 response is missing data.ScreenerHulPaging.");
-  }
-
-  const recordCount = screener.recordCount;
-  if (!Number.isSafeInteger(recordCount) || recordCount <= 0) {
-    throw new Error("ScreenerHulPaging3 recordCount must be a positive safe integer.");
-  }
-
-  if (!Array.isArray(screener.records)) {
-    throw new Error("ScreenerHulPaging3 records must be an array.");
-  }
-  if (screener.records.length !== recordCount) {
-    throw new Error(
-      `ScreenerHulPaging3 recordCount/records.length mismatch. recordCount=${recordCount}, records.length=${screener.records.length}.`
-    );
-  }
-
-  if (Object.hasOwn(responseJson, "resultCode") && responseJson.resultCode !== 0) {
-    throw new Error(`ScreenerHulPaging3 resultCode must be 0 when present, received ${responseJson.resultCode}.`);
-  }
-
-  const records = Object.freeze([...screener.records]);
+function validateResponseMembership(requestedIds, records) {
   const responseIds = [];
   const seen = new Set();
 
   for (let index = 0; index < records.length; index++) {
-    const securityId = canonicalPaperId(records[index], index);
-    if (seen.has(securityId)) {
-      throw new Error(`ScreenerHulPaging3 contains duplicate PaperId after canonicalization: ${securityId}.`);
+    const key = records[index]?.Key;
+    if (key === null || key === undefined || key === "") {
+      throw new Error(`GetSecuritiesData contains record without Key at index ${index}.`);
     }
+
+    const securityId = String(key);
+    if (seen.has(securityId)) {
+      throw new Error(`GetSecuritiesData contains duplicate Key after canonicalization: ${securityId}.`);
+    }
+
     seen.add(securityId);
     responseIds.push(securityId);
   }
 
+  const requestedSet = new Set(requestedIds);
+  const missing = requestedIds.filter((securityId) => !seen.has(securityId));
+  const unexpected = responseIds.filter((securityId) => !requestedSet.has(securityId));
+
+  if (missing.length > 0 || unexpected.length > 0) {
+    throw new Error(
+      `GetSecuritiesData chunk mismatch. Requested=${requestedIds.length}, received=${responseIds.length}, missing=[${missing.join(",")}], unexpected=[${unexpected.join(",")}].`
+    );
+  }
+
+  return {
+    responseIds: Object.freeze(responseIds),
+    uniqueCount: seen.size
+  };
+}
+
+export function buildValidatedChunk({
+  securityIds,
+  responseJson,
+  timing,
+  httpStatus = 200
+}) {
+  const requestedIds = normalizeSecurityIds(securityIds);
+
+  if (!Number.isInteger(httpStatus) || httpStatus < 200 || httpStatus >= 300) {
+    throw new Error(`GetSecuritiesData requires a successful HTTP status, received ${httpStatus}.`);
+  }
+
+  const table = extractSecuritiesTable(responseJson);
+  const records = Object.freeze([...table.Security]);
+  const membership = validateResponseMembership(requestedIds, records);
   const validatedTiming = validateTiming(timing);
-  const membership = Object.freeze([...seen].sort());
-  const sourceMetadata = buildSourceMetadata(responseJson, screener);
 
   return Object.freeze({
-    recordCount,
+    requestedIds,
+    requestedCount: requestedIds.length,
+    responseIds: membership.responseIds,
+    receivedCount: records.length,
+    uniqueCount: membership.uniqueCount,
     records,
-    responseIds: Object.freeze(responseIds),
-    membership,
-    sourceMetadata,
-    warnings: buildWarnings(records, responseJson),
+    serverAsOfDate: table.AsOfDate ?? null,
     httpStatus,
     timing: validatedTiming
   });
 }
 
-export async function fetchValidatedSnapshot({
+export async function fetchValidatedChunk({
+  securityIds,
   fetchImpl = globalThis.fetch,
   now = () => Date.now()
-} = {}) {
+}) {
   if (typeof fetchImpl !== "function") {
     throw new TypeError("fetchImpl must be a function.");
   }
@@ -189,18 +156,22 @@ export async function fetchValidatedSnapshot({
     throw new TypeError("now must be a function.");
   }
 
+  const normalizedIds = normalizeSecurityIds(securityIds);
   const startedAtMs = now();
-  const response = await fetchImpl(buildScreenerHulUrl());
+  const response = await fetchImpl(buildGetSecuritiesDataUrl(normalizedIds));
   const responseReceivedAtMs = now();
 
   if (!response?.ok) {
-    throw new Error(`ScreenerHulPaging3 failed: HTTP ${response?.status ?? "unknown"}.`);
+    throw new Error(
+      `GetSecuritiesData failed: HTTP ${response?.status ?? "unknown"}. Requested=${normalizedIds.length}.`
+    );
   }
 
   const responseJson = await response.json();
   const completedAtMs = now();
 
-  return buildValidatedSnapshot({
+  return buildValidatedChunk({
+    securityIds: normalizedIds,
     responseJson,
     timing: {
       startedAtMs,
@@ -210,3 +181,5 @@ export async function fetchValidatedSnapshot({
     httpStatus: response.status
   });
 }
+
+export { GET_SECURITIES_ENDPOINT };
