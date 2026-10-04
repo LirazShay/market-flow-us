@@ -425,6 +425,6 @@ Preserve:
 
 ## 22. Live verification boundary
 
-Live verification uses production U.S. adapter/protocol and exactly one complete snapshot.
+Live verification uses the production U.S. adapter/protocol for a bounded sustained run of at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence. Every cycle must validate and receive COMMIT ACK; final Current/History/Scanner authority is then checked before clean stop.
 
-It proves the external provider/browser boundary and product authority end-to-end but never substitutes for deterministic offline tests.
+This proves short-run continuous provider/browser operation and product authority end-to-end but never substitutes for deterministic offline tests or claims a long-duration provider SLA.
