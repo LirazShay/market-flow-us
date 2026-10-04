@@ -90,18 +90,17 @@ jobs:
           grep -Fq '# Market Flow US Data Contract' docs/DATA_CONTRACT.md
           grep -Fq '# Market Flow US Technical Spec' docs/TECHNICAL_SPEC.md
           grep -Fq '# Market Flow US Test Strategy' docs/TEST_STRATEGY.md
-          grep -Fq '# Market Flow US Scanner SQL Guide' docs/SCANNER_SQL_GUIDE.md
 
           grep -Fq 'ScreenerHulPaging3' docs/DATA_CONTRACT.md
           grep -Fq 'schema v3' docs/TECHNICAL_SPEC.md
           grep -Fq '4096' docs/TEST_STRATEGY.md
           grep -Fq '180 cycles' docs/TEST_STRATEGY.md
           grep -Fq 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
-          grep -Fq 'stage_reached' docs/SCANNER_SQL_GUIDE.md
+          grep -Fq 'stage_reached' docs/PRODUCT_SPEC.md
 
           if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly' \
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
-            echo "Core U.S. contracts still contain Israeli typed market fields"
+            echo "Core U.S. planning contracts still contain Israeli typed market fields"
             exit 1
           fi
 
