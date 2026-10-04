@@ -6,7 +6,7 @@ current:
   chat: 1
   node: "1.1"
   title: "U.S. ScreenerHulPaging3 provider adapter and exact full-response validation"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
