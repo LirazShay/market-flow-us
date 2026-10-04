@@ -12,8 +12,8 @@ Repository branch audited: plan/us-market-migration-replan
 
 Disposition counts after second-pass review:
 
-- KEEP: 17
-- ADAPT: 87
+- KEEP: 16
+- ADAPT: 88
 - REPLACE: 8
 - PLANNING_REPLACE: 9
 - DROP: 3
@@ -72,7 +72,7 @@ Do not add a new temporal-history subsystem during this conversion. Existing his
 
 ## File disposition
 
-### KEEP (17)
+### KEEP (16)
 
 .gitignore
 .planning/BASELINE_PROVENANCE.md
@@ -127,7 +127,7 @@ tests/workload/representative-workload.test.mjs
 .planning/STATUS.yaml
 .planning/TREE.yaml
 
-### ADAPT (87)
+### ADAPT (88)
 
 All remaining branch files not listed above. The 124/124 classification check proved there are no unclassified files.
 
