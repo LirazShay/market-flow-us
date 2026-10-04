@@ -3,8 +3,8 @@ version: 2
 chats:
   "1":
     nodes:
-      "1.1": { state: pending, result: null }
-      "1.2": { state: pending, result: null }
+      "1.1": { state: done, result: "Exact ScreenerHulPaging3 adapter, canonical PaperId membership, raw/source metadata preservation and one-segment cycle shaping are implemented behind pre-cutover seams; U.S. unit proof plus full Fast/Browser/Planning CI are green." }
+      "1.2": { state: done, result: "Recorder supports the pre-cutover U.S. single-response candidate seam with cadence-only 3000 ms default, canonical membership reuse/replacement before commit, same-response universe+cycle derivation, fail-closed provider/ACK handling, non-overlap and explicit stop; full Fast/Browser/Planning CI are green." }
 
   "2":
     nodes:

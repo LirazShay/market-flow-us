@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "1.1"
+current_node: "2.1"
 blockers: []
-next_action: "Chat 1 executes TREE nodes 1.1 then 1.2 from fresh main after this planning PR is merged and main CI is green."
-last_review: "R-US-FINAL"
+next_action: "Chat 2 executes TREE nodes 2.1, 2.2 and 2.3 in allocation order after Chat 1 PR is merged and main required CI is green."
+last_review: "R-US-EXEC-REOPEN-001"

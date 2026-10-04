@@ -392,3 +392,74 @@ allocate all 19 implementation leaves exactly once in EXECUTION.yaml
 → set root implementation pointer
 → only then authorize phase: implementation
 ```
+
+
+## R-US-EXEC-REOPEN-001 — Pre-cutover activation boundary review
+
+**Result:** PASS AFTER CORRECTION
+
+**Trigger:** Chat 1 node `1.1` implemented the correct ScreenerHulPaging3 adapter but replaced modules used by the normal built runtime. Fast CI was green while Browser CI failed because the still-Israeli local service/Fake Market could not consume the U.S. provider/cycle contract. This exposed an execution-staging ambiguity rather than a U.S. provider-contract defect.
+
+### Root cause
+
+The frozen plan correctly assigned normal runtime integration to `5.2`, but it did not explicitly state that earlier U.S. component leaves are **pre-cutover** and must remain non-authoritative in the normal composed runtime until downstream U.S. dependencies exist.
+
+That ambiguity conflicted with two existing repository invariants:
+
+```text
+AGENTS: keep tests green / required CI green
+TEST_STRATEGY: Browser CI for product-code changes
+```
+
+### Correction
+
+Added `D-US-018` and the global `AGENTS.md` migration-cutover rule:
+
+- nodes `1.*` through `4.*` and `5.1` implement/test U.S. behavior through existing construction/dependency/configuration seams;
+- they do not activate an incomplete U.S. normal runtime/service composition;
+- Browser tests remain enabled and green on every pre-cutover work unit;
+- no generic feature-flag subsystem or duplicate architecture is introduced;
+- `5.2` remains the sole normal-runtime U.S. activation boundary;
+- Chat 5 already owns `5.1`, `5.2`, `5.3` on one work unit, so the Browser suite is migrated and green before the cutover PR can merge;
+- `7.3` retains final superseded-path cleanup/audit ownership.
+
+### TREE / dependency review
+
+No TREE structure change is required.
+
+Reasons:
+
+1. `5.2` already explicitly owns normal Market Flow US runtime/demo composition.
+2. Chats are serial and Chats 1–4 complete before Chat 5 begins.
+3. `5.2` already depends on the acquisition/authority/Fake Market outcomes that make its direct composition possible, while Chat ordering guarantees the already-allocated trusted-read/UI/Scanner work is complete before Chat 5.
+4. The defect was activation timing ambiguity, not a missing capability, leaf, dependency cycle or product requirement.
+
+Therefore:
+
+```text
+TREE nodes: unchanged (27)
+implementation leaves: unchanged (19)
+chat allocation: unchanged (9)
+new subsystem: none
+```
+
+### Valid implementation evidence preserved
+
+The focused node `1.1` U.S. provider tests and implementation logic remain valid evidence and should be preserved. The runtime-coupled placement is what must be repaired after re-freeze: move/shape the U.S. provider implementation behind the existing pre-cutover seam while restoring the normal active composition until `5.2`.
+
+No execution node was previously `done`, so no completed outcome required invalidation.
+
+### KISS / whole-plan challenge
+
+PASS.
+
+The smallest correction is one staging invariant. It avoids both bad alternatives:
+
+- weakening/skipping Browser CI; or
+- prematurely implementing downstream schema/Fake Market work inside Chat 1.
+
+The original seven capability branches, success evidence, non-goals and final release gates remain sufficient and unchanged.
+
+### Re-freeze decision
+
+The corrected planning area is coherent. EXECUTION does not require reallocation. Node `1.1` may be reset from `blocked` to `pending`, the plan may be frozen again, and Chat 1 may resume from the preserved branch after implementation authorization is restored.

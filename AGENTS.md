@@ -30,6 +30,24 @@ Do not introduce a Strategy Engine, temporal-link engine, dynamic schema, new da
 
 The staged candidate idea is Scanner SQL. Strategy logic belongs in editable/saved SQL unless a later measured bottleneck justifies a narrower implementation optimization.
 
+## Migration cutover sequencing
+
+The U.S. conversion is **pre-cutover** until TREE node `5.2`.
+
+Before `5.2`:
+
+- nodes `1.*` through `4.*` and `5.1` implement and prove their U.S. target behavior through the existing constructor/dependency/config/test seams;
+- they must not switch the normal built browser/runtime/demo/service composition to the U.S. path while downstream U.S. dependencies are still incomplete;
+- the currently active proven composition must remain Browser-CI green;
+- do not skip/disable Browser tests to hide an integration gap;
+- do not invent a feature-flag subsystem or duplicate architecture just for migration staging.
+
+Use the smallest existing injection/construction seam that lets focused tests exercise the U.S. implementation without activating an incomplete product path.
+
+TREE node `5.2` is the normal-runtime U.S. cutover boundary. Chat 5 owns `5.1 → 5.2 → 5.3` in one work unit, so the normal runtime is switched only after the required U.S. provider, authority, read/UI and Scanner outcomes already exist, and the full U.S. Browser suite is adapted/green before that PR may merge.
+
+Legacy Israel-specific paths may remain temporarily reachable only as pre-cutover compatibility. They receive no new product behavior and are removed/retired only after replacement proof, with final authoritative cleanup owned by `7.3`.
+
 ## Fresh-chat read order
 
 Planning/review:
