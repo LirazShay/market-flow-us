@@ -258,7 +258,7 @@ Gate:
 
 ```text
 producer hello/session
-→ three consecutive complete ScreenerHulPaging3 responses at candidate cadence
+→ at least 20 consecutive complete ScreenerHulPaging3 responses spanning at least 60 seconds at candidate cadence
 → exact validation for every cycle
 → universe ACK/revision handling
 → COMMIT ACK for every cycle
@@ -283,7 +283,7 @@ The gate records rather than assumes:
 - current response shape;
 - CSP/LNA loopback compatibility;
 - provider freshness indicators;
-- repeated full-response completeness across the bounded three-cycle run;
+- repeated full-response completeness across the bounded sustained run;
 - session/auth failure shape when encountered.
 
 Long-run throttling/polling behavior may require a separate bounded observation if normal use reveals a problem.
