@@ -3,11 +3,11 @@ phase: planning
 overall_status: active
 
 current:
-  stage: "us_final_planning_review"
-  title: "Final Planning Review and freeze readiness"
+  stage: "us_execution_allocation"
+  title: "Allocate frozen U.S. implementation leaves to numbered execution chats"
   status: ready
-  previous: "Second-pass adversarial migration/S&T review PASS AFTER CORRECTIONS; R-US-002 recorded."
-  next: "Run Final Planning Review across the corrected audit, contracts, approved TREE, planning guards and handoff. Freeze only if the final review passes. Do not allocate chats or authorize implementation yet."
+  previous: "R-US-FINAL Final Planning Review PASS; plan_state frozen."
+  next: "Populate EXECUTION.yaml with all 19 implementation leaves exactly once, verify dependency/chat order and handoff. Keep phase planning until allocation verification passes."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -21,6 +21,7 @@ planning_sequence:
   new_st_tree: pass
   st_tree_review: pass
   second_pass_adversarial_review: pass
-  final_planning_review: ready
-  execution_allocation: pending
+  final_planning_review: pass
+  plan_freeze: pass
+  execution_allocation: ready
   implementation_authorization: pending
