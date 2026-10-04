@@ -1,4 +1,8 @@
-import { formatCurrentCell } from "./current-model.js";
+import {
+  LEGACY_CURRENT_PROFILE,
+  US_CURRENT_PROFILE,
+  formatCurrentCell
+} from "./current-model.js";
 
 const numberFormatter = new Intl.NumberFormat("he-IL", {
   maximumFractionDigits: 6
@@ -29,15 +33,51 @@ export const HISTORY_COLUMNS = Object.freeze([
   Object.freeze({ key: "serverAsOfDate", label: "זמן שרת", kind: "source" })
 ]);
 
-const historyByKey = new Map(HISTORY_COLUMNS.map((column) => [column.key, column]));
-
-const CURRENT_SUMMARY_KEYS = new Set([
-  "LastKnownRate",
-  "BaseRateChangePercentage",
-  "BuyLimit1",
-  "SellLimit1",
-  "LastDealTimeOnly"
+export const US_HISTORY_COLUMNS = Object.freeze([
+  Object.freeze({ key: "collectedAtMs", label: "זמן איסוף", kind: "timestamp" }),
+  Object.freeze({ key: "cycleId", label: "Cycle", kind: "number" }),
+  Object.freeze({ key: "Price", label: "Price", kind: "number" }),
+  Object.freeze({ key: "ChangePercent", label: "ChangePercent", kind: "percentage" }),
+  Object.freeze({ key: "BidRate", label: "BidRate", kind: "number" }),
+  Object.freeze({ key: "AskRate", label: "AskRate", kind: "number" }),
+  Object.freeze({ key: "DailyVolume", label: "DailyVolume", kind: "number" }),
+  Object.freeze({ key: "DailyLow", label: "DailyLow", kind: "number" }),
+  Object.freeze({ key: "DailyHigh", label: "DailyHigh", kind: "number" }),
+  Object.freeze({ key: "YesterdayRate", label: "YesterdayRate", kind: "number" }),
+  Object.freeze({ key: "PaperMarketCap", label: "PaperMarketCap", kind: "number" }),
+  Object.freeze({ key: "TradeDateTime", label: "TradeDateTime", kind: "string" })
 ]);
+
+export const DETAIL_SUMMARY_COLUMNS = Object.freeze([
+  Object.freeze({ key: "LastKnownRate", label: "שער אחרון", testId: "detail-last-rate" }),
+  Object.freeze({ key: "BaseRateChangePercentage", label: "שינוי יומי %" }),
+  Object.freeze({ key: "BuyLimit1", label: "BID1" }),
+  Object.freeze({ key: "SellLimit1", label: "ASK1" }),
+  Object.freeze({ key: "LastDealTimeOnly", label: "עסקה אחרונה" })
+]);
+
+export const US_DETAIL_SUMMARY_COLUMNS = Object.freeze([
+  Object.freeze({ key: "Price", label: "Price", testId: "detail-price" }),
+  Object.freeze({ key: "ChangePercent", label: "ChangePercent" }),
+  Object.freeze({ key: "BidRate", label: "BidRate" }),
+  Object.freeze({ key: "AskRate", label: "AskRate" }),
+  Object.freeze({ key: "DailyVolume", label: "DailyVolume" }),
+  Object.freeze({ key: "TradeDateTime", label: "TradeDateTime" })
+]);
+
+export const LEGACY_DETAIL_PROFILE = Object.freeze({
+  historyColumns: HISTORY_COLUMNS,
+  summaryColumns: DETAIL_SUMMARY_COLUMNS,
+  currentProfile: LEGACY_CURRENT_PROFILE,
+  requireChunkIndex: true
+});
+
+export const US_DETAIL_PROFILE = Object.freeze({
+  historyColumns: US_HISTORY_COLUMNS,
+  summaryColumns: US_DETAIL_SUMMARY_COLUMNS,
+  currentProfile: US_CURRENT_PROFILE,
+  requireChunkIndex: false
+});
 
 function isMissing(value) {
   return value === null || value === undefined || value === "";
@@ -49,7 +89,20 @@ function assertNonEmptyString(value, name) {
   }
 }
 
-function freezeHistoryRow(source) {
+function assertProfile(profile) {
+  if (
+    !profile
+    || !Array.isArray(profile.historyColumns)
+    || profile.historyColumns.length === 0
+    || !Array.isArray(profile.summaryColumns)
+    || profile.summaryColumns.length === 0
+    || !profile.currentProfile
+  ) {
+    throw new TypeError("Detail profile is invalid.");
+  }
+}
+
+function freezeHistoryRow(source, profile) {
   if (!source || typeof source !== "object" || Array.isArray(source)) {
     throw new TypeError("History row must be an object.");
   }
@@ -59,13 +112,14 @@ function freezeHistoryRow(source) {
   if (!Number.isSafeInteger(source.cycleId)) {
     throw new TypeError("History cycleId must be a safe integer.");
   }
-  if (!Number.isSafeInteger(source.chunkIndex)) {
+  if (profile.requireChunkIndex && !Number.isSafeInteger(source.chunkIndex)) {
     throw new TypeError("History chunkIndex must be a safe integer.");
   }
   return Object.freeze({ ...source });
 }
 
-function validateHistoryPage(page) {
+function validateHistoryPage(page, profile) {
+  assertProfile(profile);
   if (!page || !Array.isArray(page.rows) || typeof page.hasMore !== "boolean") {
     throw new TypeError("History page has an invalid shape.");
   }
@@ -77,7 +131,7 @@ function validateHistoryPage(page) {
   }
 
   return Object.freeze({
-    rows: Object.freeze(page.rows.map(freezeHistoryRow)),
+    rows: Object.freeze(page.rows.map((row) => freezeHistoryRow(row, profile))),
     hasMore: page.hasMore,
     nextCursor: page.nextCursor
   });
@@ -122,9 +176,13 @@ function validateSecurity(security) {
   });
 }
 
-export function createDetailModel(securityResponse, historyPage) {
+export function createDetailModel(
+  securityResponse,
+  historyPage,
+  profile = LEGACY_DETAIL_PROFILE
+) {
   const security = validateSecurity(securityResponse);
-  const history = validateHistoryPage(historyPage);
+  const history = validateHistoryPage(historyPage, profile);
 
   return Object.freeze({
     securityId: security.securityId,
@@ -138,11 +196,15 @@ export function createDetailModel(securityResponse, historyPage) {
   });
 }
 
-export function appendDetailHistory(model, historyPage) {
+export function appendDetailHistory(
+  model,
+  historyPage,
+  profile = LEGACY_DETAIL_PROFILE
+) {
   if (!model || !Array.isArray(model.rows)) {
     throw new TypeError("Detail model is required.");
   }
-  const page = validateHistoryPage(historyPage);
+  const page = validateHistoryPage(historyPage, profile);
 
   return Object.freeze({
     ...model,
@@ -152,18 +214,28 @@ export function appendDetailHistory(model, historyPage) {
   });
 }
 
-export function formatDetailSummaryValue(model, key) {
-  if (!model || !CURRENT_SUMMARY_KEYS.has(key)) {
+export function formatDetailSummaryValue(
+  model,
+  key,
+  profile = LEGACY_DETAIL_PROFILE
+) {
+  assertProfile(profile);
+  if (!model || !profile.summaryColumns.some((column) => column.key === key)) {
     throw new TypeError("Unknown Detail summary key.");
   }
   if (!model.isCurrent || model.currentRow === null) {
     return "—";
   }
-  return formatCurrentCell(key, model.currentRow[key]);
+  return formatCurrentCell(key, model.currentRow[key], profile.currentProfile);
 }
 
-export function formatHistoryCell(key, value) {
-  const column = historyByKey.get(key);
+export function formatHistoryCell(
+  key,
+  value,
+  profile = LEGACY_DETAIL_PROFILE
+) {
+  assertProfile(profile);
+  const column = profile.historyColumns.find((candidate) => candidate.key === key);
   if (!column) {
     throw new TypeError(`Unknown History column: ${key}`);
   }
