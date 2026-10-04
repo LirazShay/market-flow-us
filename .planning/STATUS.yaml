@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "5.1"
+current_node: "5.2"
 blockers: []
-next_action: "Chat 5 executes TREE nodes 5.1, 5.2 and 5.3 in allocation order after Chat 4 PR is merged and main required CI is green."
+next_action: "Chat 5 executes TREE node 5.2 next; node 5.1 is done with U.S. Fake Market proof green while legacy normal runtime remains unchanged until cutover."
 last_review: "R-US-EXEC-REOPEN-001"
