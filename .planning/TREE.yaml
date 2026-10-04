@@ -3,7 +3,7 @@ root: "0"
 
 nodes:
   "0":
-    status: draft
+    status: approved
     strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model while replacing only Israel-specific provider/data assumptions."
     tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and bounded live cutover/release closure."
     parallel_assumptions:
@@ -25,7 +25,7 @@ nodes:
     children: ["1", "2", "3", "4", "5", "6", "7"]
 
   "1":
-    status: draft
+    status: approved
     strategy: "The browser can repeatedly acquire one exact complete U.S. screener snapshot and turn it into the existing producer-cycle contract without Israel-specific provider logic."
     tactic: "Replace MapHeat/GetSecuritiesData acquisition with a ScreenerHulPaging3 adapter, then adapt Recorder membership handling so each validated full response becomes one one-segment cycle and universe revisions change only when canonical membership changes."
     parallel_assumptions:
@@ -42,7 +42,7 @@ nodes:
     children: ["1.1", "1.2"]
 
   "1.1":
-    status: draft
+    status: approved
     strategy: "ScreenerHulPaging3 responses are acquired and validated exactly before any row can enter product authority."
     tactic: "Implement the same-origin U.S. request builder/parser/validator from DATA_CONTRACT, preserving source metadata/raw rows and producing canonical String(PaperId) membership plus one-segment cycle data."
     parallel_assumptions:
@@ -58,7 +58,7 @@ nodes:
     children: []
 
   "1.2":
-    status: draft
+    status: approved
     strategy: "Continuous recording uses each validated U.S. response as one coherent cycle while preserving producer lifecycle and exact current-universe revision semantics."
     tactic: "Adapt Recorder/runtime composition to remove active chunk-size/delay assumptions, compare canonical membership, replace universe only when membership changes, and commit the same validated response under the acknowledged revision."
     parallel_assumptions:
@@ -74,7 +74,7 @@ nodes:
     children: []
 
   "2":
-    status: draft
+    status: approved
     strategy: "Node/DuckDB stores U.S. market authority atomically under schema v3 while preserving proven MarketScope transaction, history/latest and recovery behavior."
     tactic: "Introduce a fresh U.S. schema-v3 market projection, adapt universe/cycle persistence to the new fields and one-segment payload, and prove exact commit/rollback/session behavior with real DuckDB."
     parallel_assumptions:
@@ -92,7 +92,7 @@ nodes:
     children: ["2.1", "2.2", "2.3"]
 
   "2.1":
-    status: draft
+    status: approved
     strategy: "A fresh Market Flow US database has one explicit schema-v3 lifecycle and cannot accidentally reinterpret old MarketScope data."
     tactic: "Replace the Israeli market projections in schema bootstrap with the documented U.S. universe/history/latest columns, retain scanner_saved_queries, change the default DB filename, and fail closed on incompatible v1/v2 databases."
     parallel_assumptions:
@@ -107,7 +107,7 @@ nodes:
     children: []
 
   "2.2":
-    status: draft
+    status: approved
     strategy: "One complete U.S. cycle persists exact U.S. typed projections plus raw rows into history/latest transactionally."
     tactic: "Adapt cycle-authority validation/projection/SQL to schema v3 while preserving serialized cycle-id allocation, history append, full latest replacement, session counters and construction-only fault seams."
     parallel_assumptions:
@@ -123,7 +123,7 @@ nodes:
     children: []
 
   "2.3":
-    status: draft
+    status: approved
     strategy: "Browser producer ownership, universe revision and U.S. cycle ACKs work end-to-end against the real local service."
     tactic: "Adapt producer persistence/config validation only where U.S. Recorder configuration/universe metadata changed, then prove session start/heartbeat/universe replace/commit/failure/restart through real WebSocket and DuckDB."
     parallel_assumptions:
@@ -138,7 +138,7 @@ nodes:
     children: []
 
   "3":
-    status: draft
+    status: approved
     strategy: "Trusted reads and the Viewer expose the same proven Current and Detail/History experience using U.S. authority fields."
     tactic: "Adapt Node read projections first, then adapt Current and Detail/History browser models/surfaces while preserving paging, refresh, navigation, null handling and state restoration."
     parallel_assumptions:
@@ -154,7 +154,7 @@ nodes:
     children: ["3.1", "3.2", "3.3"]
 
   "3.1":
-    status: draft
+    status: approved
     strategy: "Node trusted reads return canonical U.S. Current, Security, History and status shapes from schema-v3 authority."
     tactic: "Replace Israeli read projections/metadata with PRODUCT_SPEC U.S. fields while preserving deterministic identity ordering, historical-only resolution, 500-row keyset paging and status semantics."
     parallel_assumptions:
@@ -169,7 +169,7 @@ nodes:
     children: []
 
   "3.2":
-    status: draft
+    status: approved
     strategy: "Current presents the authoritative U.S. universe with the required columns, default sort and preserved interaction/state behavior."
     tactic: "Adapt Current model/surface to the U.S. column list and display-name fallback while retaining existing refresh, diagnostics, keyboard navigation, missing-value formatting and sort/scroll restoration."
     parallel_assumptions:
@@ -183,7 +183,7 @@ nodes:
     children: []
 
   "3.3":
-    status: draft
+    status: approved
     strategy: "Detail/History presents current U.S. summary plus durable paged history, including historical-only securities."
     tactic: "Adapt Detail model/surface summary/history columns to U.S. fields while preserving open/back behavior, initial/continuation failures, paging and already-loaded-row retention."
     parallel_assumptions:
@@ -197,7 +197,7 @@ nodes:
     children: []
 
   "4":
-    status: draft
+    status: approved
     strategy: "Scanner remains the general strategy surface over U.S. authority and ships an editable staged-candidate query without introducing a strategy subsystem."
     tactic: "Keep Scanner admission/execution and saved-query ownership, adapt built-ins/schema documentation/tests to U.S. fields, and add the reviewed staged-ranking SQL as a normal built-in."
     parallel_assumptions:
@@ -215,7 +215,7 @@ nodes:
     children: ["4.1", "4.2"]
 
   "4.1":
-    status: draft
+    status: approved
     strategy: "The built-in/query-authoring layer describes and executes U.S. schema correctly, including staged candidate ranking."
     tactic: "Replace Israeli built-ins with U.S. examples, implement the reviewed staged SQL, and mechanically align docs/SCANNER_SQL_GUIDE.md with the actual schema/built-ins."
     parallel_assumptions:
@@ -231,7 +231,7 @@ nodes:
     children: []
 
   "4.2":
-    status: draft
+    status: approved
     strategy: "Existing Scanner execution, scheduling, saved-query CRUD and Detail navigation remain fully functional after U.S. schema migration."
     tactic: "Adapt only schema-sensitive Scanner/saved-query/browser tests and labels while preserving the proven admission engine, scheduler and persistence design."
     parallel_assumptions:
@@ -247,7 +247,7 @@ nodes:
     children: []
 
   "5":
-    status: draft
+    status: approved
     strategy: "The entire U.S. product can be exercised deterministically offline through the normal browser runtime, real local service and synthetic U.S. provider."
     tactic: "Replace the Fake Market provider behavior, integrate the normal U.S. runtime/demo with it, and adapt full Chromium E2E to prove product behavior including dynamic universe membership."
     parallel_assumptions:
@@ -263,7 +263,7 @@ nodes:
     children: ["5.1", "5.2", "5.3"]
 
   "5.1":
-    status: draft
+    status: approved
     strategy: "Fake Market models the U.S. screener contract deterministically without real authentication."
     tactic: "Replace MapHeat2/GetSecuritiesData fixtures with a stateful ScreenerHulPaging3 endpoint and synthetic U.S. rows/scenarios from TEST_STRATEGY."
     parallel_assumptions:
@@ -278,7 +278,7 @@ nodes:
     children: []
 
   "5.2":
-    status: draft
+    status: approved
     strategy: "The normal Market Flow US browser runtime and one-command demo compose U.S. provider, Recorder, Node authority and Viewer without special test-only product paths."
     tactic: "Adapt runtime composition/demo orchestration to the U.S. provider/Recorder contract while preserving same source graph, Viewer reuse, explicit service recovery and deterministic demo reset."
     parallel_assumptions:
@@ -293,7 +293,7 @@ nodes:
     children: []
 
   "5.3":
-    status: draft
+    status: approved
     strategy: "Chromium proves the complete offline U.S. user journey and failure/recovery behavior through the normal runtime."
     tactic: "Adapt existing E2E suites to U.S. fields/Fake Market and add full-response membership-change/staged-Scanner scenarios without replacing proven state-machine coverage."
     parallel_assumptions:
@@ -308,7 +308,7 @@ nodes:
     children: []
 
   "6":
-    status: draft
+    status: approved
     strategy: "Market Flow US is operationally packaged, diagnosable and measured at representative U.S. scale before any live release claim."
     tactic: "Complete product branding/local launchers, adapt diagnostics/live-verification tooling, and replace the representative workload with U.S.-scale data plus staged SQL measurement."
     parallel_assumptions:
@@ -325,7 +325,7 @@ nodes:
     children: ["6.1", "6.2", "6.3"]
 
   "6.1":
-    status: draft
+    status: approved
     strategy: "Local setup/build/run artifacts and user documentation consistently identify and operate Market Flow US."
     tactic: "Rename package, generated runtime/bookmarklet, default/demo DB, browser/global keys, CI/artifact labels and real-provider launcher; adapt START_HERE/USER_GUIDE while preserving thin-wrapper behavior."
     parallel_assumptions:
@@ -341,7 +341,7 @@ nodes:
     children: []
 
   "6.2":
-    status: draft
+    status: approved
     strategy: "Diagnostics and the SHA-bound bounded live-verification harness understand the U.S. acquisition path without exposing private session data."
     tactic: "Adapt provider checkpoints/messages/report identity and live harness from MapHeat/chunk acquisition to a bounded three-cycle ScreenerHulPaging3 repeatability run while preserving Support Snapshot and safe CLI fallback."
     parallel_assumptions:
@@ -357,7 +357,7 @@ nodes:
     children: []
 
   "6.3":
-    status: draft
+    status: approved
     strategy: "Representative U.S. scale is measured for persistence, reads, restart and staged Scanner SQL before release."
     tactic: "Replace the 561 x 600 Israeli workload with 4096 synthetic U.S. securities x 180 cycles, U.S. field generation and the required Scanner/staged query measurement/report."
     parallel_assumptions:
@@ -374,7 +374,7 @@ nodes:
     children: []
 
   "7":
-    status: draft
+    status: approved
     strategy: "The migrated product is proven offline, validated on the real authenticated U.S. provider boundary and released with no authoritative Israel-only runtime assumptions."
     tactic: "Run final offline gates on one candidate, execute the bounded live-provider gate, then perform final migration/documentation/main-state closure."
     parallel_assumptions:
@@ -392,7 +392,7 @@ nodes:
     children: ["7.1", "7.2", "7.3"]
 
   "7.1":
-    status: draft
+    status: approved
     strategy: "One release candidate passes every deterministic offline gate before live verification."
     tactic: "Run full Fast, full Browser and representative U.S. workload on the integrated candidate; fix any migration regressions at their owning leaf before accepting the candidate."
     parallel_assumptions:
@@ -410,7 +410,7 @@ nodes:
     children: []
 
   "7.2":
-    status: draft
+    status: approved
     strategy: "The release candidate works through the real authenticated Bank Leumi U.S. provider boundary without weakening security or authority semantics."
     tactic: "Run the SHA-bound bounded live gate for three consecutive complete cycles at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
     parallel_assumptions:
@@ -426,7 +426,7 @@ nodes:
     children: []
 
   "7.3":
-    status: draft
+    status: approved
     strategy: "Repository truth, local run instructions and final runtime contain only the intended Market Flow US product direction and are ready for normal use from main."
     tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, update durable docs/status/handoff truth, merge through green CI and verify main."
     parallel_assumptions:
