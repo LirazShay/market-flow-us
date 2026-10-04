@@ -1,131 +1,129 @@
-# Executor Handoff
-This file is the compact GitHub-only bootstrap for numbered implementation chats.
+# Market Flow US Executor Handoff
 
-It does not duplicate task descriptions. `.planning/TREE.yaml` owns Strategy, Tactic, dependencies and success evidence. `.planning/EXECUTION.yaml` owns chat allocation and execution state.
+This is the compact GitHub-only bootstrap for numbered implementation chats.
+
+`.planning/TREE.yaml` owns Strategy, Tactic, dependencies and success evidence.
+`.planning/EXECUTION.yaml` owns chat allocation/state only.
 
 ## Authorization gate
 
-Production implementation is allowed only when both are true:
+Production implementation is allowed only when all are true:
 
 ```text
 .planning/STATUS.yaml -> plan_state: frozen
 STATUS.yaml -> phase: implementation
+.planning/EXECUTION.yaml -> allocated (not chats: {})
 ```
 
-If either condition is false, do not implement.
+Otherwise do not code.
 
 ## Fresh executor read order
 
-For a message such as `אני צאט N תתחיל`:
+For `אני צאט N תתחיל`:
 
 1. fetch current `main`;
-2. read root `AGENTS.md`;
+2. read `AGENTS.md`;
 3. read root `STATUS.yaml`;
 4. read `.planning/STATUS.yaml`;
 5. read this file;
 6. read `.planning/EXECUTION.yaml` and locate Chat N;
-7. read only Chat N's assigned sections from `.planning/TREE.yaml`;
-8. read assigned-node dependencies only as needed;
-9. check dependency states in `.planning/EXECUTION.yaml`;
-10. load only the routed contract sections below;
-11. if the chat is not the current available chat, report the blocker and do not code;
-12. if available, use one focused feature branch for the chat work unit and execute assigned nodes in listed order.
+7. read only Chat N's assigned TREE leaf nodes and their direct dependencies;
+8. verify dependency states in EXECUTION;
+9. load only routed durable contracts/tests/code;
+10. if Chat N is not the current available chat, report the blocker and do not code;
+11. otherwise use one focused feature branch for the chat work unit and execute its nodes in listed order.
 
 Do not ask the user to restate the plan.
 
 ## Context routing
 
-| Node family | Primary durable contracts |
+| Node family | Primary durable contracts/evidence |
 |---|---|
-| `1.*` | `docs/TECHNICAL_SPEC.md`, `docs/TEST_STRATEGY.md`, relevant resolved decisions only |
-| `2.*` | `docs/DATA_CONTRACT.md`, `docs/TECHNICAL_SPEC.md`, `docs/TEST_STRATEGY.md`; Source Extraction only for exact migration provenance |
-| `3.*` | `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_SPEC.md`, `docs/TEST_STRATEGY.md` |
-| `4.*` | `docs/PRODUCT_SPEC.md`, `docs/TECHNICAL_SPEC.md`, `docs/TEST_STRATEGY.md` |
-| `5.1`–`5.5` | Scanner sections of Product Spec, Technical Spec and Test Strategy |
-| `5.6` | Scanner sections of Product Spec, Technical Spec and Test Strategy + `docs/SCANNER_SQL_GUIDE.md` |
-| `6.1` | Fake Market section of Test Strategy + Data Contract + relevant runtime/provider Technical Spec sections |
-| `6.2` | demo sections of Test Strategy + relevant runtime/product-flow contracts |
-| `6.5` | Diagnosability sections of Product Spec, Technical Spec and Test Strategy + existing failure/error contracts reused by the matrix |
-| `6.6` | `docs/TEST_STRATEGY.md` §15 + package/test scripts + current Fast/Browser tests/workflows + Actions baseline evidence |
-| `6.3`, `6.4` | Test Strategy + contracts exercised by those suites |
-| `7.1` | workload section of Test Strategy + relevant DB/read/Scanner contracts |
-| `7.2` | real-provider section of Test Strategy + Data Contract + transport/ownership contracts |
-| `7.3` | root STATUS, AGENTS, README and all verification owners required by its TREE success evidence |
+| `1.*` U.S. acquisition | DATA_CONTRACT, PRODUCT_SPEC flows 2–5, TECHNICAL_SPEC provider/Recorder, TEST_STRATEGY unit/provider sections |
+| `2.*` schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence/protocol, TEST_STRATEGY service/schema sections |
+| `3.*` trusted reads/Viewer | PRODUCT_REQUIREMENTS Current/History, PRODUCT_SPEC Current/Detail, TECHNICAL_SPEC trusted reads, TEST_STRATEGY Viewer/E2E |
+| `4.*` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
+| `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
+| `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
+| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY live gate |
+| `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC workload, Scanner staged-query contract |
+| `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/workload final gates + all affected leaf evidence |
+| `7.2` real provider | DATA_CONTRACT external facts, PRODUCT_SPEC live verification, TEST_STRATEGY real-provider gate |
+| `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, US_MIGRATION_FILE_MAP and TREE success evidence |
 
-For every node, TREE `success_evidence` is the final definition of done.
+For every node, TREE `success_evidence` is the definition of done.
 
-### Diagnosability routing rule
+## Diagnosability rule
 
-For every implementation node, also apply the diagnosability-by-design rules in `AGENTS.md` when the node introduces or changes an operational boundary or failure path. Do not add a generic logging framework by default; add only the smallest checkpoint/error/support evidence required to localize that capability's failures.
+Whenever an assigned node changes an operational boundary/failure path, preserve/add the smallest stable checkpoint/error/support evidence required by AGENTS.
 
-Node `6.5` is the dedicated cross-cutting convergence pass for the shared diagnostics contract. It owns consistent checkpoint/error semantics and support-snapshot proof across already-built Browser/Node/demo boundaries; later CI/release nodes must preserve and surface that evidence rather than inventing a parallel diagnostics mechanism.
+Do not add a parallel logging framework.
 
-## Market Flow usage
+## Donor repository rule
 
-Do not preload `market-flow`.
+Do not preload donor repos.
 
-MarketScope contracts are sufficient for normal implementation. Consult `LirazShay/market-flow` only when an assigned node explicitly benefits from source reuse/proven implementation evidence or a concrete contradiction is discovered. Then use `docs/SOURCE_EXTRACTION.md` to locate only the relevant provenance.
+Normal execution uses Market Flow US durable truth.
 
-## Availability rule
+Consult `market-scope`, `trading-us` or `market-flow` only when:
+- the assigned node explicitly cites provenance that is not sufficiently extracted here; or
+- a concrete contradiction is discovered.
 
-A node is available only when every TREE `depends_on` node is `done` in `EXECUTION.yaml`.
+Any newly resolved donor fact that materially affects implementation must be written back into Market Flow US durable docs before continuing.
+
+## Availability
+
+A leaf is available only when every TREE `depends_on` leaf is `done` in EXECUTION.
 
 Within one chat:
+- execute assigned nodes in listed order;
+- same-chat dependencies unlock as earlier nodes become done;
+- do not skip a blocked earlier assigned node.
 
-- execute nodes in listed order;
-- same-chat dependencies become available as earlier nodes become `done`;
-- do not skip a blocked earlier assigned node merely because a later independent node could run.
+Across chats, root STATUS points to the current numbered chat.
 
-Across chats, root `STATUS.yaml` points to the current numbered chat.
+## Work-unit lifecycle
 
-## Branch and verification
-
-One executor chat normally owns one focused branch/PR.
-
-For each assigned node:
+For each assigned leaf:
 
 ```text
-set in_progress on the working branch
+set in_progress on working branch
 → implement smallest sufficient contract
-→ targeted proof
+→ focused proof
 → required broader verification
-→ TREE success_evidence satisfied
+→ satisfy TREE success_evidence
 → set done + concise result
-→ advance root/planning STATUS to the next available node/chat on the same branch
+→ advance STATUS/EXECUTION on same branch
 ```
 
-Before merge, the same work-unit PR must already contain its durable execution/status transition. After merge, verify green main CI and audit repository open PRs. Do not open a second evidence-only closure PR merely to record the merge SHA/main-CI run; GitHub is the canonical source for those facts. Under the serial executor, an unexpected open PR blocks handoff.
-
-If a material planning defect is discovered, follow the reopening rule in `AGENTS.md`; do not code around a known-bad frozen plan.
-
-## Handoff invariants
-
-Historical initial implementation handoff had 28 pending leaves and began at Chat 1 / node `1.1`.
-
-After the test-feedback replan is re-frozen:
-
-- completed implementation nodes remain durable and are not reset;
-- Chat 10 remains on `5.6`; no Scanner work is repeated;
-- Chat 11 owns diagnosability convergence `6.5`; pre-replan seed work on `feat/chat-10-diagnosability-ci` remains reference-only until reconciled;
-- Chat 12 owns the bounded Test Feedback Optimization mini-project `6.6`;
-- Chat 13 owns final CI wiring `6.3 → 6.4` on the optimized test infrastructure;
-- `6.3` and `6.4` depend on `6.6`, so final CI does not fossilize the measured slow proof shape;
-- workload/live/final closure shift to Chats 14/15/16 respectively;
-- root STATUS remains the operational pointer and the normal authorization gate is still `plan_state: frozen` + root `phase: implementation`.
-
-
-## Test-feedback optimization handoff
-
-Node `6.6` is a bounded mini-project between diagnosability and final CI wiring.
-
-Baseline authority:
+Then:
 
 ```text
-Actions run 36348375187
-job total ~79s
-Chromium provisioning ~26s
-full Fast ~15s
-full Browser ~16s
+PR
+→ required CI green
+→ review diff
+→ squash merge
+→ verify main CI
+→ audit open PRs
 ```
 
-Optimize measured waiting/setup/lifecycle causes first. Do not remove full-suite obligations or replace real service/Chromium proof with mocks merely to hit timing targets. Node 6.3/6.4 must consume the optimized commands/infrastructure after 6.6 is done.
+Do not open a second evidence-only closure PR.
+
+## Planning defect discovered during execution
+
+Follow `FRAMEWORK.md` execution-reopen rules:
+
+- stop the affected leaf;
+- mark it blocked with factual reason;
+- root phase -> planning;
+- plan_state -> active;
+- no node remains in_progress;
+- reopen only the smallest affected planning area;
+- preserve valid done work;
+- re-freeze and repair allocation before resuming.
+
+## Completion discipline
+
+A chat/node result is not product completion.
+
+Overall product completion additionally requires TREE 7.1, 7.2 and 7.3 outcomes plus the normal PR/merge/main-green closure in AGENTS.
