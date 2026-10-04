@@ -18,107 +18,62 @@ authenticated provider page
 → Dynamic SQL Scanner
 ```
 
-The current project goal is market acquisition, durable history, analysis and SQL scanning. Automated order execution through IBKR is a possible later project and is not part of this migration plan.
+The current migration scope is market acquisition, durable history, analysis and SQL scanning. Automated order execution through IBKR is a possible later project and is not part of this conversion.
 
 ## Strategy boundary
 
-The earlier `trading-us` documents described a fixed multi-horizon Survivor Filter as if it were the architecture of the product. That is no longer the product contract.
+The earlier `trading-us` documents over-specialized the product around one fixed multi-horizon Survivor Filter.
+
+That is no longer the product architecture.
 
 Market Flow US keeps the same general analysis model as MarketScope:
 
 - collect the broad U.S. universe;
-- preserve every successful market snapshot;
+- preserve every successful complete snapshot in history;
 - expose Current and per-security History;
 - allow arbitrary safe read-only SQL through Scanner;
-- keep query definitions/saved queries easy to change.
+- keep built-in and saved queries easy to change.
 
-A staged filter such as:
+The staged candidate idea belongs in SQL.
+
+A query may, for example:
 
 ```text
-10s positive
-→ 20s positive
-→ 30s positive
+compare current Price with the nearest prior sample around 10s
+→ if passed, compare 20s
+→ then 30s
+→ 45s
 → ...
+→ compute highest contiguous stage reached
+→ sort candidates by stage reached
 ```
 
-is a **Scanner query**, not a special strategy engine and not a hard-coded product pipeline.
+This is a Scanner query, not a special engine.
 
-The user may create, change or remove such SQL without replacing infrastructure.
+## No new temporal mechanism
 
-## Temporal-history capability
+The U.S. conversion does **not** add:
 
-The database will support fast historical comparisons without repeated timestamp searches in every Scanner query.
+- predecessor-ID columns;
+- dynamic schema;
+- horizon configuration;
+- materialized percentage columns;
+- a dedicated Strategy Engine.
 
-Configured historical horizons are expressed canonically as **whole seconds**.
+The existing `history` table remains the historical source. Scanner SQL performs the required temporal lookup.
 
-Initial requested set:
-
-```text
-10, 20, 30, 45, 60, 90, 120
-```
-
-The set is configuration, not a permanent code constant.
-
-For every configured horizon `N`, the physical historical row owns one real nullable column:
-
-```text
-prev_<N>s_snapshot_id
-```
-
-Examples:
-
-```text
-prev_10s_snapshot_id
-prev_20s_snapshot_id
-prev_30s_snapshot_id
-prev_45s_snapshot_id
-prev_60s_snapshot_id
-prev_90s_snapshot_id
-prev_120s_snapshot_id
-```
-
-Each column stores only the ID of the selected prior snapshot. It does **not** duplicate price, BID, ASK, percentage change or another metric.
-
-The selected predecessor is:
-
-```text
-latest snapshot of the same security
-where previous.collected_at_ms <= current.collected_at_ms - horizon_seconds*1000
-```
-
-If none exists, the link is `NULL`.
-
-Scanner joins the linked snapshot only when a query needs its values.
-
-## Configuration and physical schema
-
-Logical configuration may change over time while the hot analytical path remains wide/physical.
-
-Adding a new horizon means:
-
-```text
-validate whole-second horizon
-→ add prev_<N>s_snapshot_id column if missing
-→ backfill links from existing history
-→ activate the horizon
-→ populate it for future commits
-```
-
-Removing/deactivating a horizon does not immediately drop its physical column. This avoids destructive migrations and permits inexpensive reactivation.
-
-Horizon configuration controls historical link columns only. Derived trading metrics remain SQL expressions unless a later measured bottleneck proves materialization necessary.
+If representative U.S. workload evidence later proves that this query is materially too slow, optimize only that measured bottleneck in a focused replan. Do not pre-optimize the architecture.
 
 ## Data principles
 
 - Preserve the complete raw provider row.
-- Promote commonly used verified fields to real typed columns.
+- Promote useful observed fields to real typed columns.
 - Preserve `missing != null != 0 != ""`.
-- Every successful market poll is one coherent cycle/snapshot authority boundary.
-- Failed/incomplete cycles never become current authority.
-- Every historical row receives a stable `snapshot_id`.
-- Current/latest state points to authoritative history rather than duplicating the full row.
+- Every successful full-market response is one coherent cycle/snapshot authority boundary.
+- Failed/incomplete responses never advance Current authority.
+- Keep the imported MarketScope `history` + full-row `latest` mechanism unless evidence requires otherwise.
 - History is retained unless an explicit future retention policy is approved.
-- Provider semantics that are not yet proven remain source-named rather than being renamed into stronger claims.
+- Provider semantics that are not independently proven remain source-named rather than being renamed into stronger claims.
 
 ## U.S. provider direction
 
@@ -132,22 +87,21 @@ On 2026-10-04 a request with `pageCount=5000` returned the complete observed res
 
 `4015` is evidence, not a constant.
 
-Unlike the Israeli MapHeat2 + GetSecuritiesData path, the observed U.S. screener response currently contains both universe identity/metadata and quote-like market fields in one response. The final U.S. collector therefore treats one validated full screener response as one market snapshot.
+Unlike the Israeli MapHeat2 + GetSecuritiesData path, the observed U.S. screener response currently contains identity/metadata and quote-like market fields together. One validated complete screener response therefore becomes one logical Market Flow US cycle.
 
 ## Explicit non-goals for this migration
 
 - IBKR order placement.
 - Automated buying/selling.
 - Portfolio/risk engine.
-- Score/ranking engine.
 - Hard-coded Survivor Filter engine.
+- Dedicated ranking/strategy runtime.
+- Dynamic horizon schema.
 - TradingView dependency.
 - Replacing DuckDB/Node/WebSocket without evidence.
 - Rewriting the proven MarketScope infrastructure from scratch.
 
 ## Governing rule
-
-When choosing between reuse and replacement:
 
 ```text
 preserve proven MarketScope behavior
