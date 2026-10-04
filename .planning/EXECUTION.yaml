@@ -14,7 +14,7 @@ chats:
 
   "3":
     nodes:
-      "3.1": { state: pending, result: null }
+      "3.1": { state: in_progress, result: null }
       "3.2": { state: pending, result: null }
       "3.3": { state: pending, result: null }
 
