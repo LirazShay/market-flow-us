@@ -1,759 +1,386 @@
-# MarketScope Data Contract
+# Market Flow US Data Contract
 
-## Ownership
+## 1. Ownership and evidence level
 
-This file owns provider acquisition facts, canonical market identity, complete-cycle integrity, raw-value fidelity, and the provider-neutral data objects that cross the Browser → Node boundary.
+This document owns the provider/data truth used by Market Flow US.
 
-It does **not** own:
+The Bank Leumi U.S. endpoint is empirically observed, not an official public API contract. Every field is therefore either:
 
-- WebSocket envelope/message framing;
-- Node database schema/transactions;
-- Viewer formatting;
-- Scanner SQL admission;
-- live operational status.
+- **proven shape** — observed and reproduced;
+- **source-named semantic** — useful but exact external meaning may remain empirical;
+- **unknown** — must not be silently upgraded into a stronger claim.
 
-Those belong to `docs/TECHNICAL_SPEC.md`, `docs/PRODUCT_SPEC.md`, and `STATUS.yaml`.
+Raw provider rows are retained so later discoveries do not destroy information.
 
+## 2. Provider endpoint
 
----
-
-## 1. Evidence vocabulary
-
-Material provider/data statements use these labels where useful:
-
-- **Verified** — directly proved by executable V1 tests and/or explicit recorded live evidence.
-- **Accepted** — deliberate current product/design requirement supported by evidence but not an eternal provider guarantee.
-- **Inferred** — reasonable interpretation needed for planning but not yet directly proved.
-- **Unknown** — not supported strongly enough to claim.
-
-A private provider API observation is never promoted into an eternal contract merely because it worked once.
-
----
-
-## 2. Provider boundary and authority
-
-### 2.1 Browser provider ownership
-
-**Accepted**
-
-Provider authentication/session context stays in the authenticated provider browser page.
-
-The Browser owns:
+Current source:
 
 ```text
-MapHeat2
-→ dynamic universe
-→ sequential GetSecuritiesData chunks
-→ exact complete-cycle validation
-→ provider-neutral validated objects
+GET /lti/lti-app/api/Market/ScreenerHulPaging3
 ```
 
-Node never receives browser cookies, authorization headers, session tokens, account identifiers, or authenticated raw transport dumps.
+The request runs in the already-authenticated provider browser context using a relative same-origin URL.
 
-### 2.2 Endpoint roles
+No credentials/cookies/tokens are encoded by Market Flow US.
 
-**Accepted based on observed behavior**
+## 3. Current full-result request
 
-`MapHeat2` is the universe/discovery/metadata source.
-
-`GetSecuritiesData` is the repeatedly refreshed detailed/dynamic security snapshot source.
-
-**Verified**
-
-The join relation used by this product is:
+Initial request parameters:
 
 ```text
-String(MapHeat2.PaperId)
-==
-String(GetSecuritiesData.Key)
-```
-
-Recorded historical evidence matched 561/561 securities. The number 561 is evidence from one universe observation, **not** a size contract.
-
-### 2.3 Non-atomic provider calls
-
-**Verified**
-
-MapHeat2 and GetSecuritiesData are separate calls made at different times.
-
-Therefore MarketScope must never claim that dynamic values returned by the two endpoints form one atomic provider snapshot or are required to be equal.
-
-Use MapHeat2 primarily for universe/name/metadata and GetSecuritiesData for the repeated detailed market snapshot.
-
----
-
-## 3. MapHeat2 universe acquisition
-
-### 3.1 Relative same-origin endpoint
-
-Current proven V1 adapter uses:
-
-```text
-/lti/lti-app/api/MarketFast/MapHeat2
-```
-
-with the V1 filter/query shape, including:
-
-```text
+region=1
+Country=2
 indexIdArray=0
-sectorIdAndTatSectorArray=0;0
-showOnlyDual=0
+paperType=1
+sectorIdArray=0
+subSectorIdArray=0
+changePercentFrom=-999999999
+changePercentTo=999999999
+volumeFrom=-999999999
+volumeTo=999999999
+marketCapFrom=-999999999999999
+marketCapTo=999999999999999
+beginYearChangePercentFrom=-999999999
+beginYearChangePercentTo=999999999
+month12ChangePercentFrom=-999999999
+month12ChangePercentTo=999999999
+month36ChangePercentFrom=-999999999
+month36ChangePercentTo=999999999
+EsdRatingModeSelected=0
+EsdRatingModeValueSelected=0
 page=1
-pageCount=<requested count>
-orderFieldName=DailyNumDeals
-order=DESC
+pageCount=5000
+orderFieldName=DailyVolume
+orderDir=DESC
 rt=true
 ```
 
-plus the existing broad numeric range parameters used to avoid artificially filtering the universe.
+`pageCount=5000` is the currently proven practical request size, not a permanent provider guarantee.
 
-The exact private endpoint/query shape is **provider-adapter evidence**, not a promise that the provider can never change it.
+If the provider later reports more rows than returned, the snapshot fails closed. Do not silently treat a partial page as a complete universe.
 
-### 3.2 Two-step complete-universe load
+## 4. Observed response envelope
 
-The proven baseline is:
+Expected high-level shape:
 
 ```text
-MapHeat2(pageCount=1)
-→ validate positive integer recordCount
-→ MapHeat2(pageCount=recordCount)
-→ validate same recordCount
-→ validate records.length == recordCount
-→ validate every PaperId
-→ validate unique canonical IDs
+data.ScreenerHulPaging.recordCount
+data.ScreenerHulPaging.maxDateChange
+data.ScreenerHulPaging.records[]
+
+resultCode
+rsCount
+rtIsr
+rtUsa
+logtm
+reqtm
+responsetm
+serverId
+version
 ```
 
-Failures are explicit. An invalid/missing structure is not an empty universe.
-
-### 3.3 Required universe facts
-
-Each usable MapHeat record requires a non-null, non-undefined, non-empty `PaperId`.
-
-Canonical MapHeat identity is:
+The following envelope fields are diagnostic/source metadata, not business identity:
 
 ```text
-securityId = String(rawMapHeat.PaperId)
+maxDateChange
+rsCount
+rtIsr
+rtUsa
+logtm
+reqtm
+responsetm
+serverId
+version
 ```
 
-This is source-specific. MarketScope does **not** interpret the phrase “PaperId or Key” as a fallback search through arbitrary fields in one record:
+## 5. Complete-response validation
 
-- MapHeat record → use `PaperId`;
-- Security record → use `Key`.
+A response may become an authoritative cycle only when all are true:
 
-Duplicate IDs after string canonicalization fail the universe load.
+1. HTTP response is 2xx.
+2. JSON parsing succeeds.
+3. `data.ScreenerHulPaging` exists and is an object.
+4. `recordCount` is a positive safe integer.
+5. `records` is an array.
+6. `records.length === recordCount`.
+7. every row is an object;
+8. every row has non-null/non-empty `PaperId`;
+9. `String(PaperId)` is unique across the response.
+10. if `resultCode` is present, it is `0`.
 
-Record order is preserved by the adapter for deterministic chunk planning, but array position is never identity.
+The collector records warnings/diagnostics, but does not necessarily fail the snapshot, when:
 
-### 3.4 Dynamic size
+- `Symbol` is missing;
+- quote-like fields are null/missing;
+- `TradeDateTime` appears old;
+- `serverId` or `version` changes;
+- `recordCount` changes;
+- `rtUsa` is false or absent.
 
-Universe size comes only from the validated provider `recordCount`.
+Warnings must not fabricate field values.
 
-Never hardcode:
+## 6. Canonical identity
+
+Canonical product identity:
 
 ```text
-561
-187 × 3
-or any other observed universe shape
+securityId = String(PaperId)
 ```
 
-Historical evidence supports a conservative chunk size around 187, but exact provider thresholds are not known.
+Do not key history/current by:
 
-Recorded evidence:
+- array index;
+- `Id`;
+- `Symbol`;
+- `PaperIdYatab`;
+- display name.
+
+`Symbol` may change and is query/display metadata.
+
+## 7. Observed source row fields
+
+Observed fields include:
+
+### Identity / display
 
 ```text
-187 IDs → HTTP 200
-200 IDs → HTTP 200
-250 IDs → HTTP 200
-400 IDs → HTTP 403
-561 IDs → HTTP 403
+Id
+PaperId
+PaperNameEng
+PaperNameHeb
+Symbol
+ExchangeName
+PaperIdYatab
+CountryId
+CountryName
+CountryNameEng
+PaperType
 ```
 
-**Unknown:** the exact reason/threshold behind those 403 responses.
-
-Therefore old `chunkSize=187` is a conservative proven baseline, not an eternal provider law.
-
----
-
-## 4. Validated universe object
-
-Browser collection may retain additional runtime helpers, but the provider-neutral universe object that Node needs is:
+### Market-like fields
 
 ```text
-ValidatedUniverse = {
-  loadedAtMs: finite non-negative number,
-  recordCount: positive integer,
-
-  securities: [
-    {
-      securityId: non-empty canonical string,
-      paperName: provider value or null,
-      mapHeatDateChange: provider value or null,
-      rawMapHeat: full raw MapHeat record
-    },
-    ...
-  ]
-}
+Price
+ChangePercent
+DailyHigh
+DailyLow
+YearHigh
+YearLow
+DailyVolume
+BeginYearChangePercent
+Month12ChangePercent
+Month36ChangePercent
+TradeDateTime
+AskRate
+BidRate
+YesterdayRate
+PaperMarketCap
 ```
 
-Rules:
-
-- `securities.length == recordCount`;
-- every `securityId` is unique;
-- security order follows the validated MapHeat records but is not an identity mechanism;
-- `rawMapHeat` preserves the complete provider record;
-- `paperName` is metadata convenience, not identity;
-- absence of optional metadata does not invalidate a record whose required identity is valid.
-
-Browser-internal collection mechanics such as `paperIds`, chunk arrays, chunk sizes, or collection config need not be persisted by Node merely because V1 kept them in its in-memory universe object.
-
-The later protocol must guarantee that a newly validated universe replacement is acknowledged by Node before a complete cycle validated against that new universe can become authoritative. This ordering removes the need to duplicate the whole universe in every cycle payload.
-
----
-
-## 5. GetSecuritiesData chunk acquisition
-
-### 5.1 Relative same-origin endpoint
-
-Current proven endpoint:
+### Other observed fields
 
 ```text
-/lti/lti-app/api/SecuritiesFast/GetSecuritiesData
+Logo
+ESGRatingId
+ESGScope
 ```
 
-Current observed query shape:
+No consumer may assume every row contains every field.
+
+## 8. Typed projection
+
+The U.S. DuckDB public market projection promotes the following source fields while retaining `raw_data`.
+
+### VARCHAR
 
 ```text
-securityIds=<comma-separated encoded IDs>
-responseType=1
-is_gto=true
-force=false
+Symbol
+PaperNameEng
+PaperNameHeb
+ExchangeName
+TradeDateTime
+CountryName
+CountryNameEng
 ```
 
-### 5.2 Requested ID normalization
-
-A chunk request:
-
-- must contain at least one ID;
-- rejects `null`, `undefined`, and empty string;
-- canonicalizes each ID with `String(value)`;
-- preserves requested order;
-- rejects duplicates after canonicalization.
-
-### 5.3 Required response shape
-
-A successful provider response must contain:
+### DOUBLE
 
 ```text
-data.SecuritiesData.Table.Security[]
+Price
+ChangePercent
+DailyHigh
+DailyLow
+YearHigh
+YearLow
+DailyVolume
+BeginYearChangePercent
+Month12ChangePercent
+Month36ChangePercent
+AskRate
+BidRate
+YesterdayRate
+PaperMarketCap
+PaperIdYatab
+CountryId
+PaperType
+ESGRatingId
+ESGScope
 ```
 
-Each usable Security object requires a non-null, non-undefined, non-empty `Key`.
+Projection rule:
 
-Canonical Security-record identity is:
+- finite JavaScript number -> DOUBLE;
+- string -> VARCHAR;
+- wrong type / absent / non-finite -> SQL NULL;
+- raw JSON preserves the original value/property presence.
+
+`PaperId` is represented separately as canonical `security_id`.
+
+## 9. Source semantics that remain intentionally unnormalized
+
+### Price
+
+Persist as source column `Price`.
+
+Do not rename it to `Last` or `LastPrice` until provider/live evidence establishes that stronger semantic.
+
+### DailyVolume
+
+Persist as `DailyVolume`.
+
+Do not describe its unit more strongly than the source field name until verified.
+
+### PaperMarketCap
+
+Persist as `PaperMarketCap`.
+
+Exact unit remains empirical.
+
+### TradeDateTime
+
+Persist the delivered string exactly as `TradeDateTime`.
+
+Do not parse it into the authoritative collection timestamp or assume timezone/session semantics.
+
+### collected_at_ms
+
+Browser-generated collection time is the authoritative local acquisition timestamp for history ordering and relative-time SQL.
+
+It is independent from `TradeDateTime`.
+
+## 10. Validated snapshot/cycle shape
+
+To minimize conversion risk, Market Flow US preserves the existing complete-cycle protocol shape.
+
+One full U.S. response maps to exactly one collection segment:
 
 ```text
-securityId = String(rawSecurity.Key)
+chunkIndex = 0
+chunk_count = 1
 ```
 
-`Table.AsOfDate` is preserved as `serverAsOfDate`; if absent it becomes `null`.
-
-### 5.4 Exact chunk membership
-
-For every chunk:
-
-- every response record has Key;
-- response Keys are unique after canonicalization;
-- every requested ID appears exactly once;
-- no unrequested ID appears.
-
-Provider response order **may differ** from request order and is accepted. Membership is matched by canonical ID, never by array index.
-
-A chunk with missing or unexpected IDs fails.
-
-### 5.5 Chunk timing
-
-The existing adapter records:
+Cycle:
 
 ```text
+status = complete
 startedAtMs
-responseReceivedAtMs
 completedAtMs
-requestDurationMs
-parseDurationMs
 durationMs
+requested = recordCount
+received = records.length
+unique = canonical unique PaperId count
+missing = 0
+duplicates = 0
+unexpected = 0
+chunks = [single response timing/metadata entry]
+securities = one item per row
 ```
 
-with:
+Each security item contains:
 
 ```text
-startedAtMs
-<= responseReceivedAtMs
-<= completedAtMs
+securityId
+chunkIndex = 0
+chunkReceivedAtMs
+collectedAtMs
+sourceMetadata
+data = raw provider row
 ```
 
-Current V1 measurement points are:
+This preserves the proven Node protocol/persistence boundary without pretending the U.S. source is actually chunked.
 
-- `startedAtMs` — immediately before `fetch`;
-- `responseReceivedAtMs` — after the HTTP response object resolves;
-- `completedAtMs` — after JSON parsing completes and immediately before synchronous result validation/building.
+## 11. Universe contract
 
-A security row later carries:
+A validated response also defines its canonical current membership.
 
-- `chunkReceivedAtMs = responseReceivedAtMs`;
-- `collectedAtMs = completedAtMs`.
-
-These are local Browser timing facts. They are not exchange timestamps.
-
----
-
-## 6. Validated chunk result
-
-The Browser's validated chunk result has the logical shape:
+Universe row metadata includes at least:
 
 ```text
-ValidatedChunkResult = {
-  requestedIds: canonical string[],
-  requestedCount: integer,
-
-  responseIds: canonical string[],
-  receivedCount: integer,
-  uniqueCount: integer,
-
-  records: full raw Security[],
-  serverAsOfDate: provider value or null,
-  httpStatus: integer,
-
-  timing: {
-    startedAtMs,
-    responseReceivedAtMs,
-    completedAtMs,
-    requestDurationMs,
-    parseDurationMs,
-    durationMs
-  }
-}
+security_id
+is_current
+universe_revision
+first_seen_at_ms
+last_seen_at_ms
+symbol
+paper_name_eng
+paper_name_heb
+exchange_name
+raw_source
 ```
 
-This is primarily a Browser validation/building object. The final Node cycle payload does not need to persist every helper field separately when the same fact is represented in the normalized cycle/chunk summaries and raw Security rows.
+On the first valid response, browser replaces universe then commits that same snapshot.
 
-Raw Security objects are preserved, including explicit `0` and `null`.
+On later responses:
 
----
+- identical canonical membership -> reuse accepted universe revision;
+- changed membership -> replace universe from the newly validated response, receive new revision, then commit that same response.
 
-## 7. Sequential complete-cycle construction
+A changed row order does not constitute a membership change.
 
-### 7.1 Proven baseline
+## 12. Null / zero / missing contract
 
-**Accepted until evidence deliberately changes it**
-
-Chunks execute sequentially.
+These remain distinct source facts:
 
 ```text
-fetch chunk 0
-→ optional delay
-→ fetch chunk 1
-→ optional delay
-→ ...
-→ fetch final chunk
-→ no trailing delay
-→ whole-cycle validation
+property missing
+property present = null
+property present = ""
+property present = 0
 ```
 
-At most one chunk fetch is in flight in the proven baseline.
+Typed SQL projection may map wrong-type/missing values to SQL NULL, but `raw_data` preserves the original distinction.
 
-Parallel collection is not a free optimization. It would require a revised contract for ordering, provider stability, backpressure, timing and completeness.
+UI formatting must never display numeric zero as missing.
 
-### 7.2 Chunk delay
+## 13. Dynamic count contract
 
-V1 default:
+Observed on 2026-10-04:
 
 ```text
-chunkDelayMs = 1000
+recordCount = 4015
+records.length = 4015
 ```
 
-The delay occurs only between chunks.
-
-This default is implementation evidence, not a permanent MarketScope product requirement.
-
-### 7.3 Cycle-level validation
-
-Before a cycle can be called complete, Browser validates all of the following again:
-
-- universe `recordCount` is valid;
-- universe canonical IDs are unique;
-- concatenated planned chunks exactly equal the universe canonical ID list;
-- result count equals planned chunk count;
-- each result is bound to the expected chunk;
-- each chunk has exact record count;
-- each raw Security has Key;
-- each chunk response exactly matches its requested membership;
-- no duplicate canonical Key occurs inside a chunk;
-- no duplicate canonical Key occurs across chunks;
-- no expected universe ID is missing;
-- no unexpected ID exists.
-
-If any check fails, no complete cycle exists.
-
-### 7.4 Response order is not authority
-
-Within a validated cycle, `securities[]` preserves the actual provider response order within each sequential chunk.
-
-That order is diagnostic/observational only.
-
-Downstream Node persistence and reads must use canonical `securityId`, never security-array position, as identity.
-
----
-
-## 8. CompleteCycle — exact Browser → Node data object
-
-The MarketScope complete-cycle payload is deliberately close to the proven V1 object while making all integrity counters explicit:
-
-```text
-CompleteCycle = {
-  status: "complete",
-
-  startedAtMs: finite non-negative number,
-  completedAtMs: finite non-negative number,
-  durationMs: completedAtMs - startedAtMs,
-
-  requested: positive integer,
-  received: positive integer,
-  unique: positive integer,
-  missing: 0,
-  duplicates: 0,
-  unexpected: 0,
-
-  chunks: [
-    {
-      chunkIndex: zero-based integer,
-
-      requested: positive integer,
-      received: positive integer,
-      unique: positive integer,
-
-      requestStartedAtMs: finite non-negative number,
-      receivedAtMs: finite non-negative number,
-      completedAtMs: finite non-negative number,
-      durationMs: finite non-negative number,
-
-      serverAsOfDate: provider value or null,
-      httpStatus: successful HTTP status
-    },
-    ...
-  ],
-
-  securities: [
-    {
-      securityId: canonical non-empty string,
-      chunkIndex: zero-based integer,
-      chunkReceivedAtMs: finite non-negative number,
-      collectedAtMs: finite non-negative number,
-      serverAsOfDate: provider value or null,
-      data: full raw GetSecuritiesData Security object
-    },
-    ...
-  ]
-}
-```
-
-### 8.1 Complete-cycle success invariant
-
-For a successful object:
-
-```text
-requested == received == unique == securities.length
-missing == 0
-duplicates == 0
-unexpected == 0
-```
-
-Every `securities[].securityId` is unique and matches `String(securities[].data.Key)`.
-
-The set of cycle SecurityIds equals the currently acknowledged validated universe set exactly.
-
-### 8.2 Node-assigned facts are absent
-
-The Browser does **not** invent durable database identity.
-
-Therefore Browser → Node `CompleteCycle` does not contain:
-
-- Node `cycleId`;
-- Node `sessionId`;
-- database row IDs;
-- DuckDB-specific fields.
-
-Node assigns durable session/cycle identity only when it accepts/commits the data under the Technical Spec.
-
-### 8.3 Raw Security fidelity
-
-`data` is the complete raw Security object returned by the provider.
-
-Do not project it down to only currently-used UI fields before durable persistence.
-
-Preserve logical JSON value distinctions:
-
-```text
-0
-!= null
-!= ""
-!= missing property
-```
-
-Do not apply generic falsy fallback such as `value || null`.
-
-JSON field order and exact HTTP response bytes are not product facts; the logical object/field/value content is.
-
----
-
-## 9. Universe → cycle ordering rule
-
-Because universe metadata is transported separately from every cycle, transport planning must preserve this causal order:
-
-```text
-validate universe U
-→ send/replace U at Node
-→ wait for successful acknowledgement
-→ collect/validate cycle against U
-→ send CompleteCycle
-→ Node validates cycle membership against currently acknowledged U
-→ commit or reject
-```
-
-If Browser refreshes the universe:
-
-```text
-new universe U2
-→ replace/ACK U2
-→ only then commit cycles validated against U2
-```
-
-This is a data-integrity requirement. Exact WebSocket message names/request IDs remain owned by `TECHNICAL_SPEC.md`.
-
----
-
-## 10. Failed cycle versus authoritative market data
-
-A failure object is diagnostics only.
-
-It never updates:
-
-- authoritative Current/latest;
-- authoritative history;
-- current universe membership merely by implication.
-
-### 10.1 Browser-side failed-cycle report
-
-The minimum provider/validation failure report sent to Node, when the local service is available, is:
-
-```text
-FailedCycleReport = {
-  phase: "universe" | "chunk-fetch" | "cycle-validation",
-
-  startedAtMs: finite non-negative number,
-  failedAtMs: finite non-negative number,
-
-  requested: integer | null,
-  received: integer | null,
-  unique: integer | null,
-  missing: integer | null,
-  duplicates: integer | null,
-  unexpected: integer | null,
-
-  error: {
-    name: non-empty string,
-    message: string
-  }
-}
-```
-
-Rules:
-
-- unavailable counters remain `null`; never fabricate zero;
-- no raw partial Security payload is authoritative merely because some chunks finished;
-- provider credentials/headers/session data are never included;
-- stack traces are not required in the durable failed-cycle market record;
-- richer sanitized transient diagnostics may exist locally/test-side but are not market authority.
-
-V1 evidence already distinguishes failure diagnostics from successful commit and allows counters to be null when a cycle was never fully built.
-
-### 10.2 Node-side commit failure
-
-A Browser object may be fully valid and still fail Node persistence.
-
-That is **not** a successful cycle.
-
-Node records/returns the failure according to the later Technical Spec, rolls back authoritative mutation, and sends no successful commit acknowledgement.
-
-The Browser must not expose the cycle as completed before Node commit succeeds.
-
----
-
-## 11. Recorder scheduling/in-memory success boundary
-
-The durable Recorder behavior carried forward from V1 is:
-
-- no overlapping cycles;
-- first cycle may start immediately;
-- target snapshot cadence is start-to-start, not a guarantee that one cycle finishes within the interval;
-- if a cycle runs longer than the target interval, the next cycle may start immediately **after** the previous one settles, never concurrently;
-- universe may be cached or deliberately refreshed, but a refreshed universe must pass the universe→cycle ordering rule above;
-- provider/validation failure preserves the last committed authority;
-- commit failure preserves the last committed authority;
-- a completed cycle is exposed in Recorder success state only after the authoritative commit acknowledgement.
-
-Historical V1 defaults:
-
-```text
-snapshotIntervalMs = 3000
-chunkDelayMs = 1000
-chunkSize = 187
-refreshUniverseEveryCycle = false
-```
-
-These values are **evidence/default history, not immutable MarketScope product requirements**. Later product/technical planning may retain or change them deliberately.
-
----
-
-## 12. Raw provider semantics
-
-### 12.1 Required fidelity
-
-**Accepted / required**
-
-Preserve:
-
-- full raw MapHeat record;
-- full raw GetSecuritiesData Security record;
-- explicit `null`;
-- numeric `0`;
-- empty string;
-- missing property.
-
-### 12.2 Known nullable Level 1 fields
-
-Historical live evidence showed Level 1 BID/ASK price/volume fields can be null.
-
-Models must therefore not make those fields non-null merely because the security is active.
-
-### 12.3 Levels 2–5
-
-Historical tested Equity snapshot evidence showed GetSecuritiesData Level 2–5 price/volume/change fields were null across the observed 561-security snapshot.
-
-Therefore MarketScope must not design product behavior that depends on those fields until another source/condition is explicitly verified.
-
-This is not a claim that they can never become populated.
-
-### 12.4 Unknown semantics
-
-Unknown provider fields remain raw/unknown.
-
-Do not infer business meaning from:
-
-- field names alone;
-- one sample;
-- equality with another endpoint;
-- UI assumptions.
-
----
-
-## 13. Explicit failure conditions
-
-The affected universe/chunk/cycle fails on any of:
-
-- provider HTTP failure;
-- invalid JSON;
-- missing required response structure;
-- invalid universe `recordCount`;
-- count changing between MapHeat count/full requests;
-- incomplete MapHeat records array;
-- missing/empty PaperId;
-- duplicate PaperId after canonicalization;
-- empty requested chunk;
-- duplicate requested IDs after canonicalization;
-- missing/empty Security Key;
-- duplicate response Keys;
-- missing requested IDs;
-- unexpected IDs;
-- invalid/out-of-order local timing facts;
-- wrong chunk bound to a result;
-- missing/extra chunk result;
-- cross-chunk duplicate;
-- whole-cycle membership mismatch;
-- Node commit rejection/failure.
-
-No failure path is converted into a successful empty market snapshot.
-
----
-
-## 14. Evidence map
-
-### Verified by direct executable V1 evidence
-
-- relative MapHeat2/GetSecuritiesData adapter paths and query construction;
-- dynamic recordCount validation;
-- full-map count/completeness validation;
-- canonical string identity and duplicate rejection;
-- chunk creation preserves order/remainder;
-- GetSecuritiesData response order may differ from request order;
-- exact chunk membership validation;
-- raw `0` and `null` preservation;
-- missing AsOfDate → null;
-- timing validation/derived durations;
-- exact whole-cycle membership;
-- cross-chunk duplicate rejection;
-- sequential fetch with delay only between chunks;
-- immediate stop on chunk-fetch failure;
-- no cycle success exposure before commit resolves;
-- commit failure never exposes uncommitted cycle as success;
-- failure diagnostics are separate from authority.
-
-Primary executable sources:
-
-- `recorder/pure/universe-logic.js`;
-- `recorder/pure/securities-chunk-logic.js`;
-- `recorder/pure/cycle-logic.js`;
-- `recorder/pure/recorder-loop-logic.js`;
-- their direct unit tests.
-
-### Verified / Accepted from durable Market Flow evidence
-
-- MapHeat2 role — D-004;
-- GetSecuritiesData role — D-005;
-- PaperId↔Key join — D-006;
-- dynamic universe / do not hardcode 561 — D-007;
-- conservative batching evidence and unknown 403 threshold — D-008;
-- sequential baseline — D-009;
-- null/zero distinction — D-010;
-- nullable Level 1 evidence — D-011;
-- no Level 2–5 dependency from tested snapshot — D-012;
-- endpoints are not atomic — D-013;
-- prefer GetSecuritiesData for refreshed dynamic values — D-014;
-- raw payload preservation — D-015;
-- three-surface/Node continuity — D-043/D-045.
-
-### Unknown / live-verification boundary
-
-Still not promoted to permanent facts:
-
-- long-term stability of private endpoint paths/parameters;
-- exact cause or permanent threshold of provider 403 batching behavior;
-- semantics of provider fields not independently evidenced;
-- future population behavior of currently-null optional fields;
-- current authenticated provider/session behavior until bounded live verification runs.
-
----
-
-## 15. Implementation guardrails
-
-The implemented provider/data boundary follows these guardrails:
-
-1. reuse/adapt pure V1 validation logic only if it still matches this clean contract;
-2. do not port IndexedDB authority;
-3. do not move provider authentication into Node;
-4. do not weaken exact membership checks for convenience;
-5. do not reorder/join securities by array position;
-6. do not normalize away raw null/zero/empty/missing distinctions;
-7. do not ACK success before Node commit;
-8. do not optimize chunk concurrency before evidence;
-9. add direct tests for the exact Browser→Node objects defined here;
-10. keep provider-specific parsing at the Browser adapter edge.
+This proves only the tested screener result set at that time.
+
+The product must not hard-code 4015 or claim this endpoint equals every U.S.-listed security.
+
+## 14. External facts reserved for live verification
+
+Still empirical:
+
+- safe sustained polling cadence;
+- throttling/rate-limit behavior;
+- session-expiry response;
+- market-open versus closed behavior;
+- pre-market/after-hours behavior;
+- exact `rt=true` freshness semantics;
+- exchange/consolidation coverage;
+- exact `DailyVolume` unit;
+- exact `PaperMarketCap` unit;
+- exact `Price` semantics;
+- exact timezone/session semantics of `TradeDateTime`;
+- permanent maximum `pageCount`.
+
+Until verified, code/docs must remain conservative.

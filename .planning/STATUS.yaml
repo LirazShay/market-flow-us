@@ -1,8 +1,7 @@
-version: 1
+version: 2
 plan_state: frozen
-current_node: null
+current_stage: "implementation"
+current_node: "1.1"
 blockers: []
-frozen_from_review: "R-046"
-frozen_reviewed_tree_sha: "576eb6eb4662bb5e1aa13631f1f1e6a8032194a7"
-next_action: "Implementation execution is closed. Remaining operational action is the external local real-provider gate in docs/LIVE_VERIFICATION.md, tracked only in root STATUS.yaml."
-last_review: "R-050"
+next_action: "Chat 1 executes TREE nodes 1.1 then 1.2 from fresh main after this planning PR is merged and main CI is green."
+last_review: "R-US-FINAL"

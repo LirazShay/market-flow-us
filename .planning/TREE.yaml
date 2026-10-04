@@ -1,660 +1,444 @@
-version: 1
+version: 2
 root: "0"
 
 nodes:
   "0":
     status: approved
-    strategy: "MarketScope is a clean, independently understandable, locally runnable and verifiable market-analysis product whose Browser, Node/DuckDB authority, Current, Detail/History and Scanner work together from this repository alone."
-    tactic: "Implement the product through seven necessary capability branches: runtime foundation, authoritative ingestion, trusted reads, Viewer surfaces, Scanner, canonical offline verification/demo, and scale/live/release closure."
+    strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model while replacing only Israel-specific provider/data assumptions."
+    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and bounded live cutover/release closure."
     parallel_assumptions:
-      - "The completed Product, Data, Technical and Test contracts remove the material design uncertainty needed for implementation decomposition."
-      - "A compact causal tree can cover the detailed MASTER_COVERAGE without mirroring every granular obligation as a leaf."
+      - "The exhaustive 124-file migration audit and reviewed U.S. contracts identify the material conversion boundaries."
+      - "Preserving proven MarketScope mechanisms is lower-risk than reconstructing them."
+      - "Strategy-specific candidate selection can remain editable Scanner SQL unless workload evidence proves a narrower optimization necessary."
     necessary_assumptions: []
     sufficiency_assumptions:
-      - "All seven capability branches are jointly required: buildability, authority, reads, user surfaces, Scanner, deterministic offline proof, and release evidence."
-      - "Each implementation leaf includes its own proof; verification is not postponed to one final testing phase."
+      - "Provider acquisition alone is insufficient without U.S. persistence, reads, UI, Scanner, deterministic proof and release evidence."
+      - "The seven branches jointly cover every required migration area from the audited contracts while excluding order execution and other non-goals."
     success_evidence:
-      - "Every implementation-ready leaf is completed with its success evidence."
-      - "Current, Detail/History, Scanner and diagnostics satisfy PRODUCT_SPEC.md against one Node/DuckDB authority."
-      - "Fake Market demo, Fast CI and Browser CI are green on the final candidate."
-      - "Representative workload evidence exists and no unresolved correctness/performance blocker remains."
-      - "The bounded live-provider gate is PASS, or only genuine external market/session execution is explicitly pending while the harness and all offline proof are complete."
-      - "Final repository/handoff documentation matches implemented truth and normal future work no longer requires Market Flow."
+      - "Every implementation-ready leaf is completed with its stated evidence."
+      - "The authoritative runtime no longer depends on MapHeat2/GetSecuritiesData or Israeli typed market fields."
+      - "Current, Detail/History and Scanner operate over schema-v3 U.S. authority."
+      - "Fast CI, Browser CI and the representative U.S. workload are green on the final candidate."
+      - "The bounded authenticated U.S. provider gate is PASS."
+      - "Final branding/docs/launchers describe Market Flow US and main is green with no blocking defect."
     depends_on: []
     children: ["1", "2", "3", "4", "5", "6", "7"]
 
   "1":
     status: approved
-    strategy: "MarketScope has one minimal buildable runtime foundation on which every product capability can be implemented and tested consistently."
-    tactic: "Create the root package/build layout, protocol contract, hardened DuckDB/service bootstrap, WebSocket role boundary and reusable unit/service test harness."
+    strategy: "The browser can repeatedly acquire one exact complete U.S. screener snapshot and turn it into the existing producer-cycle contract without Israel-specific provider logic."
+    tactic: "Replace MapHeat/GetSecuritiesData acquisition with a ScreenerHulPaging3 adapter, then adapt Recorder membership handling so each validated full response becomes one one-segment cycle and universe revisions change only when canonical membership changes."
     parallel_assumptions:
-      - "One root npm project with Node 24, native ESM, esbuild, ws and @duckdb/node-api is sufficient for this local product."
+      - "The proven one-request U.S. screener response contains both current membership and the source rows needed for one cycle."
+      - "Keeping the existing cycle/protocol boundary with one physical segment minimizes migration risk."
     necessary_assumptions:
-      - "Without a stable common runtime foundation, later Browser, Node and verification work would invent incompatible assumptions."
+      - "No downstream persistence or UI can be correct until the browser produces exact U.S. authority candidates."
     sufficiency_assumptions:
-      - "Build, protocol, database, transport and test-harness leaves together provide the common executable substrate for all later branches."
+      - "Exact U.S. provider validation plus Recorder/universe-revision integration is sufficient to replace the Israel-specific acquisition boundary."
     success_evidence:
-      - "Fresh checkout installs pinned dependencies, builds the normal browser runtime, boots schema-v1 DuckDB, accepts valid role handshakes and can run isolated real-service tests."
+      - "Synthetic provider tests prove exact completeness, canonical PaperId identity, row-order independence, failure cases and raw-row fidelity."
+      - "Recorder tests prove one-segment cycles, non-overlap, membership-change revision behavior and fail-closed failure reporting."
     depends_on: []
-    children: ["1.1", "1.2", "1.3", "1.4", "1.5"]
+    children: ["1.1", "1.2"]
 
   "1.1":
     status: approved
-    strategy: "The repository has one deterministic package/build/run foundation for Browser and Node code."
-    tactic: "Create the agreed source layout, root package/lockfile, Node-24 engine contract, esbuild browser bundle/bookmarklet pipeline and initial run/test scripts without adding product frameworks."
+    strategy: "ScreenerHulPaging3 responses are acquired and validated exactly before any row can enter product authority."
+    tactic: "Implement the same-origin U.S. request builder/parser/validator from DATA_CONTRACT, preserving source metadata/raw rows and producing canonical String(PaperId) membership plus one-segment cycle data."
     parallel_assumptions:
-      - "esbuild can emit both normal runtime and launcher from one browser source graph."
+      - "The extracted provider evidence is sufficient to implement deterministic validation without inventing unproven semantics."
     necessary_assumptions:
-      - "All later leaves require reproducible package/build artifacts and paths."
+      - "Without exact provider validation, partial/duplicate/malformed U.S. data could become authoritative."
     sufficiency_assumptions: []
     success_evidence:
-      - "npm ci succeeds on Node 24 using the committed lockfile."
-      - "npm run build:browser emits the normal self-contained runtime and bookmarklet artifact from one source graph."
-      - "Build tests prove the bookmarklet begins with javascript:, is one line, avoids whole-runtime percent encoding, and has no arbitrary absolute size ceiling."
-      - "Generated/local DB artifacts are ignored and no React/ORM/Express/Nest/workspace/Docker layer is introduced."
+      - "Unit tests cover request parameters, successful full response, recordCount mismatch, malformed payload, HTTP failure, missing/duplicate PaperId, row reorder and null/zero/missing fields."
+      - "No test or production code hard-codes 4015 as universe size."
+      - "Price/DailyVolume/PaperMarketCap/TradeDateTime remain source-shaped and raw_data retains original properties."
     depends_on: []
     children: []
 
   "1.2":
     status: approved
-    strategy: "Browser and Node share one exact protocol-v1 contract with deterministic validation and safe error shaping."
-    tactic: "Implement the small shared envelope, operation validators, role permissions, success/error shapes and stable error codes from TECHNICAL_SPEC.md."
+    strategy: "Continuous recording uses each validated U.S. response as one coherent cycle while preserving producer lifecycle and exact current-universe revision semantics."
+    tactic: "Adapt Recorder/runtime composition to remove active chunk-size/delay assumptions, compare canonical membership, replace universe only when membership changes, and commit the same validated response under the acknowledged revision."
     parallel_assumptions:
-      - "The finite operation set is small enough for explicit validators and does not need a generic RPC framework."
+      - "The imported Recorder lifecycle/scheduling/ACK behavior remains valid when provider collection becomes one full request."
     necessary_assumptions:
-      - "Every producer/viewer/scanner interaction depends on one shared validated message contract."
+      - "The U.S. provider adapter alone does not coordinate universe revisions, repeated cadence, stop/failure behavior or producer ACKs."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit tests cover version/type/requestId/payload validation and every operation payload boundary."
-      - "Unknown messages, role violations and unsafe error details are rejected exactly as specified."
+      - "Unit/service tests prove same-membership reuse, add/remove membership revision, row-order invariance, no overlapping cycles, explicit stop and provider-failure fail-closed behavior."
+      - "One U.S. cycle reports chunkIndex 0 and chunk_count 1 without pretending the provider is multi-chunk."
+      - "Initial demo/offline snapshot interval remains 3000 ms and is not encoded into DB schema."
     depends_on: ["1.1"]
-    children: []
-
-  "1.3":
-    status: approved
-    strategy: "The localhost service owns one hardened native DuckDB with deterministic schema-v1 startup, reopen and shutdown behavior."
-    tactic: "Implement configuration parsing, DuckDB hardening, the six-table schema, writer/viewer/scanner connections, schema-version validation and startup/shutdown resource lifecycle."
-    parallel_assumptions:
-      - "One DuckDB instance with a small fixed connection set is sufficient for the single-user authority model."
-    necessary_assumptions:
-      - "Persistence, reads and Scanner execution all require a valid database lifecycle first."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Real-DuckDB tests prove fresh bootstrap, reopen, required tables, unsupported-version fail-closed behavior and hardening settings."
-      - "Startup marks stale running sessions interrupted before readiness; graceful shutdown reopens cleanly."
-    depends_on: ["1.1"]
-    children: []
-
-  "1.4":
-    status: approved
-    strategy: "The loopback service exposes a minimal secure WebSocket transport with one producer and multiple viewers."
-    tactic: "Implement node:http upgrade handling plus ws, exact Origin allowlist, max payload, hello-first role binding, producer exclusivity, viewer multiplicity and sanitized protocol errors."
-    parallel_assumptions:
-      - "Native browser WebSocket plus ws is sufficient without Express or a generalized transport layer."
-    necessary_assumptions:
-      - "All Browser→Node behavior requires an explicit role-aware transport boundary."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Real-socket tests prove allowed/missing/wrong Origin, hello-first enforcement, malformed/oversized rejection and request correlation."
-      - "Exactly one producer is accepted, a second is explicitly rejected, and multiple viewers remain usable."
-    depends_on: ["1.2", "1.3"]
-    children: []
-
-  "1.5":
-    status: approved
-    strategy: "Implementation leaves can prove service behavior cheaply against real sockets and real temporary DuckDB."
-    tactic: "Create node:test-based unit/service utilities for isolated temp DBs, ephemeral service ports, real ws clients, durable-state inspection and construction-time persistence fault injection."
-    parallel_assumptions:
-      - "Node's built-in test runner is sufficient outside browser E2E and avoids Jest/Vitest ceremony."
-    necessary_assumptions:
-      - "Atomic persistence and recovery work needs reusable real-service proof infrastructure rather than mocks."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Tests can start/stop isolated real services with real temporary DuckDB files and ws clients."
-      - "Fault hooks are unavailable through production protocol and parallel tests cannot share DB paths/ports accidentally."
-    depends_on: ["1.4"]
     children: []
 
   "2":
     status: approved
-    strategy: "Only exact validated provider cycles become durable MarketScope authority, with failures unable to corrupt prior committed state."
-    tactic: "Adapt proven provider/Recorder logic into the Browser runtime, then connect it through producer protocol to transactional universe/cycle/session persistence and fail-closed recovery."
+    strategy: "Node/DuckDB stores U.S. market authority atomically under schema v3 while preserving proven MarketScope transaction, history/latest and recovery behavior."
+    tactic: "Introduce a fresh U.S. schema-v3 market projection, adapt universe/cycle persistence to the new fields and one-segment payload, and prove exact commit/rollback/session behavior with real DuckDB."
     parallel_assumptions:
-      - "The extracted V1 pure acquisition/validation behavior can be reused or adapted without carrying IndexedDB authority."
+      - "The existing six market-authority tables plus scanner_saved_queries remain sufficient; only their U.S. projection and compatibility policy need change."
+      - "Rejecting old MarketScope DB schemas is safer than semantically converting Israeli history into U.S. facts."
     necessary_assumptions:
-      - "Without authoritative ingestion, every read/UI/Scanner surface would operate on incomplete or untrusted data."
+      - "Validated browser data is not trusted product authority until Node persists it atomically."
     sufficiency_assumptions:
-      - "Provider validation, Recorder scheduling, session/universe persistence, atomic cycle commit, Browser protocol bridging and heartbeat/recovery together cover the complete producer path."
+      - "Schema-v3 lifecycle, U.S. projection persistence and end-to-end producer authority together provide durable U.S. authority without redesigning DuckDB."
     success_evidence:
-      - "A complete validated universe and cycle travel Browser→Node and advance latest/history only after COMMIT ACK."
-      - "Malformed/incomplete provider data, commit failure and transport loss leave prior authority intact."
+      - "Fresh DB boots as schema v3 with documented tables/columns and hardened connections."
+      - "Old MarketScope v1/v2 DBs are rejected without mutation."
+      - "Real-DuckDB fault tests prove all-or-nothing history/latest/session authority."
     depends_on: []
-    children: ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6"]
+    children: ["2.1", "2.2", "2.3"]
 
   "2.1":
     status: approved
-    strategy: "The Browser converts provider responses into validated provider-neutral universe/chunk/cycle facts without losing raw fidelity."
-    tactic: "Port/adapt the proven pure universe, chunk and cycle logic plus thin same-origin MapHeat2/GetSecuritiesData adapters according to DATA_CONTRACT.md."
+    strategy: "A fresh Market Flow US database has one explicit schema-v3 lifecycle and cannot accidentally reinterpret old MarketScope data."
+    tactic: "Replace the Israeli market projections in schema bootstrap with the documented U.S. universe/history/latest columns, retain scanner_saved_queries, change the default DB filename, and fail closed on incompatible v1/v2 databases."
     parallel_assumptions:
-      - "The extracted V1 pure logic already covers the required identity/completeness invariants."
+      - "A new product DB filename plus explicit incompatible-version rejection removes the need for a semantic Israel-to-US data migration."
     necessary_assumptions:
-      - "No Recorder schedule or Node commit can be trusted until provider identity, membership, timing and raw-value semantics are enforced."
+      - "Persistence cannot safely accept U.S. rows until table/schema truth matches the U.S. contract."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit tests prove PaperId/Key canonicalization, dynamic universe count, response-order independence and exact requested/received/unique/missing/duplicate/unexpected validation."
-      - "Raw null/zero/empty/missing values are preserved and CompleteCycle/ValidatedUniverse match DATA_CONTRACT.md with no Node IDs/auth secrets."
-    depends_on: ["1.1"]
+      - "Database lifecycle tests prove fresh v3 bootstrap, reopen, required U.S. columns, saved-query table, new default filename and v1/v2 no-mutation rejection."
+      - "DuckDB hardening and connection ownership remain unchanged."
+    depends_on: []
     children: []
 
   "2.2":
     status: approved
-    strategy: "Browser collection executes complete provider cycles sequentially without overlap or catch-up corruption."
-    tactic: "Implement chunk sequencing, timing capture, Recorder scheduling and universe-refresh ordering around the pure provider logic, with one cycle and one chunk request active at a time."
+    strategy: "One complete U.S. cycle persists exact U.S. typed projections plus raw rows into history/latest transactionally."
+    tactic: "Adapt cycle-authority validation/projection/SQL to schema v3 while preserving serialized cycle-id allocation, history append, full latest replacement, session counters and construction-only fault seams."
     parallel_assumptions:
-      - "The proven sequential baseline is sufficient until workload/live evidence justifies concurrency."
+      - "The existing transaction model remains correct because the U.S. response still represents one complete current universe."
     necessary_assumptions:
-      - "Pure validation alone does not produce the continuous complete-cycle stream required by the product."
+      - "Schema v3 alone does not make U.S. cycle commits correct."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit tests prove sequential chunks, delay only between chunks, no trailing delay, immediate first cycle, no overlapping cycles and no catch-up burst."
-      - "Provider failure stops the affected cycle immediately without fabricating success."
+      - "Real-DuckDB tests prove U.S. field fidelity, null/zero/missing projection rules, raw_data preservation, exact membership rejection and successful history/latest replacement."
+      - "Fault injection at each persistence phase leaves prior authority unchanged."
+      - "History count grows by exactly one row per committed security per cycle."
     depends_on: ["2.1"]
     children: []
 
   "2.3":
     status: approved
-    strategy: "Node owns producer session state and an atomically acknowledged durable universe revision."
-    tactic: "Implement producer.session.start/stop, heartbeat persistence primitives and producer.universe.replace with revalidation, all-seen metadata retention, current-membership revisioning and commit-before-ACK."
+    strategy: "Browser producer ownership, universe revision and U.S. cycle ACKs work end-to-end against the real local service."
+    tactic: "Adapt producer persistence/config validation only where U.S. Recorder configuration/universe metadata changed, then prove session start/heartbeat/universe replace/commit/failure/restart through real WebSocket and DuckDB."
     parallel_assumptions:
-      - "Separating universe revision from cycle payload keeps transport small while preserving membership causality."
+      - "The existing protocol message families can carry the U.S. conversion without a protocol rewrite."
     necessary_assumptions:
-      - "Cycle commits require an active Node-owned session and a known acknowledged universe revision."
+      - "Provider and DB units can both be correct while the actual producer/session integration between them is still wrong."
     sufficiency_assumptions: []
     success_evidence:
-      - "Real-service tests prove session lifecycle, sanitized config persistence, atomic revisioned universe replacement and inactive metadata retention."
-      - "Invalid universe and U1..U3 fault injection roll back with no revision ACK."
-    depends_on: ["1.5"]
-    children: []
-
-  "2.4":
-    status: approved
-    strategy: "A successful complete cycle advances cycles/history/latest/session atomically, while a failed cycle records diagnostics without changing market authority."
-    tactic: "Implement the one-writer complete-cycle and failed-cycle transactions, Node cycle ID allocation, raw+typed history projection, whole-latest replacement and ACK-after-COMMIT behavior."
-    parallel_assumptions:
-      - "Whole-latest replacement matches the complete-universe invariant and one serialized writer makes MAX(cycle_id)+1 deterministic."
-    necessary_assumptions:
-      - "Trustworthy Current/history requires one atomic persistence boundary."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Real-service tests prove valid commit updates cycles/history/latest/session and ACKs only after COMMIT."
-      - "F1..F5 fault injection proves rollback leaves prior latest/history/session completion state unchanged."
-      - "UniverseRevision/membership/raw-identity mismatches are rejected; failed-cycle persistence never touches latest/history."
-      - "History grows exactly with successful cycles and no automatic retention/cleanup silently deletes committed production history."
-    depends_on: ["2.3"]
-    children: []
-
-  "2.5":
-    status: approved
-    strategy: "The Browser producer bridges Recorder output to Node authority and exposes success only after durable acknowledgements."
-    tactic: "Implement Browser hello/session/universe/cycle/failure/stop protocol flow, commit ACK handling and metadata-only commit hints."
-    parallel_assumptions:
-      - "Separating provider acquisition from persistence transport preserves the intended authority boundary."
-    necessary_assumptions:
-      - "Recorder output and Node transactions do not form a working product until Browser success/failure state is tied to Node ACKs."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Integration tests prove universe ACK precedes cycles for that revision and cycle success is not exposed before commit ACK."
-      - "Commit hint contains no market rows and is emitted only after successful commit."
-      - "No credential/cookie/auth/account data enters protocol payloads or logs."
-    depends_on: ["2.2", "2.4"]
-    children: []
-
-  "2.6":
-    status: approved
-    strategy: "Producer ownership fails closed on heartbeat/service/transport loss and restarts without misreporting stale sessions."
-    tactic: "Implement heartbeat cadence/stale handling, socket-loss interruption, pending-request failure, Browser stop-on-disconnect, startup stale-session recovery and explicit relaunch semantics."
-    parallel_assumptions:
-      - "Explicit recovery is sufficient for v1 and avoids reconnect/offline-queue/replay complexity."
-    necessary_assumptions:
-      - "Without failure ownership, dead transport/stale producer state could falsely appear authoritative."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Real-service tests prove heartbeat update, stale timeout, producer release and interrupted sessions."
-      - "Browser integration proves disconnect fails pending authority work and stops collection rather than queueing offline cycles."
-      - "Restart preserves committed data and no stale session remains RUNNING."
-    depends_on: ["2.5"]
+      - "Real-service tests prove first universe ACK + same-response commit, unchanged-membership cycles, changed-membership revision, failure recording, heartbeat and restart recovery."
+      - "Sanitized producer config no longer requires Israel-only chunk settings."
+    depends_on: ["1.2", "2.2"]
     children: []
 
   "3":
     status: approved
-    strategy: "Browser consumers can retrieve all trusted current, diagnostic and historical data through narrow Node read operations."
-    tactic: "Implement current/status, security/history and one browser viewer client over committed DuckDB authority with deterministic pagination and historical-only support."
+    strategy: "Trusted reads and the Viewer expose the same proven Current and Detail/History experience using U.S. authority fields."
+    tactic: "Adapt Node read projections first, then adapt Current and Detail/History browser models/surfaces while preserving paging, refresh, navigation, null handling and state restoration."
     parallel_assumptions:
-      - "A small set of purpose-built reads is sufficient and avoids a generic RPC data layer."
+      - "The Viewer architecture is source-field agnostic once trusted Node reads expose the correct U.S. row shape."
     necessary_assumptions:
-      - "Current/Detail cannot be correct if browser views still depend on provider calls or direct database access."
+      - "Persisted U.S. data has little product value if Current and historical inspection still expect Israeli fields."
     sufficiency_assumptions:
-      - "Current/status, security/history and one viewer client cover all non-Scanner browser consumption."
+      - "Trusted read adaptation plus both Viewer surfaces covers the user-facing non-Scanner analysis experience."
     success_evidence:
-      - "Read operations return PRODUCT_SPEC logical shapes from committed Node/DuckDB state only."
-      - "Historical-only security and 500-row deterministic continuation work without provider access."
+      - "Service tests prove U.S. Current/security/history/status shapes and historical-only lookup."
+      - "Browser/unit tests prove the specified U.S. columns, default sorting, pagination and state preservation."
     depends_on: []
     children: ["3.1", "3.2", "3.3"]
 
   "3.1":
     status: approved
-    strategy: "Current rows and operational status are derived only from committed authority with the required health semantics."
-    tactic: "Implement viewer.current.get and viewer.status.get from latest LEFT JOIN universe plus session/cycle/history aggregates."
+    strategy: "Node trusted reads return canonical U.S. Current, Security, History and status shapes from schema-v3 authority."
+    tactic: "Replace Israeli read projections/metadata with PRODUCT_SPEC U.S. fields while preserving deterministic identity ordering, historical-only resolution, 500-row keyset paging and status semantics."
     parallel_assumptions:
-      - "The extracted Current/diagnostics contract maps directly to existing authority tables without another cache."
+      - "Read SQL/protocol shapes can change fields without changing paging/authority algorithms."
     necessary_assumptions:
-      - "Current UI and diagnostics require trusted Node reads before rendering can be migrated."
+      - "Viewer models must not query DuckDB directly or reconstruct U.S. data semantics independently."
     sufficiency_assumptions: []
     success_evidence:
-      - "Real-service tests prove latest-derived rows, metadata enrichment/no-drop behavior, summary counters and zero-vs-missing diagnostics."
-      - "Health precedence UNKNOWN/RUNNING/STALE/STOPPED/ERROR matches PRODUCT_SPEC."
-    depends_on: ["2.6"]
+      - "Real-service tests cover empty/current/historical-only security, U.S. row fields, 500-row continuation, cursor binding and unchanged status counts."
+      - "Display-name source fields are available for the specified fallback."
+    depends_on: ["2.2"]
     children: []
 
   "3.2":
     status: approved
-    strategy: "One canonical SecurityId resolves to current metadata and deterministic persisted history, including historical-only securities."
-    tactic: "Implement viewer.security.get and viewer.history.page with current/universe/history existence resolution, 500-row keyset pagination and opaque validated cursor."
+    strategy: "Current presents the authoritative U.S. universe with the required columns, default sort and preserved interaction/state behavior."
+    tactic: "Adapt Current model/surface to the U.S. column list and display-name fallback while retaining existing refresh, diagnostics, keyboard navigation, missing-value formatting and sort/scroll restoration."
     parallel_assumptions:
-      - "ORDER BY collected_at_ms DESC, cycle_id DESC provides deterministic continuation across equal timestamps."
+      - "The imported Current surface behavior is already correct; only data-field and branding assumptions require migration."
     necessary_assumptions:
-      - "Detail/History requires a read contract independent of Current-row presence and IndexedDB cursor mechanics."
+      - "Trusted U.S. reads alone do not provide the required user-visible Current experience."
     sufficiency_assumptions: []
     success_evidence:
-      - "Real-service tests prove current, historical-only and unknown SecurityId distinctions."
-      - "500/501/equal-timestamp tests prove no duplicate/skip and invalid/wrong-security cursors fail."
-    depends_on: ["2.4"]
+      - "Unit/E2E tests prove exact U.S. columns, DailyVolume DESC default, deterministic tie behavior, zero vs missing rendering, diagnostics and Current state restoration."
+    depends_on: ["3.1"]
     children: []
 
   "3.3":
     status: approved
-    strategy: "Browser Viewer code has one reusable client for trusted Node reads without owning authority."
-    tactic: "Implement viewer-role request helpers for Current, status, security, history and Scanner routing, with request correlation and explicit unavailable/error states."
+    strategy: "Detail/History presents current U.S. summary plus durable paged history, including historical-only securities."
+    tactic: "Adapt Detail model/surface summary/history columns to U.S. fields while preserving open/back behavior, initial/continuation failures, paging and already-loaded-row retention."
     parallel_assumptions:
-      - "A thin client centralizes transport/error handling without becoming a second data layer."
+      - "The existing Detail state machine/paging logic remains valid under the U.S. row projection."
     necessary_assumptions:
-      - "UI leaves should consume one stable read client rather than duplicate WebSocket plumbing."
+      - "Current alone cannot satisfy persisted per-security analysis."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit/browser-focused tests prove request correlation, sanitized errors and service-unavailable handling."
-      - "The client never treats cached rows as durable authority and never calls provider endpoints."
-    depends_on: ["3.1", "3.2"]
+      - "Unit/E2E tests prove U.S. summary/history columns, 500-row continuation, retry, historical-only security and return-state restoration."
+    depends_on: ["3.1"]
     children: []
 
   "4":
     status: approved
-    strategy: "Users can operate the complete Browser product shell and inspect Current and Security Detail/History with the exact extracted behavior while all authority comes from Node."
-    tactic: "Rebuild the Viewer surfaces around the trusted client, preserve state/accessibility/refresh contracts, and compose producer, Viewer and Scanner into one idempotent browser runtime."
+    strategy: "Scanner remains the general strategy surface over U.S. authority and ships an editable staged-candidate query without introducing a strategy subsystem."
+    tactic: "Keep Scanner admission/execution and saved-query ownership, adapt built-ins/schema documentation/tests to U.S. fields, and add the reviewed staged-ranking SQL as a normal built-in."
     parallel_assumptions:
-      - "Most extracted V1 pure display/state behavior can be adapted without preserving IndexedDB authority."
+      - "The imported read-only Scanner and saved-query mechanisms are already sufficient for arbitrary U.S. analytical SQL."
+      - "The staged candidate idea is expressible in DuckDB SQL over latest/history."
     necessary_assumptions:
-      - "Trusted reads alone do not satisfy the required user-facing analytical views."
+      - "The product goal includes flexible analytical/ranking SQL and the requested candidate-selection workflow."
     sufficiency_assumptions:
-      - "Current/diagnostics, Detail/History, refresh/state preservation and final browser-runtime composition together cover the Browser product shell."
+      - "U.S. built-ins/documentation plus preserved Scanner/saved-query regression proof is enough; no dedicated strategy engine is necessary."
     success_evidence:
-      - "Chromium against Fake Market proves one normal runtime composes producer, Current, Detail/History and Scanner without duplicate in-page producers or Viewer provider calls."
+      - "The staged built-in executes against schema v3 and returns deterministic stage_reached ordering."
+      - "Saved-query CRUD/Draft/Persisted/Active semantics remain green."
+      - "Scanner security/admission regression remains green."
     depends_on: []
-    children: ["4.1", "4.2", "4.3", "4.4"]
+    children: ["4.1", "4.2"]
 
   "4.1":
     status: approved
-    strategy: "Current Universe and operational diagnostics preserve the extracted product contract on Node data."
-    tactic: "Implement Current model/render/sort/format/accessibility plus the diagnostics strip using trusted Current/status reads."
+    strategy: "The built-in/query-authoring layer describes and executes U.S. schema correctly, including staged candidate ranking."
+    tactic: "Replace Israeli built-ins with U.S. examples, implement the reviewed staged SQL, and mechanically align docs/SCANNER_SQL_GUIDE.md with the actual schema/built-ins."
     parallel_assumptions:
-      - "Extracted V1 pure logic can be retained/adapted while replacing data-source wording and storage assumptions."
+      - "Ordinary SQL is the smallest flexible mechanism for the requested ranking behavior."
     necessary_assumptions:
-      - "Current is a first-class product surface and the primary Detail entry."
+      - "An unchanged Scanner engine would still be unusable/misleading if examples and schema docs referenced Israeli fields."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit tests prove exact 16-column shape, default/toggled deterministic sort, tie-breakers and missing/zero formatting."
-      - "Chromium proves loading/populated/empty/error states, diagnostics visibility and click/Enter/Space accessibility."
-    depends_on: ["3.3"]
+      - "Built-in tests execute all U.S. queries against real schema v3."
+      - "Staged fixture proves contiguous stage credit, missing-history stop and deterministic tie-breakers."
+      - "At least all-current-fields, practical U.S. ranking and staged-candidate built-ins are present and bounded."
+    depends_on: ["2.2"]
     children: []
 
   "4.2":
     status: approved
-    strategy: "Security Detail/History preserves exact pagination, historical-only and Back behavior on Node reads."
-    tactic: "Implement Detail loading/summary/history table, 500-row Load More/retry, historical-only presentation, not-found handling and shared Back-to-Current state capture."
+    strategy: "Existing Scanner execution, scheduling, saved-query CRUD and Detail navigation remain fully functional after U.S. schema migration."
+    tactic: "Adapt only schema-sensitive Scanner/saved-query/browser tests and labels while preserving the proven admission engine, scheduler and persistence design."
     parallel_assumptions:
-      - "The Node cursor can replace IndexedDB mechanics without changing observable guarantees."
+      - "Most Scanner code is deliberately provider-agnostic and should not be rewritten."
     necessary_assumptions:
-      - "Current alone cannot provide persisted per-security analysis or historical-only continuity."
+      - "New built-ins alone do not prove the existing reusable Scanner product behavior survived schema/branding changes."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit/Chromium tests prove exact 15-column history shape, initial 500, Load More, retryable continuation failure and unknown-vs-empty distinctions."
-      - "Historical-only Detail never fabricates current summary from newest history."
+      - "Unit/service/E2E Scanner tests remain green with U.S. built-ins and schema."
+      - "A result containing security_id AS securityId still opens the correct Detail security."
+      - "Loading/editing/saving/deleting a query does not implicitly replace an active generation."
     depends_on: ["4.1"]
-    children: []
-
-  "4.3":
-    status: approved
-    strategy: "Viewer refresh keeps UI context while always rereading trusted committed state."
-    tactic: "Wire manual refresh and metadata-only commit hints to authoritative Current/status/Detail/history rereads, preserving sort, viewport, Detail identity and loaded history depth."
-    parallel_assumptions:
-      - "Notification-as-hint plus reread makes lost notifications harmless."
-    necessary_assumptions:
-      - "Static views do not satisfy continuous market use or the extracted state-preservation contract."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Chromium proves manual refresh makes no provider call, live hints refresh committed values and lost hints recover manually."
-      - "Current sort/viewport survive Current→Detail→refresh→Back and loaded history depth survives a new committed cycle."
-    depends_on: ["4.2"]
-    children: []
-
-  "4.4":
-    status: approved
-    strategy: "The normal browser runtime composes collection, trusted Viewer surfaces and Scanner into one idempotent provider-page product entry."
-    tactic: "Implement the runtime bootstrap/shell that starts or reuses the in-page producer, opens/reuses the same-origin Viewer, wires Current/Detail/Scanner surfaces, and shuts down/relaunches explicitly on service or page lifecycle changes."
-    parallel_assumptions:
-      - "A thin composition/bootstrap layer is sufficient; product capabilities remain owned by their existing modules rather than duplicated in an application framework."
-    necessary_assumptions:
-      - "Individual producer and UI leaves do not by themselves implement the user flow that starts the daily product runtime and composes all surfaces."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Focused browser tests prove the built runtime starts the producer flow, opens/reuses one Viewer shell and exposes Current, Detail/History and Scanner through the same product entry."
-      - "Repeated launch in one provider page does not create a second in-page producer."
-      - "Service-unavailable and explicit relaunch behavior uses the existing fail-closed producer/client semantics rather than an offline queue."
-      - "Closing Viewer windows does not stop the producer; reopening Viewer state works from Node authority even when the producer is stopped."
-      - "Clean stop/relaunch waits for Node stop acknowledgement/ownership release and never creates overlapping producer ownership."
-    depends_on: ["4.3", "5.3"]
     children: []
 
   "5":
     status: approved
-    strategy: "Users can repeatedly execute broad analytical read-only SQL, preserve reusable named query configurations, start from verified examples and create new queries from durable AI-friendly guidance without Scanner mutating market authority."
-    tactic: "Combine hardened Node Scanner execution with durable schema-v2 saved-query CRUD, Browser library/built-ins/Draft-Active isolation, shared SecurityId navigation, and one schema-synchronized Scanner SQL guide."
+    strategy: "The entire U.S. product can be exercised deterministically offline through the normal browser runtime, real local service and synthetic U.S. provider."
+    tactic: "Replace the Fake Market provider behavior, integrate the normal U.S. runtime/demo with it, and adapt full Chromium E2E to prove product behavior including dynamic universe membership."
     parallel_assumptions:
-      - "DuckDB parser/statement/function metadata plus instance hardening can support the required analytical SQL without a custom SQL parser."
-      - "One same-DuckDB configuration table is sufficient for durable single-user saved queries without introducing another persistence engine."
+      - "A stateful loopback ScreenerHulPaging3 fake can prove almost all product behavior without bank credentials."
     necessary_assumptions:
-      - "Scanner is a required first-class product surface and cannot be replaced by fixed Viewer queries."
-      - "Reusable named queries and accurate SQL guidance are necessary for practical ongoing Scanner use rather than one-off hand-authored SQL."
+      - "Unit/service tests cannot prove actual browser fetch/runtime/UI composition or provide a safe offline demo."
     sufficiency_assumptions:
-      - "Node admission/execution, durable saved-query CRUD, browser library/built-ins, Detail navigation and synchronized AI documentation jointly satisfy the expanded Scanner contract."
+      - "Canonical U.S. fake, normal runtime integration and browser E2E together cover deterministic end-to-end product proof."
     success_evidence:
-      - "Allowed analytical SQL works with exact result order/columns and rejected SQL cannot mutate authority."
-      - "Schema-v1 data migrates transactionally to v2; named user-query CRUD persists across restart without changing market-authority facts."
-      - "Browser scheduling proves immediate activation, no overlap/no catch-up, saved-query selection changes Draft only, and built-ins are immutable/copyable."
-      - "Every built-in executes against current Scanner authority and automated schema/example checks keep the canonical AI SQL guide complete."
+      - "One-command demo runs the normal U.S. runtime against real local authority."
+      - "Chromium E2E covers normal movement, membership change, failures, Current, Detail/History, Scanner and recovery."
     depends_on: []
-    children: ["5.1", "5.2", "5.3", "5.4", "5.5", "5.6"]
+    children: ["5.1", "5.2", "5.3"]
 
   "5.1":
     status: approved
-    strategy: "Node executes only admitted single SELECT Scanner statements on the hardened DuckDB instance and returns exact JSON-safe results."
-    tactic: "Implement extractStatements/prepare/StatementType.SELECT/zero-parameter admission, function-call lexical extraction, query/query_table and side-effect-function rejection, then execute on the dedicated Scanner connection."
+    strategy: "Fake Market models the U.S. screener contract deterministically without real authentication."
+    tactic: "Replace MapHeat2/GetSecuritiesData fixtures with a stateful ScreenerHulPaging3 endpoint and synthetic U.S. rows/scenarios from TEST_STRATEGY."
     parallel_assumptions:
-      - "DuckDB remains the authoritative SQL parser; the lexical helper only identifies invoked functions for policy checks."
+      - "The fake can preserve provider-shape fidelity without copying private authenticated data."
     necessary_assumptions:
-      - "Scanner must support broad SQL while protecting sessions/universe/cycles/history/latest from SELECT-shaped side effects."
+      - "Browser E2E and demo need a real HTTP provider boundary matching the new production adapter."
     sufficiency_assumptions: []
     success_evidence:
-      - "Real-DuckDB tests cover SELECT/JOIN/WHERE/GROUP/HAVING/ORDER/LIMIT/window/time/rank and duplicate result-column order."
-      - "Empty/multi-statement/non-SELECT/parameter/query/query_table/side-effect cases are rejected and before/after fingerprints prove no authority mutation."
-    depends_on: ["1.5"]
+      - "Fake Market tests cover complete response, reorder, add/remove, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay and advancing values."
+      - "Fixtures contain only synthetic/sanitized data."
+    depends_on: ["1.1"]
     children: []
 
   "5.2":
     status: approved
-    strategy: "Scanner UI repeatedly executes one explicitly activated configuration with exact result/error semantics."
-    tactic: "Implement SQL/positive-interval controls, draft-vs-active generation, immediate execute→await→setTimeout loop, non-overlap guard and exact result grid/error/empty rendering."
+    strategy: "The normal Market Flow US browser runtime and one-command demo compose U.S. provider, Recorder, Node authority and Viewer without special test-only product paths."
+    tactic: "Adapt runtime composition/demo orchestration to the U.S. provider/Recorder contract while preserving same source graph, Viewer reuse, explicit service recovery and deterministic demo reset."
     parallel_assumptions:
-      - "setTimeout-after-completion prevents catch-up/overlap without a scheduler framework."
+      - "The imported runtime shell and build architecture remain valid once dependency injection points use the U.S. adapter."
     necessary_assumptions:
-      - "Node SQL execution alone does not satisfy the recurring user workflow."
+      - "A correct fake and correct components do not prove the normal built runtime actually wires them together."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit tests prove generation replacement, draft inactivity, positive interval, no overlap and no catch-up."
-      - "Chromium proves immediate activation, repeated execution, zero-row success, visible error and exact returned columns/row order with no hidden rank/sort/filter/LIMIT."
-    depends_on: ["3.3", "5.1"]
+      - "Runtime composition tests and demo service tests prove U.S. collection through real WebSocket/DuckDB."
+      - "Demo reset touches only .demo and restart preserves expected authority until reset."
+    depends_on: ["1.2", "2.3", "5.1"]
     children: []
 
   "5.3":
     status: approved
-    strategy: "A Scanner result can reuse the canonical Detail/History surface instead of creating a parallel security view."
-    tactic: "Recognize the product-supported canonical SecurityId result column/shape and route activation through existing Detail navigation."
+    strategy: "Chromium proves the complete offline U.S. user journey and failure/recovery behavior through the normal runtime."
+    tactic: "Adapt existing E2E suites to U.S. fields/Fake Market and add full-response membership-change/staged-Scanner scenarios without replacing proven state-machine coverage."
     parallel_assumptions:
-      - "One Detail surface preserves identity/history semantics and avoids duplicated state."
+      - "The existing Playwright suite already covers the right surfaces and can be migrated rather than recreated."
     necessary_assumptions:
-      - "The Product Spec requires Scanner→Detail navigation when canonical SecurityId is available."
+      - "Service/unit proof cannot validate DOM interaction, browser lifecycle and composed product behavior."
     sufficiency_assumptions: []
     success_evidence:
-      - "Chromium proves a Scanner result SecurityId opens the same Detail component and historical/current rules as Current navigation."
-      - "Queries without recognized SecurityId remain ordinary result tables."
-    depends_on: ["4.2", "5.2"]
-    children: []
-
-  "5.4":
-    status: approved
-    strategy: "Named user Scanner queries have one durable Node-owned persistence model with explicit transactional schema evolution and safe CRUD protocol semantics."
-    tactic: "Upgrade DuckDB bootstrap to schema v2 with one explicit v1→v2 migration, add scanner_saved_queries, implement normalized-name validation plus Viewer-role list/create/update/delete operations through the serialized writer, and prove market-authority isolation."
-    parallel_assumptions:
-      - "The existing writer queue and service fixture can own configuration writes without a separate DB or repository abstraction."
-    necessary_assumptions:
-      - "Browser-only persistence would fragment saved queries by Origin/browser lifecycle and would not satisfy one durable local product state."
-      - "The existing schema-v1 contract cannot persist saved queries without an explicit reviewed schema change."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Real-DuckDB tests prove fresh schema-v2 bootstrap, exact v1→v2 preservation, idempotent v2 reopen and unsupported-schema fail-closed behavior."
-      - "Real-service protocol tests prove durable create/list/update/rename/delete, restart persistence, deterministic ordering, NOT_FOUND, normalized-name conflicts and built-in read-only rejection."
-      - "Injected CRUD/migration failures leave sessions/universe/cycles/history/latest unchanged and no failed operation is acknowledged as success."
-    depends_on: ["1.5", "5.1"]
-    children: []
-
-  "5.5":
-    status: approved
-    strategy: "Scanner users can browse built-ins and multiple saved queries, edit them safely and reuse them without library actions silently changing the active Scanner generation."
-    tactic: "Add stable source-defined built-ins, Viewer-client query-library methods and Scanner UI controls for select/new/save-as/save/rename/delete; keep selected/draft/persisted/active state explicit and route built-in copies through normal user-query creation."
-    parallel_assumptions:
-      - "The existing Scanner surface can absorb a compact library editor without a frontend framework or separate settings application."
-    necessary_assumptions:
-      - "Durable CRUD alone is not usable unless the browser exposes clear selection/edit/copy/delete semantics."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Unit tests prove deterministic built-in/user merge, built-in flags, draft loading, Save-As/update/delete state transitions and active-generation isolation."
-      - "Chromium proves both built-ins are visible/read-only/copyable; multiple user queries can be created, selected, edited, renamed, persisted across Viewer reopen and deleted with explicit conflict/error states."
-      - "Library selection/save/delete while a Scanner generation is active does not alter that generation until explicit Activate."
-    depends_on: ["5.2", "5.4"]
-    children: []
-
-  "5.6":
-    status: approved
-    strategy: "A user or AI can author new Scanner SQL from one accurate durable guide whose schema and examples cannot silently drift from executable reality."
-    tactic: "Create docs/SCANNER_SQL_GUIDE.md from the current public Scanner schema/known semantics, include bounded executable examples and an AI prompt template, then add metadata/built-in synchronization tests that fail when schema or examples change without the guide."
-    parallel_assumptions:
-      - "One canonical guide plus mechanical drift checks is sufficient; a generated documentation site or SQL builder is unnecessary."
-    necessary_assumptions:
-      - "Future ad-hoc AI prompts are unreliable if table/column/semantics knowledge exists only in source code or stale prose."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "The guide documents every current public Scanner table/column, canonical identity/joins, known-vs-unknown semantics, null/zero/missing rules, admission limits, bounding guidance and a copyable AI prompt pattern."
-      - "Every built-in and documented executable example passes real Scanner admission/execution against deterministic fixtures."
-      - "Automated drift proof compares fresh-schema metadata and built-in definitions to the guide and fails on missing table/column/example synchronization."
-    depends_on: ["5.4", "5.5"]
+      - "Full Browser suite is green against U.S. Fake Market."
+      - "E2E proves Current, Detail/History, Scanner, saved-query behavior, refresh preservation, Viewer/producer independence, explicit recovery and add/remove membership."
+    depends_on: ["3.2", "3.3", "4.2", "5.2"]
     children: []
 
   "6":
     status: approved
-    strategy: "The complete product is reproducibly testable and manually runnable offline through one canonical Fake Market and CI stack."
-    tactic: "Build one deterministic real HTTP fake, one-command demo/reset, complete real-service/Fast CI verification and full Chromium/Browser CI around the normal runtime."
+    strategy: "Market Flow US is operationally packaged, diagnosable and measured at representative U.S. scale before any live release claim."
+    tactic: "Complete product branding/local launchers, adapt diagnostics/live-verification tooling, and replace the representative workload with U.S.-scale data plus staged SQL measurement."
     parallel_assumptions:
-      - "One shared fake/test/demo implementation avoids drift between CI and human use."
+      - "The imported operational tooling is structurally reusable but contains MarketScope/provider/561-specific assumptions."
     necessary_assumptions:
-      - "Implementation cannot be trusted or maintained if most behavior still depends on bank login or manual inspection."
+      - "A working browser/runtime is not release-ready without correct packaging, diagnostics, scale evidence and a U.S.-aware live gate."
     sufficiency_assumptions:
-      - "Fake Market, demo, complete service matrix and Browser CI together provide deterministic offline product confidence."
+      - "Packaging/branding, diagnosability/live-gate tooling and representative workload jointly prepare a verifiable release candidate."
     success_evidence:
-      - "A fresh developer can run Fast CI, Browser CI and the local demo without provider credentials."
-      - "The same normal browser/service/database modules are exercised in CI and demo."
+      - "User-facing package/artifact/DB/launcher names are Market Flow US."
+      - "Diagnostics remain sanitized and localize U.S. provider/runtime failures."
+      - "4096 x 180 workload is correct and reports staged-query measurements."
     depends_on: []
-    children: ["6.1", "6.2", "6.5", "6.3", "6.4"]
+    children: ["6.1", "6.2", "6.3"]
 
   "6.1":
     status: approved
-    strategy: "One stateful loopback HTTP Fake Market reproduces the provider contract deterministically across complete logical cycles and failures."
-    tactic: "Implement provider page/runtime route, real MapHeat2/GetSecuritiesData routes, deterministic four-security state machine, test-control namespace and FM-01..FM-16 scenarios."
+    strategy: "Local setup/build/run artifacts and user documentation consistently identify and operate Market Flow US."
+    tactic: "Rename package, generated runtime/bookmarklet, default/demo DB, browser/global keys, CI/artifact labels and real-provider launcher; adapt START_HERE/USER_GUIDE while preserving thin-wrapper behavior."
     parallel_assumptions:
-      - "Advancing only after the complete universe is served lets multi-chunk collection observe one stable synthetic logical cycle."
+      - "Branding/file-path changes are mechanical when done after the product contracts are fixed and protected by launcher/build tests."
     necessary_assumptions:
-      - "Main Chromium and manual demo need real browser fetches rather than Playwright interception."
+      - "A final U.S. product cannot safely ship under conflicting MarketScope filenames/DB defaults."
     sufficiency_assumptions: []
     success_evidence:
-      - "Tests prove deterministic reset/state transitions, MapHeat two-step behavior, response reordering and complete-cycle advancement."
-      - "Scenarios cover zero/null/missing, duplicate/missing/unexpected IDs, HTTP/shape errors, delay, changing values and universe removal."
-    depends_on: ["1.1"]
+      - "Build/launcher tests prove documented target names and commands."
+      - "No user-facing runtime path writes to the old market-scope.duckdb default."
+      - "Donor naming remains only in provenance/history documentation where intentional."
+    depends_on: ["2.1"]
     children: []
 
   "6.2":
     status: approved
-    strategy: "The same product stack can be launched locally with one command and safely reset without touching production state."
-    tactic: "Implement demo orchestration that builds runtime, starts service with .demo DuckDB/fake Origin, starts Fake Market, prints one URL, preserves restart state and provides a path-safe demo reset."
+    strategy: "Diagnostics and the SHA-bound bounded live-verification harness understand the U.S. acquisition path without exposing private session data."
+    tactic: "Adapt provider checkpoints/messages/report identity and live harness from MapHeat/chunk acquisition to a bounded sustained ScreenerHulPaging3 run of at least 20 complete cycles spanning at least 60 seconds while preserving Support Snapshot and safe CLI fallback."
     parallel_assumptions:
-      - "A thin orchestration script is sufficient; Electron/installer/control panel are unnecessary."
+      - "The imported diagnostic tracker and bounded live-gate structure remain valid; only U.S. provider steps/branding change."
     necessary_assumptions:
-      - "Offline verification is also a usability requirement; developers should not need DevTools/test-runner internals."
+      - "Real-provider failures must be self-localizing and the final external gate must exercise the production U.S. path."
     sufficiency_assumptions: []
     success_evidence:
-      - "npm run demo:fake-market starts the full normal stack and prints one useful URL."
-      - "Restart preserves demo history; demo:reset deletes only .demo state, refuses path escape and leaves production data untouched."
-    depends_on: ["4.4", "6.1"]
-    children: []
-
-  "6.5":
-    status: approved
-    strategy: "Operational failures are self-localizing: normal product/CLI evidence identifies the failing component/checkpoint and preserves the sanitized causal error without broad debugging."
-    tactic: "Define and implement one small shared diagnosability contract across Browser runtime, Node/service/database, producer/provider/commit, trusted reads, Scanner execution/query-library and demo startup; expose a bounded copyable Support Snapshot and CLI fallback, then prove representative failures report the correct boundary without secrets/raw dumps."
-    parallel_assumptions:
-      - "Existing explicit errors, service status and failure tests can be normalized rather than replaced by a telemetry/logging platform."
-    necessary_assumptions:
-      - "A correct product is still expensive to operate if ordinary failures collapse into generic errors that require rediscovering the failing boundary."
-    sufficiency_assumptions:
-      - "Stable component/checkpoint IDs, last-success + failed-stage evidence, sanitized causal errors, one support snapshot and targeted failure proofs are sufficient for fast local troubleshooting."
-    success_evidence:
-      - "Representative injected failures across startup/service/DB, producer/provider/commit, Viewer read, Scanner execution and saved-query CRUD/migration boundaries expose component, failed checkpoint, last successful checkpoint, stable error code and sanitized cause."
-      - "Normal Viewer/runtime exposes a compact copyable Support Snapshot; fatal launcher/startup failures expose equivalent essential evidence through local command output."
-      - "Diagnostics remain bounded/local, never become authority, and automated proof rejects credentials/cookies/auth/session/account identifiers/private browser state/raw authenticated dumps."
-      - "Fast/Browser/demo failure evidence surfaces the diagnostic boundary needed for immediate maintenance instead of generic-only failure text."
-    depends_on: ["4.4", "5.3", "5.6", "6.2"]
-    children: []
-
-  "6.6":
-    status: approved
-    strategy: "Developers receive materially faster trustworthy test feedback without trading away full final-state verification."
-    tactic: "Profile the measured Fast/Browser/setup baseline, remove deterministic lifecycle/wait overhead, prove safe Chromium setup reuse, and establish optimized commands/timing evidence that final Fast/Browser CI can consume."
-    parallel_assumptions:
-      - "Most current wall time is avoidable setup/duplication/lifecycle overhead rather than irreducible product verification."
-    necessary_assumptions:
-      - "A 79-second feedback loop for the current small suite is materially too expensive and will worsen as diagnostics/final E2E coverage grows."
-    sufficiency_assumptions:
-      - "Profiling plus deterministic lifecycle fixes and reusable browser setup can optimize test commands before CI orchestration is finalized."
-    success_evidence:
-      - "Baseline from Actions run 36348375187 is recorded and a before/after timing report attributes setup, Fast and Browser time."
-      - "Full unit/service/Browser contract coverage remains green; no test is removed or weakened solely to meet a timing target."
-      - "Full test:fast targets <=10s and full Playwright execution targets <=12s on the reference GitHub runner; any unmet target has measured irreducible evidence rather than silent relaxation."
-      - "A representative product-code proof demonstrates at least 35% wall-clock reduction from the 79s baseline, with warm <=45s and cold <=60s CI targets evaluated."
-      - "No focused+full serial duplication remains in the final verification path; optimized outputs remain diagnosable and deterministic."
-    depends_on: ["6.5"]
+      - "Unit/service tests prove U.S. checkpoint success/failure shaping and sanitized reports."
+      - "Live-verification build remains clean-checkout/SHA-bound and emits Market Flow US artifacts."
+      - "No report includes credentials, cookies, account identifiers or raw authenticated dumps."
+    depends_on: ["2.3", "3.1", "4.2", "6.1"]
     children: []
 
   "6.3":
     status: approved
-    strategy: "Fast CI proves all pure and Node/DuckDB authority contracts on every relevant change."
-    tactic: "Complete the full node:test unit/service matrix from TEST_STRATEGY.md and wire MarketScope Fast CI using Node 24/npm ci with planning/static guards."
+    strategy: "Representative U.S. scale is measured for persistence, reads, restart and staged Scanner SQL before release."
+    tactic: "Replace the 561 x 600 Israeli workload with 4096 synthetic U.S. securities x 180 cycles, U.S. field generation and the required Scanner/staged query measurement/report."
     parallel_assumptions:
-      - "Real service integration remains cheap enough to be the core CI gate."
+      - "4096 x 180 is large enough to expose approximately-4k scaling issues while remaining a practical manual/CI-dispatch workload."
+      - "Measurement-first is preferable to adding unproven temporal precomputation."
     necessary_assumptions:
-      - "Focused leaf tests are insufficient unless the full authority/protocol regression suite runs automatically on final branch state."
+      - "Small deterministic tests cannot establish whether direct history SQL is practical at intended U.S. scale."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit and service suites cover startup/schema, Origin/protocol, session/universe/cycle rollback matrices, trusted reads, history cursor, Scanner admission/non-mutation and shutdown."
-      - "npm run test:fast is green on a clean checkout and CI triggers on all relevant paths."
-    depends_on: ["3.1", "3.2", "5.1", "6.6"]
-    children: []
-
-  "6.4":
-    status: approved
-    strategy: "Browser CI proves final end-to-end product wiring against real Fake Market HTTP, real WebSocket, real Node and real DuckDB."
-    tactic: "Implement Playwright Chromium orchestration and E2E-01..E2E-12, then wire automatic Browser CI with traces/screenshots/reports and sanitized service/fake logs."
-    parallel_assumptions:
-      - "The canonical fake and completed surfaces allow production-like browser paths without page.route for main flows."
-    necessary_assumptions:
-      - "Service tests cannot prove browser fetch/WebSocket/DOM/navigation/runtime integration."
-    sufficiency_assumptions: []
-    success_evidence:
-      - "Full happy path proves provider→commit→Current→Detail→Back→Scanner→Detail using normal runtime and no page.route."
-      - "Chromium covers fidelity/diagnostics, >500 history UI, historical-only, Scanner timing, no-service, disconnect/relaunch, multiple viewers, second producer, reload, lost hint and Node restart."
-      - "Browser CI automatically gates relevant product-code PRs and uploads sanitized failure artifacts."
-    depends_on: ["4.4", "6.1", "6.6"]
+      - "Workload proves 180 completed cycles, 4096 latest rows, 737280 history rows, restart count preservation and zero failed cycles."
+      - "Report contains commit/Current/History/general Scanner/staged Scanner/restart/DB-size measurements."
+      - "If staged SQL is materially impractical, this node does not close; the smallest performance planning area is reopened."
+    depends_on: ["2.3", "4.1"]
     children: []
 
   "7":
     status: approved
-    strategy: "The final candidate has empirical scale evidence, a bounded real-provider verification path and a clean GitHub-only handoff."
-    tactic: "Measure representative workload, implement/run the self-verifying live gate as external conditions allow, then reconcile repository/docs/release evidence."
+    strategy: "The migrated product is proven offline, validated on the real authenticated U.S. provider boundary and released with no authoritative Israel-only runtime assumptions."
+    tactic: "Run final offline gates on one candidate, execute the bounded live-provider gate, then perform final migration/documentation/main-state closure."
     parallel_assumptions:
-      - "Performance should be judged from measured behavior, while real-provider testing remains narrow because offline proof owns deterministic correctness."
+      - "Deterministic offline proof should precede expensive/external live verification."
+      - "The live gate is needed only for provider/browser facts that cannot be proven offline."
     necessary_assumptions:
-      - "Offline correctness alone does not prove representative scale/current provider compatibility or a clean continuation state."
+      - "Implementation is not complete merely because individual migration branches pass in isolation."
     sufficiency_assumptions:
-      - "Workload evidence, bounded live verification and final cleanup/handoff together close remaining release risks."
+      - "Final offline proof, bounded real-provider PASS and release audit together establish end-to-end completion."
     success_evidence:
-      - "Representative workload report exists with no unresolved blocker."
-      - "Live verification harness exists and latest eligible result is PASS or explicitly externally pending."
-      - "Final main is green, clean and self-contained for future chats."
+      - "Final candidate Fast CI, Browser CI and U.S. workload are green."
+      - "Real-provider gate reports overall PASS."
+      - "Final repository audit finds no authoritative MapHeat2/GetSecuritiesData/Israeli-field runtime path and main is green."
     depends_on: []
     children: ["7.1", "7.2", "7.3"]
 
   "7.1":
     status: approved
-    strategy: "MarketScope has measured evidence that the native-DuckDB design handles the representative 561-security/600-cycle workload correctly and usefully."
-    tactic: "Implement deterministic workload generation, interleaved write/read/Scanner/restart scenario, benchmark reporting and separate Workload workflow."
+    strategy: "One release candidate passes every deterministic offline gate before live verification."
+    tactic: "Run full Fast, full Browser and representative U.S. workload on the integrated candidate; fix any migration regressions at their owning leaf before accepting the candidate."
     parallel_assumptions:
-      - "A 336,600-row starting case reveals first-order DB size/latency issues without inventing SLOs."
+      - "A single integrated candidate gate catches cross-branch drift that focused leaf tests may miss."
     necessary_assumptions:
-      - "Small correctness fixtures cannot establish representative scale behavior."
+      - "Live provider testing should not be used to discover deterministic product regressions."
     sufficiency_assumptions: []
     success_evidence:
-      - "Workload verifies expected counts/data integrity across 561×600 with interleaved Current/history/JOIN/GROUP-HAVING/window-rank/time queries and restart."
-      - "Report records DB size plus commit/Current/history/Scanner/restart latency distributions."
-      - "Any material blocker is fixed or triggers focused replanning before release."
-    depends_on: ["3.1", "3.2", "5.1"]
+      - "Fast CI is green."
+      - "Browser CI is green."
+      - "U.S. representative workload is green with a sanitized report."
+      - "No blocking deterministic defect remains."
+      - "Fast/Browser feedback remains within the imported test-feedback guidance or any measured regression has a documented irreducible cause; no avoidable focused+full duplication is added."
+    depends_on: ["5.3", "6.2", "6.3"]
     children: []
 
   "7.2":
     status: approved
-    strategy: "Irreducible real-provider/browser facts can be checked on the final candidate without exposing private session data or replacing offline tests."
-    tactic: "Implement the bounded browser-side live verification harness using production provider adapters/protocol, then execute it when an authenticated eligible provider session/market is available."
+    strategy: "The release candidate works through the real authenticated Bank Leumi U.S. provider boundary without weakening security or authority semantics."
+    tactic: "Run the SHA-bound bounded live gate for at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
     parallel_assumptions:
-      - "One validated real universe/cycle plus trusted reads is enough to prove current provider shape, Origin/CSP/LNA loopback transport and ownership wiring."
+      - "The live gate is the smallest safe way to prove provider shape, current one-request completeness and browser loopback compatibility."
     necessary_assumptions:
-      - "Fake Market cannot prove current authenticated provider/browser-policy compatibility."
+      - "Provider/CSP/session behavior is external and cannot be honestly certified by Fake Market alone."
     sufficiency_assumptions: []
     success_evidence:
-      - "Harness asserts loopback hello, universe, one complete cycle/COMMIT ACK, Current, Security, History, Scanner and producer ownership."
-      - "Output is sanitized and contains no credentials/cookies/auth/account/private dumps."
-      - "If external conditions prevent execution, harness is complete/verified and live status is explicitly pending with factual reason; PASS is never invented."
-    depends_on: ["3.1", "3.2", "5.1"]
+      - "Sanitized report is SHA-bound and overall PASS."
+      - "Report proves the bounded sustained U.S. run, revision handling, COMMIT ACK for every cycle, final Current, Security, History containing the live cycles, Scanner, ownership and clean stop."
+      - "No credential/session/private response material is committed."
+    depends_on: ["7.1"]
     children: []
 
   "7.3":
     status: approved
-    strategy: "The implemented repository is clean, documented, verified to the achievable boundary and ready for fresh-chat handoff without historical guessing."
-    tactic: "Run final Fast/Browser/workload checks, reconcile implemented truth into durable docs/README/AGENTS/status, remove obsolete temporary artifacts, record live-gate state and produce final handoff."
+    strategy: "Repository truth, local run instructions and final runtime contain only the intended Market Flow US product direction and are ready for normal use from main."
+    tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, update durable docs/status/handoff truth, merge through green CI and verify main."
     parallel_assumptions:
-      - "GitHub main plus durable docs/tests/CI can become the only normal continuation context once implementation matches them."
+      - "Cleanup after replacement proof is safer than deleting donor behavior early."
     necessary_assumptions:
-      - "Correct code is not a finished product if repository truth, verification evidence or handoff state is stale."
+      - "A technically passing candidate can still be operationally misleading if old provider paths/names remain authoritative."
     sufficiency_assumptions: []
     success_evidence:
-      - "Fast CI and Browser CI are green on final main; required workload evidence is reviewed and correctness-green."
-      - "Live gate is PASS or explicitly pending only for a genuine external boundary after all offline work is complete."
-      - "README/AGENTS/Product/Data/Technical/Test docs describe implemented reality and no live status is duplicated outside STATUS."
-      - "No obsolete Browser-SQL/IndexedDB authority artifacts, credentials/private data, broken tests or cleanup debt exist in MarketScope."
-      - "STATUS points to true post-release state and a fresh chat can run/test/continue using MarketScope alone."
-    depends_on: ["6.2", "6.3", "6.4", "7.1", "7.2"]
+      - "Audit proves no authoritative MapHeat2/GetSecuritiesData or Israeli typed-field runtime dependency remains."
+      - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior."
+      - "No unexpected pre-existing/open PR conflicts with the release work unit."
+      - "The release branch is internally consistent and ready for the normal PR/CI/squash-merge workflow defined by AGENTS.md."
+      - "STATUS/handoff changes on the release branch point to the completion transition that becomes authoritative only after merge."
+    depends_on: ["7.2", "6.1"]
     children: []
