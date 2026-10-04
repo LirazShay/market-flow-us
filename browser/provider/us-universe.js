@@ -57,13 +57,26 @@ export function buildUniverseFromSnapshot(snapshot) {
     });
   });
 
-  return Object.freeze({
+  const universe = {
     loadedAtMs: snapshot.timing?.completedAtMs ?? null,
     recordCount: snapshot.recordCount,
-    membership: Object.freeze([...snapshot.membership]),
-    securities: Object.freeze(securities),
-    sourceMetadata: snapshot.sourceMetadata ?? null
+    securities: Object.freeze(securities)
+  };
+  Object.defineProperties(universe, {
+    membership: {
+      value: Object.freeze([...snapshot.membership]),
+      enumerable: false,
+      configurable: false,
+      writable: false
+    },
+    sourceMetadata: {
+      value: snapshot.sourceMetadata ?? null,
+      enumerable: false,
+      configurable: false,
+      writable: false
+    }
   });
+  return Object.freeze(universe);
 }
 
 export async function loadValidatedUsUniverse({
