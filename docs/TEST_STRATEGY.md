@@ -258,13 +258,13 @@ Gate:
 
 ```text
 producer hello/session
-→ one complete ScreenerHulPaging3 response
-→ exact validation
-→ universe ACK
-→ cycle COMMIT ACK
-→ Current
+→ three consecutive complete ScreenerHulPaging3 responses at candidate cadence
+→ exact validation for every cycle
+→ universe ACK/revision handling
+→ COMMIT ACK for every cycle
+→ Current on final committed cycle
 → Security
-→ History
+→ History containing the committed live cycles
 → bounded Scanner query
 → ownership/status
 → clean producer stop
@@ -283,7 +283,7 @@ The gate records rather than assumes:
 - current response shape;
 - CSP/LNA loopback compatibility;
 - provider freshness indicators;
-- one-request completeness under current result count;
+- repeated full-response completeness across the bounded three-cycle run;
 - session/auth failure shape when encountered.
 
 Long-run throttling/polling behavior may require a separate bounded observation if normal use reveals a problem.
