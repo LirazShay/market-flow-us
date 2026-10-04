@@ -10,12 +10,13 @@ Repository branch audited: plan/us-market-migration-replan
 - duplicates: 0
 - extra: 0
 
-Disposition counts:
+Disposition counts after second-pass review:
 
-- KEEP: 26
-- ADAPT: 78
+- KEEP: 17
+- ADAPT: 87
 - REPLACE: 8
-- PLANNING_REPLACE: 12
+- PLANNING_REPLACE: 9
+- DROP: 3
 
 ## Main conclusion
 
@@ -71,7 +72,7 @@ Do not add a new temporal-history subsystem during this conversion. Existing his
 
 ## File disposition
 
-### KEEP (26)
+### KEEP (17)
 
 .gitignore
 .planning/BASELINE_PROVENANCE.md
@@ -111,7 +112,7 @@ tests/service/fake-market.test.mjs
 tests/unit/provider-data.test.mjs
 tests/workload/representative-workload.test.mjs
 
-### PLANNING_REPLACE (12)
+### PLANNING_REPLACE (9)
 
 .github/workflows/planning-docs-ci.yml
 .planning/COVERAGE_MAP.yaml
@@ -126,11 +127,21 @@ tests/workload/representative-workload.test.mjs
 .planning/STATUS.yaml
 .planning/TREE.yaml
 
-### ADAPT (78)
+### ADAPT (87)
 
 All remaining branch files not listed above. The 124/124 classification check proved there are no unclassified files.
 
-The ADAPT set includes the workflows, launchers, runtime composition, recorder, Viewer field models, durable product/data/technical/test docs, schema/persistence/read projections, package metadata, build/demo scripts, Scanner built-ins, U.S.-affected E2E/service/unit tests, and user documentation.
+The ADAPT set includes the workflows, launchers, runtime composition, recorder, Viewer field models, diagnostics/branding channels, test helpers that encode MarketScope names/fields, durable product/data/technical/test docs, schema/persistence/read projections, package metadata, build/demo scripts, Scanner built-ins, U.S.-affected E2E/service/unit tests, and user documentation.
+
+Second-pass review corrected nine files that had been incorrectly classified KEEP because their core mechanism was reusable but they still contained MarketScope branding/channel/fixture assumptions.
+
+### DROP (3)
+
+The following imported planning-only artifacts are superseded by the current FRAMEWORK review method and the U.S. migration audit/reviews, so retaining them would preserve contradictory MarketScope planning truth:
+
+- .planning/MASTER_COVERAGE.md
+- .planning/COVERAGE_MAP.yaml
+- .planning/LEGACY_COMPLETENESS_AUDIT.md
 
 ## Next-stage gate
 
