@@ -1,5 +1,5 @@
 import {
-  HISTORY_COLUMNS,
+  LEGACY_DETAIL_PROFILE,
   appendDetailHistory,
   createDetailModel,
   formatDetailSummaryValue,
@@ -43,7 +43,8 @@ export function createDetailSurface({
   root,
   client,
   onBack = () => {},
-  captureReturnState = () => null
+  captureReturnState = () => null,
+  profile = LEGACY_DETAIL_PROFILE
 } = {}) {
   assertElement(root);
   assertClient(client);
@@ -52,6 +53,13 @@ export function createDetailSurface({
   }
   if (typeof captureReturnState !== "function") {
     throw new TypeError("captureReturnState must be a function.");
+  }
+  if (
+    !profile
+    || !Array.isArray(profile.historyColumns)
+    || !Array.isArray(profile.summaryColumns)
+  ) {
+    throw new TypeError("profile must expose Detail columns.");
   }
 
   const document = root.ownerDocument;
@@ -113,13 +121,14 @@ export function createDetailSurface({
 
     const list = document.createElement("dl");
     list.className = "market-scope-detail-summary";
-    list.append(
-      summaryMetric(document, "שער אחרון", formatDetailSummaryValue(effective, "LastKnownRate"), "detail-last-rate"),
-      summaryMetric(document, "שינוי יומי %", formatDetailSummaryValue(effective, "BaseRateChangePercentage")),
-      summaryMetric(document, "BID1", formatDetailSummaryValue(effective, "BuyLimit1")),
-      summaryMetric(document, "ASK1", formatDetailSummaryValue(effective, "SellLimit1")),
-      summaryMetric(document, "עסקה אחרונה", formatDetailSummaryValue(effective, "LastDealTimeOnly"))
-    );
+    for (const column of profile.summaryColumns) {
+      list.append(summaryMetric(
+        document,
+        column.label,
+        formatDetailSummaryValue(effective, column.key, profile),
+        column.testId ?? null
+      ));
+    }
     container.append(list);
   }
 
@@ -129,7 +138,7 @@ export function createDetailSurface({
 
     const thead = document.createElement("thead");
     const header = document.createElement("tr");
-    for (const column of HISTORY_COLUMNS) {
+    for (const column of profile.historyColumns) {
       const th = document.createElement("th");
       th.scope = "col";
       th.textContent = column.label;
@@ -141,9 +150,9 @@ export function createDetailSurface({
     const tbody = document.createElement("tbody");
     for (const row of model.rows) {
       const tr = document.createElement("tr");
-      for (const column of HISTORY_COLUMNS) {
+      for (const column of profile.historyColumns) {
         const td = document.createElement("td");
-        td.textContent = formatHistoryCell(column.key, row[column.key]);
+        td.textContent = formatHistoryCell(column.key, row[column.key], profile);
         if (["number", "percentage", "timestamp", "time"].includes(column.kind)) {
           td.dir = "ltr";
         }
@@ -255,7 +264,7 @@ export function createDetailSurface({
       try {
         const historyPage = await client.getHistoryPage(securityId, null);
         if (sequence !== openSequence) return Object.freeze({ stale: true });
-        model = createDetailModel(securityResponse, historyPage);
+        model = createDetailModel(securityResponse, historyPage, profile);
         state = "DETAIL";
       } catch (error) {
         if (sequence !== openSequence) return Object.freeze({ stale: true });
@@ -300,7 +309,8 @@ export function createDetailSurface({
 
       let nextModel = createDetailModel(
         securityResponse,
-        await client.getHistoryPage(securityId, null)
+        await client.getHistoryPage(securityId, null),
+        profile
       );
 
       if (sequence !== openSequence || selectedSecurityId !== securityId) {
@@ -316,7 +326,7 @@ export function createDetailSurface({
         if (sequence !== openSequence || selectedSecurityId !== securityId) {
           return Object.freeze({ stale: true });
         }
-        nextModel = appendDetailHistory(nextModel, page);
+        nextModel = appendDetailHistory(nextModel, page, profile);
       }
 
       security = securityResponse;
@@ -363,7 +373,7 @@ export function createDetailSurface({
       if (sequence !== openSequence || selectedSecurityId !== securityId) {
         return Object.freeze({ stale: true });
       }
-      model = appendDetailHistory(model, page);
+      model = appendDetailHistory(model, page, profile);
     } catch (error) {
       if (sequence !== openSequence || selectedSecurityId !== securityId) {
         return Object.freeze({ stale: true });
