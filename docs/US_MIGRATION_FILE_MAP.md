@@ -1,15 +1,16 @@
 # US Migration File Map
 
-This is the exact classification of the 124 files imported from the MarketScope baseline.
+This is the exact classification of the 124 files present at the first exhaustive U.S. migration audit snapshot.
 
-Second-pass content review corrected false KEEP classifications and explicitly drops three superseded MarketScope planning-only coverage artifacts.
+That snapshot consisted of 121 files from the exact MarketScope baseline plus 3 U.S. replan/evidence files added before the audit: `.planning/BASELINE_PROVENANCE.md`, `docs/US_PRODUCT_DIRECTION.md`, and `docs/US_SOURCE_EVIDENCE.md`.
 
-## KEEP (16)
+Second-pass content review corrected false KEEP classifications, strengthens planning guards, and explicitly drops three superseded MarketScope planning-only coverage artifacts.
+
+## KEEP (15)
 
 - .gitignore
 - .planning/BASELINE_PROVENANCE.md
 - .planning/FRAMEWORK.md
-- .planning/verify-handoff.mjs
 - browser/viewer/scanner-query-library.js
 - browser/viewer/scanner-scheduler.js
 - local-service/database/writer.js
@@ -125,7 +126,7 @@ Second-pass content review corrected false KEEP classifications and explicitly d
 - tests/unit/provider-data.test.mjs
 - tests/workload/representative-workload.test.mjs
 
-## PLANNING_REPLACE (9)
+## PLANNING_REPLACE (10)
 
 - .github/workflows/planning-docs-ci.yml
 - .planning/DECISIONS.md
@@ -136,6 +137,7 @@ Second-pass content review corrected false KEEP classifications and explicitly d
 - .planning/REVIEWS.md
 - .planning/STATUS.yaml
 - .planning/TREE.yaml
+- .planning/verify-handoff.mjs
 
 ## DROP (3)
 
@@ -145,10 +147,12 @@ Second-pass content review corrected false KEEP classifications and explicitly d
 
 ## Coverage proof
 
-- imported baseline files: 124
-- classified files: 124
+- audit-snapshot files: 124
+- exact imported MarketScope baseline files: 121
+- pre-audit U.S. replan/evidence additions: 3
+- classified audit-snapshot files: 124
 - duplicates: 0
 - missing: 0
 - extra: 0
 
-New Market Flow US planning/evidence files created after the baseline import are not part of this 124-file denominator.
+Files created later by the planning process are outside this original 124-file audit denominator and are governed by current planning reviews/CI.
