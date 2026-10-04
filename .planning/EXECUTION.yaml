@@ -1,7 +1,48 @@
 version: 2
 
-# Intentionally unallocated while the U.S. replacement plan is active.
-# The imported MarketScope execution history remains recoverable from the baseline commit.
-# Allocation occurs only after the new Market Flow US TREE passes Final Planning Review and freezes.
+chats:
+  "1":
+    nodes:
+      "1.1": { state: pending, result: null }
+      "1.2": { state: pending, result: null }
 
-chats: {}
+  "2":
+    nodes:
+      "2.1": { state: pending, result: null }
+      "2.2": { state: pending, result: null }
+      "2.3": { state: pending, result: null }
+
+  "3":
+    nodes:
+      "3.1": { state: pending, result: null }
+      "3.2": { state: pending, result: null }
+      "3.3": { state: pending, result: null }
+
+  "4":
+    nodes:
+      "4.1": { state: pending, result: null }
+      "4.2": { state: pending, result: null }
+
+  "5":
+    nodes:
+      "5.1": { state: pending, result: null }
+      "5.2": { state: pending, result: null }
+      "5.3": { state: pending, result: null }
+
+  "6":
+    nodes:
+      "6.1": { state: pending, result: null }
+      "6.2": { state: pending, result: null }
+
+  "7":
+    nodes:
+      "6.3": { state: pending, result: null }
+      "7.1": { state: pending, result: null }
+
+  "8":
+    nodes:
+      "7.2": { state: pending, result: null }
+
+  "9":
+    nodes:
+      "7.3": { state: pending, result: null }
