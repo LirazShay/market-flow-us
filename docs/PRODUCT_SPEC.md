@@ -373,9 +373,9 @@ The bounded real-provider gate proves only irreducible external facts plus short
 
 ```text
 producer hello/session
-→ three consecutive validated U.S. full responses at candidate cadence
+→ at least 20 consecutive validated U.S. full responses spanning at least 60 seconds at candidate cadence
 → universe ACK/revision handling
-→ cycle COMMIT ACK for each cycle
+→ cycle COMMIT ACK for every cycle
 → Current on final cycle
 → Security
 → History containing the live committed cycles
@@ -384,4 +384,4 @@ producer hello/session
 → clean stop
 ```
 
-This is not a long-running throttling/SLA test. Only the live gate may report final external PASS.
+This is a bounded sustained-collection proof, not a long-duration throttling/SLA guarantee. Only the live gate may report final external PASS.
