@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
-current_stage: "execution_allocation"
-current_node: null
+current_stage: "implementation"
+current_node: "1.1"
 blockers: []
-next_action: "Allocate every one of the 19 implementation-ready TREE leaves exactly once in .planning/EXECUTION.yaml, respecting dependencies and coherent chat boundaries. Then verify handoff before authorizing implementation."
+next_action: "Chat 1 executes TREE nodes 1.1 then 1.2 from fresh main after this planning PR is merged and main CI is green."
 last_review: "R-US-FINAL"
