@@ -1,62 +1,61 @@
-# Goal
+# Market Flow US Goal
 
 ## Desired outcome
 
-Build MarketScope as a clean local single-user market analysis product whose product knowledge, plan and eventual implementation live in this repository without requiring Market Flow history for normal work.
+Convert the exact green MarketScope implementation into Market Flow US with the smallest safe set of changes required by the U.S. Bank Leumi market data.
 
 Target product:
 
 ```text
-authenticated provider page
-→ preserved provider acquisition
-→ exact complete-cycle validation
+authenticated U.S. provider page
+→ ScreenerHulPaging3 full response
+→ exact validation
 → loopback WebSocket
-→ one localhost Node.js service
-→ one native DuckDB authority
-→ Current Universe
+→ localhost Node.js
+→ native DuckDB
+→ Current
 → Security Detail / History
 → Dynamic SQL Scanner
 ```
 
-MarketScope must be independently understandable, runnable and verifiable, including deterministic offline verification through a real local Fake Market and representative workload verification.
+The final product should feel and operate like the proven Israeli MarketScope product, with U.S. data fields and U.S.-scale verification.
 
-## Current reality
+## Stable product direction
 
-- MarketScope contains planning/documentation only; no production implementation has been migrated.
-- Product Requirements, Product Spec, Data Contract, Technical Spec, Test Strategy and Source Extraction are complete for the current pre-implementation scope.
-- Proven V1 Current, Detail/History, provider/Recorder and operational-diagnostics behavior has been extracted into MarketScope durable contracts; normal implementation planning no longer depends on rereading Market Flow.
-- Market Flow remains reference-only evidence when a concrete later contradiction requires it.
-- D-043 preserves provider/data continuity and the three surfaces.
-- D-045 establishes browser → loopback WebSocket → Node → native DuckDB as target authority.
-- The causal S&T implementation tree has passed local necessity, sufficiency, dependency and KISS review: 36 nodes / 28 implementation-ready leaves, all approved.
-- The dedicated legacy-completeness/outside-in audit is complete and every one of the 660 unique coverage IDs maps to a durable owner; Final Planning Review is the remaining pre-freeze gate.
-- No production code may be written until the full plan is reviewed, frozen and allocated.
+- Preserve the existing architecture rather than rewrite it.
+- Preserve every successful snapshot in history.
+- Preserve Current/Detail/History/Scanner/saved-query/diagnostics workflows.
+- Use `String(PaperId)` as canonical identity.
+- Use source-shaped U.S. fields and preserve raw rows.
+- Keep strategy logic in editable Scanner SQL.
+- Ship staged candidate ranking as a built-in example query.
+- Do not add a special temporal/horizon mechanism before performance evidence.
+- Keep the product local and public-safe.
 
-## Constraints
+## Planning boundary
 
-- Local single-user product; no cloud backend, remote app server or collaboration.
-- Browser owns provider authentication/calls and complete-cycle validation.
-- Node owns durable history, DuckDB, transaction authority and trusted reads/SQL.
-- One Node-owned DuckDB; browsers never open it directly.
-- Preserve MapHeat2 → sequential GetSecuritiesData → exact complete-cycle validation unless evidence changes it.
-- Preserve canonical `String(PaperId or Key)`, raw facts and `null != 0 != "" != missing`.
-- Incomplete/corrupt cycles never advance authority.
-- Preserve exact V1-derived Current and Detail/History behavior after extraction.
-- Scanner is separate and must not hide ranking/filter/sort/LIMIT.
-- Real local Fake Market using production provider paths is mandatory.
-- Tests protect observable/public contracts.
-- Public-safe repository discipline.
-- KISS; no speculative frameworks.
-- No production implementation while `plan_state: active`.
-- Planning ends only after Final Planning Review, freeze and executor allocation.
+The exhaustive 124-file migration audit is complete.
 
-## Non-goals
+Durable U.S. contracts and decisions must be coherent before a replacement S&T tree is built.
 
-- Automatic trading/order execution.
-- Portfolio management.
-- Cloud SaaS / remote multi-user access.
-- Generic data warehouse.
-- DuckDB-Wasm/OPFS/browser SQL Worker as production authority.
-- Legacy IndexedDB history import in the first release unless later explicitly required.
-- Browser-SQL archaeology in HOT context.
-- Production coding during the current planning/preparation phase.
+Production implementation remains forbidden while:
+
+```text
+.plan_state = active
+root phase = planning
+```
+
+## Completion
+
+Market Flow US is complete only when:
+
+- U.S. provider path is authoritative;
+- Israel-only runtime assumptions are removed/superseded;
+- schema v3 and U.S. typed projections are proven;
+- Current/Detail/History/Scanner operate on U.S. data;
+- staged candidate SQL executes correctly;
+- Fast and Browser CI are green;
+- representative U.S. workload is green;
+- local real-provider gate is PASS;
+- final docs/launchers/branding match the product;
+- main is green with no blocking defect.
