@@ -1,147 +1,83 @@
-# MarketScope
+# Market Flow US
 
-MarketScope is the clean product repository for a local, single-user market analysis tool.
+Market Flow US is the U.S.-market conversion of the proven MarketScope local market-analysis product.
 
-## Product boundary
-
-The implemented product flow is:
+## Intended product flow
 
 ```text
-authenticated provider page
-→ browser provider acquisition
-→ exact complete-cycle validation
+authenticated Bank Leumi U.S. market page
+→ full U.S. screener snapshot
+→ exact snapshot validation
 → loopback WebSocket
-→ one localhost Node.js service
+→ localhost Node.js service
 → native DuckDB
-→ trusted reads / SQL
-→ Current Universe
+→ Current
 → Security Detail / History
 → Dynamic SQL Scanner
 ```
 
-There is no cloud backend and no remote application server.
-
-## Quick start
-
-**Windows / easiest path:** start with [START_HERE.md](START_HERE.md). It provides double-click helpers for first-time setup, local Demo, normal real-provider use, regular tests and bounded live-verification preparation.
-
-For a fuller user-oriented walkthrough, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
-
-Requirements: Node.js 24.x and npm.
-
-Install the pinned dependencies:
-
-```text
-npm ci
-```
-
-Fastest local product smoke, using the canonical Fake Market and the normal MarketScope browser runtime:
-
-```text
-npm run demo:fake-market
-```
-
-Open the URL printed by the command. The demo persists only under `.demo/`; stop it with Ctrl+C. To remove demo state safely:
-
-```text
-npm run demo:reset
-```
-
-For the authenticated provider flow:
-
-```text
-npm run build:browser
-npm run service -- --allowed-origin <exact-provider-origin>
-```
-
-Read the exact origin from the authenticated provider page as `location.origin`. The service is loopback-only and stores production data in `data/market-scope.duckdb` unless `--db` is supplied. Launch the self-contained bookmarklet generated at:
-
-```text
-dist/browser/market-scope.bookmarklet.txt
-```
-
-Do not copy cookies, authorization headers, account identifiers, or authenticated browser dumps into the repository or service configuration.
-
-Core verification commands:
-
-```text
-npm run test:fast
-npm run build:browser
-npm run test:e2e
-npm run test:workload
-```
-
-Local Chromium E2E requires the pinned Playwright Chromium binary; install it when needed with `npx playwright install chromium`. The real-provider release gate is documented in `docs/LIVE_VERIFICATION.md`; its **current state belongs only in `STATUS.yaml`**.
-
-## Repository roles
-
-- `LirazShay/market-scope` — **the product source of truth**.
-- `LirazShay/market-flow` — reference-only source library and historical evidence.
-- `LirazShay/st-planner` — reusable S&T planning framework.
-
-Normal MarketScope work must not require reading Market Flow history. Relevant knowledge is extracted into this repository before implementation.
+The architecture, operational model, Scanner, saved queries, diagnostics, Fake Market, demo, CI and local-only authority are inherited from the verified MarketScope baseline wherever U.S. data does not require a change.
 
 ## Current state
 
-Read `STATUS.yaml` for the current operational phase and verification pointer.
+The repository contains an exact green MarketScope implementation baseline and a frozen U.S. conversion plan. Production U.S. conversion is executed serially from `.planning/EXECUTION.yaml`.
 
-While `.planning/STATUS.yaml -> plan_state: active`, production implementation is forbidden. After freeze, executor chats use `.planning/EXECUTION.yaml` and their assigned S&T nodes.
+Read `STATUS.yaml` for the current chat/node.
 
-## Start here
+Do not treat the imported Israel provider path as the final U.S. product until the corresponding migration nodes are completed.
 
-Fresh planning/review chat:
+## Baseline
 
-1. `AGENTS.md`
-2. `STATUS.yaml`
-3. `.planning/README.md`
-4. `.planning/FRAMEWORK.md`
-5. `.planning/STATUS.yaml`
-6. only the docs/source evidence needed by the current stage
+Imported donor:
 
-After the S&T plan is frozen, executor chats use `.planning/EXECUTION.yaml` and only their assigned S&T nodes.
+```text
+LirazShay/market-scope
+commit: d8bc770d292d328d7e89febb8ef4f450abe9458e
+tree:   c49cc5f691e6d27ad120e0a5395e6b190f1b5952
+```
 
-For normal post-implementation maintenance, start with `AGENTS.md` → `STATUS.yaml` → this README, then load only the durable contract and code area relevant to the change. Planning history is not normal HOT context.
+Market Flow US baseline commit:
+
+```text
+cf6a21a17288832af3a69703dff39c9f843fe9a5
+```
+
+The imported tree matched byte-for-byte and passed Planning, Fast and Browser CI in this repository. See `.planning/BASELINE_PROVENANCE.md`.
+
+## Product decisions
+
+- Keep the MarketScope product style and runtime architecture.
+- Replace the Israel-specific provider/data contract with the proven U.S. Leumi screener path.
+- Keep append-only history + latest/current behavior; do not invent a new temporal-link mechanism.
+- Keep Scanner as the strategy/analysis surface.
+- The staged "best candidate" idea is an editable SQL query that computes the highest contiguous stage reached and sorts candidates accordingly.
+- Automated order execution/IBKR is outside this migration scope.
+- Optimize historical SQL only after the U.S. workload proves a real bottleneck.
+
+## Durable documents
+
+- `docs/US_PRODUCT_DIRECTION.md`
+- `docs/US_SOURCE_EVIDENCE.md`
+- `docs/PRODUCT_REQUIREMENTS.md`
+- `docs/PRODUCT_SPEC.md`
+- `docs/DATA_CONTRACT.md`
+- `docs/TECHNICAL_SPEC.md`
+- `docs/SCANNER_SQL_GUIDE.md`
+- `docs/TEST_STRATEGY.md`
+- `docs/SOURCE_EXTRACTION.md`
 
 ## Development workflow
 
-Meaningful planning or implementation changes use a focused branch + pull request rather than direct work on `main`:
-
 ```text
-main
+fresh main
+→ assigned execution chat
 → focused branch
-→ implementation/planning + verification
+→ proof + implementation
 → PR
 → CI green
 → squash merge
-→ verify main
+→ main green
+→ advance STATUS
 ```
 
-`main` is the last accepted verified truth; an open PR is explicitly work-in-progress. See `AGENTS.md` for the full operating rules.
-
-## Durable product documents
-
-- `docs/PRODUCT_REQUIREMENTS.md` — what the user needs and why.
-- `docs/PRODUCT_SPEC.md` — exact observable product behavior.
-- `docs/DATA_CONTRACT.md` — provider, identity, complete-cycle and raw-data semantics.
-- `docs/TECHNICAL_SPEC.md` — current technical architecture contract.
-- `docs/TEST_STRATEGY.md` — verification layers and their proof boundaries.
-- `docs/SOURCE_EXTRACTION.md` — traceability from Market Flow evidence to MarketScope.
-
-## Migration rule
-
-Do not copy Market Flow wholesale.
-
-```text
-inspect old evidence
-→ extract product knowledge
-→ KEEP / ADAPT / DROP / INVESTIGATE
-→ define the clean MarketScope contract
-→ plan proof/tests
-→ only then implement justified code
-```
-
-Browser-SQL archaeology, DuckDB-Wasm production authority, OPFS authority, browser SQL Worker ownership, browser DB Web Locks, obsolete execution graphs and old live-status files are not MarketScope HOT context.
-
-## Security
-
-Treat repository contents as public-safe regardless of current GitHub visibility. Never commit credentials, cookies, session/auth data, account identifiers, private browser/session data, or unsanitized authenticated dumps. Use sanitized synthetic fixtures only.
+GitHub `main` is the source of truth. See `AGENTS.md`.
