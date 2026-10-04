@@ -2,9 +2,9 @@
 
 This is the exact classification of the 124 files imported from the MarketScope baseline.
 
-Second-pass review corrected nine false KEEP classifications and explicitly drops three superseded MarketScope planning-only coverage artifacts.
+Second-pass content review corrected false KEEP classifications and explicitly drops three superseded MarketScope planning-only coverage artifacts.
 
-## KEEP (17)
+## KEEP (16)
 
 - .gitignore
 - .planning/BASELINE_PROVENANCE.md
@@ -22,9 +22,8 @@ Second-pass review corrected nine false KEEP classifications and explicitly drop
 - tests/unit/saved-query-library.test.mjs
 - tests/unit/scanner-admission.test.mjs
 - tests/unit/scanner-scheduler.test.mjs
-- tests/unit/viewer-refresh-controller.test.mjs
 
-## ADAPT (87)
+## ADAPT (88)
 
 - .github/workflows/browser-ci.yml
 - .github/workflows/fast-ci.yml
@@ -112,6 +111,7 @@ Second-pass review corrected nine false KEEP classifications and explicitly drop
 - tests/unit/scanner-query-library.test.mjs
 - tests/unit/service-config.test.mjs
 - tests/unit/viewer-client.test.mjs
+- tests/unit/viewer-refresh-controller.test.mjs
 - tests/unit/windows-launchers.test.mjs
 
 ## REPLACE (8)
