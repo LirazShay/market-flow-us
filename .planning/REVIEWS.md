@@ -378,6 +378,21 @@ The planning branch could not be cloned into the local container because that en
 
 Instead, the Planning CI/verify-handoff logic was reviewed directly from the authoritative GitHub branch and its structural predicates were checked against repository state. Actual Planning Docs CI remains a required PR/main verification before the planning work unit can be merged.
 
+### Freeze decision
+
+PASS — the complete plan may now be frozen.
+
+Freeze does **not** authorize production implementation by itself.
+
+Next stage after freeze:
+
+```text
+allocate all 19 implementation leaves exactly once in EXECUTION.yaml
+→ verify dependency/chat order
+→ set root implementation pointer
+→ only then authorize phase: implementation
+```
+
 
 ## R-US-EXEC-REOPEN-001 — Pre-cutover activation boundary review
 
