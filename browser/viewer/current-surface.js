@@ -1,5 +1,5 @@
 import {
-  CURRENT_COLUMNS,
+  LEGACY_CURRENT_PROFILE,
   createCurrentModel,
   createInitialCurrentSort,
   formatCurrentCell,
@@ -47,7 +47,8 @@ export function createCurrentSurface({
   root,
   client,
   onOpenSecurity = () => {},
-  now = () => Date.now()
+  now = () => Date.now(),
+  profile = LEGACY_CURRENT_PROFILE
 } = {}) {
   assertElement(root);
   assertClient(client);
@@ -57,9 +58,13 @@ export function createCurrentSurface({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
+  if (!profile || !Array.isArray(profile.columns) || profile.columns.length === 0) {
+    throw new TypeError("profile must expose Current columns.");
+  }
 
+  const columns = profile.columns;
   const document = root.ownerDocument;
-  let sort = createInitialCurrentSort();
+  let sort = createInitialCurrentSort(profile);
   let model = null;
   let status = null;
   let state = "BOOTING";
@@ -126,7 +131,7 @@ export function createCurrentSurface({
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
 
-    for (const column of CURRENT_COLUMNS) {
+    for (const column of columns) {
       const th = document.createElement("th");
       th.scope = "col";
 
@@ -141,7 +146,7 @@ export function createCurrentSurface({
         : "";
       button.textContent = `${column.label}${activeIndicator}`;
       button.addEventListener("click", () => {
-        sort = nextCurrentSort(sort, column.key);
+        sort = nextCurrentSort(sort, column.key, profile);
         renderCurrentState();
       });
 
@@ -157,7 +162,7 @@ export function createCurrentSurface({
     table.append(thead);
 
     const tbody = document.createElement("tbody");
-    const orderedRows = sortCurrentRows(model.rows, sort);
+    const orderedRows = sortCurrentRows(model.rows, sort, profile);
 
     for (const row of orderedRows) {
       const tr = document.createElement("tr");
@@ -169,14 +174,14 @@ export function createCurrentSurface({
       tr.addEventListener("click", (event) => activateRow(row, event));
       tr.addEventListener("keydown", (event) => activateRow(row, event));
 
-      for (const column of CURRENT_COLUMNS) {
+      for (const column of columns) {
         const td = document.createElement("td");
-        td.textContent = formatCurrentCell(column.key, row[column.key]);
+        td.textContent = formatCurrentCell(column.key, row[column.key], profile);
         if (numericDirection(column)) {
           td.dir = "ltr";
         }
         if (
-          column.key === "BaseRateChangePercentage"
+          column.kind === "percentage"
           && typeof row[column.key] === "number"
           && Number.isFinite(row[column.key])
         ) {
@@ -248,7 +253,7 @@ export function createCurrentSurface({
 
     if (
       viewState.sort
-      && CURRENT_COLUMNS.some((column) => column.key === viewState.sort.key)
+      && columns.some((column) => column.key === viewState.sort.key)
       && ["asc", "desc"].includes(viewState.sort.direction)
     ) {
       sort = Object.freeze({
