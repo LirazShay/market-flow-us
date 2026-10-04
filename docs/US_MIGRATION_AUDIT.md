@@ -1,152 +1,173 @@
-# US Migration Audit
+# Market Flow US Migration Audit
 
-## Coverage
+## Audit boundary
 
-Repository branch audited: plan/us-market-migration-replan
+The first exhaustive migration snapshot contained **124 files**:
 
-- files in branch: 124
-- files classified: 124
-- missing: 0
-- duplicates: 0
-- extra: 0
+```text
+121 files from the exact MarketScope baseline
++ 3 U.S. replan/evidence files created before the audit
+= 124 audited files
+```
 
-Disposition counts after second-pass review:
+The three pre-audit additions were:
 
-- KEEP: 16
-- ADAPT: 88
-- REPLACE: 8
-- PLANNING_REPLACE: 9
-- DROP: 3
+- `.planning/BASELINE_PROVENANCE.md`
+- `docs/US_PRODUCT_DIRECTION.md`
+- `docs/US_SOURCE_EVIDENCE.md`
+
+The exact per-file disposition is owned by `docs/US_MIGRATION_FILE_MAP.md`.
+
+## Second-pass verified disposition
+
+```text
+KEEP              15
+ADAPT             88
+REPLACE            8
+PLANNING_REPLACE  10
+DROP               3
+TOTAL             124
+```
+
+Coverage proof:
+
+- classified: 124/124;
+- duplicate classifications: 0;
+- missing classifications: 0;
+- extra classifications: 0.
 
 ## Main conclusion
 
-This is an incremental conversion of the proven MarketScope product to the U.S. data source, not a rewrite.
+This remains an incremental U.S. conversion of the proven MarketScope product, not a rewrite.
 
-Keep the existing local architecture, WebSocket transport, Node service, DuckDB authority, history/latest model, Viewer surfaces, Scanner engine, saved-query library, diagnostics, demo and verification layers unless the U.S. data contract forces a change.
+Preserve:
 
-Do not add a new temporal-history subsystem during this conversion. Existing history plus Scanner SQL is the baseline. Optimize later only if representative workload proves a real bottleneck.
+- browser-authenticated provider execution;
+- loopback WebSocket;
+- Node/DuckDB authority;
+- one-producer/session lifecycle;
+- serialized writer;
+- atomic cycle commit/rollback;
+- append-only history;
+- full-row latest;
+- trusted Current/Security/History reads;
+- Current/Detail/Scanner product model;
+- Scanner admission and saved-query architecture;
+- deterministic Fake Market architecture;
+- diagnostics/Support Snapshot concept;
+- Fast/Browser/Workload/live verification layering.
+
+Replace/adapt only the boundaries that U.S. provider/data/scale/branding require.
 
 ## Required conversion areas
 
-1. Replace the Israel-specific provider flow based on MapHeat2 and GetSecuritiesData with the U.S. ScreenerHulPaging3 full-response flow.
-2. Preserve complete-response validation, canonical String(PaperId) identity, raw-row fidelity and fail-closed commit semantics.
-3. Adapt recorder configuration to remove chunk-only assumptions that no longer apply.
-4. Keep the existing database table layout concept, but replace Israel-specific typed market columns and MapHeat metadata with U.S. fields.
-5. Preserve Current and Detail/History behavior while changing visible columns and labels.
-6. Preserve Scanner architecture and adapt the public schema guide, built-ins and examples.
-7. Replace the provider-specific Fake Market implementation with a deterministic U.S. screener fake.
-8. Replace the 561-security/chunk-specific workload with a U.S.-scale workload based on the observed roughly-4k universe, without hard-coding 4015 as a permanent product constant.
-9. Adapt the bounded live verification gate to the U.S. provider.
-10. Rename MarketScope package/runtime/database/launcher/CI user-facing names to Market Flow US.
-11. Replace imported MarketScope planning artifacts before implementation allocation.
+1. Replace `MapHeat2 + GetSecuritiesData` acquisition with `ScreenerHulPaging3`.
+2. Use `String(PaperId)` as canonical security identity.
+3. Treat every valid full response as one complete one-segment cycle.
+4. Drive current-universe revision from canonical membership changes.
+5. Replace Israeli schema projections with source-shaped U.S. schema-v3 fields.
+6. Preserve history/latest transaction semantics.
+7. Adapt Current and Detail/History fields while preserving UX/state/paging behavior.
+8. Keep Scanner generic and add staged candidate ranking as editable SQL only.
+9. Replace provider-specific Fake Market fixtures/path with U.S. screener behavior.
+10. Replace the 561/chunk-specific workload with the 4096 x 180 U.S. workload.
+11. Adapt diagnostics/live verification to the U.S. path.
+12. Rename operational package/runtime/DB/launcher/CI surfaces to Market Flow US.
+13. Replace stale MarketScope planning guards/handoff artifacts before freeze.
 
-## Explicitly preserved
+## Explicit non-changes
 
-- local-only architecture
-- browser-authenticated provider access
-- loopback WebSocket
-- one-producer ownership/session lifecycle
-- serialized DuckDB writer
-- atomic commit/rollback
-- append-only history
-- full-row latest mechanism
-- history paging
-- read-only Scanner admission
-- saved-query CRUD
-- diagnostics/Support Snapshot
-- demo/reset concept
-- Fast/Browser/Workload verification layers
-- public-safe security discipline
+Do not add during this conversion:
 
-## Contract decisions to settle before TREE
+- Strategy Engine;
+- predecessor/horizon schema;
+- dynamic temporal columns;
+- new database architecture;
+- new transport;
+- cloud backend;
+- IBKR/order execution;
+- semantic conversion of Israeli historical DB rows into U.S. market rows.
 
-1. Exact U.S. typed columns for universe/history/latest.
-2. Final Current and Detail/History visible columns and default sort.
-3. Treatment of Price and TradeDateTime while exact provider semantics remain empirical.
-4. Whether each full U.S. poll directly refreshes current-universe membership.
-5. Initial collection cadence for demo/offline proof and how live cadence is tuned.
-6. Representative U.S. workload size/cycle count.
-7. Exact staged-ranking Scanner SQL example and deterministic proof fixture.
-8. Schema migration/version from the imported MarketScope schema.
-9. Final runtime/bookmarklet/database/Windows-launcher naming.
+Direct `history` SQL is the initial strategy mechanism. Performance optimization is evidence-driven by the representative workload.
 
-## File disposition
+## Second-pass corrections
 
-### KEEP (16)
+The repeat review intentionally challenged the first audit and found:
 
-.gitignore
-.planning/BASELINE_PROVENANCE.md
-.planning/FRAMEWORK.md
-.planning/verify-handoff.mjs
-browser/diagnostics/support-snapshot.js
-browser/viewer/refresh-controller.js
-browser/viewer/scanner-query-library.js
-browser/viewer/scanner-scheduler.js
-browser/viewer/scanner-surface.js
-local-service/database/writer.js
-local-service/scanner/query-library.js
-local-service/scanner/scanner.js
-local-service/server/startup-diagnostics.js
-playwright.config.mjs
-scripts/demo-reset.mjs
-shared/diagnostics/index.js
-shared/protocol/index.js
-tests/service/helpers/database-worker.mjs
-tests/service/helpers/service-fixture.mjs
-tests/service/saved-query-library.test.mjs
-tests/service/service-fixture.test.mjs
-tests/service/websocket-transport.test.mjs
-tests/unit/saved-query-library.test.mjs
-tests/unit/scanner-admission.test.mjs
-tests/unit/scanner-scheduler.test.mjs
-tests/unit/viewer-refresh-controller.test.mjs
+### False KEEP classifications
 
-### REPLACE (8)
+Several reusable files still contained MarketScope branding/channels/fixtures or Israeli fields. They were moved to ADAPT, including diagnostics, Viewer broadcast/surface files, service-test helpers and Viewer refresh tests.
 
-browser/collector/cycle.js
-browser/provider/securities.js
-browser/provider/universe.js
-tests/fake-market/server.mjs
-tests/service/cycle-authority.test.mjs
-tests/service/fake-market.test.mjs
-tests/unit/provider-data.test.mjs
-tests/workload/representative-workload.test.mjs
+`.planning/verify-handoff.mjs` also moved from KEEP to PLANNING_REPLACE because stronger allocation validation is required after replacing the old Planning CI.
 
-### PLANNING_REPLACE (9)
+### Stale planning infrastructure
 
-.github/workflows/planning-docs-ci.yml
-.planning/COVERAGE_MAP.yaml
-.planning/DECISIONS.md
-.planning/EXECUTION.yaml
-.planning/EXECUTOR_HANDOFF.md
-.planning/GOAL.md
-.planning/LEGACY_COMPLETENESS_AUDIT.md
-.planning/MASTER_COVERAGE.md
-.planning/README.md
-.planning/REVIEWS.md
-.planning/STATUS.yaml
-.planning/TREE.yaml
+The imported Planning CI and executor handoff still referenced old MarketScope nodes/reviews/workload/coverage. They were rewritten for the current U.S. tree.
 
-### ADAPT (88)
+Three superseded legacy coverage artifacts were deleted:
 
-All remaining branch files not listed above. The 124/124 classification check proved there are no unclassified files.
+- `.planning/MASTER_COVERAGE.md`
+- `.planning/COVERAGE_MAP.yaml`
+- `.planning/LEGACY_COMPLETENESS_AUDIT.md`
 
-The ADAPT set includes the workflows, launchers, runtime composition, recorder, Viewer field models, diagnostics/branding channels, test helpers that encode MarketScope names/fields, durable product/data/technical/test docs, schema/persistence/read projections, package metadata, build/demo scripts, Scanner built-ins, U.S.-affected E2E/service/unit tests, and user documentation.
+Whole-goal coverage now follows `.planning/FRAMEWORK.md` and is recorded in `.planning/REVIEWS.md`.
 
-Second-pass review corrected nine files that had been incorrectly classified KEEP because their core mechanism was reusable but they still contained MarketScope branding/channel/fixture assumptions.
+### Live repeatability
 
-### DROP (3)
+A one-cycle and then three-cycle live proof was judged too weak for a continuous collector.
 
-The following imported planning-only artifacts are superseded by the current FRAMEWORK review method and the U.S. migration audit/reviews, so retaining them would preserve contradictory MarketScope planning truth:
+Final planned live proof is bounded but sustained:
 
-- .planning/MASTER_COVERAGE.md
-- .planning/COVERAGE_MAP.yaml
-- .planning/LEGACY_COMPLETENESS_AUDIT.md
+```text
+>= 20 consecutive complete cycles
+AND
+>= 60 seconds elapsed
+at the candidate collection cadence
+```
 
-## Next-stage gate
+This is short-run repeatability proof, not a long-duration provider SLA claim.
 
-Do not build the replacement TREE yet.
+### Execution allocation guard
 
-Next order:
+The repeat review noticed that rewriting Planning CI had accidentally removed the old exact leaf-allocation guard.
 
-audit -> durable U.S. contracts + decisions -> new S&T TREE -> review -> freeze -> EXECUTION allocation.
+`.planning/verify-handoff.mjs` now owns one reusable validation path for:
+
+- every implementation leaf assigned exactly once;
+- contiguous chat numbers;
+- valid execution states;
+- dependency order;
+- serial done-prefix discipline;
+- at most one `in_progress`;
+- dependency completion for done/in-progress nodes;
+- execution-reopen invariants;
+- implementation STATUS pointer correctness.
+
+## File-to-TREE coverage
+
+All **96** implementation-affecting files:
+
+```text
+88 ADAPT
++ 8 REPLACE
+= 96
+```
+
+were mechanically routed to at least one implementation leaf.
+
+Result:
+
+```text
+mapped:   96
+unmapped: 0
+```
+
+The 10 PLANNING_REPLACE files are owned by the planning process before execution.
+The 3 DROP files are intentionally removed.
+The 15 KEEP files require no U.S. implementation change; donor/provenance mentions are intentional where present.
+
+## Current planning gate
+
+The migration audit is now considered corrected.
+
+The next stage is Final Planning Review, not implementation.
