@@ -83,6 +83,20 @@ Rules:
 - fix root cause + regression proof, not only the symptom;
 - if implementation proves the frozen plan materially wrong, reopen the smallest affected planning area before coding forward.
 
+## Learning from failures
+
+When a defect is found:
+
+```text
+root cause
+→ fix
+→ regression proof
+→ affected verification
+→ green
+```
+
+If the defect proves a frozen planning decision/contract wrong, stop coding forward and reopen only the smallest affected planning area before continuing.
+
 ## Planning boundary
 
 Production implementation is forbidden while:
@@ -97,23 +111,27 @@ Implementation is authorized only when:
 .planning/STATUS.yaml -> plan_state: frozen
 AND
 STATUS.yaml -> phase: implementation
+AND
+.planning/EXECUTION.yaml is allocated
 ```
 
-The planner must finish contracts, S&T review, coverage audit, freeze, allocation and handoff verification before authorizing execution.
+The planner must finish contracts, S&T review, whole-goal coverage review, Final Planning Review, freeze, allocation and handoff verification before authorizing execution.
 
 ## Serial executor protocol
 
 When the user says `אני צאט N תתחיל` or equivalent:
 
-1. read `.planning/EXECUTOR_HANDOFF.md`;
-2. read `.planning/EXECUTION.yaml`;
-3. verify root STATUS points to chat N and its first non-done node;
-4. load only assigned TREE nodes/dependencies and routed contracts;
-5. verify dependencies are `done`;
-6. set the active node `in_progress` before implementation;
-7. implement/test only assigned unblocked work;
-8. mark `done` only after success evidence is green;
-9. merge the PR and verify main before advancing STATUS.
+1. fetch current `main`;
+2. read `.planning/EXECUTOR_HANDOFF.md`;
+3. read `.planning/EXECUTION.yaml`;
+4. verify root STATUS points to chat N and its first non-done node;
+5. load only assigned TREE nodes/dependencies and routed contracts;
+6. verify dependencies are `done`;
+7. set the active node `in_progress` before implementation;
+8. implement/test only assigned unblocked work;
+9. mark `done` only after success evidence is green;
+10. update STATUS/EXECUTION on the same branch;
+11. PR → CI green → review → squash merge → verify main before the next independent work unit.
 
 A chat may own several nodes; execute them in listed order.
 
@@ -128,11 +146,11 @@ current verified requirement
 → stop
 ```
 
-Tests protect observable/public contracts. Reuse the imported tests wherever behavior is unchanged; adapt tests only where the U.S. contract intentionally changes.
+Tests protect observable/public contracts. Reuse imported tests wherever behavior is unchanged; adapt tests only where the U.S. contract intentionally changes.
 
 ### Diagnosability-by-design
 
-Preserve MarketScope's diagnosability model:
+Preserve the proven diagnosability model:
 
 - stable component/checkpoint;
 - stable error code;
@@ -165,15 +183,17 @@ Never commit credentials, cookies, authorization/session data, account identifie
 - `.planning/GOAL.md` — stable U.S. migration goal.
 - `.planning/TREE.yaml` — S&T logic/dependencies/evidence.
 - `.planning/DECISIONS.md` — material decisions.
-- `.planning/REVIEWS.md` — plan reviews.
-- `.planning/MASTER_COVERAGE.md` + `COVERAGE_MAP.yaml` — U.S. migration anti-forgetting coverage.
-- `.planning/EXECUTION.yaml` — numbered execution allocation.
+- `.planning/REVIEWS.md` — planning and whole-goal coverage reviews.
+- `.planning/EXECUTION.yaml` — numbered execution allocation after freeze.
 - `.planning/EXECUTOR_HANDOFF.md` — executor routing.
+- `docs/US_MIGRATION_AUDIT.md` + `docs/US_MIGRATION_FILE_MAP.md` — exhaustive imported-baseline migration audit.
+- `docs/US_CONTRACT_REVIEW.md` — durable contract coherence review.
 - `docs/PRODUCT_REQUIREMENTS.md` — what/why.
 - `docs/PRODUCT_SPEC.md` — observable behavior.
 - `docs/DATA_CONTRACT.md` — provider/data truth.
 - `docs/TECHNICAL_SPEC.md` — architecture/schema contract.
 - `docs/TEST_STRATEGY.md` — verification contract.
+- `docs/SCANNER_SQL_GUIDE.md` — public Scanner schema/query guide.
 - `docs/SOURCE_EXTRACTION.md` / `docs/US_SOURCE_EVIDENCE.md` — migration provenance/evidence.
 
 Do not duplicate live operational status in durable specs.
