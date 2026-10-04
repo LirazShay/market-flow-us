@@ -6,7 +6,7 @@ current:
   chat: 2
   node: "2.1"
   title: "U.S. schema v3 lifecycle and incompatible old-DB fail-closed behavior"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
