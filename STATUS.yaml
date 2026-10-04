@@ -6,7 +6,7 @@ current:
   chat: 4
   node: "4.1"
   title: "U.S. Scanner built-ins and staged candidate ranking"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
