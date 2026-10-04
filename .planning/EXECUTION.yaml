@@ -20,8 +20,8 @@ chats:
 
   "4":
     nodes:
-      "4.1": { state: in_progress, result: null }
-      "4.2": { state: pending, result: null }
+      "4.1": { state: done, result: "Explicit pre-cutover Market Flow US Scanner built-ins cover bounded all-current-fields, practical U.S. ranking and staged-candidate SQL over schema v3; real DuckDB/Scanner and guide drift proof validate contiguous stage credit, missing-history stop, target lookup and deterministic tie-breaks while normal legacy composition remains unchanged until 5.2." }
+      "4.2": { state: in_progress, result: null }
 
   "5":
     nodes:
