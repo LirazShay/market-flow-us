@@ -25,7 +25,7 @@ chats:
 
   "5":
     nodes:
-      "5.1": { state: pending, result: null }
+      "5.1": { state: in_progress, result: null }
       "5.2": { state: pending, result: null }
       "5.3": { state: pending, result: null }
 
