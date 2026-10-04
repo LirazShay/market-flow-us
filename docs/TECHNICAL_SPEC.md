@@ -42,7 +42,17 @@ node:test
 
 Do not change toolchain during the U.S. conversion without evidence.
 
-## 3. Provider adapter boundary
+## 3. Canonical identity
+
+Canonical product identity is:
+
+```text
+securityId = String(PaperId)
+```
+
+`Symbol`, provider row order, names and `PaperIdYatab` are never primary identity.
+
+## 4. Provider adapter boundary
 
 Replace the two-file Israel provider model with a U.S. full-response adapter.
 
@@ -60,7 +70,7 @@ Provider responsibilities:
 
 The provider adapter owns no persistence.
 
-## 4. Recorder behavior
+## 5. Recorder behavior
 
 Preserve Recorder lifecycle/scheduling semantics.
 
@@ -80,7 +90,7 @@ Initial demo/default interval:
 
 Live-safe cadence remains empirical and can change as configuration without schema redesign.
 
-## 5. Protocol
+## 6. Protocol
 
 Keep protocol version and message families unless implementation proves a concrete incompatibility:
 
@@ -105,7 +115,7 @@ scanner.queries.*
 
 The U.S. migration should prefer adapting payload validation over creating a second protocol.
 
-## 6. DuckDB authority
+## 7. DuckDB authority
 
 Keep one Node-owned DuckDB with:
 
@@ -129,7 +139,7 @@ Keep:
 - append-only successful history;
 - full-table `latest` replacement inside the same transaction.
 
-## 7. Schema version policy
+## 8. Schema version policy
 
 Imported MarketScope schema version is v2.
 
@@ -151,7 +161,7 @@ KISS migration policy:
 
 This avoids destructive or semantically false conversion of Israeli historical data while preserving the old file separately.
 
-## 8. Universe table v3
+## 9. Universe table v3
 
 Target logical columns:
 
@@ -170,7 +180,7 @@ raw_source JSON NOT NULL
 
 Universe replace retains all-seen rows and toggles `is_current` exactly as MarketScope did.
 
-## 9. Cycle table
+## 10. Cycle table
 
 Keep the current cycle-authority shape to minimize migration risk.
 
@@ -185,7 +195,7 @@ Failed cycles continue to record bounded counters/phase/error metadata without c
 
 Failure phase vocabulary changes provider-specific wording where necessary, but remains stable and diagnosable.
 
-## 10. history/latest v3
+## 11. history/latest v3
 
 Common columns:
 
@@ -242,7 +252,7 @@ latest PRIMARY KEY (security_id)
 
 No temporal predecessor-link columns are added.
 
-## 11. Persistence transaction
+## 12. Persistence transaction
 
 Successful commit:
 
@@ -262,7 +272,7 @@ Fault at any point rolls back all authority changes.
 
 Keep construction-only persistence fault seams and regression proofs.
 
-## 12. Trusted reads
+## 13. Trusted reads
 
 Adapt field projection only; keep read behavior.
 
@@ -285,7 +295,7 @@ cycle_id DESC
 
 Cursor remains bound to the requested security.
 
-## 13. Scanner
+## 14. Scanner
 
 Keep the current security design:
 
@@ -299,7 +309,7 @@ Keep the current security design:
 
 No Strategy Engine is added.
 
-## 14. Staged candidate built-in
+## 15. Staged candidate built-in
 
 The built-in is ordinary SQL over `latest` and `history`.
 
@@ -328,7 +338,7 @@ The SQL computes contiguous `stage_reached`, exposes `security_id AS securityId`
 
 This query is mechanically tested against the actual schema and included in workload measurement.
 
-## 15. Diagnostics
+## 16. Diagnostics
 
 Keep the imported tracker/checkpoint architecture.
 
@@ -349,7 +359,7 @@ live verification
 
 Support Snapshot remains sanitized and bounded.
 
-## 16. Fake Market
+## 17. Fake Market
 
 Replace provider paths/fixtures, not the overall fake architecture.
 
@@ -361,7 +371,7 @@ Fake Market serves:
 
 It must not require Playwright interception for normal scenarios.
 
-## 17. Build and artifact naming
+## 18. Build and artifact naming
 
 Target outputs:
 
@@ -374,7 +384,7 @@ dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
 
 Global runtime/live-result keys should be renamed coherently to `MARKET_FLOW_US` during branding cleanup.
 
-## 18. Local file naming
+## 19. Local file naming
 
 ```text
 production DB: data/market-flow-us.duckdb
@@ -385,7 +395,7 @@ Windows launcher: START_MARKET_FLOW_US.cmd
 
 Keep SETUP/START_DEMO/RESET_DEMO/RUN_TESTS/PREPARE_LIVE_VERIFICATION names unless a user-facing reason requires additional rename.
 
-## 19. Workload
+## 20. Workload
 
 U.S. representative workload:
 
@@ -401,7 +411,7 @@ Measure distributions, do not invent latency SLOs.
 
 If staged SQL is materially impractical at this scale, reopen only Scanner/history performance before release.
 
-## 20. Security
+## 21. Security
 
 Preserve:
 
@@ -413,7 +423,7 @@ Preserve:
 - no raw authenticated dumps in diagnostics/tests;
 - synthetic/sanitized fixtures only.
 
-## 21. Live verification boundary
+## 22. Live verification boundary
 
 Live verification uses production U.S. adapter/protocol and exactly one complete snapshot.
 
