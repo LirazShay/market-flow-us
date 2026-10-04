@@ -251,7 +251,7 @@ Keep the real loopback HTTP fake, normal runtime, deterministic scenarios and on
 
 No GitHub credentials/live bank CI.
 
-The final authenticated-browser gate verifies one complete U.S. response through commit, Current, Detail/History, Scanner, ownership and clean stop.
+The final authenticated-browser gate verifies **three consecutive complete U.S. cycles** at the candidate collection cadence through commit, Current, Detail/History, Scanner, ownership and clean stop. This is a bounded repeatability proof, not a long-running load test or provider SLA claim.
 
 Only that gate may declare the external provider boundary PASS.
 
