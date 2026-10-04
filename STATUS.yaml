@@ -3,11 +3,11 @@ phase: planning
 overall_status: active
 
 current:
-  stage: "us_st_tree_review_reopen"
-  title: "Second-pass migration review corrections"
-  status: in_progress
-  previous: "Second-pass review found planning-infrastructure drift and incorrect KEEP classifications."
-  next: "Correct the 124-file migration map and replace stale MarketScope planning guards/handoff/coverage artifacts, then rerun whole-plan review. Do not freeze or allocate chats."
+  stage: "us_final_planning_review"
+  title: "Final Planning Review and freeze readiness"
+  status: ready
+  previous: "Second-pass adversarial migration/S&T review PASS AFTER CORRECTIONS; R-US-002 recorded."
+  next: "Run Final Planning Review across the corrected audit, contracts, approved TREE, planning guards and handoff. Freeze only if the final review passes. Do not allocate chats or authorize implementation yet."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -16,10 +16,11 @@ authority:
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
 
 planning_sequence:
-  file_audit_and_change_summary: reopen
+  file_audit_and_change_summary: pass
   durable_us_contracts_and_decisions: pass
   new_st_tree: pass
-  st_tree_review: reopen
-  final_planning_review: pending
+  st_tree_review: pass
+  second_pass_adversarial_review: pass
+  final_planning_review: ready
   execution_allocation: pending
   implementation_authorization: pending
