@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "4.2"
+current_node: "5.1"
 blockers: []
-next_action: "Chat 4 completes TREE node 4.2, then merges the focused PR with required CI green and advances truth to Chat 5 / node 5.1."
+next_action: "Chat 5 executes TREE nodes 5.1, 5.2 and 5.3 in allocation order after Chat 4 PR is merged and main required CI is green."
 last_review: "R-US-EXEC-REOPEN-001"
