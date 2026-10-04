@@ -6,7 +6,7 @@ current:
   chat: 3
   node: "3.1"
   title: "U.S. trusted Current, Security, History and status reads"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
