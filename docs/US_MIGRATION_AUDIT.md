@@ -1,239 +1,141 @@
-# MarketScope to Market Flow US Migration Audit
+# US Migration Audit
 
-## Audit boundary
+## Coverage
 
-This audit is completed before constructing the replacement S&T tree.
+Repository branch audited: plan/us-market-migration-replan
 
-- Repository: LirazShay/market-flow-us
-- Branch: plan/us-market-migration-replan
-- Files audited/classified: 124
-- Missing from classification: 0
-- Duplicate classifications: 0
-- Extra classifications: 0
+- files in branch: 124
+- files classified: 124
+- missing: 0
+- duplicates: 0
+- extra: 0
 
-## Governing conclusion
+Disposition counts:
 
-This is an incremental U.S. market conversion, not a rewrite.
+- KEEP: 26
+- ADAPT: 78
+- REPLACE: 8
+- PLANNING_REPLACE: 12
 
-The proven MarketScope architecture remains: authenticated provider page -> browser acquisition -> complete-cycle validation -> loopback WebSocket -> localhost Node.js -> native DuckDB -> Current -> Detail/History -> Dynamic SQL Scanner.
+## Main conclusion
 
-The staged best-candidate idea remains ordinary Scanner SQL. No Strategy Engine, dynamic horizon schema, predecessor-link columns, or new temporal infrastructure are introduced in this migration.
+This is an incremental conversion of the proven MarketScope product to the U.S. data source, not a rewrite.
 
-## Main migration changes
+Keep the existing local architecture, WebSocket transport, Node service, DuckDB authority, history/latest model, Viewer surfaces, Scanner engine, saved-query library, diagnostics, demo and verification layers unless the U.S. data contract forces a change.
 
-### Provider and collection
+Do not add a new temporal-history subsystem during this conversion. Existing history plus Scanner SQL is the baseline. Optimize later only if representative workload proves a real bottleneck.
 
-Replace the Israel-specific MapHeat2 plus chunked GetSecuritiesData flow with the proven U.S. ScreenerHulPaging3 full-response flow. Preserve canonical identity, full-response validation, raw-row fidelity, timing metadata, fail-closed behavior, and commit only after a coherent complete cycle.
+## Required conversion areas
 
-### Recorder
+1. Replace the Israel-specific provider flow based on MapHeat2 and GetSecuritiesData with the U.S. ScreenerHulPaging3 full-response flow.
+2. Preserve complete-response validation, canonical String(PaperId) identity, raw-row fidelity and fail-closed commit semantics.
+3. Adapt recorder configuration to remove chunk-only assumptions that no longer apply.
+4. Keep the existing database table layout concept, but replace Israel-specific typed market columns and MapHeat metadata with U.S. fields.
+5. Preserve Current and Detail/History behavior while changing visible columns and labels.
+6. Preserve Scanner architecture and adapt the public schema guide, built-ins and examples.
+7. Replace the provider-specific Fake Market implementation with a deterministic U.S. screener fake.
+8. Replace the 561-security/chunk-specific workload with a U.S.-scale workload based on the observed roughly-4k universe, without hard-coding 4015 as a permanent product constant.
+9. Adapt the bounded live verification gate to the U.S. provider.
+10. Rename MarketScope package/runtime/database/launcher/CI user-facing names to Market Flow US.
+11. Replace imported MarketScope planning artifacts before implementation allocation.
 
-Preserve start/stop/relaunch, snapshot cadence, one-producer ownership, heartbeat/recovery and commit-ACK semantics. Remove or adapt chunkSize, chunkDelayMs and MapHeat-specific universe refresh configuration where the U.S. full response makes them unnecessary.
+## Explicitly preserved
 
-### Identity and universe
+- local-only architecture
+- browser-authenticated provider access
+- loopback WebSocket
+- one-producer ownership/session lifecycle
+- serialized DuckDB writer
+- atomic commit/rollback
+- append-only history
+- full-row latest mechanism
+- history paging
+- read-only Scanner admission
+- saved-query CRUD
+- diagnostics/Support Snapshot
+- demo/reset concept
+- Fast/Browser/Workload verification layers
+- public-safe security discipline
 
-Keep security_id as canonical product identity and derive it from String(PaperId). Adapt universe metadata to Symbol, display name, ExchangeName and preserved raw source row. Remove MapHeat-only metadata columns.
+## Contract decisions to settle before TREE
 
-### Database
+1. Exact U.S. typed columns for universe/history/latest.
+2. Final Current and Detail/History visible columns and default sort.
+3. Treatment of Price and TradeDateTime while exact provider semantics remain empirical.
+4. Whether each full U.S. poll directly refreshes current-universe membership.
+5. Initial collection cadence for demo/offline proof and how live cadence is tuned.
+6. Representative U.S. workload size/cycle count.
+7. Exact staged-ranking Scanner SQL example and deterministic proof fixture.
+8. Schema migration/version from the imported MarketScope schema.
+9. Final runtime/bookmarklet/database/Windows-launcher naming.
 
-Keep schema_info, sessions, universe, cycles, history, latest, scanner_saved_queries, serialized writer, append-only history, full-row latest replacement, rollback and hardening. Replace Israeli typed projections with U.S. source fields such as Price, ChangePercent, BidRate, AskRate, DailyVolume, DailyHigh, DailyLow, YearHigh, YearLow, YesterdayRate, PaperMarketCap, TradeDateTime, Symbol and ExchangeName. Introduce a U.S. schema version migration.
+## File disposition
 
-### Current and Detail/History
+### KEEP (26)
 
-Preserve UI states, sorting, null handling, navigation, viewport restoration, historical-only detail, paging, retry and refresh behavior. Adapt visible columns and labels to U.S. fields and choose a U.S.-appropriate default sort.
+.gitignore
+.planning/BASELINE_PROVENANCE.md
+.planning/FRAMEWORK.md
+.planning/verify-handoff.mjs
+browser/diagnostics/support-snapshot.js
+browser/viewer/refresh-controller.js
+browser/viewer/scanner-query-library.js
+browser/viewer/scanner-scheduler.js
+browser/viewer/scanner-surface.js
+local-service/database/writer.js
+local-service/scanner/query-library.js
+local-service/scanner/scanner.js
+local-service/server/startup-diagnostics.js
+playwright.config.mjs
+scripts/demo-reset.mjs
+shared/diagnostics/index.js
+shared/protocol/index.js
+tests/service/helpers/database-worker.mjs
+tests/service/helpers/service-fixture.mjs
+tests/service/saved-query-library.test.mjs
+tests/service/service-fixture.test.mjs
+tests/service/websocket-transport.test.mjs
+tests/unit/saved-query-library.test.mjs
+tests/unit/scanner-admission.test.mjs
+tests/unit/scanner-scheduler.test.mjs
+tests/unit/viewer-refresh-controller.test.mjs
 
-### Scanner
+### REPLACE (8)
 
-Keep the read-only SQL engine, scheduler, saved-query CRUD and Detail navigation contract. Adapt the public schema guide, built-ins and examples. Add one editable staged-candidate ranking query that calculates how far each security passes through the chosen SQL stages and orders by stage reached. Stage definitions remain SQL, not infrastructure.
+browser/collector/cycle.js
+browser/provider/securities.js
+browser/provider/universe.js
+tests/fake-market/server.mjs
+tests/service/cycle-authority.test.mjs
+tests/service/fake-market.test.mjs
+tests/unit/provider-data.test.mjs
+tests/workload/representative-workload.test.mjs
 
-### Fake Market
+### PLANNING_REPLACE (12)
 
-Replace the Israeli MapHeat2/GetSecuritiesData fake with a stateful ScreenerHulPaging3 fake. Preserve deterministic scenarios for complete responses, reordering, dynamic membership, missing/duplicate/invalid rows, null/zero/missing distinctions, HTTP/shape errors, delay, changing values, restart and diagnostics.
+.github/workflows/planning-docs-ci.yml
+.planning/COVERAGE_MAP.yaml
+.planning/DECISIONS.md
+.planning/EXECUTION.yaml
+.planning/EXECUTOR_HANDOFF.md
+.planning/GOAL.md
+.planning/LEGACY_COMPLETENESS_AUDIT.md
+.planning/MASTER_COVERAGE.md
+.planning/README.md
+.planning/REVIEWS.md
+.planning/STATUS.yaml
+.planning/TREE.yaml
 
-### Workload
+### ADAPT (78)
 
-Replace the 561 x 600 / chunk-size-187 Israeli workload assumptions with a U.S.-scale representative workload based on the observed roughly 4,015-result universe without treating 4015 as a permanent constant. Measure commit, Current, History, normal Scanner queries, the staged ranking query, restart and DB size. Optimize only if measurement proves a bottleneck.
+All remaining branch files not listed above. The 124/124 classification check proved there are no unclassified files.
 
-### Live verification
+The ADAPT set includes the workflows, launchers, runtime composition, recorder, Viewer field models, durable product/data/technical/test docs, schema/persistence/read projections, package metadata, build/demo scripts, Scanner built-ins, U.S.-affected E2E/service/unit tests, and user documentation.
 
-Keep the bounded gate structure and change only provider acquisition/validation to the U.S. endpoint. Live verification owns unresolved external facts: market-hours behavior, safe polling cadence, session expiry, current provider shape and browser loopback compatibility.
+## Next-stage gate
 
-### Branding and local operation
+Do not build the replacement TREE yet.
 
-Rename MarketScope user-facing package/runtime/bookmarklet/database/launcher/CI/artifact names to Market Flow US while preserving the one-command setup/demo/reset/test/service workflows.
+Next order:
 
-### Planning artifacts
-
-The imported MarketScope TREE, coverage, decisions, reviews and execution history are donor history, not the new U.S. execution truth. They will be rebuilt only after this audit and durable U.S. contracts are coherent.
-
-## What explicitly does not change
-
-- Local-only architecture
-- Browser-authenticated provider access
-- Loopback WebSocket transport
-- One-producer authority and session recovery
-- Serialized native DuckDB writer
-- Atomic cycle commit/rollback
-- Append-only history and full-row latest mechanism
-- History pagination
-- Scanner admission/sandboxing
-- Saved-query CRUD
-- Diagnostics and Support Snapshot
-- Demo/reset concept
-- Fast, Browser and Workload verification layers
-- Public-safe security rules
-
-## Remaining contract decisions before TREE
-
-1. Exact U.S. typed projection list and final Current/History columns.
-2. Whether Price remains source-named or receives a normalized alias after semantic proof.
-3. Exact handling/display of TradeDateTime before timezone/session semantics are proven.
-4. Whether every U.S. poll directly refreshes the current universe; prefer the single full response unless evidence requires otherwise.
-5. Initial offline/demo polling interval and the rule for live tuning.
-6. Representative U.S. workload size/cycle count that proves about-4k scale while keeping the workload practical.
-7. Exact staged-ranking SQL example and deterministic fixture.
-8. Schema migration/versioning from imported MarketScope schema v2 to the U.S. schema.
-9. Final generated-file/database/Windows-launcher naming.
-
-## File-by-file disposition
-
-### KEEP - 26
-
-- .gitignore
-- .planning/BASELINE_PROVENANCE.md
-- .planning/FRAMEWORK.md
-- .planning/verify-handoff.mjs
-- browser/diagnostics/support-snapshot.js
-- browser/viewer/refresh-controller.js
-- browser/viewer/scanner-query-library.js
-- browser/viewer/scanner-scheduler.js
-- browser/viewer/scanner-surface.js
-- local-service/database/writer.js
-- local-service/scanner/query-library.js
-- local-service/scanner/scanner.js
-- local-service/server/startup-diagnostics.js
-- playwright.config.mjs
-- scripts/demo-reset.mjs
-- shared/diagnostics/index.js
-- shared/protocol/index.js
-- tests/service/helpers/database-worker.mjs
-- tests/service/helpers/service-fixture.mjs
-- tests/service/saved-query-library.test.mjs
-- tests/service/service-fixture.test.mjs
-- tests/service/websocket-transport.test.mjs
-- tests/unit/saved-query-library.test.mjs
-- tests/unit/scanner-admission.test.mjs
-- tests/unit/scanner-scheduler.test.mjs
-- tests/unit/viewer-refresh-controller.test.mjs
-
-### ADAPT - 78
-
-- .github/workflows/browser-ci.yml
-- .github/workflows/fast-ci.yml
-- .github/workflows/workload-ci.yml
-- AGENTS.md
-- PREPARE_LIVE_VERIFICATION.cmd
-- README.md
-- RESET_DEMO.cmd
-- RUN_TESTS.cmd
-- SETUP.cmd
-- START_DEMO.cmd
-- START_HERE.md
-- START_MARKETSCOPE.cmd
-- STATUS.yaml
-- browser/live-verification/harness.js
-- browser/live-verification/index.js
-- browser/recorder/config.js
-- browser/recorder/recorder.js
-- browser/runtime/application.js
-- browser/runtime/index.js
-- browser/runtime/producer-bridge.js
-- browser/viewer/client.js
-- browser/viewer/current-model.js
-- browser/viewer/current-surface.js
-- browser/viewer/detail-model.js
-- browser/viewer/detail-surface.js
-- docs/DATA_CONTRACT.md
-- docs/LIVE_VERIFICATION.md
-- docs/PRODUCT_REQUIREMENTS.md
-- docs/PRODUCT_SPEC.md
-- docs/SCANNER_SQL_GUIDE.md
-- docs/SOURCE_EXTRACTION.md
-- docs/TECHNICAL_SPEC.md
-- docs/TEST_FEEDBACK_PERFORMANCE.md
-- docs/TEST_STRATEGY.md
-- docs/USER_GUIDE.md
-- docs/US_PRODUCT_DIRECTION.md
-- docs/US_SOURCE_EVIDENCE.md
-- docs/benchmarks/REPRESENTATIVE_WORKLOAD_BASELINE.md
-- local-service/database/database.js
-- local-service/database/schema.js
-- local-service/persistence/cycle-authority.js
-- local-service/persistence/producer-authority.js
-- local-service/reads/viewer-reads.js
-- local-service/server/config.js
-- local-service/server/index.js
-- local-service/server/service.js
-- package-lock.json
-- package.json
-- scripts/build-browser.mjs
-- scripts/build-live-verification.mjs
-- scripts/demo-fake-market.mjs
-- shared/scanner/builtins.js
-- tests/e2e/current-surface.spec.mjs
-- tests/e2e/detail-surface.spec.mjs
-- tests/e2e/runtime-composition.spec.mjs
-- tests/e2e/scanner-surface.spec.mjs
-- tests/e2e/viewer-refresh.spec.mjs
-- tests/service/browser-producer-bridge.test.mjs
-- tests/service/database-lifecycle.test.mjs
-- tests/service/demo-orchestration.test.mjs
-- tests/service/diagnostics.test.mjs
-- tests/service/producer-authority.test.mjs
-- tests/service/producer-recovery.test.mjs
-- tests/service/scanner-authority.test.mjs
-- tests/service/viewer-reads.test.mjs
-- tests/unit/browser-build.test.mjs
-- tests/unit/current-surface.test.mjs
-- tests/unit/detail-surface.test.mjs
-- tests/unit/diagnostics.test.mjs
-- tests/unit/live-verification-build.test.mjs
-- tests/unit/live-verification.test.mjs
-- tests/unit/producer-bridge.test.mjs
-- tests/unit/protocol.test.mjs
-- tests/unit/recorder-scheduling.test.mjs
-- tests/unit/scanner-query-library.test.mjs
-- tests/unit/service-config.test.mjs
-- tests/unit/viewer-client.test.mjs
-- tests/unit/windows-launchers.test.mjs
-
-### REPLACE - 8
-
-- browser/collector/cycle.js
-- browser/provider/securities.js
-- browser/provider/universe.js
-- tests/fake-market/server.mjs
-- tests/service/cycle-authority.test.mjs
-- tests/service/fake-market.test.mjs
-- tests/unit/provider-data.test.mjs
-- tests/workload/representative-workload.test.mjs
-
-### PLANNING_REPLACE - 12
-
-- .github/workflows/planning-docs-ci.yml
-- .planning/COVERAGE_MAP.yaml
-- .planning/DECISIONS.md
-- .planning/EXECUTION.yaml
-- .planning/EXECUTOR_HANDOFF.md
-- .planning/GOAL.md
-- .planning/LEGACY_COMPLETENESS_AUDIT.md
-- .planning/MASTER_COVERAGE.md
-- .planning/README.md
-- .planning/REVIEWS.md
-- .planning/STATUS.yaml
-- .planning/TREE.yaml
-
-## Gate to next stage
-
-Next order: this audit -> rewrite durable U.S. contracts and decisions -> construct new S&T TREE -> necessity/sufficiency/KISS review -> Final Planning Review -> freeze -> allocate EXECUTION chats.
-
-Do not construct the replacement TREE from the imported MarketScope planning history.
+audit -> durable U.S. contracts + decisions -> new S&T TREE -> review -> freeze -> EXECUTION allocation.
