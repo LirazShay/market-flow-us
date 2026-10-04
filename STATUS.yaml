@@ -4,8 +4,8 @@ overall_status: ready
 
 current:
   chat: 1
-  node: "1.1"
-  title: "U.S. ScreenerHulPaging3 provider adapter and exact full-response validation"
+  node: "1.2"
+  title: "U.S. Recorder cadence, membership revision and same-response commit semantics"
   status: in_progress
 
 authority:
@@ -30,4 +30,4 @@ execution:
   chats_total: 9
   implementation_leaves_total: 19
   current_chat: 1
-  current_node: "1.1"
+  current_node: "1.2"
