@@ -269,3 +269,23 @@ Do not allocate implementation chats before:
 6. freeze.
 
 The imported MarketScope execution history is not the U.S. execution plan.
+
+## D-US-018 — U.S. normal-runtime cutover occurs only at TREE 5.2
+
+**Status:** resolved
+
+Execution exposed a staging contradiction: Browser CI is required for product-code changes, but switching an upstream component to the U.S. contract before its downstream U.S. dependencies exist makes the normal composed Browser path structurally fail even when the focused component is correct.
+
+The migration therefore uses the existing construction/dependency/configuration seams as a pre-cutover staging boundary:
+
+- before TREE `5.2`, nodes `1.*` through `4.*` and `5.1` implement and prove U.S. behavior without replacing the normal built browser/runtime/demo/service composition;
+- the active proven composition remains Browser-CI green on every pre-cutover work unit;
+- no Browser test is skipped or disabled to conceal an incomplete integration;
+- no generic feature-flag system, duplicate product architecture or long-lived parallel subsystem is introduced;
+- legacy Israel-specific paths are compatibility-only during staging and receive no new product behavior.
+
+TREE `5.2` is the sole normal-runtime U.S. activation boundary. By then Chats 1–4 are already complete and Chat 5 owns `5.1 → 5.2 → 5.3` on one branch, so the U.S. provider, authority, trusted reads/UI, Scanner and Fake Market are available before activation and the Browser suite is migrated/green before merge.
+
+Final removal/audit of superseded authoritative Israel-only runtime paths remains owned by `7.3`.
+
+**Reopen only if:** existing construction seams cannot stage one of the U.S. components without creating materially greater complexity than an earlier integrated cutover.
