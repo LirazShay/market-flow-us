@@ -9,6 +9,8 @@ export const DEFAULT_US_RECORDER_CONFIG = Object.freeze({
   snapshotIntervalMs: 3000
 });
 
+const US_RECORDER_CONFIG_MARKER = Symbol("market-flow-us-recorder-config");
+
 function assertNonNegativeInteger(value, name) {
   if (!Number.isInteger(value) || value < 0) {
     throw new TypeError(`${name} must be a non-negative integer.`);
@@ -24,6 +26,11 @@ function assertPositiveInteger(value, name) {
 export function createRecorderConfig(overrides = {}) {
   if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) {
     throw new TypeError("Recorder config overrides must be an object.");
+  }
+
+  if (overrides[US_RECORDER_CONFIG_MARKER] === true) {
+    assertNonNegativeInteger(overrides.snapshotIntervalMs, "snapshotIntervalMs");
+    return overrides;
   }
 
   const config = {
@@ -57,5 +64,11 @@ export function createUsRecorderConfig(overrides = {}) {
     ...overrides
   };
   assertNonNegativeInteger(config.snapshotIntervalMs, "snapshotIntervalMs");
+  Object.defineProperty(config, US_RECORDER_CONFIG_MARKER, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false
+  });
   return Object.freeze(config);
 }

@@ -1,14 +1,22 @@
 import path from "node:path";
 
-export const DEFAULT_SERVICE_CONFIG = Object.freeze({
-  host: "127.0.0.1",
-  port: 8765,
-  dbPath: path.resolve("data", "market-scope.duckdb"),
-  maxInboundMessageBytes: 16 * 1024 * 1024,
-  producerHeartbeatMs: 5000,
-  producerStaleAfterMs: 15000,
-  historyPageSize: 500
-});
+export const MARKET_SCOPE_DB_FILENAME = "market-scope.duckdb";
+export const MARKET_FLOW_US_DB_FILENAME = "market-flow-us.duckdb";
+
+function baseConfig(dbFilename) {
+  return Object.freeze({
+    host: "127.0.0.1",
+    port: 8765,
+    dbPath: path.resolve("data", dbFilename),
+    maxInboundMessageBytes: 16 * 1024 * 1024,
+    producerHeartbeatMs: 5000,
+    producerStaleAfterMs: 15000,
+    historyPageSize: 500
+  });
+}
+
+export const DEFAULT_SERVICE_CONFIG = baseConfig(MARKET_SCOPE_DB_FILENAME);
+export const DEFAULT_MARKET_FLOW_US_SERVICE_CONFIG = baseConfig(MARKET_FLOW_US_DB_FILENAME);
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
@@ -47,10 +55,10 @@ function parseOrigin(value) {
   return value;
 }
 
-export function parseServiceConfig(argv, { cwd = process.cwd() } = {}) {
+function parseConfig(argv, { cwd, defaults, dbFilename }) {
   const config = {
-    ...DEFAULT_SERVICE_CONFIG,
-    dbPath: path.resolve(cwd, "data", "market-scope.duckdb"),
+    ...defaults,
+    dbPath: path.resolve(cwd, "data", dbFilename),
     allowedOrigins: []
   };
 
@@ -95,5 +103,21 @@ export function parseServiceConfig(argv, { cwd = process.cwd() } = {}) {
   return Object.freeze({
     ...config,
     allowedOrigins: Object.freeze([...config.allowedOrigins])
+  });
+}
+
+export function parseServiceConfig(argv, { cwd = process.cwd() } = {}) {
+  return parseConfig(argv, {
+    cwd,
+    defaults: DEFAULT_SERVICE_CONFIG,
+    dbFilename: MARKET_SCOPE_DB_FILENAME
+  });
+}
+
+export function parseMarketFlowUsServiceConfig(argv, { cwd = process.cwd() } = {}) {
+  return parseConfig(argv, {
+    cwd,
+    defaults: DEFAULT_MARKET_FLOW_US_SERVICE_CONFIG,
+    dbFilename: MARKET_FLOW_US_DB_FILENAME
   });
 }

@@ -6,10 +6,11 @@ import {
 const FAILED_PHASES = new Set([
   "universe",
   "chunk-fetch",
+  "provider-fetch",
   "cycle-validation"
 ]);
 
-const TYPED_NUMERIC_FIELDS = Object.freeze([
+const LEGACY_TYPED_NUMERIC_FIELDS = Object.freeze([
   "LastKnownRate",
   "BaseRateChangePercentage",
   "BuyLimit1",
@@ -22,6 +23,38 @@ const TYPED_NUMERIC_FIELDS = Object.freeze([
   "DailyNISRevenue",
   "DailyLowestRate",
   "DailyHighestRate"
+]);
+
+const US_TYPED_STRING_FIELDS = Object.freeze([
+  "Symbol",
+  "PaperNameEng",
+  "PaperNameHeb",
+  "ExchangeName",
+  "TradeDateTime",
+  "CountryName",
+  "CountryNameEng"
+]);
+
+const US_TYPED_NUMERIC_FIELDS = Object.freeze([
+  "Price",
+  "ChangePercent",
+  "DailyHigh",
+  "DailyLow",
+  "YearHigh",
+  "YearLow",
+  "DailyVolume",
+  "BeginYearChangePercent",
+  "Month12ChangePercent",
+  "Month36ChangePercent",
+  "AskRate",
+  "BidRate",
+  "YesterdayRate",
+  "PaperMarketCap",
+  "PaperIdYatab",
+  "CountryId",
+  "PaperType",
+  "ESGRatingId",
+  "ESGScope"
 ]);
 
 function fail(code) {
@@ -47,6 +80,21 @@ function jsonValue(value, code = ERROR_CODES.CYCLE_INVALID) {
   const encoded = JSON.stringify(value);
   if (encoded === undefined) fail(code);
   return encoded;
+}
+
+function nullableJsonValue(value, code = ERROR_CODES.CYCLE_INVALID) {
+  if (value === null || value === undefined) return null;
+  return jsonValue(value, code);
+}
+
+function numericProjection(data, field) {
+  const value = data[field];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function stringProjection(data, field) {
+  const value = data[field];
+  return typeof value === "string" ? value : null;
 }
 
 async function queryRows(connection, sql, values) {
@@ -104,198 +152,7 @@ async function currentUniverse(connection) {
   };
 }
 
-function validateChunk(chunk, expectedIndex) {
-  if (!isPlainObject(chunk)) fail(ERROR_CODES.CYCLE_INVALID);
-
-  assertSafeInteger(chunk.chunkIndex);
-  if (chunk.chunkIndex !== expectedIndex) fail(ERROR_CODES.CYCLE_INVALID);
-
-  for (const name of ["requested", "received", "unique"]) {
-    assertSafeInteger(chunk[name], { min: 1 });
-  }
-  if (
-    chunk.requested !== chunk.received ||
-    chunk.requested !== chunk.unique
-  ) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  for (const name of [
-    "requestStartedAtMs",
-    "receivedAtMs",
-    "completedAtMs",
-    "durationMs"
-  ]) {
-    assertSafeInteger(chunk[name]);
-  }
-
-  if (
-    chunk.requestStartedAtMs > chunk.receivedAtMs ||
-    chunk.receivedAtMs > chunk.completedAtMs ||
-    chunk.durationMs !== chunk.completedAtMs - chunk.requestStartedAtMs
-  ) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  assertSafeInteger(chunk.httpStatus, { min: 200 });
-  if (chunk.httpStatus > 299) fail(ERROR_CODES.CYCLE_INVALID);
-
-  jsonValue(chunk.serverAsOfDate);
-
-  return Object.freeze({
-    ...chunk
-  });
-}
-
-function validateCompleteCycle(cycle) {
-  if (!isPlainObject(cycle) || cycle.status !== "complete") {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  for (const name of [
-    "startedAtMs",
-    "completedAtMs",
-    "durationMs"
-  ]) {
-    assertSafeInteger(cycle[name]);
-  }
-
-  if (
-    cycle.completedAtMs < cycle.startedAtMs ||
-    cycle.durationMs !== cycle.completedAtMs - cycle.startedAtMs
-  ) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  for (const name of ["requested", "received", "unique"]) {
-    assertSafeInteger(cycle[name], { min: 1 });
-  }
-  for (const name of ["missing", "duplicates", "unexpected"]) {
-    assertSafeInteger(cycle[name]);
-  }
-
-  if (
-    cycle.requested !== cycle.received ||
-    cycle.requested !== cycle.unique ||
-    cycle.missing !== 0 ||
-    cycle.duplicates !== 0 ||
-    cycle.unexpected !== 0
-  ) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  if (!Array.isArray(cycle.chunks) || cycle.chunks.length === 0) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-  if (!Array.isArray(cycle.securities) || cycle.securities.length !== cycle.requested) {
-    fail(ERROR_CODES.CYCLE_INVALID);
-  }
-
-  const chunks = cycle.chunks.map((chunk, index) => validateChunk(chunk, index));
-  const chunkRequested = chunks.reduce((sum, chunk) => sum + chunk.requested, 0);
-  if (chunkRequested !== cycle.requested) fail(ERROR_CODES.CYCLE_INVALID);
-
-  const seen = new Set();
-  const perChunkCounts = new Map();
-  const securities = cycle.securities.map((item) => {
-    if (!isPlainObject(item)) fail(ERROR_CODES.CYCLE_INVALID);
-
-    const securityId = item.securityId;
-    if (typeof securityId !== "string" || securityId.length === 0 || securityId.length > 128) {
-      fail(ERROR_CODES.CYCLE_INVALID);
-    }
-    if (seen.has(securityId)) fail(ERROR_CODES.CYCLE_INVALID);
-    seen.add(securityId);
-
-    assertSafeInteger(item.chunkIndex);
-    const chunk = chunks[item.chunkIndex];
-    if (!chunk) fail(ERROR_CODES.CYCLE_INVALID);
-
-    assertSafeInteger(item.chunkReceivedAtMs);
-    assertSafeInteger(item.collectedAtMs);
-    if (
-      item.chunkReceivedAtMs !== chunk.receivedAtMs ||
-      item.collectedAtMs !== chunk.completedAtMs
-    ) {
-      fail(ERROR_CODES.CYCLE_INVALID);
-    }
-
-    if (!isPlainObject(item.data)) fail(ERROR_CODES.CYCLE_INVALID);
-    const key = item.data.Key;
-    if (key === null || key === undefined || key === "") {
-      fail(ERROR_CODES.CYCLE_INVALID);
-    }
-    if (String(key) !== securityId) fail(ERROR_CODES.CYCLE_INVALID);
-
-    const rawDataJson = jsonValue(item.data);
-    const serverAsOfDateJson = jsonValue(item.serverAsOfDate);
-
-    perChunkCounts.set(item.chunkIndex, (perChunkCounts.get(item.chunkIndex) ?? 0) + 1);
-
-    return Object.freeze({
-      securityId,
-      chunkIndex: item.chunkIndex,
-      chunkReceivedAtMs: item.chunkReceivedAtMs,
-      collectedAtMs: item.collectedAtMs,
-      serverAsOfDateJson,
-      rawDataJson,
-      data: item.data
-    });
-  });
-
-  for (const chunk of chunks) {
-    if ((perChunkCounts.get(chunk.chunkIndex) ?? 0) !== chunk.requested) {
-      fail(ERROR_CODES.CYCLE_INVALID);
-    }
-  }
-
-  return Object.freeze({
-    cycle,
-    chunks: Object.freeze(chunks),
-    securities: Object.freeze(securities),
-    securityIds: Object.freeze(securities.map((item) => item.securityId))
-  });
-}
-
-function numericProjection(data, field) {
-  const value = data[field];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function stringProjection(data, field) {
-  const value = data[field];
-  return typeof value === "string" ? value : null;
-}
-
-function projectionParams({
-  cycleId,
-  sessionId,
-  universeRevision,
-  cycleStartedAtMs,
-  item
-}) {
-  const params = {
-    cycleId,
-    sessionId,
-    universeRevision,
-    securityId: item.securityId,
-    chunkIndex: item.chunkIndex,
-    cycleStartedAtMs,
-    chunkReceivedAtMs: item.chunkReceivedAtMs,
-    collectedAtMs: item.collectedAtMs,
-    serverAsOfDateJson: item.serverAsOfDateJson,
-    LastDealTimeOnly: stringProjection(item.data, "LastDealTimeOnly"),
-    rawDataJson: item.rawDataJson
-  };
-
-  for (const field of TYPED_NUMERIC_FIELDS) {
-    params[field] = numericProjection(item.data, field);
-  }
-
-  return params;
-}
-
-const INSERT_MARKET_ROW_SQL = `(
+const LEGACY_INSERT_MARKET_ROW_SQL = `(
   cycle_id,
   session_id,
   universe_revision,
@@ -344,6 +201,356 @@ const INSERT_MARKET_ROW_SQL = `(
   $LastDealTimeOnly,
   $rawDataJson
 )`;
+
+const US_INSERT_MARKET_ROW_SQL = `(
+  cycle_id,
+  session_id,
+  universe_revision,
+  security_id,
+  chunk_index,
+  cycle_started_at_ms,
+  chunk_received_at_ms,
+  collected_at_ms,
+  source_metadata_json,
+  Symbol,
+  PaperNameEng,
+  PaperNameHeb,
+  ExchangeName,
+  TradeDateTime,
+  CountryName,
+  CountryNameEng,
+  Price,
+  ChangePercent,
+  DailyHigh,
+  DailyLow,
+  YearHigh,
+  YearLow,
+  DailyVolume,
+  BeginYearChangePercent,
+  Month12ChangePercent,
+  Month36ChangePercent,
+  AskRate,
+  BidRate,
+  YesterdayRate,
+  PaperMarketCap,
+  PaperIdYatab,
+  CountryId,
+  PaperType,
+  ESGRatingId,
+  ESGScope,
+  raw_data
+) VALUES (
+  $cycleId,
+  $sessionId,
+  $universeRevision,
+  $securityId,
+  $chunkIndex,
+  $cycleStartedAtMs,
+  $chunkReceivedAtMs,
+  $collectedAtMs,
+  $sourceMetadataJson,
+  $Symbol,
+  $PaperNameEng,
+  $PaperNameHeb,
+  $ExchangeName,
+  $TradeDateTime,
+  $CountryName,
+  $CountryNameEng,
+  $Price,
+  $ChangePercent,
+  $DailyHigh,
+  $DailyLow,
+  $YearHigh,
+  $YearLow,
+  $DailyVolume,
+  $BeginYearChangePercent,
+  $Month12ChangePercent,
+  $Month36ChangePercent,
+  $AskRate,
+  $BidRate,
+  $YesterdayRate,
+  $PaperMarketCap,
+  $PaperIdYatab,
+  $CountryId,
+  $PaperType,
+  $ESGRatingId,
+  $ESGScope,
+  $rawDataJson
+)`;
+
+function createLegacyProjectionParams({
+  cycleId,
+  sessionId,
+  universeRevision,
+  cycleStartedAtMs,
+  item
+}) {
+  const params = {
+    cycleId,
+    sessionId,
+    universeRevision,
+    securityId: item.securityId,
+    chunkIndex: item.chunkIndex,
+    cycleStartedAtMs,
+    chunkReceivedAtMs: item.chunkReceivedAtMs,
+    collectedAtMs: item.collectedAtMs,
+    serverAsOfDateJson: item.metadataJson,
+    LastDealTimeOnly: stringProjection(item.data, "LastDealTimeOnly"),
+    rawDataJson: item.rawDataJson
+  };
+
+  for (const field of LEGACY_TYPED_NUMERIC_FIELDS) {
+    params[field] = numericProjection(item.data, field);
+  }
+
+  return params;
+}
+
+function createUsProjectionParams({
+  cycleId,
+  sessionId,
+  universeRevision,
+  cycleStartedAtMs,
+  item
+}) {
+  const params = {
+    cycleId,
+    sessionId,
+    universeRevision,
+    securityId: item.securityId,
+    chunkIndex: item.chunkIndex,
+    cycleStartedAtMs,
+    chunkReceivedAtMs: item.chunkReceivedAtMs,
+    collectedAtMs: item.collectedAtMs,
+    sourceMetadataJson: item.metadataJson,
+    rawDataJson: item.rawDataJson
+  };
+
+  for (const field of US_TYPED_STRING_FIELDS) {
+    params[field] = stringProjection(item.data, field);
+  }
+  for (const field of US_TYPED_NUMERIC_FIELDS) {
+    params[field] = numericProjection(item.data, field);
+  }
+
+  return params;
+}
+
+const LEGACY_CYCLE_ADAPTER = Object.freeze({
+  validateCycleShape() {},
+  validateChunkMetadata(chunk) {
+    jsonValue(chunk.serverAsOfDate);
+  },
+  validateSecurityIdentity(item, securityId) {
+    const key = item.data.Key;
+    if (key === null || key === undefined || key === "") {
+      fail(ERROR_CODES.CYCLE_INVALID);
+    }
+    if (String(key) !== securityId) fail(ERROR_CODES.CYCLE_INVALID);
+  },
+  metadataJson(item) {
+    return jsonValue(item.serverAsOfDate);
+  },
+  projectionParams: createLegacyProjectionParams,
+  insertMarketRowSql: LEGACY_INSERT_MARKET_ROW_SQL
+});
+
+export const MARKET_FLOW_US_CYCLE_ADAPTER = Object.freeze({
+  validateCycleShape(cycle) {
+    if (cycle.chunks.length !== 1) fail(ERROR_CODES.CYCLE_INVALID);
+  },
+  validateChunkMetadata(chunk) {
+    if (chunk.chunkIndex !== 0) fail(ERROR_CODES.CYCLE_INVALID);
+    nullableJsonValue(chunk.sourceMetadata);
+  },
+  validateSecurityIdentity(item, securityId) {
+    if (item.chunkIndex !== 0) fail(ERROR_CODES.CYCLE_INVALID);
+    const paperId = item.data.PaperId;
+    if (paperId === null || paperId === undefined || paperId === "") {
+      fail(ERROR_CODES.CYCLE_INVALID);
+    }
+    if (String(paperId) !== securityId) fail(ERROR_CODES.CYCLE_INVALID);
+  },
+  metadataJson(item) {
+    return nullableJsonValue(item.sourceMetadata);
+  },
+  projectionParams: createUsProjectionParams,
+  insertMarketRowSql: US_INSERT_MARKET_ROW_SQL
+});
+
+function selectCycleAdapter(cycle) {
+  const firstSecurity = Array.isArray(cycle?.securities) ? cycle.securities[0] : null;
+  const firstChunk = Array.isArray(cycle?.chunks) ? cycle.chunks[0] : null;
+  return Object.hasOwn(firstSecurity ?? {}, "sourceMetadata") ||
+    Object.hasOwn(firstChunk ?? {}, "sourceMetadata")
+    ? MARKET_FLOW_US_CYCLE_ADAPTER
+    : LEGACY_CYCLE_ADAPTER;
+}
+
+function assertCycleAdapter(adapter) {
+  if (
+    !adapter ||
+    typeof adapter.validateCycleShape !== "function" ||
+    typeof adapter.validateChunkMetadata !== "function" ||
+    typeof adapter.validateSecurityIdentity !== "function" ||
+    typeof adapter.metadataJson !== "function" ||
+    typeof adapter.projectionParams !== "function" ||
+    typeof adapter.insertMarketRowSql !== "string"
+  ) {
+    throw new TypeError("cycleAdapter is invalid");
+  }
+}
+
+function validateChunk(chunk, expectedIndex, adapter) {
+  if (!isPlainObject(chunk)) fail(ERROR_CODES.CYCLE_INVALID);
+
+  assertSafeInteger(chunk.chunkIndex);
+  if (chunk.chunkIndex !== expectedIndex) fail(ERROR_CODES.CYCLE_INVALID);
+
+  for (const name of ["requested", "received", "unique"]) {
+    assertSafeInteger(chunk[name], { min: 1 });
+  }
+  if (
+    chunk.requested !== chunk.received ||
+    chunk.requested !== chunk.unique
+  ) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  for (const name of [
+    "requestStartedAtMs",
+    "receivedAtMs",
+    "completedAtMs",
+    "durationMs"
+  ]) {
+    assertSafeInteger(chunk[name]);
+  }
+
+  if (
+    chunk.requestStartedAtMs > chunk.receivedAtMs ||
+    chunk.receivedAtMs > chunk.completedAtMs ||
+    chunk.durationMs !== chunk.completedAtMs - chunk.requestStartedAtMs
+  ) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  assertSafeInteger(chunk.httpStatus, { min: 200 });
+  if (chunk.httpStatus > 299) fail(ERROR_CODES.CYCLE_INVALID);
+
+  adapter.validateChunkMetadata(chunk);
+
+  return Object.freeze({
+    ...chunk
+  });
+}
+
+function validateCompleteCycle(cycle, adapter) {
+  if (!isPlainObject(cycle) || cycle.status !== "complete") {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  for (const name of [
+    "startedAtMs",
+    "completedAtMs",
+    "durationMs"
+  ]) {
+    assertSafeInteger(cycle[name]);
+  }
+
+  if (
+    cycle.completedAtMs < cycle.startedAtMs ||
+    cycle.durationMs !== cycle.completedAtMs - cycle.startedAtMs
+  ) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  for (const name of ["requested", "received", "unique"]) {
+    assertSafeInteger(cycle[name], { min: 1 });
+  }
+  for (const name of ["missing", "duplicates", "unexpected"]) {
+    assertSafeInteger(cycle[name]);
+  }
+
+  if (
+    cycle.requested !== cycle.received ||
+    cycle.requested !== cycle.unique ||
+    cycle.missing !== 0 ||
+    cycle.duplicates !== 0 ||
+    cycle.unexpected !== 0
+  ) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  if (!Array.isArray(cycle.chunks) || cycle.chunks.length === 0) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+  if (!Array.isArray(cycle.securities) || cycle.securities.length !== cycle.requested) {
+    fail(ERROR_CODES.CYCLE_INVALID);
+  }
+
+  adapter.validateCycleShape(cycle);
+
+  const chunks = cycle.chunks.map((chunk, index) => validateChunk(chunk, index, adapter));
+  const chunkRequested = chunks.reduce((sum, chunk) => sum + chunk.requested, 0);
+  if (chunkRequested !== cycle.requested) fail(ERROR_CODES.CYCLE_INVALID);
+
+  const seen = new Set();
+  const perChunkCounts = new Map();
+  const securities = cycle.securities.map((item) => {
+    if (!isPlainObject(item)) fail(ERROR_CODES.CYCLE_INVALID);
+
+    const securityId = item.securityId;
+    if (typeof securityId !== "string" || securityId.length === 0 || securityId.length > 128) {
+      fail(ERROR_CODES.CYCLE_INVALID);
+    }
+    if (seen.has(securityId)) fail(ERROR_CODES.CYCLE_INVALID);
+    seen.add(securityId);
+
+    assertSafeInteger(item.chunkIndex);
+    const chunk = chunks[item.chunkIndex];
+    if (!chunk) fail(ERROR_CODES.CYCLE_INVALID);
+
+    assertSafeInteger(item.chunkReceivedAtMs);
+    assertSafeInteger(item.collectedAtMs);
+    if (
+      item.chunkReceivedAtMs !== chunk.receivedAtMs ||
+      item.collectedAtMs !== chunk.completedAtMs
+    ) {
+      fail(ERROR_CODES.CYCLE_INVALID);
+    }
+
+    if (!isPlainObject(item.data)) fail(ERROR_CODES.CYCLE_INVALID);
+    adapter.validateSecurityIdentity(item, securityId);
+
+    const rawDataJson = jsonValue(item.data);
+    const metadataJson = adapter.metadataJson(item);
+
+    perChunkCounts.set(item.chunkIndex, (perChunkCounts.get(item.chunkIndex) ?? 0) + 1);
+
+    return Object.freeze({
+      securityId,
+      chunkIndex: item.chunkIndex,
+      chunkReceivedAtMs: item.chunkReceivedAtMs,
+      collectedAtMs: item.collectedAtMs,
+      metadataJson,
+      rawDataJson,
+      data: item.data
+    });
+  });
+
+  for (const chunk of chunks) {
+    if ((perChunkCounts.get(chunk.chunkIndex) ?? 0) !== chunk.requested) {
+      fail(ERROR_CODES.CYCLE_INVALID);
+    }
+  }
+
+  return Object.freeze({
+    cycle,
+    chunks: Object.freeze(chunks),
+    securities: Object.freeze(securities),
+    securityIds: Object.freeze(securities.map((item) => item.securityId))
+  });
+}
 
 async function allocateCycleId(connection) {
   const rows = await queryRows(
@@ -414,7 +621,8 @@ function validateFailedReport(report) {
 export function createCycleAuthorityPersistence({
   writer,
   now = () => Date.now(),
-  persistenceFault = null
+  persistenceFault = null,
+  cycleAdapter = null
 }) {
   if (!writer || typeof writer.enqueue !== "function") {
     throw new TypeError("serialized writer is required");
@@ -422,13 +630,15 @@ export function createCycleAuthorityPersistence({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function");
   }
+  if (cycleAdapter !== null) assertCycleAdapter(cycleAdapter);
 
   async function commitCycle({ sessionId, universeRevision, cycle }) {
     assertSafeInteger(universeRevision, {
       min: 1,
       code: ERROR_CODES.UNIVERSE_REVISION_MISMATCH
     });
-    const validated = validateCompleteCycle(cycle);
+    const activeAdapter = cycleAdapter ?? selectCycleAdapter(cycle);
+    const validated = validateCompleteCycle(cycle, activeAdapter);
 
     return await writer.enqueue(async (connection) => {
       await assertRunningSession(connection, sessionId);
@@ -510,7 +720,7 @@ export function createCycleAuthorityPersistence({
         persistenceFault?.hit?.("F1");
 
         for (let index = 0; index < validated.securities.length; index++) {
-          const params = projectionParams({
+          const params = activeAdapter.projectionParams({
             cycleId,
             sessionId,
             universeRevision,
@@ -518,7 +728,7 @@ export function createCycleAuthorityPersistence({
             item: validated.securities[index]
           });
           await connection.run(
-            `INSERT INTO history ${INSERT_MARKET_ROW_SQL}`,
+            `INSERT INTO history ${activeAdapter.insertMarketRowSql}`,
             params
           );
           if (index === 0) persistenceFault?.hit?.("F2");
@@ -528,7 +738,7 @@ export function createCycleAuthorityPersistence({
         persistenceFault?.hit?.("F3");
 
         for (let index = 0; index < validated.securities.length; index++) {
-          const params = projectionParams({
+          const params = activeAdapter.projectionParams({
             cycleId,
             sessionId,
             universeRevision,
@@ -536,7 +746,7 @@ export function createCycleAuthorityPersistence({
             item: validated.securities[index]
           });
           await connection.run(
-            `INSERT INTO latest ${INSERT_MARKET_ROW_SQL}`,
+            `INSERT INTO latest ${activeAdapter.insertMarketRowSql}`,
             params
           );
           if (index === 0) persistenceFault?.hit?.("F4");
