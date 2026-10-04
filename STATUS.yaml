@@ -3,11 +3,11 @@ phase: planning
 overall_status: active
 
 current:
-  stage: "us_st_tree_review"
-  title: "Review the new Market Flow US S&T tree for necessity, sufficiency, KISS and whole-goal coverage"
+  stage: "us_final_planning_review"
+  title: "Final Planning Review and freeze readiness"
   status: ready
-  previous: "Replacement S&T TREE created: 27 nodes, 19 implementation-ready leaves, 7 root capability branches; structural/dependency validation passed."
-  next: "Run local and whole-plan necessity/sufficiency/KISS/coverage review. Correct the smallest affected branches. Do not freeze or allocate chats yet."
+  previous: "S&T necessity/sufficiency/KISS/whole-goal review PASS; all 27 TREE nodes locally approved."
+  next: "Run final planning review across contracts, TREE, planning artifacts, guards and handoff readiness. Do not allocate chats or authorize implementation unless the review passes and plan is frozen."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -26,7 +26,7 @@ planning_sequence:
   file_audit_and_change_summary: pass
   durable_us_contracts_and_decisions: pass
   new_st_tree: pass
-  st_tree_review: ready
-  final_planning_review: pending
+  st_tree_review: pass
+  final_planning_review: ready
   execution_allocation: pending
   implementation_authorization: pending
