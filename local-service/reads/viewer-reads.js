@@ -341,11 +341,33 @@ export function createViewerReads({
     throw new TypeError("historyPageSize must be a positive safe integer");
   }
 
-  const useUsProjection = schemaVersion === MARKET_FLOW_US_SCHEMA_VERSION;
-  const shapeCurrentRow = useUsProjection ? shapeUsCurrentRow : shapeLegacyCurrentRow;
-  const shapeHistoryRow = useUsProjection ? shapeUsHistoryRow : shapeLegacyHistoryRow;
+  let resolvedUsProjection = schemaVersion === null
+    ? null
+    : schemaVersion === MARKET_FLOW_US_SCHEMA_VERSION;
+
+  async function usesUsProjection() {
+    if (resolvedUsProjection !== null) return resolvedUsProjection;
+
+    const rows = await queryRows(
+      connection,
+      "SELECT schema_version AS schemaVersion FROM schema_info"
+    );
+    if (rows.length !== 1) {
+      throw new Error("Schema authority query did not return exactly one row.");
+    }
+
+    const persistedSchemaVersion = Number(rows[0].schemaVersion);
+    if (!Number.isSafeInteger(persistedSchemaVersion) || persistedSchemaVersion < 1) {
+      throw new Error("Persisted schema version is invalid.");
+    }
+
+    resolvedUsProjection = persistedSchemaVersion === MARKET_FLOW_US_SCHEMA_VERSION;
+    return resolvedUsProjection;
+  }
 
   async function current() {
+    const useUsProjection = await usesUsProjection();
+    const shapeCurrentRow = useUsProjection ? shapeUsCurrentRow : shapeLegacyCurrentRow;
     const rows = await queryRows(
       connection,
       useUsProjection ? US_CURRENT_SQL : LEGACY_CURRENT_SQL
@@ -469,6 +491,8 @@ export function createViewerReads({
   }
 
   async function security(securityId) {
+    const useUsProjection = await usesUsProjection();
+    const shapeCurrentRow = useUsProjection ? shapeUsCurrentRow : shapeLegacyCurrentRow;
     const rows = await queryRows(
       connection,
       useUsProjection ? US_SECURITY_SQL : LEGACY_SECURITY_SQL,
@@ -497,6 +521,8 @@ export function createViewerReads({
   }
 
   async function historyPage(securityId, cursor) {
+    const useUsProjection = await usesUsProjection();
+    const shapeHistoryRow = useUsProjection ? shapeUsHistoryRow : shapeLegacyHistoryRow;
     const decoded = cursor === null ? null : decodeCursor(cursor, securityId);
     const continuation = decoded === null
       ? ""
