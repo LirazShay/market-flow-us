@@ -1,7 +1,7 @@
 version: 2
 plan_state: active
-current_stage: "file_audit"
+current_stage: "contracts_and_decisions"
 current_node: null
 blockers: []
-next_action: "Audit every repository file and finish the MarketScope-to-US migration change summary. Do not build/freeze the replacement TREE or allocate execution until this audit is complete."
-last_review: null
+next_action: "Use docs/US_MIGRATION_AUDIT.md and docs/US_MIGRATION_FILE_MAP.md to rewrite the durable U.S. contracts and decisions. Build the replacement TREE only after contract review."
+last_review: "US-AUDIT-001"
