@@ -1,37 +1,30 @@
 # US Migration File Map
 
-This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
+This is the exact classification of the 124 files imported from the MarketScope baseline.
 
-## KEEP (26)
+Second-pass review corrected nine false KEEP classifications and explicitly drops three superseded MarketScope planning-only coverage artifacts.
+
+## KEEP (17)
 
 - .gitignore
 - .planning/BASELINE_PROVENANCE.md
 - .planning/FRAMEWORK.md
 - .planning/verify-handoff.mjs
-- browser/diagnostics/support-snapshot.js
-- browser/viewer/refresh-controller.js
 - browser/viewer/scanner-query-library.js
 - browser/viewer/scanner-scheduler.js
-- browser/viewer/scanner-surface.js
 - local-service/database/writer.js
 - local-service/scanner/query-library.js
 - local-service/scanner/scanner.js
-- local-service/server/startup-diagnostics.js
 - playwright.config.mjs
 - scripts/demo-reset.mjs
-- shared/diagnostics/index.js
 - shared/protocol/index.js
-- tests/service/helpers/database-worker.mjs
-- tests/service/helpers/service-fixture.mjs
-- tests/service/saved-query-library.test.mjs
 - tests/service/service-fixture.test.mjs
-- tests/service/websocket-transport.test.mjs
 - tests/unit/saved-query-library.test.mjs
 - tests/unit/scanner-admission.test.mjs
 - tests/unit/scanner-scheduler.test.mjs
 - tests/unit/viewer-refresh-controller.test.mjs
 
-## ADAPT (78)
+## ADAPT (87)
 
 - .github/workflows/browser-ci.yml
 - .github/workflows/fast-ci.yml
@@ -46,6 +39,7 @@ This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
 - START_HERE.md
 - START_MARKETSCOPE.cmd
 - STATUS.yaml
+- browser/diagnostics/support-snapshot.js
 - browser/live-verification/harness.js
 - browser/live-verification/index.js
 - browser/recorder/config.js
@@ -58,6 +52,8 @@ This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
 - browser/viewer/current-surface.js
 - browser/viewer/detail-model.js
 - browser/viewer/detail-surface.js
+- browser/viewer/refresh-controller.js
+- browser/viewer/scanner-surface.js
 - docs/DATA_CONTRACT.md
 - docs/LIVE_VERIFICATION.md
 - docs/PRODUCT_REQUIREMENTS.md
@@ -79,11 +75,13 @@ This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
 - local-service/server/config.js
 - local-service/server/index.js
 - local-service/server/service.js
+- local-service/server/startup-diagnostics.js
 - package-lock.json
 - package.json
 - scripts/build-browser.mjs
 - scripts/build-live-verification.mjs
 - scripts/demo-fake-market.mjs
+- shared/diagnostics/index.js
 - shared/scanner/builtins.js
 - tests/e2e/current-surface.spec.mjs
 - tests/e2e/detail-surface.spec.mjs
@@ -94,10 +92,14 @@ This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
 - tests/service/database-lifecycle.test.mjs
 - tests/service/demo-orchestration.test.mjs
 - tests/service/diagnostics.test.mjs
+- tests/service/helpers/database-worker.mjs
+- tests/service/helpers/service-fixture.mjs
 - tests/service/producer-authority.test.mjs
 - tests/service/producer-recovery.test.mjs
+- tests/service/saved-query-library.test.mjs
 - tests/service/scanner-authority.test.mjs
 - tests/service/viewer-reads.test.mjs
+- tests/service/websocket-transport.test.mjs
 - tests/unit/browser-build.test.mjs
 - tests/unit/current-surface.test.mjs
 - tests/unit/detail-surface.test.mjs
@@ -123,17 +125,30 @@ This is the exact 124-file classification used by US_MIGRATION_AUDIT.md.
 - tests/unit/provider-data.test.mjs
 - tests/workload/representative-workload.test.mjs
 
-## PLANNING_REPLACE (12)
+## PLANNING_REPLACE (9)
 
 - .github/workflows/planning-docs-ci.yml
-- .planning/COVERAGE_MAP.yaml
 - .planning/DECISIONS.md
 - .planning/EXECUTION.yaml
 - .planning/EXECUTOR_HANDOFF.md
 - .planning/GOAL.md
-- .planning/LEGACY_COMPLETENESS_AUDIT.md
-- .planning/MASTER_COVERAGE.md
 - .planning/README.md
 - .planning/REVIEWS.md
 - .planning/STATUS.yaml
 - .planning/TREE.yaml
+
+## DROP (3)
+
+- .planning/COVERAGE_MAP.yaml
+- .planning/LEGACY_COMPLETENESS_AUDIT.md
+- .planning/MASTER_COVERAGE.md
+
+## Coverage proof
+
+- imported baseline files: 124
+- classified files: 124
+- duplicates: 0
+- missing: 0
+- extra: 0
+
+New Market Flow US planning/evidence files created after the baseline import are not part of this 124-file denominator.
