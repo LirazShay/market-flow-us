@@ -1,5 +1,6 @@
 version: 2
 plan_state: active
+replan_mode: execution_reopen
 current_stage: "execution_reopen"
 current_node: "1.1"
 blockers:
