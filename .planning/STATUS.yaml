@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "1.1"
+current_node: "2.1"
 blockers: []
-next_action: "Chat 1 resumes TREE node 1.1 on the preserved branch under D-US-018: keep the normal built composition pre-cutover until 5.2, satisfy node evidence, then continue to 1.2."
+next_action: "Chat 2 executes TREE nodes 2.1, 2.2 and 2.3 in allocation order after Chat 1 PR is merged and main required CI is green."
 last_review: "R-US-EXEC-REOPEN-001"

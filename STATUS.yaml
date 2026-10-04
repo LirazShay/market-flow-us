@@ -3,10 +3,10 @@ phase: implementation
 overall_status: ready
 
 current:
-  chat: 1
-  node: "1.2"
-  title: "U.S. Recorder cadence, membership revision and same-response commit semantics"
-  status: in_progress
+  chat: 2
+  node: "2.1"
+  title: "U.S. schema v3 lifecycle and incompatible old-DB fail-closed behavior"
+  status: ready
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -29,5 +29,5 @@ planning_completion:
 execution:
   chats_total: 9
   implementation_leaves_total: 19
-  current_chat: 1
-  current_node: "1.2"
+  current_chat: 2
+  current_node: "2.1"
