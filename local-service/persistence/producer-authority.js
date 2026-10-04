@@ -4,7 +4,7 @@ import {
   ProtocolValidationError
 } from "../../shared/protocol/index.js";
 
-const CONFIG_KEYS = Object.freeze([
+const LEGACY_CONFIG_KEYS = Object.freeze([
   "snapshotIntervalMs",
   "chunkDelayMs",
   "chunkSize",
@@ -33,6 +33,10 @@ function assertSafeInteger(value, { min = 0, code = ERROR_CODES.INVALID_MESSAGE 
   }
 }
 
+function nullableString(value) {
+  return typeof value === "string" ? value : null;
+}
+
 export function sanitizeCollectorConfig(config) {
   if (!isPlainObject(config)) {
     fail(ERROR_CODES.INVALID_MESSAGE);
@@ -40,7 +44,7 @@ export function sanitizeCollectorConfig(config) {
 
   const sanitized = {};
 
-  for (const key of CONFIG_KEYS) {
+  for (const key of LEGACY_CONFIG_KEYS) {
     if (!Object.hasOwn(config, key)) continue;
 
     const value = config[key];
@@ -61,7 +65,20 @@ export function sanitizeCollectorConfig(config) {
   return Object.freeze(sanitized);
 }
 
-function validateUniverse(payload) {
+function sanitizeUsCollectorConfig(config) {
+  if (!isPlainObject(config)) {
+    fail(ERROR_CODES.INVALID_MESSAGE);
+  }
+
+  const sanitized = {};
+  if (Object.hasOwn(config, "snapshotIntervalMs")) {
+    assertSafeInteger(config.snapshotIntervalMs);
+    sanitized.snapshotIntervalMs = config.snapshotIntervalMs;
+  }
+  return Object.freeze(sanitized);
+}
+
+function validateLegacyUniverse(payload) {
   if (!isPlainObject(payload)) {
     fail(ERROR_CODES.UNIVERSE_INVALID);
   }
@@ -134,6 +151,196 @@ function validateUniverse(payload) {
   });
 }
 
+function canonicalMembership(values) {
+  if (!Array.isArray(values)) fail(ERROR_CODES.UNIVERSE_INVALID);
+  const normalized = values.map((value) => {
+    if (value === null || value === undefined || value === "") {
+      fail(ERROR_CODES.UNIVERSE_INVALID);
+    }
+    const securityId = String(value);
+    if (securityId.length === 0 || securityId.length > 128) {
+      fail(ERROR_CODES.UNIVERSE_INVALID);
+    }
+    return securityId;
+  });
+  if (new Set(normalized).size !== normalized.length) {
+    fail(ERROR_CODES.UNIVERSE_INVALID);
+  }
+  return normalized.sort();
+}
+
+function validateUsUniverse(payload) {
+  if (!isPlainObject(payload)) {
+    fail(ERROR_CODES.UNIVERSE_INVALID);
+  }
+
+  assertSafeInteger(payload.loadedAtMs, {
+    code: ERROR_CODES.UNIVERSE_INVALID
+  });
+  assertSafeInteger(payload.recordCount, {
+    min: 1,
+    code: ERROR_CODES.UNIVERSE_INVALID
+  });
+
+  if (!Array.isArray(payload.securities) || payload.securities.length !== payload.recordCount) {
+    fail(ERROR_CODES.UNIVERSE_INVALID);
+  }
+
+  const seen = new Set();
+  const securities = payload.securities.map((security) => {
+    if (!isPlainObject(security)) fail(ERROR_CODES.UNIVERSE_INVALID);
+
+    const securityId = security.securityId;
+    if (typeof securityId !== "string" || securityId.length === 0 || securityId.length > 128) {
+      fail(ERROR_CODES.UNIVERSE_INVALID);
+    }
+    if (seen.has(securityId)) fail(ERROR_CODES.UNIVERSE_INVALID);
+    seen.add(securityId);
+
+    if (!isPlainObject(security.rawSource)) fail(ERROR_CODES.UNIVERSE_INVALID);
+    const paperId = security.rawSource.PaperId;
+    if (paperId === null || paperId === undefined || paperId === "") {
+      fail(ERROR_CODES.UNIVERSE_INVALID);
+    }
+    if (String(paperId) !== securityId) fail(ERROR_CODES.UNIVERSE_INVALID);
+
+    const rawSourceJson = JSON.stringify(security.rawSource);
+    if (rawSourceJson === undefined) fail(ERROR_CODES.UNIVERSE_INVALID);
+
+    return Object.freeze({
+      securityId,
+      symbol: nullableString(security.symbol),
+      paperNameEng: nullableString(security.paperNameEng),
+      paperNameHeb: nullableString(security.paperNameHeb),
+      exchangeName: nullableString(security.exchangeName),
+      rawSourceJson
+    });
+  });
+
+  if (Object.hasOwn(payload, "membership")) {
+    const declared = canonicalMembership(payload.membership);
+    const actual = [...seen].sort();
+    if (
+      declared.length !== actual.length ||
+      !declared.every((securityId, index) => securityId === actual[index])
+    ) {
+      fail(ERROR_CODES.UNIVERSE_INVALID);
+    }
+  }
+
+  return Object.freeze({
+    loadedAtMs: payload.loadedAtMs,
+    recordCount: payload.recordCount,
+    securities: Object.freeze(securities)
+  });
+}
+
+async function upsertLegacySecurity(connection, {
+  security,
+  universeRevision,
+  loadedAtMs
+}) {
+  await connection.run(
+    `INSERT INTO universe (
+      security_id,
+      is_current,
+      universe_revision,
+      first_seen_at_ms,
+      last_seen_at_ms,
+      paper_name,
+      map_heat_date_change_json,
+      raw_map_heat
+    ) VALUES (
+      $securityId,
+      true,
+      $universeRevision,
+      $loadedAtMs,
+      $loadedAtMs,
+      $paperName,
+      $mapHeatDateChangeJson,
+      $rawMapHeatJson
+    )
+    ON CONFLICT (security_id) DO UPDATE SET
+      is_current = true,
+      universe_revision = EXCLUDED.universe_revision,
+      last_seen_at_ms = EXCLUDED.last_seen_at_ms,
+      paper_name = EXCLUDED.paper_name,
+      map_heat_date_change_json = EXCLUDED.map_heat_date_change_json,
+      raw_map_heat = EXCLUDED.raw_map_heat`,
+    {
+      securityId: security.securityId,
+      universeRevision,
+      loadedAtMs,
+      paperName: security.paperName,
+      mapHeatDateChangeJson: security.mapHeatDateChangeJson,
+      rawMapHeatJson: security.rawMapHeatJson
+    }
+  );
+}
+
+async function upsertUsSecurity(connection, {
+  security,
+  universeRevision,
+  loadedAtMs
+}) {
+  await connection.run(
+    `INSERT INTO universe (
+      security_id,
+      is_current,
+      universe_revision,
+      first_seen_at_ms,
+      last_seen_at_ms,
+      Symbol,
+      PaperNameEng,
+      PaperNameHeb,
+      ExchangeName,
+      raw_source
+    ) VALUES (
+      $securityId,
+      true,
+      $universeRevision,
+      $loadedAtMs,
+      $loadedAtMs,
+      $symbol,
+      $paperNameEng,
+      $paperNameHeb,
+      $exchangeName,
+      $rawSourceJson
+    )
+    ON CONFLICT (security_id) DO UPDATE SET
+      is_current = true,
+      universe_revision = EXCLUDED.universe_revision,
+      last_seen_at_ms = EXCLUDED.last_seen_at_ms,
+      Symbol = EXCLUDED.Symbol,
+      PaperNameEng = EXCLUDED.PaperNameEng,
+      PaperNameHeb = EXCLUDED.PaperNameHeb,
+      ExchangeName = EXCLUDED.ExchangeName,
+      raw_source = EXCLUDED.raw_source`,
+    {
+      securityId: security.securityId,
+      universeRevision,
+      loadedAtMs,
+      symbol: security.symbol,
+      paperNameEng: security.paperNameEng,
+      paperNameHeb: security.paperNameHeb,
+      exchangeName: security.exchangeName,
+      rawSourceJson: security.rawSourceJson
+    }
+  );
+}
+
+const LEGACY_PRODUCER_ADAPTER = Object.freeze({
+  sanitizeConfig: sanitizeCollectorConfig,
+  validateUniverse: validateLegacyUniverse,
+  upsertSecurity: upsertLegacySecurity
+});
+
+export const MARKET_FLOW_US_PRODUCER_ADAPTER = Object.freeze({
+  sanitizeConfig: sanitizeUsCollectorConfig,
+  validateUniverse: validateUsUniverse,
+  upsertSecurity: upsertUsSecurity
+});
+
 async function queryRows(connection, sql, values) {
   const reader = values === undefined
     ? await connection.runAndReadAll(sql)
@@ -165,7 +372,8 @@ export function createProducerPersistence({
   writer,
   now = () => Date.now(),
   createSessionId = () => randomUUID(),
-  persistenceFault = null
+  persistenceFault = null,
+  producerAdapter = LEGACY_PRODUCER_ADAPTER
 }) {
   if (!writer || typeof writer.enqueue !== "function") {
     throw new TypeError("serialized writer is required");
@@ -176,6 +384,14 @@ export function createProducerPersistence({
   if (typeof createSessionId !== "function") {
     throw new TypeError("createSessionId must be a function");
   }
+  if (
+    !producerAdapter ||
+    typeof producerAdapter.sanitizeConfig !== "function" ||
+    typeof producerAdapter.validateUniverse !== "function" ||
+    typeof producerAdapter.upsertSecurity !== "function"
+  ) {
+    throw new TypeError("producerAdapter is invalid");
+  }
 
   async function startSession({ producerInstanceId, startedAtMs, config }) {
     if (typeof producerInstanceId !== "string" || producerInstanceId.length === 0) {
@@ -183,7 +399,7 @@ export function createProducerPersistence({
     }
     assertSafeInteger(startedAtMs);
 
-    const sanitizedConfig = sanitizeCollectorConfig(config);
+    const sanitizedConfig = producerAdapter.sanitizeConfig(config);
     const sessionId = createSessionId();
     const acceptedAtMs = now();
     assertSafeInteger(acceptedAtMs);
@@ -311,7 +527,7 @@ export function createProducerPersistence({
       await connection.run("BEGIN TRANSACTION");
 
       try {
-        const validated = validateUniverse(universe);
+        const validated = producerAdapter.validateUniverse(universe);
         await assertRunningSession(connection, sessionId);
 
         const revisionRows = await queryRows(
@@ -329,43 +545,11 @@ export function createProducerPersistence({
 
         for (let index = 0; index < validated.securities.length; index++) {
           const security = validated.securities[index];
-
-          await connection.run(
-            `INSERT INTO universe (
-              security_id,
-              is_current,
-              universe_revision,
-              first_seen_at_ms,
-              last_seen_at_ms,
-              paper_name,
-              map_heat_date_change_json,
-              raw_map_heat
-            ) VALUES (
-              $securityId,
-              true,
-              $universeRevision,
-              $loadedAtMs,
-              $loadedAtMs,
-              $paperName,
-              $mapHeatDateChangeJson,
-              $rawMapHeatJson
-            )
-            ON CONFLICT (security_id) DO UPDATE SET
-              is_current = true,
-              universe_revision = EXCLUDED.universe_revision,
-              last_seen_at_ms = EXCLUDED.last_seen_at_ms,
-              paper_name = EXCLUDED.paper_name,
-              map_heat_date_change_json = EXCLUDED.map_heat_date_change_json,
-              raw_map_heat = EXCLUDED.raw_map_heat`,
-            {
-              securityId: security.securityId,
-              universeRevision,
-              loadedAtMs: validated.loadedAtMs,
-              paperName: security.paperName,
-              mapHeatDateChangeJson: security.mapHeatDateChangeJson,
-              rawMapHeatJson: security.rawMapHeatJson
-            }
-          );
+          await producerAdapter.upsertSecurity(connection, {
+            security,
+            universeRevision,
+            loadedAtMs: validated.loadedAtMs
+          });
 
           if (index === 0) {
             persistenceFault?.hit?.("U2");
