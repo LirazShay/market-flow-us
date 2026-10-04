@@ -405,6 +405,7 @@ nodes:
       - "Browser CI is green."
       - "U.S. representative workload is green with a sanitized report."
       - "No blocking deterministic defect remains."
+      - "Fast/Browser feedback remains within the imported test-feedback guidance or any measured regression has a documented irreducible cause; no avoidable focused+full duplication is added."
     depends_on: ["5.3", "6.2", "6.3"]
     children: []
 
@@ -436,8 +437,8 @@ nodes:
     success_evidence:
       - "Audit proves no authoritative MapHeat2/GetSecuritiesData or Israeli typed-field runtime dependency remains."
       - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior."
-      - "No unexpected open PR remains."
-      - "PR is squash-merged and required main CI is green."
-      - "STATUS.yaml points to completed product truth with no blocking defect."
+      - "No unexpected pre-existing/open PR conflicts with the release work unit."
+      - "The release branch is internally consistent and ready for the normal PR/CI/squash-merge workflow defined by AGENTS.md."
+      - "STATUS/handoff changes on the release branch point to the completion transition that becomes authoritative only after merge."
     depends_on: ["7.2", "6.1"]
     children: []
