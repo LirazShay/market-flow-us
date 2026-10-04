@@ -1,8 +1,7 @@
-version: 1
-plan_state: frozen
+version: 2
+plan_state: active
+current_stage: "file_audit"
 current_node: null
 blockers: []
-frozen_from_review: "R-046"
-frozen_reviewed_tree_sha: "576eb6eb4662bb5e1aa13631f1f1e6a8032194a7"
-next_action: "Implementation execution is closed. Remaining operational action is the external local real-provider gate in docs/LIVE_VERIFICATION.md, tracked only in root STATUS.yaml."
-last_review: "R-050"
+next_action: "Audit every repository file and finish the MarketScope-to-US migration change summary. Do not build/freeze the replacement TREE or allocate execution until this audit is complete."
+last_review: null
