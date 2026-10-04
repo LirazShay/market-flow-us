@@ -1,3 +1,5 @@
+import { fetchValidatedSnapshot } from "./securities.js";
+
 function assertSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object") {
     throw new TypeError("snapshot must be a validated ScreenerHulPaging3 snapshot.");
@@ -71,4 +73,12 @@ export function buildUniverseFromSnapshot(snapshot) {
     securities: Object.freeze(securities),
     sourceMetadata: snapshot.sourceMetadata ?? null
   });
+}
+
+export async function loadValidatedUniverse({
+  fetchImpl = globalThis.fetch,
+  now = () => Date.now()
+} = {}) {
+  const snapshot = await fetchValidatedSnapshot({ fetchImpl, now });
+  return buildUniverseFromSnapshot(snapshot);
 }
