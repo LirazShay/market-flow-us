@@ -3,11 +3,11 @@ phase: planning
 overall_status: active
 
 current:
-  stage: "us_final_planning_review"
-  title: "Final Planning Review and freeze readiness"
-  status: ready
-  previous: "S&T necessity/sufficiency/KISS/whole-goal review PASS; all 27 TREE nodes locally approved."
-  next: "Run final planning review across contracts, TREE, planning artifacts, guards and handoff readiness. Do not allocate chats or authorize implementation unless the review passes and plan is frozen."
+  stage: "us_st_tree_review_reopen"
+  title: "Second-pass migration review corrections"
+  status: in_progress
+  previous: "Second-pass review found planning-infrastructure drift and incorrect KEEP classifications."
+  next: "Correct the 124-file migration map and replace stale MarketScope planning guards/handoff/coverage artifacts, then rerun whole-plan review. Do not freeze or allocate chats."
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -15,18 +15,11 @@ authority:
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
 
-baseline:
-  donor_repo: "LirazShay/market-scope"
-  donor_commit: "d8bc770d292d328d7e89febb8ef4f450abe9458e"
-  donor_tree: "c49cc5f691e6d27ad120e0a5395e6b190f1b5952"
-  imported_commit: "cf6a21a17288832af3a69703dff39c9f843fe9a5"
-  imported_tree_match: true
-
 planning_sequence:
-  file_audit_and_change_summary: pass
+  file_audit_and_change_summary: reopen
   durable_us_contracts_and_decisions: pass
   new_st_tree: pass
-  st_tree_review: pass
-  final_planning_review: ready
+  st_tree_review: reopen
+  final_planning_review: pending
   execution_allocation: pending
   implementation_authorization: pending
