@@ -1,0 +1,707 @@
+version: 1
+source: ".planning/MASTER_COVERAGE.md"
+rule: "Every unique coverage ID appears exactly once. This is traceability, not implementation order."
+entries:
+  "GOV-001": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-002": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-003": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-004": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-005": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-006": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-007": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-008": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-009": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-010": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-011": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-012": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-013": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-014": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-015": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-016": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-017": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-018": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-019": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "GOV-020": { owner: "AGENTS.md | STATUS.yaml | .planning/*", nodes: [] }
+  "MIG-001": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-002": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-003": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-004": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-005": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-006": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-007": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-008": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-009": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-010": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-011": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-012": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-013": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-014": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-015": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-016": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-017": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-018": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-019": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-020": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-021": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "MIG-022": { owner: "docs/SOURCE_EXTRACTION.md | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: [] }
+  "DOC-001": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-002": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-003": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-004": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-005": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-006": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-007": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-008": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-009": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-010": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-011": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-012": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-013": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-014": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-015": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-016": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-017": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-018": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-019": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "DOC-020": { owner: "README.md | AGENTS.md | docs/* | .planning/*", nodes: [] }
+  "REQ-001": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-002": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-003": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-004": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-005": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-006": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-007": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-008": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-009": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-010": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-011": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-012": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-013": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-014": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "REQ-015": { owner: "docs/PRODUCT_REQUIREMENTS.md", nodes: ["0"] }
+  "CUR-001": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-002": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-003": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-004": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-005": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-006": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-007": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-008": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-009": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-010": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-011": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-012": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-013": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-014": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-015": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-016": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-017": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-018": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-019": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-020": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-021": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-022": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-023": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-024": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-025": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-026": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-027": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-028": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-029": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-030": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-031": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-032": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-033": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-034": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-035": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-036": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-037": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-038": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-039": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "CUR-040": { owner: "docs/PRODUCT_SPEC.md#Surface-A", nodes: ["3.1", "4.1", "4.3", "6.4"] }
+  "DIAG-001": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-002": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-003": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-004": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-005": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-006": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-007": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-008": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-009": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-010": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-011": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-012": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-013": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-014": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-015": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-016": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-017": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-018": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-019": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-020": { owner: "docs/PRODUCT_SPEC.md#A11", nodes: ["3.1", "4.1", "6.4"] }
+  "DIAG-021": { owner: "docs/PRODUCT_REQUIREMENTS.md#Diagnosability-and-supportability-requirements | docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-022": { owner: "docs/PRODUCT_REQUIREMENTS.md#Diagnosability-and-supportability-requirements | docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-023": { owner: "docs/PRODUCT_REQUIREMENTS.md#Diagnosability-and-supportability-requirements | docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-024": { owner: "docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-025": { owner: "docs/PRODUCT_SPEC.md#D7 | AGENTS.md#Diagnosability-by-design", nodes: ["6.5"] }
+  "DIAG-026": { owner: "docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-027": { owner: "docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-028": { owner: "docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4"] }
+  "DIAG-029": { owner: "docs/PRODUCT_REQUIREMENTS.md#Diagnosability-and-supportability-requirements", nodes: ["6.5"] }
+  "DIAG-030": { owner: "AGENTS.md#Diagnosability-by-design | docs/PRODUCT_SPEC.md#D7", nodes: ["6.5", "6.4", "7.2"] }
+  "DIAG-031": { owner: "docs/PRODUCT_REQUIREMENTS.md#Diagnosability-and-supportability-requirements", nodes: ["6.5", "6.4"] }
+  "DIAG-032": { owner: "AGENTS.md#Diagnosability-by-design | .planning/EXECUTOR_HANDOFF.md", nodes: ["6.5", "7.3"] }
+  "DET-001": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-002": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-003": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-004": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-005": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-006": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-007": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-008": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-009": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-010": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-011": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-012": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-013": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-014": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-015": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-016": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-017": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-018": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-019": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-020": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-021": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-022": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-023": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-024": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "DET-025": { owner: "docs/PRODUCT_SPEC.md#Surface-B", nodes: ["3.2", "4.2", "4.3", "6.4"] }
+  "SCN-001": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-002": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-003": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-004": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-005": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-006": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-007": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-008": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-009": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-010": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-011": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-012": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-013": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-014": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-015": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-016": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-017": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-018": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-019": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-020": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-021": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-022": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-023": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-024": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-025": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-026": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-027": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-028": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-029": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-030": { owner: "docs/PRODUCT_SPEC.md#Surface-C | docs/TECHNICAL_SPEC.md#Scanner", nodes: ["5.1", "5.2", "5.3", "6.4"] }
+  "SCN-031": { owner: "docs/PRODUCT_REQUIREMENTS.md#3.3 | docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-032": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-033": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-034": { owner: "docs/PRODUCT_REQUIREMENTS.md#3.3 | docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-035": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-036": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.5"] }
+  "SCN-037": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-038": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-039": { owner: "docs/PRODUCT_SPEC.md#C1a", nodes: ["5.4", "5.5"] }
+  "SCN-040": { owner: "docs/PRODUCT_SPEC.md#C1a | docs/PRODUCT_SPEC.md#C2", nodes: ["5.5"] }
+  "SCN-041": { owner: "docs/PRODUCT_SPEC.md#C1b", nodes: ["5.5", "5.6"] }
+  "SCN-042": { owner: "docs/PRODUCT_SPEC.md#C1b", nodes: ["5.4", "5.5"] }
+  "SCN-043": { owner: "docs/PRODUCT_SPEC.md#C1b", nodes: ["5.5"] }
+  "SCN-044": { owner: "docs/PRODUCT_SPEC.md#C1b", nodes: ["5.5", "5.6"] }
+  "SCN-045": { owner: "docs/PRODUCT_SPEC.md#C1b", nodes: ["5.5", "5.6"] }
+  "SCN-046": { owner: "docs/PRODUCT_SPEC.md#C1b | docs/TEST_STRATEGY.md#Scanner", nodes: ["5.6"] }
+  "SCN-047": { owner: "docs/PRODUCT_REQUIREMENTS.md#3.3 | docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-048": { owner: "docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-049": { owner: "docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-050": { owner: "docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-051": { owner: "docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-052": { owner: "docs/PRODUCT_SPEC.md#C1c", nodes: ["5.6"] }
+  "SCN-053": { owner: "docs/PRODUCT_SPEC.md#C1c | AGENTS.md", nodes: ["5.6", "7.3"] }
+  "DAT-001": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-002": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-003": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-004": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-005": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-006": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-007": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-008": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-009": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-010": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-011": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-012": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-013": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-014": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-015": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-016": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-017": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-018": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-019": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-020": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-021": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-022": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-023": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-024": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "DAT-025": { owner: "docs/DATA_CONTRACT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5"] }
+  "PRO-001": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-002": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-003": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-004": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-005": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-006": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-007": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-008": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-009": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-010": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-011": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-012": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-013": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-014": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-015": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-016": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-017": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-018": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-019": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-020": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-021": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-022": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-023": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-024": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-025": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-026": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-027": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-028": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-029": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-030": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-031": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-032": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-033": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-034": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "PRO-035": { owner: "docs/TECHNICAL_SPEC.md#Protocol", nodes: ["1.2", "2.3", "2.4", "2.5", "3.3", "5.1"] }
+  "WS-001": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-002": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-003": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-004": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-005": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-006": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-007": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-008": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-009": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-010": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-011": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-012": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-013": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-014": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-015": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-016": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-017": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-018": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-019": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "WS-020": { owner: "docs/TECHNICAL_SPEC.md#WebSocket", nodes: ["1.4", "2.5", "2.6", "3.3"] }
+  "DB-001": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-002": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-003": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-004": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-005": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-006": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-007": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-008": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-009": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-010": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-011": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-012": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-013": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-014": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-015": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-016": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-017": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-018": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-019": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-020": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-021": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-022": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-023": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-024": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-025": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-026": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-027": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-028": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-029": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "DB-030": { owner: "docs/TECHNICAL_SPEC.md#DuckDB", nodes: ["1.3", "2.3", "2.4", "3.1", "3.2", "5.1"] }
+  "READ-001": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-002": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-003": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-004": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-005": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-006": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-007": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-008": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-009": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-010": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-011": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-012": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-013": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-014": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "READ-015": { owner: "docs/TECHNICAL_SPEC.md#Trusted-Viewer-reads", nodes: ["3.1", "3.2", "3.3"] }
+  "SAFE-001": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-002": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-003": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-004": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-005": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-006": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-007": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-008": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-009": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-010": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-011": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-012": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-013": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-014": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-015": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-016": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-017": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-018": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-019": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-020": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-021": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-022": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-023": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-024": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-025": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "SAFE-026": { owner: "docs/TECHNICAL_SPEC.md#Scanner-admission | docs/TEST_STRATEGY.md", nodes: ["5.1", "6.3"] }
+  "FAK-001": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-002": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-003": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-004": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-005": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-006": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-007": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-008": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-009": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-010": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-011": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-012": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-013": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-014": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-015": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-016": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-017": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-018": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-019": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-020": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-021": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-022": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-023": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-024": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-025": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "FAK-026": { owner: "docs/TEST_STRATEGY.md#Canonical-Fake-Market", nodes: ["6.1", "6.2", "6.4"] }
+  "DEMO-001": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-002": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-003": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-004": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-005": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-006": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-007": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-008": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-009": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-010": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-011": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-012": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-013": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-014": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-015": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "DEMO-016": { owner: "docs/TEST_STRATEGY.md#Local-Manual-Demo", nodes: ["6.2", "6.4"] }
+  "TST-001": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-002": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-003": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-004": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-005": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-006": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-007": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-008": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-009": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-010": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-011": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-012": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-013": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-014": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-015": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-016": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-017": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-018": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-019": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-020": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-021": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-022": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-023": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-024": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-025": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-026": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-027": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-028": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-029": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-030": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-031": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-032": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-033": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-034": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-035": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-036": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-037": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-038": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-039": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-040": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-041": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-042": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-043": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-044": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-045": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-046": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-047": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-048": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-049": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-050": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-051": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-052": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-053": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-054": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-055": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-056": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-057": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-058": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-059": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-060": { owner: "docs/TEST_STRATEGY.md", nodes: ["1.5", "6.3", "6.4"] }
+  "TST-061": { owner: "docs/TEST_STRATEGY.md#15.1", nodes: ["6.6"] }
+  "TST-062": { owner: "docs/TEST_STRATEGY.md#15.4", nodes: ["6.6", "6.3", "6.4"] }
+  "TST-063": { owner: "docs/TEST_STRATEGY.md#15.2", nodes: ["6.6", "6.3", "6.4"] }
+  "TST-064": { owner: "docs/TEST_STRATEGY.md#15.5", nodes: ["6.3", "6.4"] }
+  "TST-065": { owner: "docs/TEST_STRATEGY.md#15.3 | docs/TEST_STRATEGY.md#15.5", nodes: ["6.6", "6.4"] }
+  "TST-066": { owner: "docs/TEST_STRATEGY.md#15.4", nodes: ["6.6"] }
+  "TST-067": { owner: "docs/TEST_STRATEGY.md#15.1 | docs/TEST_STRATEGY.md#15.3", nodes: ["6.6"] }
+  "TST-068": { owner: "docs/TEST_STRATEGY.md#15.5", nodes: ["6.3", "6.4"] }
+  "LOAD-001": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-002": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-003": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-004": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-005": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-006": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-007": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-008": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-009": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-010": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-011": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-012": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-013": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-014": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-015": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-016": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LOAD-017": { owner: "docs/TEST_STRATEGY.md#Representative-Workload", nodes: ["7.1"] }
+  "LIVE-001": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-002": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-003": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-004": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-005": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-006": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-007": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-008": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-009": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-010": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-011": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-012": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-013": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-014": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "LIVE-015": { owner: "docs/TEST_STRATEGY.md#Real-Provider-Verification", nodes: ["7.2"] }
+  "SEC-001": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-002": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-003": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-004": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-005": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-006": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-007": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-008": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-009": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-010": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-011": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-012": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-013": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "SEC-014": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.3", "1.4", "5.1", "7.2"] }
+  "REP-001": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-002": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-003": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-004": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-005": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-006": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-007": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-008": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-009": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-010": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-011": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-012": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-013": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-014": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-015": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-016": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-017": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-018": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-019": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-020": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-021": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-022": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-023": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-024": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "REP-025": { owner: "AGENTS.md | docs/TECHNICAL_SPEC.md | docs/TEST_STRATEGY.md", nodes: ["1.1", "6.3", "6.4", "7.3"] }
+  "PLN-001": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-002": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-003": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-004": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-005": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-006": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-007": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-008": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-009": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-010": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-011": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-012": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-013": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-014": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-015": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-016": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-017": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-018": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-019": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-020": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-021": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-022": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-023": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-024": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-025": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-026": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-027": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-028": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-029": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-030": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-031": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-032": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-033": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-034": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "PLN-035": { owner: ".planning/* | STATUS.yaml", nodes: [] }
+  "IMP-001": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-002": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-003": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-004": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-005": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-006": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-007": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-008": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-009": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-010": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-011": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-012": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-013": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-014": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "IMP-015": { owner: "AGENTS.md | docs/TEST_STRATEGY.md", nodes: [] }
+  "FLOW-001": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["2.1", "2.2", "2.3", "2.4", "2.5", "2.6", "4.4"] }
+  "FLOW-002": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["3.1", "3.3", "4.1"] }
+  "FLOW-003": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["4.1", "4.2"] }
+  "FLOW-004": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["3.2", "4.2"] }
+  "FLOW-005": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["4.2", "4.3"] }
+  "FLOW-006": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["3.2", "4.2", "6.1", "6.4"] }
+  "FLOW-007": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["5.1", "5.2"] }
+  "FLOW-008": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["5.2"] }
+  "FLOW-009": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["5.1", "5.2"] }
+  "FLOW-010": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["5.1", "5.2"] }
+  "FLOW-011": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["5.3", "4.2"] }
+  "FLOW-012": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["3.3", "4.4", "6.4"] }
+  "FLOW-013": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["2.6", "4.4", "6.4"] }
+  "FLOW-014": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["2.6", "4.4", "6.4"] }
+  "FLOW-015": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["6.1", "6.2", "6.4"] }
+  "FLOW-016": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["1.3", "2.6", "6.4"] }
+  "FLOW-017": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["2.4", "3.2", "4.4", "6.4"] }
+  "FLOW-018": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["1.4", "3.3", "4.4", "6.4"] }
+  "FLOW-019": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["1.4", "4.4", "6.4"] }
+  "FLOW-020": { owner: "docs/PRODUCT_SPEC.md#Required-end-to-end-product-flows | .planning/LEGACY_COMPLETENESS_AUDIT.md", nodes: ["4.3", "6.4"] }
+  "READY-001": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-002": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-003": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-004": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-005": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-006": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-007": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-008": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-009": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-010": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-011": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-012": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-013": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-014": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-015": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-016": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-017": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-018": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-019": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-020": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-021": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-022": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-023": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-024": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-025": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-026": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-027": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-028": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-029": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-030": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "READY-031": { owner: ".planning/MASTER_COVERAGE.md | STATUS.yaml | .planning/REVIEWS.md", nodes: [] }
+  "FINAL-001": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-002": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-003": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-004": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-005": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-006": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-007": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-008": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-009": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-010": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-011": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-012": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-013": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-014": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-015": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-016": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-017": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-018": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-019": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "FINAL-020": { owner: ".planning/TREE.yaml | docs/TEST_STRATEGY.md", nodes: ["6.3", "6.4", "7.1", "7.2", "7.3"] }
+  "MIGCHECK-001": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-002": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-003": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-004": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-005": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-006": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-007": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-008": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-009": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-010": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-011": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "MIGCHECK-012": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }
+  "LEG-001": { owner: "docs/PRODUCT_REQUIREMENTS.md | docs/TECHNICAL_SPEC.md", nodes: ["2.4", "7.1"] }
+  "LEG-002": { owner: "docs/PRODUCT_REQUIREMENTS.md | docs/TECHNICAL_SPEC.md", nodes: ["2.4"] }
+  "LEG-003": { owner: "docs/PRODUCT_SPEC.md#D3", nodes: ["4.4", "6.4"] }
+  "LEG-004": { owner: "docs/PRODUCT_SPEC.md#D3", nodes: ["3.3", "4.4", "6.4"] }
+  "LEG-005": { owner: "docs/PRODUCT_SPEC.md#D3", nodes: ["3.3", "4.4"] }
+  "LEG-006": { owner: "docs/TECHNICAL_SPEC.md#Browser-runtime-delivery", nodes: ["1.1"] }
+  "LEG-007": { owner: "docs/TECHNICAL_SPEC.md#Browser-runtime-delivery", nodes: ["1.1"] }
+  "LEG-008": { owner: "docs/TECHNICAL_SPEC.md#Browser-runtime-delivery", nodes: ["1.1"] }
+  "LEG-009": { owner: "docs/TECHNICAL_SPEC.md#Browser-runtime-delivery", nodes: ["4.4"] }
+  "LEG-010": { owner: "docs/TECHNICAL_SPEC.md#External-dependency-facts | .planning/DECISIONS.md#D-008", nodes: ["7.2"] }
+  "LEG-011": { owner: ".planning/LEGACY_COMPLETENESS_AUDIT.md | docs/SOURCE_EXTRACTION.md", nodes: [] }

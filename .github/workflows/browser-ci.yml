@@ -1,0 +1,82 @@
+name: MarketScope Browser CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "browser/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/**"
+      - "tests/e2e/**"
+      - "tests/fake-market/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.mjs"
+      - ".github/workflows/browser-ci.yml"
+  pull_request:
+    paths:
+      - "browser/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/**"
+      - "tests/e2e/**"
+      - "tests/fake-market/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright.config.mjs"
+      - ".github/workflows/browser-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium:
+    name: Chromium E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      # package-lock pins @playwright/test and its Chromium revision; no restore-keys are
+      # allowed because a partial browser-version match is not a valid executable cache.
+      - name: Restore exact Playwright Chromium cache
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium and system dependencies on cache miss
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify cached Chromium on cache hit
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install chromium
+
+      - name: Build normal browser runtime
+        run: npm run build:browser
+
+      - name: Run full Chromium E2E
+        run: npm run test:e2e
+
+      - name: Upload sanitized Browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-scope-browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            test-results/**
+            playwright-report/**

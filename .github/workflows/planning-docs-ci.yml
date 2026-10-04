@@ -1,0 +1,404 @@
+name: Planning Docs CI
+# Planning-only guard; application/runtime dependencies are intentionally absent while plan_state is active.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reject orphaned open PRs after main merge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -t open_prs < <(
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" --jq '.[].number'
+          )
+
+          if (( ${#open_prs[@]} > 0 )); then
+            echo "Unexpected open PRs remain after a main merge: ${open_prs[*]}"
+            echo "Serial execution requires each prior work-unit PR to be merged/closed before progression."
+            exit 1
+          fi
+
+      - name: Validate planning/product bootstrap
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            AGENTS.md README.md STATUS.yaml
+            .planning/README.md .planning/FRAMEWORK.md .planning/GOAL.md .planning/TREE.yaml
+            .planning/DECISIONS.md .planning/REVIEWS.md .planning/STATUS.yaml .planning/EXECUTION.yaml
+            .planning/MASTER_COVERAGE.md .planning/COVERAGE_MAP.yaml .planning/LEGACY_COMPLETENESS_AUDIT.md .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
+            docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/TECHNICAL_SPEC.md
+            docs/DATA_CONTRACT.md docs/TEST_STRATEGY.md docs/SOURCE_EXTRACTION.md docs/SCANNER_SQL_GUIDE.md
+          )
+
+          for file in "${required[@]}"; do
+            test -s "$file" || { echo "Missing/empty required file: $file"; exit 1; }
+          done
+
+          grep -Eq '^plan_state: (active|frozen)$' .planning/STATUS.yaml || {
+            echo "Invalid or missing .planning/STATUS.yaml plan_state"; exit 1;
+          }
+
+          grep -q '^root: "0"$' .planning/TREE.yaml || {
+            echo "TREE.yaml must declare root node 0"; exit 1;
+          }
+
+          grep -Fq '    children: ["1", "2", "3", "4", "5", "6", "7"]' .planning/TREE.yaml || {
+            echo "TREE.yaml root must contain the seven Stage 8 capability branches"; exit 1;
+          }
+
+          grep -Fq '  "7.3":' .planning/TREE.yaml || {
+            echo "TREE.yaml is missing final Stage 8 implementation leaf 7.3"; exit 1;
+          }
+
+          grep -Fq '### D-014 — Minimal build and test tooling' .planning/DECISIONS.md || {
+            echo "DECISIONS.md is missing Stage 8 tooling decision D-014"; exit 1;
+          }
+
+          replan_mode="$(sed -n 's/^replan_mode: //p' .planning/STATUS.yaml | head -n1)"
+
+          if grep -q '^plan_state: active$' .planning/STATUS.yaml && [ "$replan_mode" != "execution_reopen" ]; then
+            grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
+              echo "Initial active planning must keep EXECUTION unallocated"; exit 1;
+            }
+          fi
+
+          if [ "$replan_mode" = "execution_reopen" ]; then
+            grep -q '^phase: planning$' STATUS.yaml || {
+              echo "execution_reopen requires root phase: planning"; exit 1;
+            }
+            ! grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
+              echo "execution_reopen must preserve allocated EXECUTION"; exit 1;
+            }
+            ! grep -Eq '^      "[^"]+": \{ state: in_progress,' .planning/EXECUTION.yaml || {
+              echo "execution_reopen cannot leave any node in_progress"; exit 1;
+            }
+            grep -Eq '^      "[^"]+": \{ state: blocked,' .planning/EXECUTION.yaml || {
+              echo "execution_reopen requires at least one blocked execution node"; exit 1;
+            }
+          fi
+
+          if grep -q '^phase: planning$' STATUS.yaml && [ "$replan_mode" != "execution_reopen" ]; then
+            for forbidden in package.json package-lock.json browser shared local-service tests; do
+              test ! -e "$forbidden" || {
+                echo "Production implementation artifact introduced during initial planning: $forbidden"; exit 1;
+              }
+            done
+          fi
+
+          if grep -q '^plan_state: frozen$' .planning/STATUS.yaml; then
+            grep -q '### R-029 — 2026-09-27 — Final Planning Review' .planning/REVIEWS.md || {
+              echo "Frozen plan is missing the original passing Final Planning Review record"; exit 1;
+            }
+            if grep -Fq '  "6.5":' .planning/TREE.yaml; then
+              grep -q '### R-041 — 2026-09-27 — Diagnosability replan review' .planning/REVIEWS.md || {
+                echo "Frozen diagnosability replan is missing review R-041"; exit 1;
+              }
+            fi
+            if grep -Fq '  "5.4":' .planning/TREE.yaml; then
+              grep -q '### R-043 — 2026-09-27 — Scanner query-library focused completeness review' .planning/REVIEWS.md || {
+                echo "Frozen Scanner query-library replan is missing review R-043"; exit 1;
+              }
+              grep -q '^# MarketScope Scanner SQL Guide$' docs/SCANNER_SQL_GUIDE.md || {
+                echo "Frozen Scanner query-library replan is missing canonical SQL guide"; exit 1;
+              }
+            fi
+            if grep -Fq '  "6.6":' .planning/TREE.yaml; then
+              grep -q '### R-045 — 2026-09-27 — Test feedback optimization mini-project replan' .planning/REVIEWS.md || {
+                echo "Frozen test-feedback replan is missing review R-045"; exit 1;
+              }
+              grep -q '^# 15. Test feedback performance contract$' docs/TEST_STRATEGY.md || {
+                echo "Frozen test-feedback replan is missing TEST_STRATEGY section 15"; exit 1;
+              }
+            fi
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const tree = fs.readFileSync('.planning/TREE.yaml', 'utf8');
+          const ids = [...tree.matchAll(/^  "([^"]+)":$/gm)].map(m => m[1]);
+          const statuses = [...tree.matchAll(/^    status: ([a-z_]+)$/gm)].map(m => m[1]);
+          if (!ids.length || statuses.length !== ids.length || statuses.some(status => status !== 'approved')) {
+            console.error('Frozen TREE must contain only approved nodes', {
+              nodes: ids.length,
+              statuses: statuses.length,
+              nonApproved: statuses.filter(status => status !== 'approved')
+            });
+            process.exit(1);
+          }
+          NODE
+          fi
+
+          if ! grep -q '^chats: {}$' .planning/EXECUTION.yaml; then
+          node <<'NODE'
+          const fs = require('node:fs');
+          const tree = fs.readFileSync('.planning/TREE.yaml', 'utf8');
+          const execution = fs.readFileSync('.planning/EXECUTION.yaml', 'utf8');
+
+          const ids = [...tree.matchAll(/^  "([^"]+)":$/gm)].map(m => m[1]);
+          const sections = {};
+          for (let i = 0; i < ids.length; i++) {
+            const start = tree.indexOf(`  "${ids[i]}":\n`);
+            const end = i + 1 < ids.length ? tree.indexOf(`  "${ids[i + 1]}":\n`, start + 1) : tree.length;
+            sections[ids[i]] = tree.slice(start, end);
+          }
+
+          const leaves = ids.filter(id => /children: \[\]/.test(sections[id]));
+          const dependencies = {};
+          for (const id of leaves) {
+            const match = sections[id].match(/depends_on: \[([^\]]*)\]/);
+            dependencies[id] = match && match[1].trim()
+              ? match[1].split(',').map(x => x.trim().replace(/^"|"$/g, ''))
+              : [];
+          }
+
+          const chatMatches = [...execution.matchAll(/^  "(\d+)":\n    nodes:\n((?:      "[^"]+": \{ state: [a-z_]+, result: (?:null|"[^"]*") \}\n)+)/gm)];
+          const positions = {};
+          const assigned = [];
+          let previousChat = 0;
+
+          for (const match of chatMatches) {
+            const chat = Number(match[1]);
+            if (chat !== previousChat + 1) {
+              console.error('EXECUTION chat numbers must be contiguous from 1', { previousChat, chat });
+              process.exit(1);
+            }
+            previousChat = chat;
+
+            const nodeMatches = [...match[2].matchAll(/^      "([^"]+)": \{ state: ([a-z_]+), result: (null|"[^"]*") \}$/gm)];
+            nodeMatches.forEach((nodeMatch, index) => {
+              const id = nodeMatch[1];
+              const state = nodeMatch[2];
+              if (!['pending', 'in_progress', 'done', 'blocked'].includes(state)) {
+                console.error('Invalid EXECUTION node state', { id, state });
+                process.exit(1);
+              }
+              assigned.push(id);
+              positions[id] = { chat, index };
+            });
+          }
+
+          const duplicates = [...new Set(assigned.filter((id, index) => assigned.indexOf(id) !== index))];
+          const missing = leaves.filter(id => !assigned.includes(id));
+          const extra = assigned.filter(id => !leaves.includes(id));
+
+          if (duplicates.length || missing.length || extra.length || assigned.length !== leaves.length) {
+            console.error('EXECUTION allocation must contain every implementation leaf exactly once', {
+              leaves: leaves.length,
+              assigned: assigned.length,
+              duplicates,
+              missing,
+              extra
+            });
+            process.exit(1);
+          }
+
+          for (const leaf of leaves) {
+            for (const dep of dependencies[leaf]) {
+              const before = positions[dep];
+              const current = positions[leaf];
+              if (!before || before.chat > current.chat || (before.chat === current.chat && before.index >= current.index)) {
+                console.error('EXECUTION allocation violates dependency order', { leaf, dep, before, current });
+                process.exit(1);
+              }
+            }
+          }
+
+          const rootStatus = fs.readFileSync('STATUS.yaml', 'utf8');
+          const planningStatus = fs.readFileSync('.planning/STATUS.yaml', 'utf8');
+          const phase = rootStatus.match(/^phase: ([a-z_]+)$/m)?.[1];
+          const replanMode = planningStatus.match(/^replan_mode: ([a-z_]+)$/m)?.[1] ?? null;
+          const stateRows = [...execution.matchAll(/^      "([^"]+)": \{ state: ([a-z_]+), result: (null|"[^"]*") \}$/gm)]
+            .map(match => ({ id: match[1], state: match[2], result: match[3] }));
+
+          if (phase === 'planning' && replanMode === 'execution_reopen') {
+            const inProgress = stateRows.filter(row => row.state === 'in_progress');
+            const blocked = stateRows.filter(row => row.state === 'blocked');
+            if (inProgress.length) {
+              console.error('execution_reopen cannot keep execution in_progress', { inProgress });
+              process.exit(1);
+            }
+            if (!blocked.length) {
+              console.error('execution_reopen must retain a factual blocked node until re-freeze/authorization');
+              process.exit(1);
+            }
+          } else if (phase === 'planning') {
+            const nonPending = stateRows.filter(row => row.state !== 'pending' || row.result !== 'null');
+            if (nonPending.length) {
+              console.error('Initial pre-implementation allocation must remain pending/null while root phase is planning', { nonPending });
+              process.exit(1);
+            }
+          }
+
+          console.log('EXECUTION allocation verified:', {
+            chats: previousChat,
+            leaves: leaves.length
+          });
+          NODE
+          fi
+
+          grep -q 'READY-030' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is incomplete or missing readiness gate"; exit 1;
+          }
+
+          grep -q 'FINAL-020' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is incomplete or missing final quality gate"; exit 1;
+          }
+
+          grep -q 'READY-031' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is missing the legacy-migration completeness readiness gate"; exit 1;
+          }
+
+          grep -q 'MIGCHECK-012' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is missing the legacy-migration completeness audit"; exit 1;
+          }
+
+          grep -q 'DIAG-020' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is missing the original operational diagnostics coverage"; exit 1;
+          }
+
+          grep -q 'DIAG-032' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is missing diagnosability-by-design coverage"; exit 1;
+          }
+
+          grep -Fq '## 28. Diagnosability-by-design' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing diagnosability-by-design contract"; exit 1;
+          }
+
+          grep -Fq '# 8A. Cross-cutting Diagnosability Verification' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing diagnosability verification matrix"; exit 1;
+          }
+
+          grep -Fxq '## Branch and PR workflow' AGENTS.md || {
+            echo "AGENTS.md is missing the branch/PR workflow rule"; exit 1;
+          }
+
+          grep -q 'squash-merge' AGENTS.md || {
+            echo "AGENTS.md is missing the verified-main merge discipline"; exit 1;
+          }
+
+          grep -Fq '## Learning from failures' AGENTS.md || {
+            echo "AGENTS.md is missing failure-learning discipline"; exit 1;
+          }
+
+          grep -Fq '.planning/EXECUTOR_HANDOFF.md' AGENTS.md || {
+            echo "AGENTS.md is missing executor handoff routing"; exit 1;
+          }
+
+          grep -Fq 'STATUS.yaml -> phase: implementation' .planning/EXECUTOR_HANDOFF.md || {
+            echo "EXECUTOR_HANDOFF.md is missing implementation authorization gate"; exit 1;
+          }
+
+          node .planning/verify-handoff.mjs
+
+          grep -q '^## 1. Product problem' docs/PRODUCT_REQUIREMENTS.md || {
+            echo "PRODUCT_REQUIREMENTS.md is missing the durable product-problem contract"; exit 1;
+          }
+
+          grep -q '^## 1. Runtime baseline' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing the runtime baseline contract"; exit 1;
+          }
+
+          grep -q '@duckdb/node-api 1.5.5-r.5' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing the verified DuckDB Node baseline"; exit 1;
+          }
+
+          grep -q 'StatementType.SELECT' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing Scanner statement-type admission"; exit 1;
+          }
+
+          grep -q 'enable_external_access = false' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing DuckDB external-access hardening"; exit 1;
+          }
+
+          grep -q 'ws://127.0.0.1:8765' docs/TECHNICAL_SPEC.md || {
+            echo "TECHNICAL_SPEC.md is missing loopback WebSocket target"; exit 1;
+          }
+
+          grep -q '^## 1. Core principles' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing the durable verification contract"; exit 1;
+          }
+
+          grep -q '^# 5. Canonical Fake Market contract' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing canonical Fake Market contract"; exit 1;
+          }
+
+          for file in docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; do
+            if grep -Eq 'Stage [0-9]+|readiness result|review status|next planning phase|No production implementation exists yet' "$file"; then
+              echo "Durable contract leaks planning-stage/status text: $file"; exit 1;
+            fi
+          done
+
+          grep -q 'universe = 561' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing representative workload universe"; exit 1;
+          }
+
+          grep -q 'cycles = 600' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing representative workload cycle count"; exit 1;
+          }
+
+          grep -q '^# 10. Layer 6 — Real Provider Verification' docs/TEST_STRATEGY.md || {
+            echo "TEST_STRATEGY.md is missing bounded live-provider layer"; exit 1;
+          }
+
+          for flow in 1 2 3 4 5 6 7 8; do
+            grep -q "^### Flow ${flow} —" docs/PRODUCT_SPEC.md || {
+              echo "PRODUCT_SPEC.md is missing mandatory Flow ${flow}"; exit 1;
+            }
+          done
+
+          for disposition in KEEP ADAPT DROP INVESTIGATE; do
+            grep -q "\*\*${disposition}\*\*" docs/SOURCE_EXTRACTION.md || {
+              echo "SOURCE_EXTRACTION.md is missing disposition definition: ${disposition}"; exit 1;
+            }
+          done
+
+          grep -q 'LEG-011' .planning/MASTER_COVERAGE.md || {
+            echo "MASTER_COVERAGE.md is missing Stage 10 legacy findings"; exit 1;
+          }
+
+          node <<'NODE'
+          const fs = require('node:fs');
+          const master = fs.readFileSync('.planning/MASTER_COVERAGE.md', 'utf8');
+          const map = fs.readFileSync('.planning/COVERAGE_MAP.yaml', 'utf8');
+          const masterRaw = [...master.matchAll(/\*\*([A-Z]+-\d{3})\*\*/g)].map(m => m[1]);
+          const mapRaw = [...map.matchAll(/^  "([A-Z]+-\d{3})":/gm)].map(m => m[1]);
+          const masterIds = [...new Set(masterRaw)].sort();
+          const mapIds = [...new Set(mapRaw)].sort();
+          const duplicateMaster = masterIds.filter(id => masterRaw.filter(x => x === id).length !== 1);
+          const duplicateMap = mapIds.filter(id => mapRaw.filter(x => x === id).length !== 1);
+          const missing = masterIds.filter(id => !mapIds.includes(id));
+          const extra = mapIds.filter(id => !masterIds.includes(id));
+          if (duplicateMaster.length || duplicateMap.length || missing.length || extra.length || masterIds.length !== mapIds.length) {
+            console.error('coverage map IDs do not exactly match MASTER_COVERAGE one-to-one', {
+              master: masterIds.length,
+              map: mapIds.length,
+              duplicateMaster,
+              duplicateMap,
+              missing,
+              extra
+            });
+            process.exit(1);
+          }
+          if (masterIds.length < 660) {
+            console.error('coverage inventory unexpectedly shrank:', masterIds.length);
+            process.exit(1);
+          }
+          console.log('Exact one-to-one coverage IDs mapped:', masterIds.length);
+          NODE
+
+          echo "Planning/document bootstrap validation passed."

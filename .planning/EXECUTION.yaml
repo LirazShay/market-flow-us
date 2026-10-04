@@ -1,0 +1,132 @@
+version: 1
+
+# Generated from the frozen S&T plan.
+#
+# Every implementation-ready TREE leaf appears exactly once below.
+# TREE.yaml remains the source for Strategy, Tactic, depends_on and success_evidence.
+# Node order inside one chat is execution order when same-chat dependencies exist.
+#
+# Execution states:
+# - pending: assigned, not started
+# - in_progress: currently being executed
+# - done: success_evidence verified
+# - blocked: execution cannot continue because of a real execution/planning blocker
+#
+# If blocked because the frozen plan itself is materially wrong/incomplete:
+# - set .planning/STATUS.yaml -> plan_state: active and root STATUS.yaml -> phase: planning;
+# - stop starting new execution work;
+# - replan/review the smallest affected S&T area;
+# - preserve done nodes only if still valid;
+# - re-freeze and repair only affected execution entries.
+#
+# result:
+# - null while pending/in_progress
+# - short verification/result reference when done
+# - short blocker explanation when blocked
+
+chats:
+  # Runtime/package/protocol/database foundation
+  "1":
+    nodes:
+      "1.1": { state: done, result: "Node 24 npm ci + unit/build proof green in Actions run 36321635954" }
+      "1.2": { state: done, result: "Protocol unit/build proof green in Actions run 36321766986" }
+      "1.3": { state: done, result: "Native DuckDB lifecycle proof green: 12 unit + 3 real-DuckDB service tests in Actions run 36322123434" }
+
+  # WebSocket/service test foundation + canonical Fake Market
+  "2":
+    nodes:
+      "1.4": { state: done, result: "Real-socket transport contract green in Actions run 36322909184" }
+      "1.5": { state: done, result: "Reusable isolated service fixture + construction-only fault seam green in Actions run 36323031537" }
+      "6.1": { state: done, result: "Canonical Fake Market + final build/Fast proof green in Actions run 36323384128 (12 unit + 14 service)" }
+
+  # Browser provider acquisition and Recorder scheduling
+  "3":
+    nodes:
+      "2.1": { state: done, result: "Provider data/unit + Fast/build proof green in Actions run 36324421662" }
+      "2.2": { state: done, result: "Recorder scheduling/authority boundary + Fast/build proof green in Actions run 36324739740 (18 focused, 30 unit, 14 service)" }
+
+  # Node producer/session/universe and atomic cycle authority
+  "4":
+    nodes:
+      "2.3": { state: done, result: "Producer session/universe authority proof green in Actions run 36325365317 (6 focused, 30 unit, 20 service)" }
+      "2.4": { state: done, result: "Atomic complete/failed cycle authority proof green in Actions run 36326158363 (9 focused, 30 unit, 29 service)" }
+
+  # Browser producer bridge and fail-closed recovery
+  "5":
+    nodes:
+      "2.5": { state: done, result: "Browser producer ACK bridge green in Actions run 36328119601 (32 unit + 30 real-service + browser build)" }
+      "2.6": { state: done, result: "Fail-closed heartbeat/disconnect/restart proof green in Actions run 36328718811 (33 unit + 34 real-service + browser build)" }
+
+  # Trusted Current/status/security/history reads + Viewer client
+  "6":
+    nodes:
+      "3.1": { state: done, result: "Trusted Current/status authority green in Actions run 36329772584 (4 focused real-service; full Fast 36 unit + 38 service)" }
+      "3.2": { state: done, result: "Security/history lookup and 500-row keyset paging green in Actions run 36329772584 (focused real-service + full Fast)" }
+      "3.3": { state: done, result: "Viewer read client correlation/error/unavailable proof + browser build green in Actions run 36329772584 (3 focused unit; full Fast green)" }
+
+  # Current, Detail/History and refresh/state preservation
+  "7":
+    nodes:
+      "4.1": { state: done, result: "Current exact model/sort/format + Chromium states/diagnostics/accessibility + browser build/Fast green in Actions run 36330798302" }
+      "4.2": { state: done, result: "Detail exact 15-column history + 500-row paging/retry + historical-only/unknown/stale-open Chromium proof + browser build/Fast green in Actions run 36331277667" }
+      "4.3": { state: done, result: "Authoritative manual/live-hint refresh + coalescing + shared diagnostics + Current sort/RTL viewport + Detail 502→503 depth preservation + browser build/Fast green in Actions run 36333218700" }
+
+  # Scanner SQL authority, scheduling/UI and Detail navigation
+  "8":
+    nodes:
+      "5.1": { state: done, result: "Scanner SELECT admission/exact JSON-safe result/non-mutation + full Fast green in Actions run 36339404583" }
+      "5.2": { state: done, result: "Scanner generation/draft/no-overlap cadence + exact UI/empty/error Chromium and full Fast green in Actions run 36339668600" }
+      "5.3": { state: done, result: "Scanner canonical SecurityId rows reuse shared Detail/History; ordinary results stay non-navigable; Chromium/build/Fast green in Actions run 36339969138" }
+
+  # Normal Browser composition + one-command demo
+  "9":
+    nodes:
+      "4.4": { state: done, result: "Normal runtime composition + lifecycle proof green: Fast 48 unit + 40 service and 3 Chromium E2E in Actions run 36340961726" }
+      "6.2": { state: done, result: "One-command demo + safe reset complete. Actions run 36341859492: Fast 48 unit + 44 service, real npm demo command green, restart persistence green, reset path-safety/production-data isolation green." }
+
+  # Scanner saved-query library, built-ins and AI authoring guide
+  "10":
+    nodes:
+      "5.4": { state: done, result: "Schema v2 migration + durable saved-query CRUD/protocol green in Actions run 36347294801 (focused unit/service, full Fast, browser build)." }
+      "5.5": { state: done, result: "Browser Query Library UX + built-ins + Draft/Persisted/Active isolation green in Actions run 36348375187 (focused unit/service/Chromium, full Fast, full Browser)." }
+      "5.6": { state: done, result: "Canonical Scanner SQL guide drift/executable proof green in Actions run 36349881713 (53/53 unit, 52/52 real-service)." }
+
+  # Diagnosability convergence
+  "11":
+    nodes:
+      "6.5": { state: done, result: "Diagnosability convergence green in Actions run 36352276529: 57/57 unit, 57/57 service, 14/14 Chromium; R-046/R-047 closed." }
+
+  # Test feedback optimization mini-project
+  "12":
+    nodes:
+      "6.6": { state: done, result: "R-049 pass — 55.7% representative wall-clock improvement; warm 31s/cold 56s; full coverage preserved; Fast/Browser command misses covered by measured irreducible evidence." }
+
+  # Complete Fast/Browser CI on optimized test infrastructure
+  "13":
+    nodes:
+      "6.3": { state: done, result: "Permanent Fast CI green in Actions run 36355662948: planning/static guard + 57/57 unit + 57/57 real-service; relevant-path PR trigger proven." }
+      "6.4": { state: done, result: "Permanent Browser CI green: cold run 36356079673 and exact-cache-hit warm run 36356195522 both passed 14/14 Chromium with normal runtime; failure trace/screenshot/report + sanitized Support Snapshot attachment wiring is active." }
+
+  # Representative workload proof
+  "14":
+    nodes:
+      "7.1": { state: done, result: "Representative 561x600 workload passed in Actions run 36357127789; baseline artifact 10944652741; final Fast CI run 36358277267 green." }
+
+  # Bounded real-provider verification harness/gate
+  "15":
+    nodes:
+      "7.2": { state: done, result: "Harness/package/runbook verified green on PR #35; real-provider execution explicitly pending because this execution environment has no access to the user's authenticated provider page, local browser session or loopback service; PASS not invented." }
+
+  # Final repository/release/handoff closure
+  "16":
+    nodes:
+      "7.3": { state: done, result: "Final repository/docs/security/cleanup closure reviewed on PR #36; Fast/Planning candidate proof green; unchanged product/runtime code retains green Browser and 561x600 workload evidence; real-provider execution remains an explicit external local gate." }
+
+# Serial executor protocol:
+# - implementation is authorized only when plan_state is frozen AND root STATUS phase is implementation;
+# - while root phase is planning, all allocated nodes remain pending and no executor starts code;
+# - the user then starts a numbered executor chat, e.g. "אני צאט 1 תתחיל";
+# - that chat reads only its assigned node IDs, their TREE dependencies, and referenced contracts;
+# - before starting any node, every dependency must already be state: done;
+# - same-chat dependencies are satisfied by completing earlier listed nodes first;
+# - a node becomes done only after its TREE success_evidence is verified.

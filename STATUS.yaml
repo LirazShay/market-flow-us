@@ -1,0 +1,354 @@
+schema_version: 1
+phase: release_ready
+overall_status: pending_external_verification
+
+current:
+  gate: "real_provider_live_verification"
+  title: "Bounded Real Provider Verification"
+  status: pending
+  reason: "Requires an eligible authenticated provider browser session and local loopback MarketScope service on the user's machine."
+
+authority:
+  product_truth: "LirazShay/market-scope main"
+  planning_state: ".planning/STATUS.yaml"
+  execution_allocation: ".planning/EXECUTION.yaml"
+  executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
+
+planning_completion:
+  stages_1_to_14: pass
+  plan_state: frozen
+  final_planning_review: pass_replan
+  legacy_completeness: pass
+  exact_coverage_mapping: pass
+  execution_allocation: pass_replan
+  fresh_chat_simulation: pass_replan
+  authorized_handoff_verification: pass_replan
+
+verification:
+  test_feedback_optimization_profile:
+    status: pass
+    run_id: 36352649760
+    pr: 32
+    full_unit: "57/57"
+    full_service: "57/57"
+    full_browser: "14/14"
+    timings:
+      npm_ci_ms: 2592
+      browser_build_ms: 182
+      unit_ms: 1335
+      service_ms: 14980
+      chromium_install_ms: 33622
+      browser_ms: 15926
+    largest_service_file: "demo-orchestration.test.mjs — 5612ms"
+    optimization_1:
+      run_id: 36352976403
+      demo_orchestration_ms: 1143
+      service_ms: 10050
+      fast_ms: 11244
+      chromium_install_ms: 29014
+      browser_ms: 16787
+      result: "pass — uncancelled 5s timer removed; same 5s failure bound preserved; 57/57 unit, 57/57 service, 14/14 Chromium green"
+    browser_profile:
+      run_id: 36353261423
+      full_browser_ms: 17076
+      dominant_spec: "runtime-composition.spec.mjs — 10406ms independent wall time"
+      dominant_test: "Viewer close/reopen + producer independence — 3700ms"
+      root_cause: "Test waits for the next real Recorder cycle while using the production default snapshotIntervalMs=3000; the cadence is incidental to the ownership proof."
+    optimization_2:
+      run_id: 36353473919
+      producer_independence_test_ms: 1200
+      runtime_composition_spec_ms: 8201
+      full_browser_ms: 14396
+      result: "pass — test-only recorder cadence reduced through existing seam; production 3000ms default unchanged; 14/14 Chromium green"
+    browser_phase_profile:
+      run_id: 36353703729
+      query_library_measured_ms: 1952
+      detail_measured_ms: 1463
+      viewer_refresh_measured_ms: 1230
+      warm_full_browser_ms: 10842
+      conclusion: "No further large incidental test-local wait: remaining cost is real CRUD/reopen and 500+ row rendering/state-preservation proof. Warm <=12s is achievable but not yet a cold/stability proof."
+    browser_parallelism_probe:
+      initial_run_id: 36353979246
+      regression_review: "R-048"
+      repaired_run_id: 36354083502
+      baseline_workers_1_ms: 12738
+      workers_2a_ms: 15266
+      workers_2b_ms: 14530
+      workers_3_ms: 16065
+      result: "rejected — deterministic after fixing the Detail loading proof, but slower than workers=1; all repaired variants 14/14 green"
+    chromium_cache_proof:
+      run_id: 36354367303
+      cache_key_contract: "ms-playwright-{runner.os}-{runner.arch}-{hashFiles(package-lock.json)}"
+      cold_job_wall_s: 56
+      warm_job_wall_s: 48
+      cold_browser_ms: 14223
+      warm_browser_ms: 11959
+      cold_binary_ms: 12846
+      warm_binary_verify_ms: 689
+      cold_deps_ms: 14657
+      warm_deps_ms: 19531
+      result: "pass — exact cache miss→fresh-runner hit proven; 14/14 Browser green both paths; cold <=60s met, warm <=45s not yet met"
+    warm_browser_proof:
+      run_id: 36354652419
+      exact_cache_hit: true
+      install_deps: "skipped"
+      chromium_verify_ms: 2228
+      browser_ms: 14453
+      job_wall_s: 31
+      result: "pass — fresh ubuntu-latest runner launched pinned cached Chromium with no install-deps; 14/14 Browser green; warm <=45s met"
+    representative_final_proof:
+      run_id: 36354809655
+      unit_tests: "57/57"
+      service_tests: "57/57"
+      browser_tests: "14/14"
+      fast_ms: 11695
+      browser_ms: 14450
+      fast_job_wall_s: 20
+      browser_job_wall_s: 33
+      parallel_product_path_wall_s: 35
+      baseline_wall_s: 79
+      improvement_percent: 55.7
+      result: "pass for >=35% hard improvement and full coverage; individual <=10s Fast and <=12s Browser command targets remain above target in this run"
+    fast_parallel_probe:
+      run_id: 36355039922
+      sequential_fast_ms: 12210
+      parallel_a_ms: 11452
+      parallel_b_ms: 12615
+      sequential_service_ms: 10377
+      parallel_a_service_ms: 11170
+      parallel_b_service_ms: 12425
+      result: "rejected — 57/57 unit + 57/57 service stayed green, but parallel execution increased service contention and was not deterministically faster; <=10s miss recorded as measured irreducible overhead"
+    final_audit:
+      review: "R-049"
+      status: pass
+      result: "All node 6.6 success evidence satisfied; numeric Fast/Browser command misses are covered by measured irreducible evidence with targets unchanged."
+    next_stage: "PR #32 final diff review and merge remain the Chat 12 closure boundary; durable execution pointer already advances to the first non-done node, Chat 13 / 6.3, per verify-handoff invariant."
+  diagnosability_node_6_5:
+    pr: 31
+    contract_repair_review: "R-046"
+    failure_review: "R-047"
+    proof:
+      status: pass
+      run_id: 36352276529
+      commit: "ad5e054fd540341822a984ab07ce7674f8826765"
+      full_unit: "57/57"
+      full_service: "57/57"
+      full_browser: "14/14"
+    planning_ci:
+      status: pass
+      run_id: 36352276487
+      commit: "ad5e054fd540341822a984ab07ce7674f8826765"
+  scanner_sql_guide_node_5_6:
+    pr: 27
+    proof:
+      status: pass
+      run_id: 36349881713
+      commit: "d0b07dba71cbcb3c17c0041f5a1a4df22bedd40a"
+      full_unit: "53/53"
+      full_service: "52/52"
+  test_feedback_optimization_replan:
+    review: "R-045"
+    baseline:
+      run_id: 36348375187
+      total_seconds: 79
+      chromium_setup_seconds: 26
+      focused_browser_seconds: 11
+      full_fast_seconds: 15
+      full_browser_seconds: 16
+    final_pr:
+      number: 25
+      head_ci:
+        status: pass
+        run_id: 36349604984
+        commit: "79b6b7aef60c23fbb6b05169bfa89c585a87713c"
+      merge_commit: "20f1f7d19617ff525fb78396e1ee7f2955a66857"
+      main_ci:
+        status: pass
+        run_id: 36349625338
+        commit: "20f1f7d19617ff525fb78396e1ee7f2955a66857"
+    implementation_authorized: true
+    current_chat: 10
+    current_node: "5.6"
+  scanner_saved_query_node_5_5:
+    pr: 23
+    proof:
+      status: pass
+      run_id: 36348375187
+      commit: "62baa08d875ab2523ccc2808dbe6a92e9e054b6e"
+      focused_unit: "8/8"
+      focused_service: "5/5"
+      focused_chromium: "7/7"
+      full_unit: "53/53"
+      full_service: "50/50"
+      full_browser: "13/13"
+    failure_review: "R-044"
+    final_pr:
+      head_ci:
+        status: pass
+        run_id: 36348554884
+        commit: "35edc96245f126e8cdc7f47a52b57d587005c3ea"
+      merge_commit: "186e52b89882f10c15d195b9b642396936a328c5"
+      main_ci:
+        status: pass
+        run_id: 36348594594
+        commit: "186e52b89882f10c15d195b9b642396936a328c5"
+  scanner_saved_query_node_5_4:
+    pr: 22
+    proof:
+      status: pass
+      run_id: 36347294801
+      commit: "f8709533f1d50d4bb353110b5782086f8f5794aa"
+    planning_ci:
+      status: pass
+      run_id: 36347294795
+      commit: "f8709533f1d50d4bb353110b5782086f8f5794aa"
+  chat_9_closure:
+    pr: 18
+    merge_commit: "78145729380aa3d02112fafdac2424b896ceeb94"
+    main_ci:
+      status: pass
+      run_id: 36343476711
+      commit: "78145729380aa3d02112fafdac2424b896ceeb94"
+  diagnosability_replan:
+    review: "R-041"
+    planning_ci:
+      status: pass
+      run_id: 36343153523
+      commit: "a73c0f8a748a0a07f5a1b4e4b4d1ae835350fedd"
+    implementation_authorized: true
+    current_chat: 9
+    current_node: "6.2"
+  scanner_query_library_replan:
+    review: "R-043"
+    planning_ci:
+      status: pass
+      run_id: 36346606635
+      commit: "11a5fee1b7a4d85c6deec32eb7c551ea6ff4b037"
+    final_pr:
+      number: 20
+      head_ci:
+        status: pass
+        run_id: 36346636422
+        commit: "e3c2405d080a289bd27c77c0c83247a3bef110b1"
+      merge_commit: "f111e7c1295b23516646253e9ce1183b6383d190"
+      main_ci:
+        status: pass
+        run_id: 36346683772
+        commit: "f111e7c1295b23516646253e9ce1183b6383d190"
+    implementation_authorized: true
+    current_chat: 10
+    current_node: "5.4"
+  stage_14:
+    pre_authorization_ci:
+      status: pass
+      run_id: 36320676403
+      commit: "8ec6d88d0c3154474e31a289252fa703392ed41c"
+    authorized_state_ci:
+      status: pass
+      run_id: 36320739229
+      commit: "25839c8115c190ee8b71b5aa242a0459a41c050d"
+    implementation_authorized: true
+    current_chat: 1
+    current_node: "1.1"
+    production_code_started: true
+
+  fast_ci:
+    status: pass
+    run_id: 36355662948
+    pr: 33
+    commit: "d5ec83b647136890bb876b59c9b85c589ddfeb56"
+    planning_static: pass
+    unit: "57/57"
+    service: "57/57"
+    trigger: "pull_request path gate proven by CI workflow change"
+
+  browser_ci:
+    status: pass
+    pr: 33
+    cold_run_id: 36356079673
+    warm_run_id: 36356195522
+    cold_commit: "37bb44ffc112c76f8b0e37f7065084bdbdba1274"
+    warm_commit: "f4a65f0b7148af72a1b6d104fe1ffa4c0a620812"
+    chromium: "14/14"
+    exact_cache_hit: true
+    warm_e2e_ms: 14400
+    failure_evidence: "Playwright trace + screenshot + HTML report; sanitized Support Snapshot attached from normal product surface when obtainable"
+    result: "pass — automatic PR path gate, normal runtime build, cold cache population and fresh-runner warm cache reuse proven"
+
+  representative_workload_node_7_1:
+    status: pass
+    pr: 34
+    workload_run_id: 36357127789
+    workload_artifact_id: 10944652741
+    scenario: "561 securities × 600 complete cycles"
+    history_rows: 336600
+    failed_cycles: 0
+    db_file_bytes: 133705728
+    restart_to_ready_ms: 44.613
+    commit_latency_ms:
+      median: 1644.866
+      p95: 1945.302
+      max: 2609.652
+    current_read_p95_ms: 11.965
+    history_page_p95_ms: 163.471
+    scanner_overall_p95_ms: 6.212
+    final_fast_ci:
+      status: pass
+      run_id: 36358277267
+      planning_static: pass
+      unit: pass
+      service: pass
+    baseline_doc: "docs/benchmarks/REPRESENTATIVE_WORKLOAD_BASELINE.md"
+    result: "pass — expected counts, interleaved Current/History/Scanner queries and restart authority all verified; no workload blocker identified"
+
+  live_verification_node_7_2:
+    status: done
+    pr: 35
+    harness_core_commit: "7fad93b1aa4dc311ca4df7bbdc516f7295cf3fa8"
+    packaging_commit: "60ee736c849ecc5780476f7f3cacb3eb2e7f273a"
+    packaging_proof:
+      planning_ci_run_id: 36359568835
+      fast_ci_run_id: 36359568856
+      browser_ci_run_id: 36359568843
+      result: "pass — isolated live-verification bookmarklet/build command, exact clean-checkout HEAD binding, sanitized report path and runbook are green"
+    live_execution:
+      status: pending
+      result: "External boundary: this execution environment cannot access the user's authenticated provider page, browser session or local loopback MarketScope service. The verified gate must be run locally when an eligible authenticated provider session is available; no PASS was invented."
+
+  final_repository_closure_node_7_3:
+    status: pass
+    pr: 36
+    docs_contract_reconciliation: pass
+    repository_cleanup_security_review: pass
+    fast_candidate_run_id: 36360675969
+    planning_docs_candidate_run_id: 36360675980
+    browser_reference_run_id: 36360079981
+    workload_reference_run_id: 36357127789
+    workload_artifact_id: 10944652741
+    result: "pass — repository/docs match implemented reality; no product/runtime code changed in PR #36; Fast/Planning candidate proof is green; Browser and representative workload evidence remain valid; only the genuine local real-provider gate remains pending."
+
+readiness:
+  ready_001_to_031: pass
+  diagnosability_replan_review: pass
+  scanner_query_library_replan_review: pass
+  replan_frozen_from_review: "R-046"
+
+pending:
+  - "Real-provider live verification is pending only at the external local-session boundary; run docs/LIVE_VERIFICATION.md on an eligible authenticated provider page when available."
+
+next:
+  gate: "real_provider_live_verification"
+  action: "On the user's machine, run docs/LIVE_VERIFICATION.md from a clean current main checkout on an eligible authenticated provider page. Record PASS only if the bounded gate itself reports PASS."
+
+notes:
+  - "Chat 15 node 7.2 success evidence is satisfied without fabricating live PASS: harness/package/runbook are verified, and live execution is explicitly pending because this environment has no access to the user's authenticated provider page/local browser/loopback service. PR #35 merge + green main CI remain the Chat 15 closure boundary."
+  - "Chat 11 node 6.5 is complete on PR #31 proof state: Actions run 36352276529 passed 57/57 unit, 57/57 service and 14/14 Chromium tests; Planning Docs CI 36352276487 is green."
+  - "R-046 added the truthful scanner.query_library diagnostic checkpoint after a focused execution-time contract repair; no TREE/allocation expansion was needed."
+  - "R-047 closed two proof-discovered defects: DuckDB now explicitly closes its owning native instance after child connections, and Viewer diagnostic subroots preserve complete create/attach/return wiring."
+  - "Chat 10 node 5.5 is closed: PR #23 squash-merged as 186e52b89882f10c15d195b9b642396936a328c5; product proof run 36348375187 and main Planning Docs CI run 36348594594 are green."
+  - "Chat 10 node 5.6 proof is green: Actions run 36349881713 passed full Fast with 53/53 unit and 52/52 real-service tests. Guide schema/type/built-in drift and all 9 marked executable SQL examples are mechanically verified."
+  - "Test-feedback replan R-045 is closed: PR #25 squash-merged as 20f1f7d19617ff525fb78396e1ee7f2955a66857; PR-head CI 36349604984 and main Planning Docs CI 36349625338 are green. Node 6.6 owns measured optimization before final CI wiring; full coverage remains mandatory."
+  - "Scanner saved-query replan R-043 is closed: PR #20 squash-merged as f111e7c1295b23516646253e9ce1183b6383d190; PR-head Planning Docs CI run 36346636422 and main Planning Docs CI run 36346683772 are green. Chat 10/5.4 is authorized and ready."
+  - "Operational current/next always point to the first non-done EXECUTION node."
+  - "Diagnosability replan R-041 is re-frozen and reauthorized. Planning Docs CI run 36343153523 is green on the restored Chat 9 / 6.2 implementation handoff."
+  - "Chat 9 is closed: PR #18 squash-merged as 78145729380aa3d02112fafdac2424b896ceeb94 and main Planning Docs CI run 36343476711 is green. Scanner replan closure superseded the former Chat 10/6.5 pointer; authorized execution now resumes at Chat 10/5.4."

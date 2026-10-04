@@ -1,0 +1,30 @@
+{
+  "name": "market-scope",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build:browser": "node scripts/build-browser.mjs",
+    "test": "npm run test:fast",
+    "test:unit": "node --test tests/unit/**/*.test.mjs",
+    "test:service": "node --test tests/service/**/*.test.mjs",
+    "test:fast": "npm run test:unit && npm run test:service",
+    "test:e2e": "playwright test",
+    "test:workload": "node --test tests/workload/**/*.test.mjs",
+    "service": "node local-service/server/index.js",
+    "demo:fake-market": "node scripts/demo-fake-market.mjs",
+    "demo:reset": "node scripts/demo-reset.mjs",
+    "build:live-verification": "node scripts/build-live-verification.mjs"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "1.5.5-r.5",
+    "ws": "8.21.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "esbuild": "0.28.2"
+  }
+}

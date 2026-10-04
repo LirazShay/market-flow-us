@@ -1,0 +1,88 @@
+name: MarketScope Fast CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "browser/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/**"
+      - "tests/unit/**"
+      - "tests/service/**"
+      - "package.json"
+      - "package-lock.json"
+      - "AGENTS.md"
+      - "README.md"
+      - "STATUS.yaml"
+      - "docs/**"
+      - ".planning/**"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "browser/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/**"
+      - "tests/unit/**"
+      - "tests/service/**"
+      - "package.json"
+      - "package-lock.json"
+      - "AGENTS.md"
+      - "README.md"
+      - "STATUS.yaml"
+      - "docs/**"
+      - ".planning/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  planning-static:
+    name: Planning / static guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Verify executor handoff invariants
+        run: node .planning/verify-handoff.mjs
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Run unit suite
+        run: npm run test:unit
+
+  service:
+    name: Real service integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Run real service suite
+        run: npm run test:service
