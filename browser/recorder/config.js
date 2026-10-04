@@ -5,6 +5,10 @@ export const DEFAULT_RECORDER_CONFIG = Object.freeze({
   refreshUniverseEveryCycle: false
 });
 
+export const DEFAULT_US_RECORDER_CONFIG = Object.freeze({
+  snapshotIntervalMs: 3000
+});
+
 function assertNonNegativeInteger(value, name) {
   if (!Number.isInteger(value) || value < 0) {
     throw new TypeError(`${name} must be a non-negative integer.`);
@@ -35,5 +39,23 @@ export function createRecorderConfig(overrides = {}) {
     throw new TypeError("refreshUniverseEveryCycle must be a boolean.");
   }
 
+  return Object.freeze(config);
+}
+
+export function createUsRecorderConfig(overrides = {}) {
+  if (!overrides || typeof overrides !== "object" || Array.isArray(overrides)) {
+    throw new TypeError("U.S. Recorder config overrides must be an object.");
+  }
+
+  const unsupported = Object.keys(overrides).filter((key) => key !== "snapshotIntervalMs");
+  if (unsupported.length > 0) {
+    throw new TypeError(`Unsupported U.S. Recorder config: ${unsupported.join(", ")}.`);
+  }
+
+  const config = {
+    ...DEFAULT_US_RECORDER_CONFIG,
+    ...overrides
+  };
+  assertNonNegativeInteger(config.snapshotIntervalMs, "snapshotIntervalMs");
   return Object.freeze(config);
 }
