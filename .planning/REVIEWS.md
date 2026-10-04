@@ -101,3 +101,94 @@ This does **not** freeze the whole plan and does **not** authorize implementatio
 ### Next gate
 
 Run Final Planning Review against GOAL + contracts + audited file map + approved TREE, repair any remaining planning/document/handoff/CI inconsistencies, then freeze only if the entire plan passes.
+
+
+## R-US-002 — Second-pass adversarial migration/S&T review
+
+**Result:** PASS AFTER CORRECTIONS
+
+**Reason for repeat:** user requested a fresh review because the first S&T review might have missed migration details.
+
+### Review method
+
+The second pass did not trust R-US-001. It independently challenged:
+
+- the original 124-file audit denominator;
+- every file classified KEEP;
+- every ADAPT/REPLACE file's implementation-leaf ownership;
+- stale MarketScope planning artifacts;
+- Planning CI guards;
+- executor handoff/allocation validation;
+- cross-contract live-verification consistency;
+- continuous-collection evidence;
+- S&T structure/dependencies/non-goals.
+
+### Findings and fixes
+
+1. **Audit denominator wording was wrong.**  
+   The 124-file audit snapshot was 121 exact MarketScope baseline files plus 3 U.S. replan/evidence files already added. Durable audit/map text now states this precisely.
+
+2. **Eleven original KEEP classifications were too optimistic.**  
+   Ten files contained MarketScope branding/channel/fixture/Israeli-field coupling and moved to ADAPT. `.planning/verify-handoff.mjs` moved to PLANNING_REPLACE because its guard responsibility changed.
+
+3. **Stale MarketScope planning truth remained.**  
+   Planning CI and EXECUTOR_HANDOFF still referenced old node IDs, D/R IDs, 561x600 workload and legacy coverage. Both were rewritten.
+
+4. **Obsolete coverage artifacts contradicted the current FRAMEWORK.**  
+   MASTER_COVERAGE, COVERAGE_MAP and LEGACY_COMPLETENESS_AUDIT were removed. Whole-plan coverage is now review evidence, not a parallel task/coverage database.
+
+5. **Live verification was internally inconsistent and too weak.**  
+   TECHNICAL_SPEC still said one snapshot while other files said three cycles. The final reviewed contract is at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence.
+
+6. **Allocation integrity guard regressed when Planning CI was simplified.**  
+   verify-handoff now validates complete leaf allocation, dependency order and serial execution invariants in addition to the current pointer.
+
+### File audit proof
+
+```text
+KEEP              15
+ADAPT             88
+REPLACE            8
+PLANNING_REPLACE  10
+DROP               3
+TOTAL             124
+```
+
+Every one of the 96 ADAPT/REPLACE files maps to at least one implementation leaf:
+
+```text
+mapped = 96
+unmapped = 0
+```
+
+All current KEEP files were content-scanned for the known U.S.-migration coupling families. Remaining donor MarketScope wording in BASELINE_PROVENANCE is intentional provenance, not runtime coupling.
+
+### S&T re-check
+
+After corrections:
+
+- nodes: 27;
+- implementation leaves: 19;
+- root capability branches: 7;
+- missing child references: 0;
+- non-root nodes with invalid parent count: 0;
+- one-child decompositions: 0;
+- invalid leaf dependencies: 0;
+- dependency cycles: 0;
+- non-goal Strategy Engine / temporal schema / order execution: absent.
+
+No additional implementation branch was required by the second pass. The existing leaves already cover the newly corrected ADAPT files through 4.2, 6.1 and 6.2 as applicable.
+
+### KISS result
+
+PASS.
+
+The second pass strengthened proof/ownership without adding a new product subsystem.
+
+### Planning state
+
+The corrected TREE remains locally approved.
+
+This review still does **not** freeze the plan and does **not** authorize implementation.
+
+Next gate: Final Planning Review over the corrected planning infrastructure and contracts.
