@@ -150,7 +150,18 @@ Every row also retains `raw_data JSON`.
 
 Missing/invalid typed values project to SQL NULL without changing the raw JSON.
 
-## 8. Flow 5 — Current
+## 8. Display-name rule
+
+Viewer `paperName` is the first non-empty value in this order:
+
+```text
+PaperNameEng
+→ PaperNameHeb
+→ Symbol
+→ securityId
+```
+
+## 9. Flow 5 — Current
 
 Current reads `latest` joined with current universe metadata.
 
@@ -185,7 +196,7 @@ Behavior:
 - current sort and scroll survive authoritative refresh;
 - row click/Enter/Space opens Detail.
 
-## 9. Flow 6 — Detail / History
+## 10. Flow 6 — Detail / History
 
 Detail summary shows:
 
@@ -219,7 +230,7 @@ History remains newest-first with 500-row keyset pages.
 
 A security that is absent from Current but exists in history remains openable by canonical `securityId`.
 
-## 10. Flow 7 — Scanner and saved queries
+## 11. Flow 7 — Scanner and saved queries
 
 Scanner keeps existing admission/security rules:
 
@@ -238,7 +249,7 @@ Saved-query behavior remains unchanged:
 - create/update/delete are explicit;
 - active generation remains separate from selected draft.
 
-## 11. Built-in staged candidate query
+## 12. Built-in staged candidate query
 
 Market Flow US adds a built-in editable query named conceptually `Staged candidate ranking`.
 
@@ -277,7 +288,7 @@ securityId ASC
 
 The query is an example, not hard-coded strategy behavior.
 
-## 12. Flow 8 — Failure/recovery
+## 13. Flow 8 — Failure/recovery
 
 Preserve imported behavior:
 
@@ -288,7 +299,7 @@ Preserve imported behavior:
 - service restart marks stale running sessions interrupted;
 - explicit relaunch creates a new producer generation.
 
-## 13. Fake Market behavior
+## 14. Fake Market behavior
 
 Canonical Fake Market serves the normal browser runtime plus the U.S. screener endpoint.
 
@@ -306,7 +317,7 @@ It owns deterministic scenarios for:
 - delayed response;
 - restart/persistence.
 
-## 14. Polling cadence
+## 15. Polling cadence
 
 Configuration remains in seconds/milliseconds as an implementation timing value; no market-history schema is generated from it.
 
@@ -314,7 +325,7 @@ Initial offline/demo default remains the inherited 3000 ms snapshot interval.
 
 This is not a claim that the provider contract guarantees safe 3-second polling. Real-provider verification records actual behavior. If live evidence requires a slower default, change the collection configuration without changing data architecture.
 
-## 15. U.S. workload shape
+## 16. U.S. workload shape
 
 Representative workload:
 
@@ -339,7 +350,7 @@ The workload measures:
 
 No arbitrary latency threshold is a correctness gate in the first U.S. baseline.
 
-## 16. Branding / generated artifacts
+## 17. Branding / generated artifacts
 
 Target names:
 
@@ -356,7 +367,7 @@ Windows launcher: START_MARKET_FLOW_US.cmd
 
 Old MarketScope names are donor history, not final product surface.
 
-## 17. Live verification
+## 18. Live verification
 
 The bounded real-provider gate proves only irreducible external facts:
 
