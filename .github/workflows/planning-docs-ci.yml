@@ -55,7 +55,10 @@ jobs:
             test -s "$file" || { echo "Missing/empty required file: $file"; exit 1; }
           done
 
-          for obsolete in             .planning/MASTER_COVERAGE.md             .planning/COVERAGE_MAP.yaml             .planning/LEGACY_COMPLETENESS_AUDIT.md; do
+          for obsolete in \
+            .planning/MASTER_COVERAGE.md \
+            .planning/COVERAGE_MAP.yaml \
+            .planning/LEGACY_COMPLETENESS_AUDIT.md; do
             test ! -e "$obsolete" || {
               echo "Superseded MarketScope planning artifact still present: $obsolete"
               exit 1
@@ -96,7 +99,8 @@ jobs:
           grep -Fq 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
           grep -Fq 'stage_reached' docs/SCANNER_SQL_GUIDE.md
 
-          if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly'             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
+          if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly' \
+            docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
             echo "Core U.S. contracts still contain Israeli typed market fields"
             exit 1
           fi
@@ -191,17 +195,25 @@ jobs:
           NODE
 
           plan_state="$(sed -n 's/^plan_state: //p' .planning/STATUS.yaml | head -n1)"
+          replan_mode="$(sed -n 's/^replan_mode: //p' .planning/STATUS.yaml | head -n1)"
           phase="$(sed -n 's/^phase: //p' STATUS.yaml | head -n1)"
 
           if [ "$plan_state" = "active" ]; then
-            grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
-              echo "Active planning must keep EXECUTION unallocated"
-              exit 1
-            }
             [ "$phase" = "planning" ] || {
               echo "Active plan requires root phase: planning"
               exit 1
             }
+            if [ "$replan_mode" = "execution_reopen" ]; then
+              ! grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
+                echo "execution_reopen requires preserved allocated EXECUTION"
+                exit 1
+              }
+            else
+              grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
+                echo "Initial active planning must keep EXECUTION unallocated"
+                exit 1
+              }
+            fi
           fi
 
           if [ "$phase" = "implementation" ]; then
