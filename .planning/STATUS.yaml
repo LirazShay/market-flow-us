@@ -1,7 +1,7 @@
 version: 2
-plan_state: active
-current_stage: "final_planning_review"
-current_node: "0"
+plan_state: frozen
+current_stage: "execution_allocation"
+current_node: null
 blockers: []
-next_action: "Run R-US-FINAL across the corrected migration audit, durable contracts, approved TREE, planning CI/static guards and executor handoff. Freeze only after that review passes."
-last_review: "R-US-002"
+next_action: "Allocate every one of the 19 implementation-ready TREE leaves exactly once in .planning/EXECUTION.yaml, respecting dependencies and coherent chat boundaries. Then verify handoff before authorizing implementation."
+last_review: "R-US-FINAL"
