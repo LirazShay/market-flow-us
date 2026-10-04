@@ -1,7 +1,7 @@
 version: 2
 plan_state: active
-current_stage: "st_tree_design"
-current_node: null
+current_stage: "st_tree_review"
+current_node: "0"
 blockers: []
-next_action: "Build the replacement Market Flow US S&T TREE from docs/US_MIGRATION_AUDIT.md plus the reviewed durable U.S. contracts. Do not allocate EXECUTION chats until TREE review/freeze passes."
+next_action: "Review .planning/TREE.yaml against GOAL, US_MIGRATION_AUDIT and durable contracts using necessity, sufficiency, KISS, dependency and whole-goal coverage checks. Keep EXECUTION unallocated."
 last_review: "US-CONTRACT-001"
