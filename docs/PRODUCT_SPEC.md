@@ -369,19 +369,19 @@ Old MarketScope names are donor history, not final product surface.
 
 ## 18. Live verification
 
-The bounded real-provider gate proves only irreducible external facts:
+The bounded real-provider gate proves only irreducible external facts plus short repeatability:
 
 ```text
 producer hello/session
-→ validated U.S. full response
-→ universe ACK
-→ cycle COMMIT ACK
-→ Current
+→ three consecutive validated U.S. full responses at candidate cadence
+→ universe ACK/revision handling
+→ cycle COMMIT ACK for each cycle
+→ Current on final cycle
 → Security
-→ History
+→ History containing the live committed cycles
 → bounded Scanner SELECT
 → producer ownership/status
 → clean stop
 ```
 
-Only the live gate may report final external PASS.
+This is not a long-running throttling/SLA test. Only the live gate may report final external PASS.
