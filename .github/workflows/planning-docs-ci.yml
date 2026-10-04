@@ -93,7 +93,7 @@ jobs:
           grep -Fq 'schema v3' docs/TECHNICAL_SPEC.md
           grep -Fq '4096' docs/TEST_STRATEGY.md
           grep -Fq '180 cycles' docs/TEST_STRATEGY.md
-          grep -Fq 'three consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
+          grep -Fq 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
           grep -Fq 'stage_reached' docs/SCANNER_SQL_GUIDE.md
 
           if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly'             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
