@@ -114,7 +114,7 @@ PASS: כמה responses זהים מושלמים מקבלים durable ACK; History
 ```text
 RUN_LOCAL_ACCEPTANCE.cmd moving
 RUN_LOCAL_ACCEPTANCE.cmd membership
-RUN_LOCAL_ACCEPTANCE.cmd recovery
+RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
 RUN_LOCAL_ACCEPTANCE.cmd restart
 ```
 
@@ -191,9 +191,9 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 הפעל את ה־bookmarklet שנוצר בעמוד הספק המחובר.
 
-PASS דורש לפחות 5 complete committed provider responses רצופות, validation מלאה, stable revision כאשר membership לא השתנה, History לכל cycle, Current/Security, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
+PASS של ה־gate הנוכחי הוא מחמיר יותר מהמינימום של TREE: הוא דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
 
-ערכים זהים ברצף חוקיים כאן. אין דרישת movement.
+אין דרישת movement בשלב הזה.
 
 ## FR-13 — Authenticated market-open acceptance
 
@@ -211,7 +211,7 @@ spanning at least 60 seconds
 + clean stop
 ```
 
-אם לא נצפה שינוי אמיתי, תוצאת movement נשארת `pending/inconclusive`; אסור להחליש את ה־gate או לסמן PASS ידנית.
+ה־live gate הרגיל מוכיח את provider/commit/read boundary אך אינו מסמן movement-specific PASS בעצמו; לכן יש לאמת בנוסף שינוי provider market/freshness אמיתי והשתקפותו ב־Current/History. אם לא נצפה שינוי אמיתי, תוצאת movement נשארת `pending/inconclusive`; אסור להחליש את ה־gate או לסמן PASS ידנית.
 
 ## FR-14 — Final evidence and operational handoff
 
