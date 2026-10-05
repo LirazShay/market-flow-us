@@ -110,7 +110,7 @@ test("support snapshot remains useful when Node is unavailable and does not copy
     error: {
       code: "SERVICE_UNAVAILABLE",
       name: "ServiceUnavailableError",
-      message: "Local MarketScope service is unavailable.",
+      message: "Local Market Flow US service is unavailable.",
       retryable: false
     }
   });
@@ -165,8 +165,8 @@ test("CLI diagnostic format is exactly one parseable prefixed record", () => {
 
   const line = formatCliDiagnostic(record);
   assert.equal(line.split("\n").length, 1);
-  assert.ok(line.startsWith("MARKETSCOPE_DIAGNOSTIC "));
-  const parsed = JSON.parse(line.slice("MARKETSCOPE_DIAGNOSTIC ".length));
+  assert.ok(line.startsWith("MARKET_FLOW_US_DIAGNOSTIC "));
+  const parsed = JSON.parse(line.slice("MARKET_FLOW_US_DIAGNOSTIC ".length));
   assert.equal(parsed.checkpoint, "node.service.ready");
   assert.equal(parsed.lastSuccessfulCheckpoint, "node.database.ready");
 });

@@ -1,23 +1,26 @@
-import { collectCompleteCycle } from "../collector/cycle.js";
-import { loadValidatedUniverse } from "../provider/universe.js";
-import { createRecorderConfig } from "../recorder/config.js";
+import { collectUsCollectionCandidate } from "../collector/us-cycle.js";
+import { sameCanonicalMembership } from "../provider/us-universe.js";
+import { createUsRecorderConfig } from "../recorder/config.js";
 import { createProducerBridge } from "../runtime/producer-bridge.js";
 import { createViewerClient } from "../viewer/client.js";
 
 const DEFAULT_SERVICE_URL = "ws://127.0.0.1:8765";
 const DEFAULT_PRODUCT_VERSION = "0.1.0";
-const DEFAULT_RECORDER_CONFIG = createRecorderConfig({ snapshotIntervalMs: 0 });
+const DEFAULT_RECORDER_CONFIG = createUsRecorderConfig();
+
+export const MIN_COMPLETE_CYCLES = 20;
+export const MIN_RUN_DURATION_MS = 60_000;
 
 const SAFE_FAILURE_MESSAGES = Object.freeze({
   "producer.start": "Producer hello/session start did not complete.",
-  "provider.universe": "Provider universe acquisition or validation did not complete.",
-  "producer.universe": "Validated universe was not acknowledged by local authority.",
-  "provider.cycle": "Exactly one complete provider cycle did not validate.",
-  "producer.commit": "Complete cycle was not durably acknowledged by local authority.",
-  "viewer.current": "Trusted Current proof did not match the committed cycle.",
+  "provider.snapshot": "ScreenerHulPaging3 snapshot acquisition or validation did not complete.",
+  "producer.universe": "Validated U.S. universe was not acknowledged by local authority.",
+  "producer.commit": "Complete U.S. cycle was not durably acknowledged by local authority.",
+  "sustained.run": "The bounded sustained U.S. provider run did not satisfy its minimum proof.",
+  "viewer.current": "Trusted Current proof did not match the final committed cycle.",
   "viewer.security": "Trusted Security proof did not match the selected security.",
-  "viewer.history": "Trusted History proof did not contain the committed cycle.",
-  "scanner.execute": "Bounded Scanner proof did not match committed authority.",
+  "viewer.history": "Trusted History proof did not contain the committed live cycles.",
+  "scanner.execute": "Bounded Scanner proof did not match final committed authority.",
   "producer.ownership": "Producer ownership was not valid during the live gate.",
   "producer.stop": "Verification producer did not stop cleanly.",
   "harness.input": "Live verification input is invalid."
@@ -54,6 +57,100 @@ function normalizeCandidateCommit(value) {
   return value.toLowerCase();
 }
 
+function defaultWait(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+function validateCandidate(candidate) {
+  const universe = candidate?.universe;
+  const cycle = candidate?.cycle;
+  assertAt(
+    universe
+      && cycle
+      && Number.isSafeInteger(universe.recordCount)
+      && universe.recordCount > 0
+      && Array.isArray(universe.membership)
+      && universe.membership.length === universe.recordCount
+      && Array.isArray(universe.securities)
+      && universe.securities.length === universe.recordCount,
+    "provider.snapshot"
+  );
+  assertAt(
+    cycle.status === "complete"
+      && cycle.requested === universe.recordCount
+      && cycle.received === universe.recordCount
+      && cycle.unique === universe.recordCount
+      && cycle.missing === 0
+      && cycle.duplicates === 0
+      && cycle.unexpected === 0
+      && Array.isArray(cycle.chunks)
+      && cycle.chunks.length === 1
+      && cycle.chunks[0]?.chunkIndex === 0
+      && Array.isArray(cycle.securities)
+      && cycle.securities.length === universe.recordCount,
+    "provider.snapshot"
+  );
+  return candidate;
+}
+
+function intersectMembership(existing, membership) {
+  const current = new Set(membership.map(String));
+  if (existing === null) return current;
+  return new Set([...existing].filter((securityId) => current.has(securityId)));
+}
+
+function sqlStringLiteral(value) {
+  return `'${String(value).replaceAll("'", "''")}'`;
+}
+
+function progressSnapshot({
+  completedCycles,
+  commitAckCount,
+  universeAckCount,
+  lastCycleId,
+  sustainedStartedAtMs,
+  now
+}) {
+  return Object.freeze({
+    completedCycles,
+    commitAckCount,
+    universeAckCount,
+    lastCycleId,
+    elapsedMs: sustainedStartedAtMs === null ? 0 : Math.max(0, now() - sustainedStartedAtMs)
+  });
+}
+
+function failureReport({
+  candidateCommit,
+  browserVersion,
+  originHost,
+  producer,
+  error,
+  lastSuccessfulCheckpoint,
+  progress,
+  startedAtMs,
+  completedAtMs
+}) {
+  const state = producer?.getState?.();
+  return Object.freeze({
+    verification: "market-flow-us-real-provider",
+    candidateCommit,
+    browserVersion,
+    providerOriginHost: originHost,
+    transportCspLna: state?.state === "ready" || state?.state === "stopped" ? "PASS" : "FAIL",
+    lastSuccessfulCheckpoint,
+    progress,
+    overall: "FAIL",
+    failure: Object.freeze({
+      checkpoint: error.checkpoint,
+      code: error.code,
+      message: error.message
+    }),
+    startedAtMs,
+    completedAtMs
+  });
+}
+
 export function providerOriginHost(origin) {
   assertNonEmptyString(origin, "providerOrigin");
   const url = new URL(origin);
@@ -85,37 +182,6 @@ export function browserVersionSummary(userAgent) {
   return "unknown";
 }
 
-function sqlStringLiteral(value) {
-  return `'${String(value).replaceAll("'", "''")}'`;
-}
-
-function failureReport({
-  candidateCommit,
-  browserVersion,
-  originHost,
-  producer,
-  error,
-  startedAtMs,
-  completedAtMs
-}) {
-  const state = producer?.getState?.();
-  return Object.freeze({
-    verification: "market-scope-real-provider",
-    candidateCommit,
-    browserVersion,
-    providerOriginHost: originHost,
-    transportCspLna: state?.state === "ready" || state?.state === "stopped" ? "PASS" : "FAIL",
-    overall: "FAIL",
-    failure: Object.freeze({
-      checkpoint: error.checkpoint,
-      code: error.code,
-      message: error.message
-    }),
-    startedAtMs,
-    completedAtMs
-  });
-}
-
 export async function runBoundedLiveVerification({
   candidateCommit,
   serviceUrl = DEFAULT_SERVICE_URL,
@@ -124,12 +190,8 @@ export async function runBoundedLiveVerification({
   userAgent = globalThis.navigator?.userAgent ?? "",
   recorderConfig = DEFAULT_RECORDER_CONFIG,
   now = () => Date.now(),
-  loadUniverse = () => loadValidatedUniverse(),
-  collectCycle = ({ universe, config }) => collectCompleteCycle({
-    universe,
-    chunkSize: config.chunkSize,
-    chunkDelayMs: config.chunkDelayMs
-  }),
+  wait = defaultWait,
+  collectCandidate = () => collectUsCollectionCandidate(),
   producerBridgeFactory = createProducerBridge,
   viewerClientFactory = createViewerClient
 } = {}) {
@@ -137,19 +199,26 @@ export async function runBoundedLiveVerification({
   const startedAtMs = clock();
   let originHost;
   let safeCandidateCommit = "unknown";
+  let safeRecorderConfig;
   let producer = null;
   let viewer = null;
   let failure = null;
   let proof = null;
   let sessionStarted = false;
+  let lastSuccessfulCheckpoint = null;
+  let sustainedStartedAtMs = null;
+  let completedCycles = 0;
+  let commitAckCount = 0;
+  let universeAckCount = 0;
+  let lastCycleId = null;
 
   try {
     safeCandidateCommit = normalizeCandidateCommit(candidateCommit);
     assertNonEmptyString(serviceUrl, "serviceUrl");
     assertNonEmptyString(productVersion, "productVersion");
     if (typeof now !== "function") throw new TypeError("now must be a function.");
-    if (typeof loadUniverse !== "function") throw new TypeError("loadUniverse must be a function.");
-    if (typeof collectCycle !== "function") throw new TypeError("collectCycle must be a function.");
+    if (typeof wait !== "function") throw new TypeError("wait must be a function.");
+    if (typeof collectCandidate !== "function") throw new TypeError("collectCandidate must be a function.");
     if (typeof producerBridgeFactory !== "function") {
       throw new TypeError("producerBridgeFactory must be a function.");
     }
@@ -157,15 +226,27 @@ export async function runBoundedLiveVerification({
       throw new TypeError("viewerClientFactory must be a function.");
     }
 
+    safeRecorderConfig = createUsRecorderConfig(recorderConfig);
+    if (safeRecorderConfig.snapshotIntervalMs <= 0) {
+      throw new TypeError("Live verification snapshotIntervalMs must be greater than zero.");
+    }
     originHost = providerOriginHost(providerOrigin);
   } catch {
     const completedAtMs = clock();
     return Object.freeze({
-      verification: "market-scope-real-provider",
+      verification: "market-flow-us-real-provider",
       candidateCommit: safeCandidateCommit,
       browserVersion: browserVersionSummary(userAgent),
       providerOriginHost: null,
       transportCspLna: "FAIL",
+      lastSuccessfulCheckpoint: null,
+      progress: Object.freeze({
+        completedCycles: 0,
+        commitAckCount: 0,
+        universeAckCount: 0,
+        lastCycleId: null,
+        elapsedMs: 0
+      }),
       overall: "FAIL",
       failure: Object.freeze({
         checkpoint: "harness.input",
@@ -178,92 +259,119 @@ export async function runBoundedLiveVerification({
   }
 
   const browserVersion = browserVersionSummary(userAgent);
+  const committedCycleIds = [];
+  const universeRevisions = new Set();
+  let currentUniverse = null;
+  let commonMembership = null;
+  let finalCandidate = null;
+  let firstCycleId = null;
 
   try {
     producer = producerBridgeFactory({
       url: serviceUrl,
       productVersion,
-      clientInstanceId: `market-scope-live-producer-${startedAtMs}`,
+      clientInstanceId: `market-flow-us-live-producer-${startedAtMs}`,
       now
     });
 
     try {
-      await producer.startSession(recorderConfig);
+      await producer.startSession(safeRecorderConfig);
       sessionStarted = true;
+      lastSuccessfulCheckpoint = "producer.start";
     } catch (error) {
       throw checkpointError(error, "producer.start");
     }
 
-    let universe;
-    try {
-      universe = await loadUniverse();
-      assertAt(
-        Number.isInteger(universe?.recordCount)
-          && universe.recordCount > 0
-          && Array.isArray(universe?.securities)
-          && universe.securities.length === universe.recordCount,
-        "provider.universe"
-      );
-    } catch (error) {
-      throw checkpointError(error, "provider.universe");
+    sustainedStartedAtMs = clock();
+
+    while (true) {
+      const cycleStartedAtMs = clock();
+      let candidate;
+      try {
+        candidate = validateCandidate(await collectCandidate({ config: safeRecorderConfig }));
+        lastSuccessfulCheckpoint = "provider.snapshot";
+      } catch (error) {
+        throw checkpointError(error, "provider.snapshot");
+      }
+
+      commonMembership = intersectMembership(commonMembership, candidate.universe.membership);
+
+      const membershipChanged = currentUniverse === null
+        || !sameCanonicalMembership(currentUniverse.membership, candidate.universe.membership);
+
+      if (membershipChanged) {
+        try {
+          const universeAck = await producer.acceptUniverse(candidate.universe);
+          assertAt(
+            Number.isSafeInteger(universeAck?.universeRevision)
+              && universeAck.universeRevision > 0
+              && universeAck.recordCount === candidate.universe.recordCount,
+            "producer.universe"
+          );
+          currentUniverse = candidate.universe;
+          universeAckCount += 1;
+          universeRevisions.add(universeAck.universeRevision);
+          lastSuccessfulCheckpoint = "producer.universe";
+        } catch (error) {
+          throw checkpointError(error, "producer.universe");
+        }
+      }
+
+      let commit;
+      try {
+        commit = await producer.commitCycle(candidate.cycle);
+        assertAt(Number.isSafeInteger(commit?.cycleId) && commit.cycleId > 0, "producer.commit");
+        commitAckCount += 1;
+        completedCycles += 1;
+        committedCycleIds.push(commit.cycleId);
+        firstCycleId ??= commit.cycleId;
+        lastCycleId = commit.cycleId;
+        finalCandidate = candidate;
+        lastSuccessfulCheckpoint = "producer.commit";
+      } catch (error) {
+        throw checkpointError(error, "producer.commit");
+      }
+
+      const elapsedMs = Math.max(0, clock() - sustainedStartedAtMs);
+      if (completedCycles >= MIN_COMPLETE_CYCLES && elapsedMs >= MIN_RUN_DURATION_MS) {
+        break;
+      }
+
+      const cycleElapsedMs = Math.max(0, clock() - cycleStartedAtMs);
+      await wait(Math.max(0, safeRecorderConfig.snapshotIntervalMs - cycleElapsedMs));
     }
 
-    let universeAck;
-    try {
-      universeAck = await producer.acceptUniverse(universe);
-      assertAt(
-        Number.isSafeInteger(universeAck?.universeRevision)
-          && universeAck.universeRevision > 0
-          && universeAck.recordCount === universe.recordCount,
-        "producer.universe"
-      );
-    } catch (error) {
-      throw checkpointError(error, "producer.universe");
-    }
+    const sustainedDurationMs = Math.max(0, clock() - sustainedStartedAtMs);
+    assertAt(
+      completedCycles >= MIN_COMPLETE_CYCLES
+        && commitAckCount === completedCycles
+        && sustainedDurationMs >= MIN_RUN_DURATION_MS
+        && finalCandidate !== null,
+      "sustained.run"
+    );
+    lastSuccessfulCheckpoint = "sustained.run";
 
-    let cycle;
-    try {
-      cycle = await collectCycle({ universe, config: recorderConfig });
-      assertAt(
-        cycle?.status === "complete"
-          && cycle.requested === universe.recordCount
-          && cycle.received === universe.recordCount
-          && cycle.unique === universe.recordCount
-          && cycle.missing === 0
-          && cycle.duplicates === 0
-          && cycle.unexpected === 0,
-        "provider.cycle"
-      );
-    } catch (error) {
-      throw checkpointError(error, "provider.cycle");
-    }
+    const selectedSecurityId = [...commonMembership].sort()[0] ?? null;
+    assertAt(selectedSecurityId !== null, "viewer.history");
 
-    let commit;
-    try {
-      commit = await producer.commitCycle(cycle);
-      assertAt(Number.isSafeInteger(commit?.cycleId) && commit.cycleId > 0, "producer.commit");
-    } catch (error) {
-      throw checkpointError(error, "producer.commit");
-    }
-
-    const selectedSecurityId = String(universe.securities[0].securityId);
     viewer = viewerClientFactory({
       url: serviceUrl,
       productVersion,
-      clientInstanceId: `market-scope-live-viewer-${startedAtMs}`
+      clientInstanceId: `market-flow-us-live-viewer-${startedAtMs}`
     });
 
     let current;
     try {
       current = await viewer.getCurrent();
       assertAt(
-        current?.summary?.rowCount === universe.recordCount
-          && current?.summary?.lastCycleId === commit.cycleId
+        current?.summary?.rowCount === finalCandidate.universe.recordCount
+          && String(current?.summary?.lastCycleId) === String(lastCycleId)
           && Array.isArray(current?.rows)
-          && current.rows.length === universe.recordCount
+          && current.rows.length === finalCandidate.universe.recordCount
           && current.rows.some((row) => String(row?.securityId) === selectedSecurityId),
         "viewer.current"
       );
+      lastSuccessfulCheckpoint = "viewer.current";
     } catch (error) {
       throw checkpointError(error, "viewer.current");
     }
@@ -278,6 +386,7 @@ export async function runBoundedLiveVerification({
           && String(security?.currentRow?.securityId) === selectedSecurityId,
         "viewer.security"
       );
+      lastSuccessfulCheckpoint = "viewer.security";
     } catch (error) {
       throw checkpointError(error, "viewer.security");
     }
@@ -285,11 +394,13 @@ export async function runBoundedLiveVerification({
     let history;
     try {
       history = await viewer.getHistoryPage(selectedSecurityId, null);
+      const historyCycleIds = new Set((history?.rows ?? []).map((row) => String(row?.cycleId)));
       assertAt(
         Array.isArray(history?.rows)
-          && history.rows.some((row) => row?.cycleId === commit.cycleId),
+          && committedCycleIds.every((cycleId) => historyCycleIds.has(String(cycleId))),
         "viewer.history"
       );
+      lastSuccessfulCheckpoint = "viewer.history";
     } catch (error) {
       throw checkpointError(error, "viewer.history");
     }
@@ -304,9 +415,10 @@ export async function runBoundedLiveVerification({
           && Array.isArray(scanner?.rows)
           && scanner.rows.length === 1
           && String(scanner.rows[0]?.[0]) === selectedSecurityId
-          && String(scanner.rows[0]?.[1]) === String(commit.cycleId),
+          && String(scanner.rows[0]?.[1]) === String(lastCycleId),
         "scanner.execute"
       );
+      lastSuccessfulCheckpoint = "scanner.execute";
     } catch (error) {
       throw checkpointError(error, "scanner.execute");
     }
@@ -316,28 +428,33 @@ export async function runBoundedLiveVerification({
       const producerState = producer.getState();
       assertAt(
         status?.recorderHealth === "RUNNING"
-          && status?.lastCompletedCycleId === commit.cycleId
+          && String(status?.lastCompletedCycleId) === String(lastCycleId)
           && producerState?.state === "ready"
           && typeof producerState?.sessionId === "string"
           && producerState.sessionId.length > 0
-          && producerState?.acknowledgedUniverseRevision === universeAck.universeRevision,
+          && Number.isSafeInteger(producerState?.acknowledgedUniverseRevision)
+          && producerState.acknowledgedUniverseRevision > 0,
         "producer.ownership"
       );
+      lastSuccessfulCheckpoint = "producer.ownership";
     } catch (error) {
       throw checkpointError(error, "producer.ownership");
     }
 
     proof = {
-      universeCount: universe.recordCount,
-      cycleRequested: cycle.requested,
-      cycleReceived: cycle.received,
-      cycleUnique: cycle.unique,
-      cycleId: commit.cycleId,
-      currentRowCount: current.summary.rowCount,
+      finalUniverseCount: finalCandidate.universe.recordCount,
+      finalCycle: finalCandidate.cycle,
+      completedCycles,
+      commitAckCount,
+      sustainedDurationMs,
+      firstCycleId,
+      lastCycleId,
+      universeAckCount,
+      universeRevisionCount: universeRevisions.size,
       selectedSecurityId,
-      historyProofCount: history.rows.filter((row) => row?.cycleId === commit.cycleId).length,
-      historyCycleId: commit.cycleId,
-      scannerRowCount: scanner.rowCount
+      historyProofCount: committedCycleIds.length,
+      scannerRowCount: scanner.rowCount,
+      snapshotIntervalMs: safeRecorderConfig.snapshotIntervalMs
     };
   } catch (error) {
     failure = error instanceof LiveVerificationError
@@ -359,7 +476,7 @@ export async function runBoundedLiveVerification({
     }
   }
 
-  const completedAtMs = now();
+  const completedAtMs = clock();
   if (failure) {
     return failureReport({
       candidateCommit: safeCandidateCommit,
@@ -367,27 +484,48 @@ export async function runBoundedLiveVerification({
       originHost,
       producer,
       error: failure,
+      lastSuccessfulCheckpoint,
+      progress: progressSnapshot({
+        completedCycles,
+        commitAckCount,
+        universeAckCount,
+        lastCycleId,
+        sustainedStartedAtMs,
+        now: clock
+      }),
       startedAtMs,
       completedAtMs
     });
   }
 
   return Object.freeze({
-    verification: "market-scope-real-provider",
+    verification: "market-flow-us-real-provider",
     candidateCommit: safeCandidateCommit,
     browserVersion,
     providerOriginHost: originHost,
-    universeCount: proof.universeCount,
+    universeCount: proof.finalUniverseCount,
     cycle: Object.freeze({
-      requested: proof.cycleRequested,
-      received: proof.cycleReceived,
-      unique: proof.cycleUnique
+      requested: proof.finalCycle.requested,
+      received: proof.finalCycle.received,
+      unique: proof.finalCycle.unique
     }),
-    cycleId: proof.cycleId,
-    currentRowCount: proof.currentRowCount,
+    cycleId: proof.lastCycleId,
+    sustainedRun: Object.freeze({
+      minimumCompleteCycles: MIN_COMPLETE_CYCLES,
+      minimumDurationMs: MIN_RUN_DURATION_MS,
+      snapshotIntervalMs: proof.snapshotIntervalMs,
+      completedCycles: proof.completedCycles,
+      commitAckCount: proof.commitAckCount,
+      durationMs: proof.sustainedDurationMs,
+      firstCycleId: proof.firstCycleId,
+      lastCycleId: proof.lastCycleId,
+      universeAckCount: proof.universeAckCount,
+      universeRevisionCount: proof.universeRevisionCount
+    }),
+    currentRowCount: proof.finalUniverseCount,
     selectedSecurityId: proof.selectedSecurityId,
     historyProofCount: proof.historyProofCount,
-    historyCycleId: proof.historyCycleId,
+    historyCycleId: proof.lastCycleId,
     scannerProof: Object.freeze({
       rowCount: proof.scannerRowCount,
       securityIdMatched: true,
@@ -395,6 +533,7 @@ export async function runBoundedLiveVerification({
     }),
     transportCspLna: "PASS",
     producerOwnership: "PASS",
+    lastSuccessfulCheckpoint,
     cleanStop: true,
     overall: "PASS",
     startedAtMs,

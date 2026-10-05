@@ -75,6 +75,10 @@ function boundedText(value, fallback) {
   return trimmed.slice(0, MAX_TEXT_LENGTH);
 }
 
+function diagnosticMessage(value, fallback) {
+  return boundedText(value, fallback).replaceAll("MarketScope", "Market Flow US");
+}
+
 function sanitizeScalar(value) {
   if (
     value === null
@@ -129,7 +133,7 @@ function sanitizeError(error) {
   return Object.freeze({
     code: boundedText(error.code, "UNKNOWN_ERROR"),
     name: boundedText(error.name, "Error"),
-    message: boundedText(error.message, "Operation failed."),
+    message: diagnosticMessage(error.message, "Operation failed."),
     retryable: error.retryable === true
   });
 }
@@ -228,5 +232,5 @@ export function formatCliDiagnostic(record) {
   if (!record || record.schemaVersion !== 1 || record.status !== "error") {
     throw new TypeError("A DiagnosticRecord error is required.");
   }
-  return `MARKETSCOPE_DIAGNOSTIC ${JSON.stringify(record)}`;
+  return `MARKET_FLOW_US_DIAGNOSTIC ${JSON.stringify(record)}`;
 }

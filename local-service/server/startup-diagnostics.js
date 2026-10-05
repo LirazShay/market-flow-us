@@ -19,7 +19,7 @@ function attachDiagnosticRecord(error, diagnosticRecord) {
     }
   }
 
-  const wrapped = new Error("MarketScope service startup failed.");
+  const wrapped = new Error("Market Flow US service startup failed.");
   wrapped.name = "ServiceStartupError";
   Object.defineProperty(wrapped, "diagnosticRecord", {
     value: diagnosticRecord,

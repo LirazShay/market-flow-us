@@ -3,9 +3,9 @@ phase: implementation
 overall_status: ready
 
 current:
-  chat: 6
-  node: "6.2"
-  title: "U.S. diagnostics and live-verification harness"
+  chat: 7
+  node: "6.3"
+  title: "Representative U.S. scale workload"
   status: ready
 
 authority:
@@ -29,5 +29,5 @@ planning_completion:
 execution:
   chats_total: 9
   implementation_leaves_total: 19
-  current_chat: 6
-  current_node: "6.2"
+  current_chat: 7
+  current_node: "6.3"
