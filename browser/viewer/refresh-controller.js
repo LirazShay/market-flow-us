@@ -1,4 +1,4 @@
-const COMMIT_CHANNEL = "market-scope:v1";
+const COMMIT_CHANNEL = "market-flow-us:v1";
 
 function assertSurface(surface, requiredMethods, name) {
   if (!surface || typeof surface !== "object") {
