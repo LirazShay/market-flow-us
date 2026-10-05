@@ -11,7 +11,7 @@ The product must generate a local, reproducible evidence pack that lets an AI in
 - why the exact Scanner SQL ranked/selected the security;
 - what facts were actually available before the virtual buy;
 - what warning signals may have been present in other persisted fields or calculable pre-buy features;
-- how the selected security compared with nearby high-ranked candidates from the same Scanner generation;
+- how the selected security compared with nearby high-ranked candidates from the same Scanner generation when that comparison context was retained;
 - what happened after the virtual buy;
 - what minimal SQL changes might have filtered, de-ranked or better distinguished the failed candidate;
 - which proposed changes are hypotheses that require validation across many Demo Buy observations rather than overfitting one failure.
@@ -132,7 +132,7 @@ Do not create another market-data authority or persist future outcomes into this
 
 The existing capture/item/history relations remain authoritative for virtual-buy identity and outcomes.
 
-## 7. Investigation target
+## 7. Investigation target and context coverage
 
 The user starts an investigation from one Demo Buy item:
 
@@ -142,7 +142,20 @@ captureId + securityId
 
 The target must belong to that capture.
 
-The pack builder never accepts arbitrary SQL/file paths from the browser and never reads data outside the active/archived database explicitly opened by the product workflow.
+The persisted comparison context is intentionally only the original Top-50 rows. Therefore the pack records:
+
+```text
+targetInScannerContext: boolean
+```
+
+Rules:
+
+- when `resultRank <= 50` and the exact original row exists in the frozen context, `targetInScannerContext=true` and the AI may perform direct candidate-vs-peer/rank reconstruction;
+- when the target rank is outside the retained context, `targetInScannerContext=false`; pack generation still succeeds using exact SQL, original result rank, pre-buy history, baseline and outcome evidence;
+- when `targetInScannerContext=false`, the prompt explicitly forbids pretending that the target's exact Scanner output row or neighboring peer values were retained;
+- a missing target row that should be inside the retained Top-50 is an integrity/export error, not silently downgraded to `false`.
+
+The pack builder never accepts arbitrary SQL/file paths from the browser and never reads data outside the active database opened by the running product. A service intentionally started against an archived schema-v4 database may generate packs from that database without introducing a second archive subsystem.
 
 ## 8. Time windows
 
@@ -191,7 +204,7 @@ No generated investigation artifact is committed to the repository.
 
 ### `README.md`
 
-Explains what to upload, evidence boundaries, and whether outcome evidence is partial/complete.
+Explains what to upload, evidence boundaries, whether outcome evidence is partial/complete, and whether the target itself is present in the retained Scanner comparison context.
 
 ### `PROMPT.md`
 
@@ -207,6 +220,7 @@ productVersion
 captureId
 securityId
 resultRank
+targetInScannerContext
 generatedAtMs
 sourceResultStartedAtMs
 sourceResultCompletedAtMs
@@ -226,7 +240,7 @@ Exact immutable SQL from the capture provenance.
 
 ### `SCANNER_CONTEXT.json`
 
-The frozen first-50 result comparison context from the original Scanner generation, including original ranks and truncation metadata.
+The frozen first-50 result comparison context from the original Scanner generation, including original ranks and truncation metadata. It explicitly identifies whether the investigation target is contained in those rows.
 
 ### `TARGET_BEFORE.jsonl`
 
@@ -263,8 +277,9 @@ A compact extraction from the durable data contract explaining:
 ### A. Reconstruct the original decision
 
 - Explain the query in plain language.
-- Identify the ORDER BY / ranking logic and filters.
-- Using `SCANNER_CONTEXT.json`, explain why the target occupied its original rank relative to nearby candidates.
+- Identify the `ORDER BY` / ranking logic and filters.
+- If `targetInScannerContext=true`, use `SCANNER_CONTEXT.json` to explain why the target occupied its original rank relative to nearby candidates.
+- If `targetInScannerContext=false`, state that the exact target output row/peer neighborhood was not retained and do not fabricate that comparison; analyze only the query, rank number and other available pre-buy evidence.
 - Identify any data needed by the SQL that is missing/truncated and say so rather than inventing it.
 
 ### B. Inspect prediction-time warning signals
@@ -278,7 +293,7 @@ Search for:
 - bid/ask/Price relationships when available;
 - volume/change/high/low/yesterday/market-cap/source fields when available;
 - repeated null/stale values;
-- candidate-vs-peer differences;
+- candidate-vs-peer differences only when the relevant candidate/peer rows are actually retained;
 - additional calculations derivable only from pre-buy persisted history.
 
 The AI must cite the concrete field/timestamp evidence for each claimed signal.
@@ -311,7 +326,8 @@ Start with the smallest KISS modification before proposing broader rewrites.
 For every proposed improvement, answer:
 
 - Would this rule have rejected/de-ranked the failed target using only pre-buy information?
-- What would it likely do to the neighboring high-ranked candidates visible in the frozen context?
+- When retained comparison rows permit it, what would the rule likely do to neighboring high-ranked candidates?
+- When comparison context does not contain the target/needed peer row, explicitly mark that counterfactual as unproven rather than guessing.
 - Is the rule merely fitted to this one failure?
 
 ### F. Validation plan
@@ -331,6 +347,7 @@ Generate AI Investigation Pack
 The UI shows:
 
 - target identity/rank;
+- whether the target is inside the retained Top-50 Scanner comparison context;
 - whether the 10-minute outcome evidence is partial or complete;
 - generated local folder/path after success;
 - `Copy AI Prompt` after generation;
@@ -360,11 +377,12 @@ The server:
 
 1. validates target membership in the capture;
 2. loads immutable capture/query/context provenance;
-3. loads the exact baseline;
-4. loads bounded target before/after history;
-5. reuses the trusted Demo Buy evaluator for `OUTCOME.json` rather than implementing a second horizon algorithm;
-6. generates deterministic sanitized files under the controlled export root;
-7. returns pack metadata/path and prompt text suitable for clipboard copying.
+3. determines and validates `targetInScannerContext`;
+4. loads the exact baseline;
+5. loads bounded target before/after history;
+6. reuses the trusted Demo Buy evaluator for `OUTCOME.json` rather than implementing a second horizon algorithm;
+7. generates deterministic sanitized files under the controlled export root;
+8. returns pack metadata/path and prompt text suitable for clipboard copying.
 
 Do not accept a browser-supplied output path.
 
@@ -399,11 +417,12 @@ Prove:
 - pack prompt sections and anti-hindsight instructions;
 - deterministic target/window boundaries;
 - context rank/order preservation;
+- `targetInScannerContext` true/false behavior and no fabricated peer comparison;
 - context bounding/truncation markers;
 - partial vs complete outcome classification;
 - safe export naming/path construction;
 - no browser-controlled output path;
-- field-guide semantics remain aligned with DATA_CONTRACT.
+- field-guide semantics remain aligned with `DATA_CONTRACT`.
 
 ### Real DuckDB/service
 
@@ -411,6 +430,8 @@ Prove:
 
 - target must belong to capture;
 - exact immutable query/context/baseline are exported;
+- a target expected inside Top-50 but missing from context is an integrity/export error;
+- a valid target outside Top-50 still produces a pack with `targetInScannerContext=false`;
 - before rows never exceed `capturedAtMs`;
 - after rows never precede capture or exceed the fixed 10-minute boundary;
 - baseline is the exact linked row;
@@ -426,12 +447,13 @@ Prove:
 1. capture a rank-1 candidate with visible comparison rows;
 2. create future history in which that candidate falls;
 3. generate the pack from the Demo Buy observation;
-4. UI clearly reports partial/complete evidence;
+4. UI clearly reports partial/complete evidence and target-context coverage;
 5. generated manifest/query/context/before/baseline/after/outcome/prompt files are present;
 6. Copy AI Prompt exposes the exact generated prompt;
 7. regeneration after additional history updates only outcome-dependent evidence;
 8. pack failure is visible and does not break Scanner/Demo Buy;
-9. existing Current/Detail/Scanner/Demo Buy regressions remain green.
+9. one target outside Top-50 produces a valid reduced-context pack without invented peer claims;
+10. existing Current/Detail/Scanner/Demo Buy regressions remain green.
 
 ## 16. Explicit non-goals
 
