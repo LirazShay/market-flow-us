@@ -1,60 +1,51 @@
 version: 2
-root: '0'
+root: "0"
 nodes:
-  '0':
+  "0":
     status: approved
-    strategy: Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model, replaces only Israel-specific provider/data assumptions, validates Scanner-selected candidates over short future horizons, and can export disciplined local evidence for AI-assisted strategy investigation before any real order execution exists.
-    tactic: 'Complete seven necessary capability branches: U.S. acquisition, U.S. data authority, trusted reads/surfaces, Scanner + Demo Buy + AI investigation, deterministic offline proof, operational verification infrastructure, and staged release/target-machine acceptance.'
+    strategy: Market Flow US is a complete local U.S.-market analysis product that preserves the proven operating model, validates Scanner candidates with Demo Buy, and exports disciplined local evidence for AI-assisted query improvement before real order execution exists.
+    tactic: Complete seven necessary capability branches covering acquisition, authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, and release/target-machine acceptance.
     parallel_assumptions:
-    - Preserving proven MarketScope mechanisms is lower-risk than reconstructing them.
-    - Strategy-specific candidate selection remains editable Scanner SQL; Demo Buy and AI investigation are evidence/analysis layers, not order execution.
+      - Preserve proven mechanisms unless current evidence requires change.
+      - Scanner SQL remains strategy authority; Demo Buy and AI Investigation are evidence layers.
     necessary_assumptions: []
     sufficiency_assumptions:
-    - Provider acquisition alone is insufficient without persistence, reads, Scanner, Demo Buy, forensic export, deterministic proof and release evidence.
-    - The seven branches jointly cover the requested product while excluding real order execution, portfolio logic and Phase-2 liquidity/sellability analysis.
+      - All seven branches are required to deliver a usable and verifiable product without adding real execution or Phase-2 liquidity analysis.
     success_evidence:
-    - Every implementation-ready leaf is completed with its stated evidence.
-    - Current, Detail/History, Scanner, Demo Buy and AI Investigation operate over the final schema-v4 authority.
-    - Node owns Demo Buy evaluation and AI evidence-pack construction; the browser does not recreate authority semantics.
-    - Fast, Browser, Planning and bounded Workload verification are green on the final post-feature candidate.
-    - Target-machine/local/provider acceptance passes on the exact final candidate with no blocking defect.
+      - Every implementation leaf satisfies its success evidence.
+      - Current, Detail/History, Scanner, Demo Buy and AI Investigation operate over final schema-v4 authority.
+      - Fast, Browser, Planning and bounded Workload gates are green on the post-feature candidate.
+      - Final target-machine/provider acceptance passes on that exact candidate.
     depends_on: []
-    children:
-    - '1'
-    - '2'
-    - '3'
-    - '4'
-    - '5'
-    - '6'
-    - '7'
-  '1':
+    children: ["1", "2", "3", "4", "5", "6", "7"]
+
+  "1":
     status: approved
     strategy: The browser repeatedly acquires one exact complete U.S. screener snapshot and shapes it into the existing producer-cycle contract.
-    tactic: Use ScreenerHulPaging3 with exact response validation and canonical PaperId membership; preserve Recorder lifecycle and one-segment cycle semantics.
-    parallel_assumptions:
-    - The proven one-request U.S. screener response contains current membership and row data.
+    tactic: Use ScreenerHulPaging3 with exact response validation and canonical PaperId membership while preserving Recorder lifecycle and one-segment cycle semantics.
+    parallel_assumptions: []
     necessary_assumptions:
-    - No downstream authority can be correct without exact U.S. acquisition.
+      - No downstream authority can be correct without exact U.S. acquisition.
     sufficiency_assumptions:
-    - Provider validation plus Recorder/universe integration is sufficient for the acquisition boundary.
+      - Provider validation plus Recorder/universe integration covers the acquisition boundary.
     success_evidence:
-    - Provider/Recorder proof covers completeness, identity, membership changes, non-overlap and fail-closed behavior.
+      - Provider/Recorder proof covers completeness, identity, membership changes, non-overlap and fail-closed behavior.
     depends_on: []
-    children:
-    - '1.1'
-    - '1.2'
-  '1.1':
+    children: ["1.1", "1.2"]
+
+  "1.1":
     status: approved
     strategy: ScreenerHulPaging3 responses are acquired and validated exactly before authority.
-    tactic: Implement same-origin request/parser/validator preserving raw/source metadata and canonical String(PaperId) identity.
+    tactic: Use same-origin request/parser/validator preserving raw/source metadata and canonical String(PaperId) identity.
     parallel_assumptions: []
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Unit proof covers full response, count mismatch, malformed/HTTP failure, missing/duplicate PaperId, reorder and null/zero/missing fields.
+      - Unit proof covers complete response, count mismatch, malformed/HTTP failure, missing/duplicate PaperId, reorder and null/zero/missing fields.
     depends_on: []
     children: []
-  '1.2':
+
+  "1.2":
     status: approved
     strategy: Continuous recording maps each validated U.S. response to one coherent cycle with exact universe revisions.
     tactic: Preserve lifecycle/scheduling/ACK behavior; replace universe only on canonical membership change and commit the same response under the accepted revision.
@@ -62,39 +53,38 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Tests prove same/add/remove membership, row-order invariance, non-overlap, stop and provider-failure behavior.
-    depends_on:
-    - '1.1'
+      - Tests prove same/add/remove membership, row-order invariance, non-overlap, stop and provider-failure behavior.
+    depends_on: ["1.1"]
     children: []
-  '2':
+
+  "2":
     status: approved
-    strategy: Node/DuckDB stores U.S. market authority atomically under schema v3 while preserving proven transaction/history/latest behavior.
-    tactic: Use the U.S. schema-v3 projection, exact cycle persistence and real-service producer authority.
+    strategy: Node/DuckDB stores U.S. market authority atomically under the proven U.S. schema before Demo Buy extends it additively.
+    tactic: Use the U.S. projection, exact cycle persistence and real-service producer authority.
     parallel_assumptions:
-    - Demo Buy later extends this authority additively rather than rewriting it.
+      - Demo Buy extends this authority without rewriting it.
     necessary_assumptions:
-    - Validated browser data is not product authority until Node persists it atomically.
+      - Validated browser data is not product authority until Node persists it atomically.
     sufficiency_assumptions:
-    - Schema lifecycle, cycle persistence and producer integration jointly provide durable U.S. authority.
+      - Schema lifecycle, cycle persistence and producer integration jointly provide durable U.S. authority.
     success_evidence:
-    - Fresh/reopen/reject and real-DuckDB commit/rollback evidence is green.
+      - Fresh/reopen/reject and real-DuckDB commit/rollback evidence is green.
     depends_on: []
-    children:
-    - '2.1'
-    - '2.2'
-    - '2.3'
-  '2.1':
+    children: ["2.1", "2.2", "2.3"]
+
+  "2.1":
     status: approved
     strategy: Fresh Market Flow US DBs have explicit schema-v3 lifecycle and reject incompatible MarketScope data.
-    tactic: Bootstrap documented U.S. tables plus saved queries, new DB filename and fail-closed v1/v2 handling.
+    tactic: Bootstrap documented U.S. tables plus saved queries and fail closed on v1/v2.
     parallel_assumptions: []
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Lifecycle tests prove v3 bootstrap/reopen/columns/saved queries/filename/v1-v2 rejection.
+      - Lifecycle tests prove v3 bootstrap/reopen/columns/saved queries/filename/v1-v2 rejection.
     depends_on: []
     children: []
-  '2.2':
+
+  "2.2":
     status: approved
     strategy: One complete U.S. cycle persists typed projections plus raw rows transactionally.
     tactic: Preserve serialized cycle allocation, history append, full latest replacement, session counters and rollback seams.
@@ -102,11 +92,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Real-DuckDB tests prove projection fidelity, exact membership, repeated commits and rollback preservation.
-    depends_on:
-    - '2.1'
+      - Real-DuckDB tests prove projection fidelity, exact membership, repeated commits and rollback preservation.
+    depends_on: ["2.1"]
     children: []
-  '2.3':
+
+  "2.3":
     status: approved
     strategy: Producer ownership, universe revision and cycle ACKs work end-to-end through WebSocket/service/DuckDB.
     tactic: Adapt only U.S.-specific producer/config metadata and prove session/universe/commit/failure/restart integration.
@@ -114,28 +104,25 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Real-service tests cover first ACK+commit, revision changes, failure recording, heartbeat and restart.
-    depends_on:
-    - '1.2'
-    - '2.2'
+      - Real-service tests cover first ACK+commit, revision changes, failure recording, heartbeat and restart.
+    depends_on: ["1.2", "2.2"]
     children: []
-  '3':
+
+  "3":
     status: approved
     strategy: Trusted reads and Viewer expose Current and Detail/History using U.S. authority fields.
     tactic: Adapt trusted read projections then Viewer surfaces while preserving paging, navigation, null handling and state restoration.
     parallel_assumptions: []
     necessary_assumptions:
-    - Persisted U.S. authority must be inspectable through the product.
+      - Persisted U.S. authority must be inspectable through the product.
     sufficiency_assumptions:
-    - Trusted reads plus Current and Detail/History cover non-Scanner inspection.
+      - Trusted reads plus Current and Detail/History cover non-Scanner inspection.
     success_evidence:
-    - Service and browser proof covers U.S. shapes, historical-only lookup, paging and state.
+      - Service/browser proof covers U.S. shapes, historical-only lookup, paging and state.
     depends_on: []
-    children:
-    - '3.1'
-    - '3.2'
-    - '3.3'
-  '3.1':
+    children: ["3.1", "3.2", "3.3"]
+
+  "3.1":
     status: approved
     strategy: Node trusted reads expose canonical U.S. Current/Security/History/status.
     tactic: Use documented U.S. fields with deterministic identity ordering, historical-only resolution and 500-row keyset history paging.
@@ -143,11 +130,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Real-service tests cover empty/current/historical-only, row fields and cursor binding.
-    depends_on:
-    - '2.2'
+      - Real-service tests cover empty/current/historical-only, row fields and cursor binding.
+    depends_on: ["2.2"]
     children: []
-  '3.2':
+
+  "3.2":
     status: approved
     strategy: Current presents the authoritative U.S. universe with required columns and preserved interaction state.
     tactic: Adapt Current model/surface to U.S. columns/display fallback while retaining refresh, diagnostics, navigation and sort/scroll restoration.
@@ -155,11 +142,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Unit/E2E prove columns, DailyVolume DESC, zero/missing rendering and state restoration.
-    depends_on:
-    - '3.1'
+      - Unit/E2E prove columns, DailyVolume DESC, zero/missing rendering and state restoration.
+    depends_on: ["3.1"]
     children: []
-  '3.3':
+
+  "3.3":
     status: approved
     strategy: Detail/History presents U.S. summary and durable paged history, including historical-only securities.
     tactic: Adapt Detail model/surface fields while preserving open/back, retry, paging and loaded-row retention.
@@ -167,35 +154,30 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Unit/E2E prove U.S. fields, continuation/retry, historical-only and return-state behavior.
-    depends_on:
-    - '3.1'
+      - Unit/E2E prove U.S. fields, continuation/retry, historical-only and return-state behavior.
+    depends_on: ["3.1"]
     children: []
-  '4':
+
+  "4":
     status: approved
-    strategy: Scanner remains the editable strategy surface; Demo Buy validates short-horizon outcomes and AI Investigation exports bounded, anti-hindsight forensic evidence for improving Scanner SQL.
-    tactic: Preserve Scanner, add Demo Buy backend and UX, then add a local deterministic AI Investigation Pack exporter and UI workflow.
+    strategy: Scanner remains editable strategy authority; Demo Buy validates short-horizon outcomes and AI Investigation exports bounded anti-hindsight evidence for improving Scanner SQL.
+    tactic: Preserve Scanner, add Demo Buy backend/UX, then add deterministic local AI Investigation export/UX.
     parallel_assumptions:
-    - Scanner SQL remains strategy authority; no Strategy Engine is introduced.
-    - Demo Buy persists facts and derives outcomes directly from existing history.
-    - AI Investigation is a local evidence export, not an AI agent or automatic query editor.
+      - No Strategy Engine or real execution is introduced.
+      - Demo Buy derives outcomes from existing history; AI Investigation packages evidence rather than becoming authority.
     necessary_assumptions:
-    - The product now requires candidate selection, outcome validation and disciplined post-outcome strategy investigation.
+      - Candidate selection, outcome validation and disciplined post-outcome investigation are all required by the current scope.
     sufficiency_assumptions:
-    - Scanner + Demo Buy + AI Investigation jointly cover the requested strategy-learning loop without real execution or Phase-2 liquidity modeling.
+      - 4.1–4.5 cover the full strategy-learning loop without Phase-2 liquidity/fillability.
     success_evidence:
-    - Existing Scanner behavior remains green.
-    - Schema v4 preserves exact Demo Buy and bounded original Scanner-context provenance.
-    - Demo Buy Viewer shows all required horizons and failure states.
-    - AI Investigation Pack reproduces query/context/pre-buy/baseline/post-buy/outcome evidence with anti-hindsight instructions and no cloud dependency.
+      - Existing Scanner behavior remains green.
+      - Schema v4 preserves minimum Demo Buy facts and bounded original Scanner context.
+      - Demo Buy Viewer exposes trustworthy progressive outcomes.
+      - AI pack reproduces exact query/context/pre-buy/baseline/post-buy/outcome evidence with anti-hindsight rules and no cloud dependency.
     depends_on: []
-    children:
-    - '4.1'
-    - '4.2'
-    - '4.3'
-    - '4.4'
-    - '4.5'
-  '4.1':
+    children: ["4.1", "4.2", "4.3", "4.4", "4.5"]
+
+  "4.1":
     status: approved
     strategy: Built-ins/query-authoring describe and execute U.S. schema correctly, including staged candidate ranking.
     tactic: Ship U.S. built-ins and align Scanner guide with actual schema.
@@ -203,234 +185,234 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Built-ins execute against real schema; staged fixture proves contiguous stage credit and deterministic tie-breakers.
-    depends_on:
-    - '2.2'
+      - Built-ins execute against real schema; staged fixture proves contiguous stage credit and deterministic tie-breakers.
+    depends_on: ["2.2"]
     children: []
-  '4.2':
+
+  "4.2":
     status: approved
-    strategy: Existing Scanner execution, scheduling, saved-query CRUD and Detail navigation remain functional after U.S. migration.
-    tactic: Adapt only schema-sensitive tests/labels while preserving admission, scheduler and persistence design.
+    strategy: Scanner execution, scheduling, saved-query CRUD and Detail navigation remain functional after U.S. migration.
+    tactic: Preserve admission, Draft/Persisted/Active isolation and recurring scheduler behavior.
     parallel_assumptions: []
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Unit/service/E2E Scanner tests remain green and active-generation isolation is preserved.
-    depends_on:
-    - '4.1'
+      - Unit/service/E2E Scanner tests are green and active-generation isolation is preserved.
+    depends_on: ["4.1"]
     children: []
-  '4.3':
+
+  "4.3":
     status: approved
-    strategy: 'Demo Buy backend authority is explicit: schema stores durable facts/provenance, capture resolves the exact baseline, and trusted reads compute outcomes.'
+    strategy: Demo Buy backend authority is explicit: schema stores facts/provenance, capture resolves the exact writer-ordered baseline, and trusted reads compute post-watermark outcomes.
     tactic: Separate schema/persistence, serialized capture/protocol authority and bounded evaluation/read-model responsibilities.
     parallel_assumptions:
-    - Existing writer/history provide the required authority.
+      - Existing writer/history provide the required authority.
     necessary_assumptions:
-    - Reliable Demo Buy requires durable facts, exact capture semantics and one calculation authority.
+      - Reliable Demo Buy requires durable facts, exact capture semantics and one calculation authority.
     sufficiency_assumptions:
-    - 4.3.1–4.3.3 provide all backend facts/calculations required by Demo Buy and AI export.
+      - 4.3.1–4.3.3 provide all backend facts/calculations required by Demo Buy and AI export.
     success_evidence:
-    - All backend leaves pass focused DuckDB/service proof; no horizon outcome is persisted.
+      - All backend leaves pass focused DuckDB/service proof and no horizon outcome is persisted.
     depends_on: []
-    children:
-    - 4.3.1
-    - 4.3.2
-    - 4.3.3
-  4.3.1:
+    children: ["4.3.1", "4.3.2", "4.3.3"]
+
+  "4.3.1":
     status: approved
-    strategy: Schema v4 durably stores the minimum Demo Buy facts plus bounded original Scanner comparison provenance and safely upgrades valid v3 U.S. databases.
-    tactic: Add demo_buy_captures/demo_buy_items, source_result_context_json, transactional v3→v4 migration/fresh-v4 bootstrap, restart behavior and new-day rotation.
+    strategy: Schema v4 durably stores minimum Demo Buy facts plus bounded original Scanner comparison provenance and safely upgrades valid v3 U.S. databases.
+    tactic: Add demo_buy_captures/demo_buy_items, bounded source_result_context_json, transactional v3→v4 migration/fresh-v4 bootstrap, restart behavior and v3-or-v4 new-day rotation.
     parallel_assumptions:
-    - Baseline/future market facts remain in history.
-    - Bounded first-50 Scanner context is provenance only, not market authority.
+      - Baseline/future market facts remain in history.
+      - Scanner context is provenance only, never market authority.
     necessary_assumptions:
-    - Capture, AI investigation and restart cannot be trustworthy without explicit schema lifecycle ownership.
+      - Capture, AI investigation and restart cannot be trustworthy without explicit schema lifecycle ownership.
     sufficiency_assumptions: []
     success_evidence:
-    - Fresh DB boots schema v4 with exact Demo Buy columns/constraints including bounded context JSON.
-    - Valid v3→v4 migration preserves market authority and scanner_saved_queries; partial-v3-with-Demo-tables fails closed; injected migration failure leaves v3 usable.
-    - Context contract is first 50 rows in original order, max 128 columns, deterministic per-cell truncation metadata, <=1 MiB serialized; over-budget/wide contexts fail visibly rather than silently dropping evidence.
-    - Restart preserves active-day captures/context.
-    - New-day accepts a valid v3 or v4 source, preserves saved queries, archives source unchanged if requested, and creates a fresh v4 DB with empty Demo Buy tables.
-    depends_on:
-    - '2.3'
+      - Fresh DB boots schema v4 with exact Demo Buy columns/constraints.
+      - Valid v3→v4 preserves market authority and scanner_saved_queries; partial-v3-with-Demo-structures fails closed; injected migration failure leaves v3 usable.
+      - Context preserves first 50 source rows, canonical identity column always, at most 64 retained columns, 128-byte textual/serialized-cell bound, deterministic truncation/omission metadata and at most 256 KiB serialized JSON.
+      - Restart preserves active-day captures/context.
+      - New-day accepts valid v3 or v4, preserves saved queries, archives source unchanged if requested, and creates fresh v4 with empty Demo Buy tables.
+      - No speculative history index is added without representative workload evidence.
+    depends_on: ["2.3"]
     children: []
-  4.3.2:
+
+  "4.3.2":
     status: approved
     strategy: A Demo Buy capture records exact selected candidates, immutable Scanner provenance/context and the authoritative baseline visible at its serialized writer point.
     tactic: Add demo.buy.capture validation/client-service protocol and same-writer all-or-nothing persistence; browser submits ordered deduped {securityId,resultRank} plus bounded generation context.
     parallel_assumptions:
-    - Writer ordering defines the virtual-buy moment relative to market commits.
+      - Writer ordering defines virtual-buy authority relative to market commits; wall-clock timestamps are diagnostics only.
     necessary_assumptions:
-    - Schema alone does not define race behavior, baseline linkage, capture bounds or acknowledgement semantics.
+      - Schema alone does not define race behavior, baseline linkage, provenance integrity, capture bounds or acknowledgement semantics.
     sufficiency_assumptions: []
     success_evidence:
-    - Protocol/unit tests reject malformed/duplicate/out-of-range items, invalid modes/bounds and invalid context.
-    - Real-service tests prove all-or-nothing capture, original resultRank, immutable query/timing/context provenance, monotonic capture IDs and exact buy_cycle_id linkage.
-    - captured_at_ms is assigned inside serialized writer work after any Viewer/socket queueing.
-    - Lost transport acknowledgement after request submission is surfaced as ACKNOWLEDGEMENT_UNKNOWN, never as confirmed rejection; there is no blind automatic retry.
-    - Capture stores no user-supplied or copied buy Price and does not mutate market authority.
-    depends_on:
-    - 4.3.1
+      - Protocol/unit tests reject malformed/duplicate/out-of-range items, invalid mode/bounds, oversized SQL/context and context-to-item rank/identity mismatch.
+      - Real-service tests prove all-or-nothing capture, original resultRank, immutable query/timing/context provenance, monotonic capture IDs and exact buy_cycle_id linkage.
+      - captured_at_ms is assigned inside serialized writer work after prior socket/writer work; buy_cycle_id is the item authority watermark.
+      - Wall-clock anomalies preserve raw timestamps and produce nullable derived timing + bounded anomaly diagnostics rather than changing authority or rejecting an otherwise valid capture.
+      - Lost transport acknowledgement after dispatch is ACKNOWLEDGEMENT_UNKNOWN, never confirmed rejection, with no blind automatic retry.
+      - Capture stores no user-supplied/copied buy Price and does not mutate market authority.
+    depends_on: ["4.3.1"]
     children: []
-  4.3.3:
+
+  "4.3.3":
     status: approved
-    strategy: One authoritative Node read model answers what happened after each virtual buy at all required horizons.
-    tactic: Add demo.buy.page and demo.buy.capture.get using one set-wise consistent read snapshot, exact baseline join, first-at/after horizon matching and bounded keyset paging.
+    strategy: One authoritative Node read model answers what happened after each virtual buy at all required horizons and can refresh either a page or one observation.
+    tactic: Add demo.buy.page, demo.buy.observation.get and demo.buy.capture.get using the same set-wise evaluator, exact baseline join, post-watermark first-at/after matching and bounded keyset paging.
     parallel_assumptions: []
     necessary_assumptions:
-    - Persisted capture facts do not answer the user's outcome question until later history is resolved and calculated.
+      - Persisted capture facts do not answer the outcome question until later history is resolved and calculated.
+      - Long-running Auto capture requires targeted refresh so an older observation remains inspectable even after it leaves page one.
     sufficiency_assumptions: []
     success_evidence:
-    - New evaluation SQL passes mandatory static preflight before execution.
-    - Fixtures prove target=captured_at_ms+horizon, first-at/after tie-break, delayed observations, null/zero/unavailable-reason semantics and baseline-integrity failure.
-    - Read model exposes baseline/timing/provenance summary and all ten horizons; SQL detail is loaded once per capture.
-    - Ordering is capture_id DESC then result_rank ASC with fixed 50-item cursor-bound paging and stable continuation while newer captures arrive.
-    - Each page comes from one transactionally consistent DuckDB read snapshot.
-    - Representative active-day timing is measured; no precompute/index/background updater is added absent evidence.
-    depends_on:
-    - 4.3.1
+      - New/materially changed evaluation SQL passes mandatory static preflight before first execution.
+      - Fixtures prove target=captured_at_ms+horizon and future row requires cycle_id > buy_cycle_id plus collected_at_ms >= target, with deterministic time/cycle tie-break.
+      - Null/zero/unavailable-reason semantics, delayed observations and baseline-integrity failure are proven.
+      - demo.buy.page and demo.buy.observation.get reuse identical evaluator semantics; targeted refresh updates one item without resetting list pagination.
+      - Page ordering is capture_id DESC then result_rank ASC with fixed 50-item opaque keyset paging and stable continuation while newer captures arrive.
+      - Each page is produced from one transactionally consistent DuckDB read snapshot; no N×10 browser/read loop.
+      - Capture SQL detail is loaded on demand through demo.buy.capture.get.
+      - Representative active-day timing is measured; no precompute/index/background updater is added absent evidence.
+    depends_on: ["4.3.1"]
     children: []
-  '4.4':
+
+  "4.4":
     status: approved
-    strategy: The user can create Demo Buys from Scanner and inspect a dedicated outcome screen.
-    tactic: Separate Scanner capture controls from Demo Buy outcome presentation.
+    strategy: The user can create Demo Buys from Scanner and inspect progressive outcomes without hidden background behavior or losing the observation being investigated.
+    tactic: Separate Scanner capture/Auto controls from a capture-grouped Demo Buy outcome surface with targeted refresh and explicit recovery states.
     parallel_assumptions: []
     necessary_assumptions:
-    - Backend authority alone is not a usable strategy-validation product.
+      - Backend authority alone is not a usable strategy-validation product.
     sufficiency_assumptions:
-    - Capture UX plus outcome screen cover candidate-to-outcome workflow.
+      - Capture UX plus outcome screen cover candidate-to-outcome workflow and long-running Auto usage.
     success_evidence:
-    - Both browser leaves pass focused and composed Fake Market proof.
+      - Both browser leaves pass focused and composed Fake Market proof.
     depends_on: []
-    children:
-    - 4.4.1
-    - 4.4.2
-  4.4.1:
+    children: ["4.4.1", "4.4.2"]
+
+  "4.4.1":
     status: approved
-    strategy: The exact current Scanner generation converts into bounded manual/automatic Demo Buy capture requests without changing SQL order or provenance.
-    tactic: Add recognized-ID gating, immutable generation snapshot, Selected/All/Top-X actions and Viewer-session Auto Off/All/Top-X with one shared capture slot.
+    strategy: The exact rendered Scanner generation converts into bounded manual/automatic captures without changing SQL order/provenance, while recurring scanning remains explicitly controllable.
+    tactic: Add recognized-ID selection, synchronous generation snapshot, Selected/All/Top-X actions, Viewer-session Auto Off/All/Top-X, persistent Auto indicator/Turn off, one capture slot and resumable Stop recurring scan.
     parallel_assumptions:
-    - Busy auto generations are visibly skipped rather than queued.
+      - Busy auto generations are visibly skipped rather than queued.
     necessary_assumptions:
-    - Without capture controls observations cannot be created practically.
+      - Without capture controls observations cannot be created practically.
+      - Background Auto must remain visible/controllable when Scanner is hidden.
     sufficiency_assumptions: []
     success_evidence:
-    - Controls require exactly one recognized identity column; invalid rows are never silently included.
-    - Selected/All/Top-X choose source rows before dedupe, preserve original ranks, enforce 5000 bound and reset selection on new generation.
-    - Generation snapshot includes exact SQL/timing/rowCount and bounded first-50 context under 4.3.1 limits.
-    - One shared capture slot prevents double-submit/unbounded queues; busy auto generations are visibly skipped.
-    - Confirmed commit/reject vs acknowledgement-unknown states are distinguishable and Scanner scheduling continues.
-    depends_on:
-    - 4.3.2
-    - '4.2'
-    - '5.2'
+      - Exactly one recognized identity column is required; invalid rows are never silently included and checkbox interaction never opens Detail.
+      - Selected/All/Top-X choose source rows before dedupe, preserve original ranks, enforce 5000 unique-item bound, show source-row versus unique-item counts and reset selection on a new rendered generation.
+      - Capture freezes the displayed generation synchronously before async submission; later Scanner refresh cannot alter an in-flight capture.
+      - Auto changes affect only future successful generations; zero-row is no-op; busy generations increment bounded skip status rather than queue.
+      - Persistent Viewer-level Auto indicator is visible across top-level surfaces and Turn off affects future generations only, never pretending to cancel an in-flight capture.
+      - One capture slot prevents manual double-submit/unbounded queues and distinguishes committed/rejected/acknowledgement-unknown states.
+      - Stop recurring scan cancels future scheduling and ignores stale in-flight results while allowing a later Activate; Auto may remain armed but produces no capture while scanning is stopped.
+    depends_on: ["4.3.2", "4.2", "5.2"]
     children: []
-  4.4.2:
+
+  "4.4.2":
     status: approved
-    strategy: A dedicated Demo Buy screen clearly shows baseline and all requested future outcomes and exposes provenance/details.
-    tactic: Add top-level Demo Buy surface over demo.buy.page/capture.get with Refresh, Load more, explicit outcome/reasons and capture timing.
+    strategy: A dedicated Demo Buy screen makes baseline and all requested future outcomes understandable and stable under continuing Auto capture.
+    tactic: Add top-level Demo Buy over page/observation/capture-detail reads with capture grouping, sticky identity columns, compact horizon cells, Refresh latest, Refresh observation and Load more.
     parallel_assumptions: []
     necessary_assumptions:
-    - Stored/evaluated observations must be inspectable by the user.
+      - Stored/evaluated observations must be inspectable by the user.
     sufficiency_assumptions: []
     success_evidence:
-    - Unit/browser tests cover loading/empty/error/populated/refresh/load-more and null/zero formatting.
-    - Visible rows show query label, capture/signal timing, original resultRank, identity/display, baseline and all ten Price/%/outcome cells.
-    - Unavailable reasons are inspectable; direction is not color-only.
-    - E2E proves manual/Top-X/auto capture, progressive completion, provenance immutability, acknowledgement-unknown recovery and Viewer/Scanner lifecycle.
-    depends_on:
-    - 4.3.3
-    - 4.4.1
-    - '5.2'
+      - Unit/browser tests cover loading/empty/populated/first-page error/continuation error/provenance error/targeted-refresh error while preserving prior trustworthy data where possible.
+      - Capture groups show query/timing/mode context once; a page split inside one capture repeats/marks the header so rows never lose provenance context.
+      - Sticky leading identity/baseline columns remain visible while ten horizons render as one compact cell each containing outcome + percentage + Price where applicable.
+      - NO_FUTURE_OBSERVATION is presented as Pending while non-temporal unavailable reasons remain explicit warnings; direction never relies on color alone.
+      - Refresh latest resets to first page; Load more appends stable continuation; Refresh observation updates one target in place even while newer Auto captures arrive.
+      - Provenance/SQL loads on demand and timing anomalies are inspectable without overriding authority semantics.
+      - E2E proves manual/Top-X/Auto capture, progressive completion, provenance immutability, acknowledgement-unknown recovery and Scanner/Viewer lifecycle.
+    depends_on: ["4.3.3", "4.4.1", "5.2"]
     children: []
-  '4.5':
+
+  "4.5":
     status: approved
-    strategy: A Demo Buy observation can be turned into a reproducible local AI Investigation Pack that supports strategy improvement without hindsight leakage or automatic AI control.
+    strategy: A Demo Buy observation can become a reproducible local AI Investigation Pack that supports strategy improvement without hindsight leakage or automatic AI control.
     tactic: Build a deterministic Node evidence exporter, then expose generation/copy/regeneration controls from Demo Buy.
     parallel_assumptions:
-    - The useful AI boundary is evidence packaging and disciplined prompting, not automatic cloud integration.
-    - Persisted history, Demo Buy provenance and bounded Scanner context contain the necessary local evidence.
+      - The useful AI boundary is evidence packaging and disciplined prompting, not automatic cloud integration.
     necessary_assumptions:
-    - Outcome inspection alone does not systematically explain why the query ranked a candidate or what pre-buy evidence might improve SQL.
+      - Outcome inspection alone does not systematically explain why the query ranked a candidate or what pre-buy evidence might improve SQL.
     sufficiency_assumptions:
-    - Exporter plus UI workflow make the forensic evidence usable while preserving human control and local privacy.
+      - Exporter plus UI workflow make forensic evidence usable while preserving human control and local privacy.
     success_evidence:
-    - Pack contains exact SQL, bounded original Scanner context, 30-minute pre-buy history, exact baseline, 10-minute post-buy history, trusted horizon outcomes, manifest, field guide and anti-hindsight prompt.
-    - No AI API/key/cloud dependency or automatic SQL mutation is introduced.
+      - Pack contains exact SQL, bounded original Scanner context, authority-watermarked pre-buy history, exact baseline, post-watermark 10-minute history, trusted outcomes, manifest, field guide and anti-hindsight prompt.
+      - No AI API/key/cloud dependency or automatic SQL mutation is introduced.
     depends_on: []
-    children:
-    - 4.5.1
-    - 4.5.2
-  4.5.1:
+    children: ["4.5.1", "4.5.2"]
+
+  "4.5.1":
     status: approved
     strategy: Node can deterministically generate a safe local AI Investigation Pack for one captured security.
-    tactic: Add demo.buy.ai-pack.create that validates capture membership, reads persisted provenance/context/history/evaluator output, and atomically writes a controlled export directory.
+    tactic: Add demo.buy.ai-pack.create that validates membership/provenance, reuses the trusted evaluator and atomically publishes a controlled export directory.
     parallel_assumptions:
-    - The existing trusted evaluator is reused for OUTCOME.json rather than duplicated.
+      - OUTCOME.json reuses the existing evaluator rather than duplicating horizon logic.
     necessary_assumptions:
-    - A prompt alone is insufficient without reproducible evidence files and strict time boundaries.
+      - A prompt alone is insufficient without reproducible evidence files and strict authority/time boundaries.
     sufficiency_assumptions: []
     success_evidence:
-    - Unit/service tests prove fixed 30-minute pre-buy and 10-minute post-buy windows, exact baseline, partial/complete outcome classification and targetInScannerContext flag.
-    - SCANNER_CONTEXT preserves first-50 order/ranks/truncation metadata; rank>50 targets remain investigable but peer/rank claims are explicitly limited.
-    - PROMPT enforces prediction-time vs outcome separation, fact/derived/hypothesis labeling, KISS SQL proposals and multi-observation validation.
-    - Generated bundle has README/PROMPT/MANIFEST/QUERY/SCANNER_CONTEXT/TARGET_BEFORE/BASELINE/TARGET_AFTER/OUTCOME/FIELD_GUIDE.
-    - Safe generated paths only; no browser output path, credentials/session data or raw authenticated dumps.
-    - Temp-dir + atomic rename prevents partial final packs; failure leaves no misleading complete bundle and mutates no DB.
-    - Regeneration is deterministic except generation metadata and changes only evidence that legitimately became available.
-    depends_on:
-    - 4.3.2
-    - 4.3.3
+      - Prediction-time history is limited by cycle_id <= buy_cycle_id and the 30-minute time window; outcome history requires cycle_id > buy_cycle_id and ends at captured_at_ms + 10m.
+      - COMPLETE_OUTCOME is based on committed post-watermark evidence reaching the 10-minute boundary; otherwise the pack remains honestly PARTIAL_OUTCOME.
+      - SCANNER_CONTEXT preserves first-50 row order/ranks and bounded retained-column/truncation metadata; rank>50 targets remain investigable with targetInScannerContext=false.
+      - PROMPT enforces prediction-time/outcome separation, fact/derived/hypothesis labeling, minimal SQL proposals, peer limitations and multi-observation validation.
+      - Bundle contains README/PROMPT/MANIFEST/QUERY/SCANNER_CONTEXT/TARGET_BEFORE/BASELINE/TARGET_AFTER/OUTCOME/FIELD_GUIDE.
+      - Export root/path is product-owned, repository-relative/public-safe, browser supplies no path, temporary directory + atomic rename prevents partial final packs and successful packs are never overwritten.
+      - Export response contains bounded relative path/metadata/prompt only; prompt is bounded and no evidence payload enters diagnostics.
+      - Export lost ACK is safe to regenerate after reconnect because export mutates no DB authority; regeneration creates a new collision-safe pack.
+      - One pack generation mutates no DB authority and representative export timing is measured without adding a second transport/worker.
+    depends_on: ["4.3.2", "4.3.3"]
     children: []
-  4.5.2:
+
+  "4.5.2":
     status: approved
-    strategy: The Demo Buy UI lets the user generate, inspect, copy and regenerate AI Investigation Packs without leaving the local product workflow.
-    tactic: Add per-observation Generate AI Investigation Pack, partial/complete status, local export path, Copy AI Prompt and Regenerate controls using demo.buy.ai-pack.create.
+    strategy: Demo Buy UI lets the user investigate one observation, generate/copy/regenerate an AI pack and understand evidence limitations without leaving the local workflow.
+    tactic: Add an expandable Investigate with AI panel, targeted refresh, one Viewer-wide export slot, partial/complete/context-coverage state, relative path and clipboard fallbacks.
     parallel_assumptions: []
     necessary_assumptions:
-    - A backend exporter is not useful if the user cannot invoke it from the observation being investigated.
+      - A backend exporter is not useful if the user cannot invoke and understand it from the observation being investigated.
     sufficiency_assumptions: []
     success_evidence:
-    - UI shows target identity/rank and PARTIAL_OUTCOME vs COMPLETE_OUTCOME before/after generation.
-    - Generate returns the local folder and Copy AI Prompt copies the generated prompt; Regenerate refreshes outcome-dependent evidence.
-    - Pack generation failure is visible and does not alter Scanner/Demo Buy authority or scheduling.
-    - Chromium E2E proves a failed rank-1 candidate investigation end-to-end, file presence/content boundaries, prompt copy and regeneration.
-    - No automatic AI call or SQL activation exists.
-    depends_on:
-    - 4.5.1
-    - 4.4.2
-    - '5.2'
+      - Panel shows target identity/rank, horizon progress, targetInScannerContext and PARTIAL_OUTCOME/COMPLETE_OUTCOME before/after generation.
+      - At most one Generate/Regenerate request is in flight per Viewer; additional actions are visibly disabled/refused rather than queued.
+      - Generate returns relative local folder + file count; Copy AI Prompt and Copy folder path use clipboard with selectable fallback text.
+      - PARTIAL pack can be safely regenerated after later evidence; export lost-ACK guidance permits safe regeneration, unlike capture lost-ACK behavior.
+      - Chromium E2E proves a failed rank-1 candidate investigation, file/content boundaries, prompt copy, targeted refresh and regeneration plus a rank>50 reduced-context case.
+      - No automatic AI call, upload or SQL activation exists.
+    depends_on: ["4.5.1", "4.4.2", "5.2"]
     children: []
-  '5':
+
+  "5":
     status: approved
     strategy: The entire U.S. product can be exercised deterministically offline through normal browser runtime, real service and synthetic provider.
     tactic: Use canonical U.S. Fake Market/runtime/E2E rather than test-only product paths.
     parallel_assumptions: []
     necessary_assumptions:
-    - Unit/service proof cannot validate full browser composition.
+      - Unit/service proof cannot validate full browser composition.
     sufficiency_assumptions:
-    - Fake provider + normal runtime + Chromium cover deterministic browser behavior.
+      - Fake provider + normal runtime + Chromium cover deterministic browser behavior.
     success_evidence:
-    - One-command demo and browser E2E cover movement, membership, failures, reads, Scanner and recovery.
+      - One-command demo and browser E2E cover movement, membership, failures, reads, Scanner and recovery.
     depends_on: []
-    children:
-    - '5.1'
-    - '5.2'
-    - '5.3'
-  '5.1':
+    children: ["5.1", "5.2", "5.3"]
+
+  "5.1":
     status: approved
     strategy: Fake Market models the U.S. screener deterministically without authentication.
-    tactic: Serve ScreenerHulPaging3 synthetic scenarios from shared generator.
+    tactic: Serve ScreenerHulPaging3 synthetic scenarios from the shared generator.
     parallel_assumptions: []
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Synthetic scenarios cover complete/static/reorder/add-remove/invalid/malformed/error/delay/movement and contain no private data.
-    depends_on:
-    - '1.1'
+      - Synthetic scenarios cover complete/static/reorder/add-remove/invalid/malformed/error/delay/movement and contain no private data.
+    depends_on: ["1.1"]
     children: []
-  '5.2':
+
+  "5.2":
     status: approved
     strategy: Normal runtime/demo compose U.S. provider, Recorder, Node authority and Viewer.
     tactic: Wire the normal source graph to U.S. components while preserving service recovery and bounded demo reset.
@@ -438,44 +420,37 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Runtime/demo tests prove U.S. collection through real WebSocket/DuckDB and bounded reset/restart.
-    depends_on:
-    - '1.2'
-    - '2.3'
-    - '5.1'
+      - Runtime/demo tests prove U.S. collection through real WebSocket/DuckDB and bounded reset/restart.
+    depends_on: ["1.2", "2.3", "5.1"]
     children: []
-  '5.3':
+
+  "5.3":
     status: approved
-    strategy: Chromium proves the complete offline U.S. user journey and failure/recovery behavior.
-    tactic: Adapt E2E to U.S. Fake Market while preserving existing state-machine coverage.
+    strategy: Chromium proves the complete pre-feature U.S. user journey and failure/recovery behavior.
+    tactic: Exercise normal runtime against U.S. Fake Market while preserving existing state-machine coverage.
     parallel_assumptions: []
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Full Browser suite is green for pre-Demo-Buy U.S. runtime journeys.
-    depends_on:
-    - '3.2'
-    - '3.3'
-    - '4.2'
-    - '5.2'
+      - Full Browser suite is green for pre-Demo-Buy U.S. runtime journeys.
+    depends_on: ["3.2", "3.3", "4.2", "5.2"]
     children: []
-  '6':
+
+  "6":
     status: approved
     strategy: Market Flow US is packaged, diagnosable and supplied with scalable correctness/performance tooling.
     tactic: Complete branding/launchers, diagnostics/live harness and configurable synthetic workload support.
     parallel_assumptions: []
     necessary_assumptions:
-    - A working runtime is not release-ready without operability and scalable verification.
+      - A working runtime is not release-ready without operability and scalable verification.
     sufficiency_assumptions:
-    - Packaging + diagnostics + workload tooling prepare release verification.
+      - Packaging + diagnostics + workload tooling prepare release verification.
     success_evidence:
-    - Artifacts/docs are branded, diagnostics sanitized, workload supports bounded CI and heavy target-machine profiles.
+      - Artifacts/docs are branded, diagnostics sanitized, workload supports bounded CI and heavy target-machine profiles.
     depends_on: []
-    children:
-    - '6.1'
-    - '6.2'
-    - '6.3'
-  '6.1':
+    children: ["6.1", "6.2", "6.3"]
+
+  "6.1":
     status: approved
     strategy: Local setup/build/run artifacts and user docs consistently identify Market Flow US.
     tactic: Rename package/artifacts/DB/globals/launchers/docs while preserving thin wrappers.
@@ -483,11 +458,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Build/launcher tests prove canonical names and paths.
-    depends_on:
-    - '2.1'
+      - Build/launcher tests prove canonical names and paths.
+    depends_on: ["2.1"]
     children: []
-  '6.2':
+
+  "6.2":
     status: approved
     strategy: Diagnostics and SHA-bound live verification understand U.S. acquisition without exposing session data.
     tactic: Adapt checkpoints/reports/live harness to bounded ScreenerHulPaging3 verification.
@@ -495,14 +470,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Sanitized diagnostics/live artifacts are proven and contain no private auth data.
-    depends_on:
-    - '2.3'
-    - '3.1'
-    - '4.2'
-    - '6.1'
+      - Sanitized diagnostics/live artifacts are proven and contain no private auth data.
+    depends_on: ["2.3", "3.1", "4.2", "6.1"]
     children: []
-  '6.3':
+
+  "6.3":
     status: approved
     strategy: Scalable U.S. workload tooling proves correctness broadly and exposes target-machine performance profiles.
     tactic: Reuse configurable synthetic generator for bounded CI, isolated probes and 4096x180 target profile.
@@ -510,31 +482,26 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Bounded correctness and isolated/heavy profiles are available with sanitized reports.
-    depends_on:
-    - '2.3'
-    - '4.1'
+      - Bounded correctness and isolated/heavy profiles are available with sanitized reports.
+    depends_on: ["2.3", "4.1"]
     children: []
-  '7':
+
+  "7":
     status: approved
     strategy: The product is deterministically re-closed after all requested development, then accepted on the exact final target-machine/provider candidate.
     tactic: Preserve completed U.S. migration evidence, implement Demo Buy + AI Investigation, rerun deterministic release closure, then perform final user-dependent acceptance.
     parallel_assumptions:
-    - Target-machine/authenticated checks remain last.
+      - Target-machine/authenticated checks remain last.
     necessary_assumptions:
-    - Older release evidence predates the new feature scope.
+      - Older release evidence predates the new feature scope.
     sufficiency_assumptions:
-    - Completed migration proof + new feature leaves + 7.5 + 7.4 establish end-to-end completion.
+      - Completed migration proof + new feature leaves + 7.5 + 7.4 establish end-to-end completion.
     success_evidence:
-    - Final candidate has green deterministic gates, accurate docs, local acceptance including AI pack, and final target-machine/provider PASS.
+      - Final candidate has green deterministic gates, accurate docs, local acceptance including AI pack, and final target-machine/provider PASS.
     depends_on: []
-    children:
-    - '7.1'
-    - '7.2'
-    - '7.3'
-    - '7.5'
-    - '7.4'
-  '7.1':
+    children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
+
+  "7.1":
     status: approved
     strategy: One release candidate passes deterministic offline correctness and bounded performance sanity.
     tactic: Run Fast/Browser/bounded workload gates and fix deterministic regressions.
@@ -542,13 +509,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Fast, Browser, bounded workload green; no blocking deterministic defect.
-    depends_on:
-    - '5.3'
-    - '6.2'
-    - '6.3'
+      - Fast, Browser and bounded workload are green with no blocking deterministic defect.
+    depends_on: ["5.3", "6.2", "6.3"]
     children: []
-  '7.2':
+
+  "7.2":
     status: approved
     strategy: A deterministic local Fake Leumi acceptance package proves static/moving/failure/restart/load behavior.
     tactic: Reuse normal runtime/service/DuckDB and shared generator for one-command local acceptance profiles.
@@ -556,11 +521,11 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - Acceptance tooling covers static/moving/membership/failure/restart/probes/heavy profile without credentials.
-    depends_on:
-    - '7.1'
+      - Acceptance tooling covers static/moving/membership/failure/restart/probes/heavy profile without credentials.
+    depends_on: ["7.1"]
     children: []
-  '7.3':
+
+  "7.3":
     status: approved
     strategy: Repository truth, run instructions and final pre-feature runtime are operationally coherent.
     tactic: Complete migration/branding cleanup, daily lifecycle docs/status/handoff and merge readiness.
@@ -568,45 +533,42 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions: []
     success_evidence:
-    - No authoritative Israel path remains; docs/launchers/daily lifecycle/open-PR truth are coherent.
-    depends_on:
-    - '7.2'
-    - '6.1'
+      - No authoritative Israel path remains; docs/launchers/daily lifecycle/open-PR truth are coherent.
+    depends_on: ["7.2", "6.1"]
     children: []
-  '7.5':
+
+  "7.5":
     status: approved
     strategy: After Demo Buy and AI Investigation are implemented, one exact release candidate has coherent schema-v4 contracts/docs and passes all deterministic repository gates.
-    tactic: Align all canonical/user/Scanner/AI docs to implementation, extend bounded workload/local acceptance, run full deterministic gates, review/merge and point final acceptance to the exact candidate SHA.
+    tactic: Align canonical/user/Scanner/AI docs to implementation, extend bounded workload/local acceptance, run full deterministic gates, review/merge and point final acceptance to the exact candidate SHA.
     parallel_assumptions:
-    - Previously green 7.1–7.3 evidence remains historical but the accepted SHA must include all new features.
+      - Previously green 7.1–7.3 evidence remains historical but the accepted SHA must include all new features.
     necessary_assumptions:
-    - Final acceptance must not run against an un-reclosed feature candidate.
+      - Final acceptance must not run against an un-reclosed feature candidate.
     sufficiency_assumptions: []
     success_evidence:
-    - Canonical PRODUCT_REQUIREMENTS/PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY/DEMO_BUY_VALIDATION/AI_INVESTIGATION_PACK plus USER_GUIDE/SCANNER_SQL_GUIDE match implementation.
-    - Full Fast, Browser, Planning Docs and bounded Workload verification are green.
-    - Local Fake Leumi automation proves Demo Buy and AI Investigation Pack generation/regeneration without huge redundant matrices.
-    - No blocking defect/unexpected open PR; feature/reclosure PR is reviewed, squash-merged, main CI green.
-    - STATUS/EXECUTION/handoff point 7.4 at the exact accepted-candidate SHA.
-    depends_on:
-    - 4.5.2
-    - '7.3'
+      - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, DEMO_BUY_VALIDATION, DEMO_BUY_PROTOCOL_LIMITS, DEMO_BUY_UX and AI_INVESTIGATION_PACK plus USER_GUIDE/SCANNER_SQL_GUIDE match implementation.
+      - Full Fast, Browser, Planning Docs and bounded Workload verification are green.
+      - Local Fake Leumi proves Demo Buy progressive/targeted refresh and AI pack generation/regeneration without huge redundant matrices.
+      - No blocking defect/unexpected open PR; feature/reclosure PR is reviewed, squash-merged and main CI is green.
+      - STATUS/EXECUTION/handoff point 7.4 at the exact accepted-candidate SHA.
+    depends_on: ["4.4.1", "4.4.2", "4.5.2", "7.3"]
     children: []
-  '7.4':
+
+  "7.4":
     status: approved
-    strategy: The exact final post-feature candidate is accepted on the user's target machine through local daily-bounded proof, AI Investigation usability, authenticated static compatibility and market-open movement.
+    strategy: The exact final post-feature candidate is accepted on the user's target machine through local day-bounded proof, AI Investigation usability, authenticated static compatibility and market-open movement.
     tactic: Run final target-machine local acceptance first, then static authenticated smoke, then market-open SHA-bound gate.
     parallel_assumptions: []
     necessary_assumptions:
-    - Automated fake proof cannot establish actual target-machine/browser/provider compatibility or heavy performance.
+      - Automated fake proof cannot establish actual target-machine/browser/provider compatibility or heavy performance.
     sufficiency_assumptions: []
     success_evidence:
-    - Local Fake Leumi static/moving/failure/restart PASS.
-    - Local Demo Buy journey proves capture, horizon transition and successful AI Investigation Pack generation/copy/regeneration on the final SHA.
-    - 4096x180 and isolated one-day probes pass target-machine criteria.
-    - New-day archive/reset preserves saved queries and starts clean v4 Demo Buy state.
-    - Authenticated static smoke and market-open movement gates pass with sanitized SHA-bound reports.
-    - No private credential/session material enters repo/reports.
-    depends_on:
-    - '7.5'
+      - Local Fake Leumi static/moving/failure/restart PASS.
+      - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful AI Investigation generation/copy/regeneration on the final SHA.
+      - 4096x180 and isolated one-day probes pass target-machine criteria.
+      - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
+      - Authenticated static smoke and market-open movement gates pass with sanitized SHA-bound reports.
+      - No private credential/session material enters repo/reports.
+    depends_on: ["7.5"]
     children: []
