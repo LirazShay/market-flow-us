@@ -109,6 +109,17 @@ async function currentUniverse(service) {
   };
 }
 
+async function latestCompleteCycleRevision(service) {
+  const rows = await service.rows(
+    `SELECT universe_revision
+     FROM cycles
+     WHERE status = 'complete'
+     ORDER BY cycle_id DESC
+     LIMIT 1`
+  );
+  return rows.length === 1 ? Number(rows[0].universe_revision) : null;
+}
+
 async function completedCycles(service) {
   const rows = await service.rows(
     "SELECT completed_cycles FROM sessions WHERE status = 'running' LIMIT 1"
@@ -253,7 +264,7 @@ test("normal U.S. runtime preserves committed authority across service restart a
   }
 });
 
-test("normal U.S. runtime applies add/remove membership, recovers from provider failure, and executes staged Scanner", async ({ page, context }) => {
+test("normal U.S. runtime applies add/remove membership under acknowledged universe revisions", async ({ page, context }) => {
   const fake = await startFake();
   const service = await startService(fake);
 
@@ -272,7 +283,6 @@ test("normal U.S. runtime applies add/remove membership, recovers from provider 
     const viewer = await popupPromise;
 
     await waitForRunning(page);
-
     const currentTable = await waitForCurrentRows(viewer, 5);
     await expect(currentTable).toContainText("Fixture Epsilon US");
     await expect.poll(() => currentIds(service)).toEqual([
@@ -283,33 +293,66 @@ test("normal U.S. runtime applies add/remove membership, recovers from provider 
       "1005"
     ]);
 
+    const addedUniverse = await currentUniverse(service);
+    expect(addedUniverse.revisions).toHaveLength(1);
+    const addedRevision = addedUniverse.revisions[0];
+    expect(addedRevision).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => latestCompleteCycleRevision(service)).toBe(addedRevision);
+
     await setScenario(fake, "US-04");
     await waitForCurrentRows(viewer, 3);
     await expect(currentTable).not.toContainText("Fixture Epsilon US");
     await expect.poll(() => currentIds(service)).toEqual(["1001", "1002", "1003"]);
 
-    const beforeFailure = await service.rows(
-      "SELECT failed_cycles, completed_cycles FROM sessions WHERE status = 'running' LIMIT 1"
-    );
-    const failedBefore = Number(beforeFailure[0].failed_cycles);
-    const completedBefore = Number(beforeFailure[0].completed_cycles);
+    const removedUniverse = await currentUniverse(service);
+    expect(removedUniverse.revisions).toHaveLength(1);
+    const removedRevision = removedUniverse.revisions[0];
+    expect(removedRevision).toBeGreaterThan(addedRevision);
+    await expect.poll(() => latestCompleteCycleRevision(service)).toBe(removedRevision);
+  } finally {
+    await stopRuntime(page).catch(() => {});
+    for (const candidate of context.pages()) {
+      if (candidate !== page) await candidate.close().catch(() => {});
+    }
+    await service.cleanup();
+    await fake.close();
+  }
+});
 
+test("normal U.S. runtime records provider failure, recovers, and executes staged Scanner", async ({ page, context }) => {
+  const fake = await startFake();
+  const service = await startService(fake);
+
+  try {
     await setScenario(fake, "US-13");
+    await page.addInitScript(() => {
+      globalThis.__MARKET_FLOW_US_CONFIG__ = {
+        recorder: {
+          snapshotIntervalMs: 100
+        }
+      };
+    });
+
+    const popupPromise = page.waitForEvent("popup");
+    await page.goto(fake.baseUrl);
+    const viewer = await popupPromise;
+
+    await waitForRunning(page);
 
     await expect.poll(async () => {
       const rows = await service.rows(
         "SELECT failed_cycles FROM sessions WHERE status = 'running' LIMIT 1"
       );
-      return Number(rows[0].failed_cycles);
-    }).toBeGreaterThan(failedBefore);
+      return rows.length === 1 ? Number(rows[0].failed_cycles) : 0;
+    }).toBeGreaterThanOrEqual(1);
 
     await waitForCurrentRows(viewer, 4);
     await expect.poll(async () => {
       const rows = await service.rows(
         "SELECT completed_cycles FROM sessions WHERE status = 'running' LIMIT 1"
       );
-      return Number(rows[0].completed_cycles);
-    }).toBeGreaterThan(completedBefore);
+      return rows.length === 1 ? Number(rows[0].completed_cycles) : 0;
+    }).toBeGreaterThanOrEqual(1);
     await expect.poll(() => currentIds(service)).toEqual(["1001", "1002", "1003", "1004"]);
 
     const recoveredFake = await fakeState(fake);
