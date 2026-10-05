@@ -3,6 +3,9 @@ setlocal
 pushd "%~dp0"
 title Market Flow US Demo
 
+call "%~dp0scripts\windows-require-node24.cmd"
+if errorlevel 1 goto :runtime_fail
+
 if not exist "node_modules" (
   echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
@@ -20,6 +23,9 @@ echo The browser will open automatically when the demo is ready.
 echo Keep this window open. Press Ctrl+C here to stop the demo.
 echo.
 
+call node scripts\check-demo-ports.mjs
+if errorlevel 1 goto :port_fail
+
 start "" /b powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(30); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:4173/' -TimeoutSec 1; if($r.StatusCode -eq 200){ Start-Process 'http://127.0.0.1:4173/'; exit 0 } } catch {} ; Start-Sleep -Seconds 1 }; exit 1" >nul 2>&1
 
 call npm run demo:fake-market
@@ -36,3 +42,20 @@ echo.
 pause
 popd
 exit /b %RESULT%
+
+:runtime_fail
+echo.
+echo Install/use Node.js 24.x before running Market Flow US.
+echo.
+pause
+popd
+exit /b 1
+
+:port_fail
+echo.
+echo [ERROR] Demo startup was stopped before launching a browser opener.
+echo Close the process using port 4173 or 8765 and try again.
+echo.
+pause
+popd
+exit /b 1
