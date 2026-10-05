@@ -126,16 +126,17 @@ While that slot is busy, additional Generate/Regenerate actions are disabled/ref
 
 Scanner `startedAtMs`/`completedAtMs`, market `collectedAtMs` and Demo Buy `capturedAtMs` are wall-clock diagnostics. Writer/cycle ordering is the authority boundary.
 
-Validate `sourceResultStartedAtMs <= sourceResultCompletedAtMs` because both values come from one Scanner execution. Do **not** fail a valid capture merely because wall-clock adjustment makes `sourceResultCompletedAtMs > capturedAtMs` or `baselineCollectedAtMs > capturedAtMs`.
-
-Instead:
+Wall-clock movement must not invalidate an otherwise authoritative capture. Preserve the raw timestamps exactly and derive timing diagnostics only when their ordering supports the calculation:
 
 ```text
-captureLatencyMs = capturedAtMs - sourceResultCompletedAtMs when non-negative, else null + timingAnomaly
-baselineAgeMs    = capturedAtMs - baselineCollectedAtMs when non-negative, else null + timingAnomaly
+scannerDurationMs = sourceResultCompletedAtMs - sourceResultStartedAtMs when non-negative, else null
+captureLatencyMs  = capturedAtMs - sourceResultCompletedAtMs when non-negative, else null
+baselineAgeMs     = capturedAtMs - baselineCollectedAtMs when non-negative, else null
 ```
 
-The raw persisted timestamps remain unchanged. A timing anomaly is diagnostic and must not be clamped to zero or used to reorder authority.
+Any negative relationship sets an explicit bounded `timingAnomaly` indicator describing which derived diagnostic is unavailable. It is not clamped to zero, does not reject the capture by itself and never changes writer/cycle ordering.
+
+This matches the existing Scanner posture of tolerating wall-clock regression rather than treating `Date.now()` as a monotonic authority clock.
 
 ## 7. Capture-time authority watermark
 
@@ -284,4 +285,4 @@ Demo Buy/context rows are never copied into the new active day. A v4 archive rem
 
 ## 12. Verification ownership
 
-Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-64 retention, context↔item rank/identity mismatch rejection, canonical object-key ordering, UTF-8 multi-byte clipping, request-size preflight, Scanner started/completed inversion rejection, wall-clock anomaly nullable diagnostics, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, one-export-slot behavior, AI-pack lost-ACK safe-regeneration behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-64 retention, context↔item rank/identity mismatch rejection, canonical object-key ordering, UTF-8 multi-byte clipping, request-size preflight, wall-clock inversion/timing-anomaly nullable diagnostics, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, one-export-slot behavior, AI-pack lost-ACK safe-regeneration behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
