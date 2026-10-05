@@ -8,8 +8,8 @@ permissions:
   contents: read
 
 jobs:
-  representative-workload:
-    name: 4096 x 180 representative U.S. workload
+  bounded-workload:
+    name: Bounded U.S. correctness and performance sanity
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -24,26 +24,29 @@ jobs:
       - name: Install pinned dependencies
         run: npm ci
 
-      - name: Run representative workload
-        env:
-          MARKET_FLOW_US_WORKLOAD_REPORT: test-results/workload/representative-workload.json
+      - name: Run bounded workload profiles
         run: npm run test:workload
 
-      - name: Print sanitized benchmark report
+      - name: Print sanitized workload reports
         if: always()
         shell: bash
         run: |
-          if [[ -f test-results/workload/representative-workload.json ]]; then
-            cat test-results/workload/representative-workload.json
-          else
-            echo "Representative workload report was not produced."
+          shopt -s nullglob
+          reports=(test-results/workload/*.json)
+          if (( ${#reports[@]} == 0 )); then
+            echo "Bounded workload reports were not produced."
+            exit 0
           fi
+          for report in "${reports[@]}"; do
+            echo "--- ${report}"
+            cat "${report}"
+          done
 
-      - name: Upload sanitized workload report
+      - name: Upload sanitized workload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: market-flow-us-workload-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 30
-          path: test-results/workload/representative-workload.json
+          path: test-results/workload/*.json
