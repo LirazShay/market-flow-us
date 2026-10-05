@@ -4,6 +4,18 @@ import {
 } from "../../shared/protocol/index.js";
 import { MARKET_FLOW_US_SCHEMA_VERSION } from "../database/schema.js";
 
+const SAFE_COLLECTION_ERRORS = Object.freeze({
+  UniverseCollectionError: "Provider universe acquisition or validation failed.",
+  CycleCollectionError: "Provider cycle acquisition failed.",
+  ProviderSnapshotError: "Provider snapshot acquisition or validation failed.",
+  CycleValidationError: "Provider cycle validation failed."
+});
+
+const GENERIC_SANITIZED_COLLECTION_ERROR = Object.freeze({
+  name: "CollectionError",
+  message: "A sanitized collection error was recorded."
+});
+
 function asSafeInteger(value, name, { nullable = false } = {}) {
   if (value === null || value === undefined) {
     if (nullable) return null;
@@ -32,28 +44,21 @@ function sanitizeLastError(value) {
     try {
       parsed = JSON.parse(parsed);
     } catch {
-      return {
-        name: "Error",
-        message: "A sanitized collection error was recorded."
-      };
+      return GENERIC_SANITIZED_COLLECTION_ERROR;
     }
   }
 
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return {
-      name: "Error",
-      message: "A sanitized collection error was recorded."
-    };
+    return GENERIC_SANITIZED_COLLECTION_ERROR;
   }
 
-  const name = typeof parsed.name === "string" && parsed.name.length > 0
-    ? parsed.name.slice(0, 128)
-    : "Error";
-  const message = typeof parsed.message === "string"
-    ? parsed.message.slice(0, 2048)
-    : "A sanitized collection error was recorded.";
+  const name = typeof parsed.name === "string" ? parsed.name : "";
+  const safeMessage = SAFE_COLLECTION_ERRORS[name];
+  if (safeMessage && parsed.message === safeMessage) {
+    return { name, message: safeMessage };
+  }
 
-  return { name, message };
+  return GENERIC_SANITIZED_COLLECTION_ERROR;
 }
 
 function deriveHealth({ sessionStatus, lastHeartbeatAtMs, lastError, nowMs, staleAfterMs }) {

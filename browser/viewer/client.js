@@ -17,7 +17,7 @@ export class ViewerClientError extends Error {
 
 export class ViewerUnavailableError extends ViewerClientError {
   constructor(
-    message = "MarketScope service is unavailable.",
+    message = "Market Flow US service is unavailable.",
     { code = DIAGNOSTIC_CODES.SERVICE_UNAVAILABLE } = {}
   ) {
     super(message, { code, retryable: false });
@@ -41,7 +41,7 @@ function defaultCreateSocket(url) {
 export function createViewerClient({
   url = "ws://127.0.0.1:8765",
   productVersion = "0.1.0",
-  clientInstanceId = "market-scope-browser-viewer",
+  clientInstanceId = "market-flow-us-browser-viewer",
   createSocket = defaultCreateSocket,
   diagnosticTracker = createDiagnosticTracker({ productVersion })
 } = {}) {
@@ -105,7 +105,7 @@ export function createViewerClient({
       error: {
         code: DIAGNOSTIC_CODES.SERVICE_UNAVAILABLE,
         name: "ServiceUnavailableError",
-        message: "Local MarketScope service is unavailable.",
+        message: "Local Market Flow US service is unavailable.",
         retryable: false
       }
     });
@@ -143,7 +143,7 @@ export function createViewerClient({
         error: {
           code: DIAGNOSTIC_CODES.SERVICE_DISCONNECTED,
           name: "ServiceDisconnectedError",
-          message: "Local MarketScope service connection was lost.",
+          message: "Local Market Flow US service connection was lost.",
           retryable: false
         }
       });
@@ -169,7 +169,7 @@ export function createViewerClient({
         : event?.data?.toString?.();
       message = JSON.parse(raw);
     } catch {
-      failTransport("MarketScope service returned an invalid response.");
+      failTransport("Market Flow US service returned an invalid response.");
       return;
     }
 
@@ -178,7 +178,7 @@ export function createViewerClient({
       (message?.type !== "response.ok" && message?.type !== "response.error") ||
       typeof message?.requestId !== "string"
     ) {
-      failTransport("MarketScope service returned an invalid response.");
+      failTransport("Market Flow US service returned an invalid response.");
       return;
     }
 
@@ -187,7 +187,7 @@ export function createViewerClient({
 
     if (message?.payload?.requestType !== waiter.requestType) {
       pending.delete(message.requestId);
-      waiter.reject(failTransport("MarketScope response correlation failed."));
+      waiter.reject(failTransport("Market Flow US response correlation failed."));
       return;
     }
 
@@ -201,7 +201,7 @@ export function createViewerClient({
     waiter.reject(new ViewerClientError(
       typeof message.payload?.message === "string"
         ? message.payload.message
-        : "MarketScope service rejected the request.",
+        : "Market Flow US service rejected the request.",
       {
         code: typeof message.payload?.code === "string" ? message.payload.code : null,
         retryable: message.payload?.retryable === true
@@ -223,14 +223,14 @@ export function createViewerClient({
     socket.addEventListener("error", () => {
       if (!openSettled) {
         openSettled = true;
-        openReject(new ViewerUnavailableError("Could not connect to MarketScope service."));
+        openReject(new ViewerUnavailableError("Could not connect to Market Flow US service."));
       }
     });
 
     socket.addEventListener("close", () => {
       if (!openSettled) {
         openSettled = true;
-        openReject(new ViewerUnavailableError("Could not connect to MarketScope service."));
+        openReject(new ViewerUnavailableError("Could not connect to Market Flow US service."));
       }
 
       if (explicitClose) {
@@ -240,18 +240,20 @@ export function createViewerClient({
       }
 
       if (state !== "disconnected") {
-        failTransport("MarketScope service connection was lost.");
+        failTransport("Market Flow US service connection was lost.");
       }
     });
   }
 
-  function sendRequest(type, payload) {
-    if (!socket || socket.readyState !== SOCKET_OPEN) {
-      return Promise.reject(new ViewerUnavailableError("MarketScope service is unavailable."));
-    }
-
+  function nextRequestId() {
     requestSequence += 1;
-    const requestId = `viewer-${requestSequence}`;
+    return `viewer-${requestSequence}`;
+  }
+
+  function sendRequest(type, payload, requestId = nextRequestId()) {
+    if (!socket || socket.readyState !== SOCKET_OPEN) {
+      return Promise.reject(new ViewerUnavailableError("Market Flow US service is unavailable."));
+    }
 
     return new Promise((resolve, reject) => {
       pending.set(requestId, { requestType: type, resolve, reject });
@@ -265,7 +267,7 @@ export function createViewerClient({
         }));
       } catch {
         pending.delete(requestId);
-        reject(failTransport("MarketScope service connection was lost."));
+        reject(failTransport("Market Flow US service connection was lost."));
       }
     });
   }
@@ -286,11 +288,11 @@ export function createViewerClient({
       try {
         socket = createSocket(url);
       } catch {
-        throw new ViewerUnavailableError("Could not connect to MarketScope service.");
+        throw new ViewerUnavailableError("Could not connect to Market Flow US service.");
       }
 
       if (!socket || typeof socket.addEventListener !== "function") {
-        throw new ViewerUnavailableError("Could not connect to MarketScope service.");
+        throw new ViewerUnavailableError("Could not connect to Market Flow US service.");
       }
 
       await new Promise((resolve, reject) => {
@@ -308,7 +310,7 @@ export function createViewerClient({
         hello.role !== "viewer" ||
         hello.ready !== true
       ) {
-        throw failTransport("MarketScope service is not ready.");
+        throw failTransport("Market Flow US service is not ready.");
       }
 
       state = "ready";
@@ -330,7 +332,7 @@ export function createViewerClient({
       if (error instanceof ViewerUnavailableError) {
         throw error;
       }
-      throw new ViewerUnavailableError("Could not connect to MarketScope service.");
+      throw new ViewerUnavailableError("Could not connect to Market Flow US service.");
     } finally {
       connectPromise = null;
     }
@@ -338,24 +340,26 @@ export function createViewerClient({
 
   async function request(type, payload) {
     const spec = diagnosticSpec(type);
+    let requestId = null;
     try {
       await connect();
-      const result = await sendRequest(type, payload);
+      requestId = nextRequestId();
+      const result = await sendRequest(type, payload, requestId);
       if (spec) {
         diagnosticTracker.recordSuccess({
           component: spec.component,
           operation: type,
-          operationId: `viewer-${requestSequence}`,
+          operationId: requestId,
           checkpoint: spec.checkpoint
         });
       }
       return result;
     } catch (error) {
-      if (spec && !(error instanceof ViewerUnavailableError)) {
+      if (spec && requestId !== null && !(error instanceof ViewerUnavailableError)) {
         diagnosticTracker.recordError({
           component: spec.component,
           operation: type,
-          operationId: `viewer-${requestSequence}`,
+          operationId: requestId,
           checkpoint: spec.checkpoint,
           error: {
             code: typeof error?.code === "string" ? error.code : ERROR_CODES.DB_ERROR,
