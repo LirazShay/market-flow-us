@@ -2,7 +2,7 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A5"
+current_stage: "A6"
 fr0_blocked_until_audit_closes: true
 
 stages:
@@ -11,7 +11,7 @@ stages:
   A2: done
   A3: done
   A4: done
-  A5: pending
+  A5: done
   A6: pending
   A7: pending
   A8: pending
@@ -107,6 +107,46 @@ findings:
     regression: "tests/unit/final-preflight-a4.test.mjs binds a real loopback port to prove rejection, then proves success after release and verifies launcher ordering."
     state: "fixed; A4 CI green"
 
+  - id: "A5-001"
+    severity: HIGH
+    area: "scripts/run-local-acceptance.mjs + scripts/acceptance-process.mjs"
+    finding: "Local acceptance subprocesses had no runner-level hard bound. A hung Playwright/workload child or leaked descendant could leave FR-7/8/9 waiting indefinitely instead of producing a bounded FAIL."
+    fix: "Added bounded subprocess execution with non-Windows process-group cleanup and Windows taskkill tree cleanup. Playwright acceptance is bounded at 3 minutes per sub-check; workload acceptance is bounded above its existing 40-minute test ceiling."
+    regression: "tests/unit/final-preflight-a5.test.mjs starts a deliberately non-terminating child and proves TIMEOUT plus prompt reap, while normal exit status/output remain intact."
+    state: "fixed; A5 CI green"
+
+  - id: "A5-002"
+    severity: MEDIUM
+    area: "tests/workload/us-workload-support.mjs"
+    finding: "Workload detail artifacts sanitized only the profile temp directory, and the rethrown error retained its raw message; the top-level end-to-end report could therefore persist repo/home/temp paths or URLs."
+    fix: "Workload diagnostics now redact profile-temp, repo, home, system-temp and URLs, cap the message, and replace the rethrown Error.message with the sanitized form before any outer report records it."
+    regression: "tests/unit/final-preflight-a5.test.mjs injects path/URL sentinels and proves neither the report object nor the rethrown message retains them."
+    state: "fixed; A5 CI green"
+
+  - id: "A5-003"
+    severity: HIGH
+    area: "scripts/run-workload-profile.mjs"
+    finding: "Authoritative target-day/target-e2e runs inherited custom workload shape environment variables. Ambient experiment settings could shrink or alter an FR-9 target profile while it still reported an authoritative target profile name."
+    fix: "Non-custom workload profiles now scrub all shape/pattern/failure override variables before execution; custom retains configurability and explicit report-path overrides remain supported."
+    regression: "tests/unit/final-preflight-a5.test.mjs proves target-day/target-e2e ignore hostile custom overrides while custom preserves them."
+    state: "fixed; A5 CI green"
+
+  - id: "A5-004"
+    severity: MEDIUM
+    area: "scripts/new-trading-day.mjs"
+    finding: "In --no-archive mode, a failure after the fresh DB had been installed could report rollover failure while leaving the fresh DB active and the prior authority at a temporary path, creating an ambiguous retry state."
+    fix: "Post-install failure in no-archive mode now moves the fresh DB back to the temporary slot, restores the exact prior active DB, and then removes the failed fresh candidate."
+    regression: "tests/service/final-preflight-a5.test.mjs injects after-fresh-install failure and proves the prior stopped session and saved query are restored with no temporary rollover files left."
+    state: "fixed; A5 CI green"
+
+  - id: "A5-005"
+    severity: MEDIUM
+    area: "scripts/new-trading-day.mjs CLI boundary"
+    finding: "Missing --db/--archive-dir values were not rejected consistently; an empty archive-dir could resolve to cwd and a following flag could be consumed as a path."
+    fix: "CLI path options now require an explicit non-flag value, and the API rejects empty archiveDir values."
+    regression: "tests/unit/final-preflight-a5.test.mjs covers missing/flag-as-value cases; tests/service/final-preflight-a5.test.mjs covers empty archiveDir API input."
+    state: "fixed; A5 CI green"
+
 reviewed_non_findings:
   - id: "A2-REVIEW-001"
     area: "schema-v3 bootstrap/reopen/rejection"
@@ -135,8 +175,20 @@ reviewed_non_findings:
   - id: "A4-REVIEW-003"
     area: "Windows quoting and exit propagation"
     note: "Reviewed launchers anchor cwd with quoted %~dp0, quote generated artifact paths and Origin arguments, preserve command exit codes, and keep heavy acceptance/workload actions explicit rather than silently folding them into regular verification."
+  - id: "A5-REVIEW-001"
+    area: "Fake Market acceptance composition"
+    note: "FR-7/FR-8 static, moving, membership, provider-recovery and restart profiles use the built normal U.S. runtime, ScreenerHulPaging3 loopback Fake Market, real local service and real DuckDB. The acceptance scenarios do not rely on Playwright interception and assert non-overlap plus durable authority behavior."
+  - id: "A5-REVIEW-002"
+    area: "workload integrity"
+    note: "End-to-end and isolated workload proofs assert exact completed/failed/latest/history counts, last-cycle identity, restart preservation, Current/History values and Scanner families. Detail reports are removed before each authoritative run and must be newly produced before the acceptance envelope can PASS."
+  - id: "A5-REVIEW-003"
+    area: "default new-day lifecycle"
+    note: "Default rollover refuses a running producer session, builds a fresh schema-v3 DB before moving authority, archives the prior DB with collision refusal, preserves saved Scanner queries transactionally, restores the prior DB if install fails, and starts market tables clean. Existing plus A5 rollback tests remain green."
 
 cross_stage_observations:
+  - id: "A7-CANDIDATE-001"
+    area: "tests/fake-market/server.mjs"
+    note: "A legacy donor Fake Market file still contains MapHeat/GetSecuritiesData and market-scope.runtime.js naming. It is not part of the reviewed U.S. local acceptance route; classify/remove or retain-with-evidence during the repository-wide A7 stale-path sweep."
   - id: "A8-CANDIDATE-001"
     area: "docs/LIVE_VERIFICATION.md / TREE 7.4"
     note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
@@ -146,6 +198,7 @@ verification:
   a2_code_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
   a3_code_candidate_sha: "ffe644e3acf8780776350b1ee35b427444325665"
   a4_code_candidate_sha: "85290a17b58896b21bf12d73965a71f31dae8d13"
+  a5_code_candidate_sha: "57eb228605ded88190bf5d0b7ebd37f246c0b4ae"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
@@ -153,4 +206,4 @@ verification:
   planning_docs_ci: green
   integrated_a9: pending
 
-next: "A5 — Fake Market, acceptance, workload and trading-day lifecycle"
+next: "A6 — Test-suite and CI adversarial review"
