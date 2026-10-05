@@ -194,7 +194,7 @@ test("npm run demo:fake-market starts the normal stack and prints one useful URL
 
     const page = await fetch(url);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /\/assets\/market-scope\.runtime\.js/);
+    assert.match(await page.text(), /\/assets\/market-flow-us\.runtime\.js/);
 
     const viewer = await openClient({
       url: "ws://127.0.0.1:8765",
@@ -231,11 +231,11 @@ test("startDemo builds and starts the normal fake/service stack and emits exactl
 
     const page = await fetch(handle.url);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /\/assets\/market-scope\.runtime\.js/);
+    assert.match(await page.text(), /\/assets\/market-flow-us\.runtime\.js/);
 
-    const runtime = await fetch(new URL("/assets/market-scope.runtime.js", handle.url));
+    const runtime = await fetch(new URL("/assets/market-flow-us.runtime.js", handle.url));
     assert.equal(runtime.status, 200);
-    assert.match(await runtime.text(), /__MARKET_SCOPE_RUNTIME_V1__/);
+    assert.match(await runtime.text(), /__MARKET_FLOW_US_RUNTIME_V1__/);
 
     const viewer = await openClient({
       url: handle.serviceUrl,
