@@ -6,7 +6,7 @@ import { ERROR_CODES, PROTOCOL_VERSION } from "../../shared/protocol/index.js";
 import { createRecorderConfig } from "../recorder/config.js";
 
 const SOCKET_OPEN = 1;
-const COMMIT_CHANNEL = "market-scope:v1";
+const COMMIT_CHANNEL = "market-flow-us:v1";
 
 export class ProducerBridgeError extends Error {
   constructor(message, { code = null, retryable = false } = {}) {
