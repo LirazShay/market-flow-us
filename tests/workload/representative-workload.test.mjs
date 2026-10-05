@@ -10,6 +10,7 @@ import {
   buildUsCollectionCandidate,
   buildUsCompleteCycle
 } from "../../browser/collector/us-cycle.js";
+import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
 import { startMarketScopeService } from "../../local-service/server/service.js";
 import { MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES } from "../../shared/scanner/builtins.js";
 
@@ -203,7 +204,8 @@ function serviceConfig(dbPath) {
 async function startService(dbPath) {
   const service = await startMarketScopeService({
     config: serviceConfig(dbPath),
-    serviceVersion: "market-flow-us-workload-proof"
+    serviceVersion: "market-flow-us-workload-proof",
+    openDatabase: openMarketFlowUsDatabase
   });
 
   return {
