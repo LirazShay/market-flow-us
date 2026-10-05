@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  BUILTIN_SCANNER_QUERIES,
+  MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES,
   builtinNameKeys,
   isBuiltinQueryId
 } from "../../shared/scanner/builtins.js";
@@ -22,7 +22,7 @@ test("saved-query name normalization is deterministic and collision-oriented", (
 });
 
 test("built-in saved-query identities and names are stable and reserved", () => {
-  assert.deepEqual(BUILTIN_SCANNER_QUERIES.map(({ queryId, name, intervalMs }) => ({
+  assert.deepEqual(MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.map(({ queryId, name, intervalMs }) => ({
     queryId,
     name,
     intervalMs
