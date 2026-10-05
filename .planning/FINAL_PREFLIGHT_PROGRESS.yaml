@@ -25,7 +25,7 @@ findings:
     finding: "Provider fetch/JSON had no hard failure bound; a stalled provider request could leave Recorder cycleInFlight true and make runtime stop/relaunch wait indefinitely."
     fix: "Added a 10-second provider request hard bound using AbortController plus Promise.race so acquisition/parse cannot block authority lifecycle indefinitely."
     regression: "tests/unit/final-preflight-a1.test.mjs bounds a never-settling fetch."
-    state: "fixed; branch CI pending"
+    state: "fixed; A1 CI green"
 
   - id: "A1-002"
     severity: HIGH
@@ -33,15 +33,15 @@ findings:
     finding: "producer.session.stop rejection re-armed heartbeat, and a launch failure after session start did not close the partial producer session; either path could leave a live producer while runtime state was error and make relaunch conflict with ownership."
     fix: "stopSession now fails closed and tears down transport; launch failure drains/stops Recorder and closes any already-started producer session before remaining in error."
     regression: "tests/unit/final-preflight-a1.test.mjs covers both stop rejection and partial-launch cleanup."
-    state: "fixed; branch CI pending"
+    state: "fixed; A1 CI green"
 
   - id: "A1-003"
     severity: MEDIUM
     area: "browser/runtime/producer-bridge.js + browser/diagnostics/support-snapshot.js"
     finding: "Several user-visible browser diagnostic/error strings still identified the local service as MarketScope after release branding cutover."
     fix: "Changed reviewed A1 producer/support diagnostic strings and default producer client identity to Market Flow US."
-    regression: "Existing branding/diagnostic suites plus A9 full Fast/Browser verification."
-    state: "fixed; branch CI pending"
+    regression: "Existing branding/diagnostic suites plus A1 Fast/Browser verification; repeat integrated proof at A9."
+    state: "fixed; A1 CI green"
 
 cross_stage_observations:
   - id: "A3-CANDIDATE-001"
@@ -52,8 +52,13 @@ cross_stage_observations:
     note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
 
 verification:
+  a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
   focused_tests_added: true
-  draft_pr_ci: pending
+  fast_ci: green
+  browser_ci: green
+  workload_ci: green
+  planning_docs_ci: green
+  latest_planning_pointer_browser_ci: green
   integrated_a9: pending
 
 next: "A2 — Local service, DuckDB schema, persistence, protocol and recovery"
