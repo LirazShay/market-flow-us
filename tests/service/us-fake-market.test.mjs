@@ -72,7 +72,7 @@ async function state(baseUrl) {
 
 async function withFakeMarket(fn) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-fake-"));
-  const runtimePath = path.join(tempDir, "market-scope.runtime.js");
+  const runtimePath = path.join(tempDir, "market-flow-us.runtime.js");
   await writeFile(runtimePath, "globalThis.__FAKE_RUNTIME_LOADED__ = true;\n", "utf8");
   const fake = await startUsFakeMarket({ port: 0, runtimePath });
 
@@ -94,7 +94,7 @@ test("U.S. Fake Market serves runtime plus the production ScreenerHulPaging3 ful
     assert.equal(page.status, 200);
     assert.match(await page.text(), /Market Flow US Fake Market/);
 
-    const runtime = await fetch(new URL("/assets/market-scope.runtime.js", baseUrl));
+    const runtime = await fetch(new URL("/assets/market-flow-us.runtime.js", baseUrl));
     assert.equal(runtime.status, 200);
     assert.match(await runtime.text(), /__FAKE_RUNTIME_LOADED__/);
 
