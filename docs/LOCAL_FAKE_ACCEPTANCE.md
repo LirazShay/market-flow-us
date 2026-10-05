@@ -16,7 +16,7 @@ Equivalent npm command:
 npm run test:acceptance:local
 ```
 
-The default run executes `FR-7` plus all four `FR-8` sub-checkpoints. Its JSON report contains a separate PASS/FAIL row for each sub-checkpoint so a failure is not collapsed into one opaque recovery result.
+The default run executes `FR-7` and then the four `FR-8` sub-checkpoints sequentially. It stops immediately at the first failing checkpoint; an all-green run reaches all five checks. Its JSON report contains a separate PASS/FAIL row for every attempted sub-checkpoint so a failure is not collapsed into one opaque recovery result.
 
 ## FR-7 — repeated identical complete responses
 
@@ -132,7 +132,7 @@ Representative `4096 × 180` target profile:
 RUN_LOCAL_ACCEPTANCE.cmd target
 ```
 
-The acceptance envelope is written under `test-results/acceptance/`. Detailed workload reports are written under `test-results/acceptance/details/`.
+The acceptance envelope is written under `test-results/acceptance/`. Detailed workload reports are written under `test-results/acceptance/details/` only when the workload runner actually produced them.
 
 ## Evidence and safety
 
