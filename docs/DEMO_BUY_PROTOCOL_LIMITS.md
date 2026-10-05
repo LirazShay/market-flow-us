@@ -2,6 +2,8 @@
 
 This document owns the concrete bounded constants and temporal-authority rules required by the Demo Buy + AI Investigation contracts. These are implementation requirements, not suggestions.
 
+While the comprehensive replan is still `active`, this document is the normative owner for Demo Buy/AI protocol bounds, authority-watermark timing and lost-ack behavior. Any older conflicting wording elsewhere must be aligned before the plan is frozen; executors remain unauthorized until that alignment and final review are complete.
+
 ## 1. Existing transport boundary
 
 The local WebSocket service keeps the existing inbound-message limit:
@@ -111,6 +113,14 @@ Consequences:
 - automatic capture never queues behind another in-flight capture; it is visibly skipped according to the Demo Buy contract.
 
 AI-pack generation may delay the next Scanner request on that Viewer socket while its bounded request is being serviced, but the existing Scanner scheduler must remain non-overlapping so this cannot grow an unbounded request backlog. No second transport or global server-concurrency rewrite is introduced solely for export.
+
+The Viewer also owns one AI-export slot:
+
+```text
+at most one Generate/Regenerate AI Investigation request in flight per Viewer instance
+```
+
+While that slot is busy, additional Generate/Regenerate actions are disabled/refused visibly rather than queued. This bounds local file-export work and prevents user clicks from building a second application-level backlog on top of the socket FIFO.
 
 ### Timing diagnostics are not authority
 
@@ -274,4 +284,4 @@ Demo Buy/context rows are never copied into the new active day. A v4 archive rem
 
 ## 12. Verification ownership
 
-Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-64 retention, context↔item rank/identity mismatch rejection, canonical object-key ordering, UTF-8 multi-byte clipping, request-size preflight, Scanner started/completed inversion rejection, wall-clock anomaly nullable diagnostics, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, AI-pack lost-ACK safe-regeneration behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-64 retention, context↔item rank/identity mismatch rejection, canonical object-key ordering, UTF-8 multi-byte clipping, request-size preflight, Scanner started/completed inversion rejection, wall-clock anomaly nullable diagnostics, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, one-export-slot behavior, AI-pack lost-ACK safe-regeneration behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
