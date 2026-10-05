@@ -542,3 +542,101 @@ All completed nodes `1.1` through `6.2` remain valid. Current `6.3` work remains
 PASS.
 
 The affected planning area is coherent, allocation is repaired with one new final chat, and implementation may resume at Chat 7 / node `6.3`.
+
+
+## R-US-EXEC-REOPEN-004 — Correctness-first CI, configurable load probes and daily DB review
+
+**Result:** PASS AFTER CORRECTION
+
+**Trigger:** During Chat 7, hosted `4096 × 45` probes consumed the weak GitHub runner without providing a useful target-machine performance conclusion. The user clarified three product/testing facts: CI should emphasize many fast correctness tests and only light performance sanity; serious load/performance proof belongs on the user's stronger target machine at the final stage; and the active market-data DB is intended to hold one trading day, not years of intraday history. The user also requested a smarter configurable Fake Market/generator so performance probes can isolate only the subsystem being measured.
+
+### Planning defect
+
+The frozen contracts conflated three different jobs:
+
+```text
+correctness proof
+hosted-runner performance observation
+target-machine release performance
+```
+
+`6.3` and `7.1` effectively required the full `4096 × 180` workload as pre-release/CI-style evidence, even though GitHub-hosted hardware is not representative of the intended local machine. The workload was also too monolithic: Scanner/read measurement could require replaying many real commits and full runtime layers even when those layers were irrelevant to the performance question.
+
+Finally, the performance model implicitly allowed active history to grow indefinitely, while the intended operating model is one trading day per active DB with optional archival/reset between days.
+
+### Correction
+
+The smallest affected area remains `6.3` plus release branch `7`; no completed node is reopened.
+
+1. Revised `D-US-011`: `4096 × 180` remains the heavy end-to-end target-machine profile, but hosted CI is no longer performance authority.
+2. Added `D-US-021`: Fake Market and workload tooling share one externally configurable deterministic synthetic generator/profile rather than duplicate large fixtures.
+3. Added `D-US-022`: active market-data authority is one trading day; performance profiles are day-bounded and saved queries must survive new-day reset/rotation.
+4. Rewrote TREE `6.3` around correctness-first bounded CI smoke, approximately-4k width sanity, isolated persistence/read/Scanner probes, and target-machine heavy-profile exposure.
+5. Rewrote TREE `7.1` so the final offline candidate requires Fast, Browser and bounded workload correctness/sanity only.
+6. Reworked `7.2` to package configurable Fake Leumi plus isolated and end-to-end load profiles.
+7. Extended `7.3` to document/prove the safe one-day archive/reset operational lifecycle.
+8. Extended `7.4` so heavy `4096 × 180`, one-day-sized isolated performance and new-day lifecycle PASS are final target-machine evidence.
+9. TEST_STRATEGY and TECHNICAL_SPEC now explicitly separate component probes from end-to-end probes and allow efficient direct seeding of day-bounded Scanner/read datasets.
+10. EXECUTOR_HANDOFF now forbids treating weak hosted-runner timing as release-performance authority.
+
+### S&T / allocation review
+
+The correction changes evidence ownership, not capability count or dependency order:
+
+```text
+TREE nodes                 28
+implementation leaves      20
+root capability branches    7
+chat allocation            10
+new leaf nodes              0
+new product subsystem       0
+```
+
+Existing serial order remains valid:
+
+```text
+Chat 7: 6.3 → 7.1
+Chat 8: 7.2
+Chat 9: 7.3
+Chat 10: 7.4
+```
+
+No reallocation is required.
+
+### Correctness / performance boundary challenge
+
+PASS.
+
+The revised proof model does not weaken correctness:
+
+- Unit/service/browser correctness stays extensive in CI.
+- Workload count/history/latest/restart/Scanner/report correctness stays automated with bounded fixtures.
+- At least one approximately-4096-security width sanity remains in CI to catch full-universe shape problems.
+- Heavy timing moves to the machine where the product will actually run rather than disappearing.
+- The final target-machine bundle still requires the full `4096 × 180` end-to-end profile.
+- Scanner/read performance gains a stronger one-day-sized dataset proof because the harness can seed the intended data shape directly instead of paying for irrelevant browser/transport work.
+
+### Daily DB challenge
+
+PASS with the following boundary:
+
+```text
+active DB = one trading day of market authority
+prior day = optional archive
+new day = fresh market tables/authority
+saved queries = preserved user configuration
+```
+
+This remains the existing DuckDB architecture. It does not add a warehouse, multi-day analytics subsystem or second database engine. Release work owns only the smallest safe stop/archive/reset/new-day procedure and its proof.
+
+### Preservation result
+
+All completed nodes `1.1` through `6.2` remain valid.
+
+Current `6.3` implementation work remains useful, including static Scanner optimization evidence and the discovered duplicate persistence work. The failed hosted `4096 × 45` run remains diagnostic history but is no longer a release-performance gate. Known obviously duplicated work should still be removed when it materially improves the real runtime; the correction only prevents weak CI hardware from defining the product's performance PASS/FAIL.
+
+### Re-freeze decision
+
+PASS.
+
+No TREE dependency or chat-allocation change is required. Reset `6.3` from planning `blocked` back to `in_progress`, freeze the plan, restore root phase `implementation`, and resume Chat 7 under the revised correctness-first/performance-target-machine contract.
