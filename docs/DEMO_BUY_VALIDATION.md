@@ -120,6 +120,7 @@ Rules:
 - the browser sends only already-deduped ordered items;
 - Node independently validates the request and **rejects duplicate `securityId` or duplicate `resultRank` values** rather than silently repairing malformed protocol input;
 - every `resultRank` must be a positive safe integer no greater than `sourceResultRowCount`;
+- submitted ranks are strictly increasing in Scanner result order;
 - for `top_x`, every submitted `resultRank` must be `<= topX`.
 
 The 5000 bound is a product/transport safety bound aligned with the current provider envelope; it is not a permanent claim about U.S. market size.
@@ -171,20 +172,29 @@ The horizon clock starts at `captured_at_ms`, not at Scanner completion time and
 
 Demo Buy advances Market Flow US from schema v3 to additive schema v4.
 
-v3→v4 preserves all existing U.S. authority and saved Scanner queries.
+A valid v3 database contains the established U.S. authority/saved-query tables and **neither** Demo Buy table.
 
 Migration:
 
 ```text
-schema v3
+validate v3 prerequisites
+→ reject suspicious partial Demo Buy table state
 → BEGIN
 → create demo_buy_captures
 → create demo_buy_items
-→ update schema_info to v4
+→ update schema_info to v4 + current product version
 → COMMIT
 ```
 
-Failure leaves the original v3 database recoverable without a partial accepted v4 contract. Fresh DBs bootstrap directly as v4.
+If a DB claims v3 while either Demo Buy table already exists, startup fails closed instead of silently completing a possibly partial prior migration. Do not use `CREATE TABLE IF NOT EXISTS` to normalize that state.
+
+Migration fault tests must prove rollback at multiple phases. Failure leaves the original v3 database semantically usable as v3 with market authority and saved Scanner queries intact.
+
+Fresh DBs bootstrap directly as v4. A reopened v4 DB requires both Demo Buy tables plus the established U.S. tables.
+
+MarketScope v1/v2 remain unsupported and are rejected without mutation.
+
+No new `history` index is part of the initial schema-v4 contract. Direct bounded evaluation is measured first; an evaluation index is added only if representative workload proves a real bottleneck and a focused replan approves it.
 
 ## 8. `demo_buy_captures`
 
@@ -236,6 +246,8 @@ The stored `(buy_cycle_id, security_id)` must resolve to exactly one `history` r
 
 No copied baseline/future price, percentage or direction columns are persisted.
 
+A physical foreign key is not required in Phase 1; the serialized capture transaction establishes the semantic link and trusted reads verify it. Do not add foreign-key/index complexity without evidence.
+
 ## 10. Capture request contract
 
 `demo.buy.capture` payload:
@@ -258,7 +270,7 @@ isAutomatic: boolean
 topX: integer | null
 ```
 
-Node validates exact keys, bounds, unique IDs/ranks, rank range, mode/topX/automatic consistency and provenance shape. It does not accept a price.
+Node validates exact keys, bounds, unique IDs/ranks, increasing rank order, rank range, mode/topX/automatic consistency and provenance shape. It does not accept a price and does not dedupe malformed protocol input.
 
 Successful response returns only capture authority facts such as:
 
@@ -390,7 +402,7 @@ result_rank ASC
 
 The opaque keyset cursor binds the last `(capture_id, result_rank)` and supports stable continuation while newer automatic captures are inserted. New captures appear only when the user refreshes from the first page; they do not cause gaps or duplicates in an existing continuation walk.
 
-Each page's baseline/horizon evaluation must be produced from one transactionally consistent DuckDB read snapshot. Prefer one set-wise SQL statement/CTE for the bounded page; do not issue ten independent browser requests or independently timed horizon queries.
+Each page's baseline/horizon evaluation must be produced from one transactionally consistent DuckDB read snapshot. Prefer one set-wise SQL statement/CTE on the existing Viewer read connection; do not issue ten independent browser requests or independently timed horizon queries, and do not open a multi-statement transaction on the shared Viewer read connection merely to create consistency.
 
 Browser-ready item includes at least:
 
@@ -478,16 +490,7 @@ demo.buy.page
 demo.buy.capture.get
 ```
 
-Stable errors distinguish at least:
-
-```text
-DEMO_BUY_INVALID
-DEMO_BUY_BUSY (browser-facing busy is normally prevented before transport)
-DEMO_BUY_INTEGRITY
-DB_ERROR
-```
-
-Exact code names may be normalized with the repository's existing naming style before implementation, but the semantic distinction is mandatory.
+Stable errors distinguish at least invalid Demo Buy input, Demo Buy integrity violation and generic DB/read failure. Browser-visible busy state is normally handled before transport by the single capture slot.
 
 Missing future horizons are normal data. Missing immutable baseline linkage is an integrity error.
 
@@ -598,7 +601,7 @@ tiny deterministic fixture
 
 Use set-wise bounded evaluation. Because Viewer requests on one socket are serialized by the existing service, workload/browser proof must verify that a 50-item Demo Buy refresh does not materially starve recurring Scanner use under the intended bounded workload.
 
-Do not add background horizon updates, materialized horizon columns, a temporal feature engine, new DB/transport or Strategy Engine unless measured evidence proves direct bounded reads insufficient.
+Do not add background horizon updates, materialized horizon columns, a temporal feature engine, a speculative history index, new DB/transport or Strategy Engine unless measured evidence proves direct bounded reads insufficient.
 
 ## 21. Verification contract
 
@@ -608,7 +611,7 @@ Prove identity gating, source-row-first Top-X semantics, original result-rank pr
 
 ### Real DuckDB/service
 
-Prove fresh v4, transactional v3→v4, migration rollback, exact writer-order baseline linkage, all-or-nothing capture, provenance persistence, original ranks, repeated security across captures, baseline-link integrity failure, one-snapshot set-wise future evaluation, nearest-at-or-after semantics, unavailable reasons, 50-item cursor paging, continuation stability while newer captures are inserted, on-demand provenance read, restart persistence and new-day clearing with saved queries preserved.
+Prove fresh v4, strict partial-v3 rejection, transactional v3→v4, migration rollback, exact writer-order baseline linkage, all-or-nothing capture, provenance persistence, original ranks, repeated security across captures, baseline-link integrity failure, one-snapshot set-wise future evaluation, nearest-at-or-after semantics, unavailable reasons, 50-item cursor paging, continuation stability while newer captures are inserted, on-demand provenance read, restart persistence and new-day clearing with saved queries preserved.
 
 ### Browser E2E
 
