@@ -29,6 +29,47 @@ import {
 const REPORT_PATH = process.env.MARKET_FLOW_US_ISOLATED_REPORT
   ?? path.resolve("test-results/workload/isolated-probes.json");
 const FIRST_PAPER_ID = 1000000;
+const SYNTHETIC_STATIC_FIELDS = Object.freeze([
+  "Symbol",
+  "PaperNameEng",
+  "PaperNameHeb",
+  "ExchangeName",
+  "CountryName",
+  "CountryNameEng"
+]);
+const SYNTHETIC_NUMERIC_FIELDS = Object.freeze([
+  "Price",
+  "ChangePercent",
+  "DailyHigh",
+  "DailyLow",
+  "YearHigh",
+  "YearLow",
+  "DailyVolume",
+  "BeginYearChangePercent",
+  "Month12ChangePercent",
+  "Month36ChangePercent",
+  "AskRate",
+  "BidRate",
+  "YesterdayRate",
+  "PaperMarketCap",
+  "PaperIdYatab",
+  "CountryId",
+  "PaperType",
+  "ESGRatingId",
+  "ESGScope"
+]);
+const CURRENT_NUMERIC_FIELDS = Object.freeze([
+  "Price",
+  "ChangePercent",
+  "BidRate",
+  "AskRate",
+  "DailyVolume",
+  "DailyLow",
+  "DailyHigh",
+  "YesterdayRate",
+  "PaperMarketCap"
+]);
+const SYNTHETIC_INSERT_CHUNK = 256;
 
 function assertSafeProfile(profile) {
   for (const [name, value] of Object.entries({
@@ -43,7 +84,165 @@ function assertSafeProfile(profile) {
   }
 }
 
-async function seedPersistenceAuthority(connection, universeSize, cadenceMs) {
+function sqlLiteral(value) {
+  if (value === null || value === undefined) return "NULL";
+  if (typeof value === "number") {
+    assert.ok(Number.isFinite(value), "synthetic SQL numbers must be finite");
+    return String(value);
+  }
+  if (typeof value === "string") {
+    return `'${value.replaceAll("'", "''")}'`;
+  }
+  throw new TypeError(`Unsupported synthetic SQL literal type: ${typeof value}`);
+}
+
+function createScaleGenerator({ universeSize, cycleCount, cadenceMs }) {
+  return createUsSyntheticGenerator({
+    universeSize,
+    cycleCount,
+    cadenceMs,
+    firstPaperId: FIRST_PAPER_ID,
+    epochMs: SYNTHETIC_EPOCH_MS,
+    dataPattern: "moving"
+  });
+}
+
+async function insertUniverseFromGenerator(connection, generator, lastSeenAtMs) {
+  const records = generator.recordsForCycle(0);
+  for (let offset = 0; offset < records.length; offset += SYNTHETIC_INSERT_CHUNK) {
+    const values = records
+      .slice(offset, offset + SYNTHETIC_INSERT_CHUNK)
+      .map((row) => `(
+        ${sqlLiteral(String(row.PaperId))},
+        true,
+        1,
+        ${SYNTHETIC_EPOCH_MS},
+        ${lastSeenAtMs},
+        ${sqlLiteral(row.Symbol)},
+        ${sqlLiteral(row.PaperNameEng)},
+        ${sqlLiteral(row.PaperNameHeb)},
+        ${sqlLiteral(row.ExchangeName)},
+        CAST('{}' AS JSON)
+      )`);
+    await connection.run(`INSERT INTO universe VALUES ${values.join(",\n")}`);
+  }
+}
+
+function buildSyntheticBasis(generator, lastCycle) {
+  const baseRows = generator.recordsForCycle(0);
+  const nextRows = generator.recordsForCycle(1);
+  const lastRows = generator.recordsForCycle(lastCycle);
+
+  return baseRows.map((base, index) => {
+    const next = nextRows[index];
+    const last = lastRows[index];
+    assert.equal(next.PaperId, base.PaperId, "synthetic identity drift at cycle 1");
+    assert.equal(last.PaperId, base.PaperId, "synthetic identity drift at last cycle");
+
+    for (const field of SYNTHETIC_STATIC_FIELDS) {
+      assert.equal(next[field], base[field], `${field} must stay static for bulk day seeding`);
+      assert.equal(last[field], base[field], `${field} must stay static for bulk day seeding`);
+    }
+
+    const numeric = {};
+    for (const field of SYNTHETIC_NUMERIC_FIELDS) {
+      const baseValue = base[field];
+      const nextValue = next[field];
+      const lastValue = last[field];
+      if (baseValue === null || nextValue === null || lastValue === null) {
+        assert.equal(baseValue, null, `${field} nullability must stay stable`);
+        assert.equal(nextValue, null, `${field} nullability must stay stable`);
+        assert.equal(lastValue, null, `${field} nullability must stay stable`);
+        numeric[field] = { base: null, delta: null };
+        continue;
+      }
+
+      assert.equal(typeof baseValue, "number", `${field} synthetic base must be numeric`);
+      assert.equal(typeof nextValue, "number", `${field} synthetic next must be numeric`);
+      assert.equal(typeof lastValue, "number", `${field} synthetic last must be numeric`);
+      const delta = nextValue - baseValue;
+      const expectedLast = baseValue + (delta * lastCycle);
+      assert.ok(
+        Math.abs(lastValue - expectedLast) <= 1e-9,
+        `${field} must remain linear for generator-driven bulk day seeding`
+      );
+      numeric[field] = { base: baseValue, delta };
+    }
+
+    return {
+      securityId: String(base.PaperId),
+      static: Object.fromEntries(
+        SYNTHETIC_STATIC_FIELDS.map((field) => [field, base[field]])
+      ),
+      numeric
+    };
+  });
+}
+
+async function createSyntheticBasisTable(connection, generator, lastCycle) {
+  const numericColumns = SYNTHETIC_NUMERIC_FIELDS
+    .flatMap((field) => [`${field}_base DOUBLE`, `${field}_delta DOUBLE`])
+    .join(",\n      ");
+  await connection.run(`
+    CREATE TEMP TABLE isolated_synthetic_basis (
+      security_id VARCHAR NOT NULL,
+      Symbol VARCHAR NULL,
+      PaperNameEng VARCHAR NULL,
+      PaperNameHeb VARCHAR NULL,
+      ExchangeName VARCHAR NULL,
+      CountryName VARCHAR NULL,
+      CountryNameEng VARCHAR NULL,
+      ${numericColumns}
+    )
+  `);
+
+  const basis = buildSyntheticBasis(generator, lastCycle);
+  for (let offset = 0; offset < basis.length; offset += SYNTHETIC_INSERT_CHUNK) {
+    const values = basis
+      .slice(offset, offset + SYNTHETIC_INSERT_CHUNK)
+      .map((row) => {
+        const literals = [
+          sqlLiteral(row.securityId),
+          ...SYNTHETIC_STATIC_FIELDS.map((field) => sqlLiteral(row.static[field])),
+          ...SYNTHETIC_NUMERIC_FIELDS.flatMap((field) => [
+            sqlLiteral(row.numeric[field].base),
+            sqlLiteral(row.numeric[field].delta)
+          ])
+        ];
+        return `(${literals.join(", ")})`;
+      });
+    await connection.run(`INSERT INTO isolated_synthetic_basis VALUES ${values.join(",\n")}`);
+  }
+}
+
+function syntheticNumericProjection(field) {
+  return `CASE
+        WHEN b.${field}_base IS NULL THEN NULL
+        ELSE b.${field}_base + (b.${field}_delta * cycle_id)
+      END`;
+}
+
+function assertCurrentMatchesGenerator(row, expected) {
+  assert.equal(row.securityId, String(expected.PaperId));
+  assert.equal(row.paperName, expected.PaperNameEng);
+  assert.equal(row.Symbol, expected.Symbol);
+  assert.equal(row.ExchangeName, expected.ExchangeName);
+
+  for (const field of CURRENT_NUMERIC_FIELDS) {
+    const actual = row[field];
+    const wanted = expected[field];
+    if (wanted === null) {
+      assert.equal(actual, null, `${field} null must match shared synthetic authority`);
+    } else {
+      assert.ok(
+        Math.abs(Number(actual) - wanted) <= 1e-9,
+        `${field} must match shared synthetic authority`
+      );
+    }
+  }
+}
+
+async function seedPersistenceAuthority(connection, generator, cadenceMs) {
   const lastSeenAtMs = SYNTHETIC_EPOCH_MS + cadenceMs;
   await connection.run(`
     INSERT INTO sessions VALUES (
@@ -62,21 +261,7 @@ async function seedPersistenceAuthority(connection, universeSize, cadenceMs) {
       NULL
     )
   `);
-  await connection.run(`
-    INSERT INTO universe
-    SELECT
-      CAST(${FIRST_PAPER_ID} + idx AS VARCHAR) AS security_id,
-      true AS is_current,
-      1 AS universe_revision,
-      ${SYNTHETIC_EPOCH_MS} AS first_seen_at_ms,
-      ${lastSeenAtMs} AS last_seen_at_ms,
-      'US' || lpad(CAST(idx AS VARCHAR), 4, '0') AS Symbol,
-      'Synthetic US Security ' || lpad(CAST(idx AS VARCHAR), 4, '0') AS PaperNameEng,
-      NULL AS PaperNameHeb,
-      CASE WHEN idx % 2 = 0 THEN 'NASDAQ' ELSE 'NYSE' END AS ExchangeName,
-      CAST('{}' AS JSON) AS raw_source
-    FROM range(0, ${universeSize}) AS securities(idx)
-  `);
+  await insertUniverseFromGenerator(connection, generator, lastSeenAtMs);
 }
 
 async function runPersistenceProbe(profile, tempDir, {
@@ -95,20 +280,17 @@ async function runPersistenceProbe(profile, tempDir, {
     now: () => Date.now(),
     cycleAdapter: MARKET_FLOW_US_CYCLE_ADAPTER
   });
-  const generator = createUsSyntheticGenerator({
+  const generator = createScaleGenerator({
     universeSize,
     cycleCount: cycles,
-    cadenceMs: profile.cadenceMs,
-    firstPaperId: FIRST_PAPER_ID,
-    epochMs: SYNTHETIC_EPOCH_MS,
-    dataPattern: "moving"
+    cadenceMs: profile.cadenceMs
   });
   const commitMs = [];
 
   try {
     await seedPersistenceAuthority(
       database.writerConnection,
-      universeSize,
+      generator,
       profile.cadenceMs
     );
 
@@ -149,7 +331,9 @@ async function runPersistenceProbe(profile, tempDir, {
 async function seedReadScannerAuthority(connection, profile) {
   const { universeSize, cycleCount, cadenceMs } = profile;
   const lastCollectedAtMs = SYNTHETIC_EPOCH_MS + (cycleCount * cadenceMs);
+  const generator = createScaleGenerator({ universeSize, cycleCount, cadenceMs });
 
+  await createSyntheticBasisTable(connection, generator, cycleCount);
   await connection.run(`
     INSERT INTO sessions VALUES (
       'isolated-read',
@@ -168,21 +352,7 @@ async function seedReadScannerAuthority(connection, profile) {
     )
   `);
 
-  await connection.run(`
-    INSERT INTO universe
-    SELECT
-      CAST(${FIRST_PAPER_ID} + idx AS VARCHAR),
-      true,
-      1,
-      ${SYNTHETIC_EPOCH_MS},
-      ${lastCollectedAtMs},
-      'US' || lpad(CAST(idx AS VARCHAR), 4, '0'),
-      'Synthetic US Security ' || lpad(CAST(idx AS VARCHAR), 4, '0'),
-      NULL,
-      CASE WHEN idx % 2 = 0 THEN 'NASDAQ' ELSE 'NYSE' END,
-      CAST('{}' AS JSON)
-    FROM range(0, ${universeSize}) AS securities(idx)
-  `);
+  await insertUniverseFromGenerator(connection, generator, lastCollectedAtMs);
 
   await connection.run(`
     INSERT INTO cycles
@@ -207,6 +377,10 @@ async function seedReadScannerAuthority(connection, profile) {
       NULL
     FROM range(1, ${cycleCount + 1}) AS cycles(cycle_id)
   `);
+
+  const numericProjection = SYNTHETIC_NUMERIC_FIELDS
+    .map((field) => syntheticNumericProjection(field))
+    .join(",\n      ");
 
   await connection.run(`
     INSERT INTO history (
@@ -251,47 +425,31 @@ async function seedReadScannerAuthority(connection, profile) {
       cycle_id,
       'isolated-read',
       1,
-      CAST(${FIRST_PAPER_ID} + idx AS VARCHAR),
+      b.security_id,
       0,
       ${SYNTHETIC_EPOCH_MS} + (cycle_id * ${cadenceMs}) - 100,
       ${SYNTHETIC_EPOCH_MS} + (cycle_id * ${cadenceMs}) - 10,
       ${SYNTHETIC_EPOCH_MS} + (cycle_id * ${cadenceMs}),
-      CAST('{"source":"isolated-day-seed"}' AS JSON),
-      'US' || lpad(CAST(idx AS VARCHAR), 4, '0'),
-      'Synthetic US Security ' || lpad(CAST(idx AS VARCHAR), 4, '0'),
+      CAST('{"source":"synthetic-us-generator-bulk-seed"}' AS JSON),
+      b.Symbol,
+      b.PaperNameEng,
+      b.PaperNameHeb,
+      b.ExchangeName,
       NULL,
-      CASE WHEN idx % 2 = 0 THEN 'NASDAQ' ELSE 'NYSE' END,
-      NULL,
-      'United States',
-      'United States',
-      100 + idx + cycle_id,
-      (idx % 25) + (cycle_id / 1000.0),
-      102 + idx + cycle_id,
-      98 + idx + cycle_id,
-      125 + idx + cycle_id,
-      75 + idx + cycle_id,
-      (cycle_id * 100000) + idx,
-      (idx % 17) / 10.0,
-      (idx % 23) / 10.0,
-      (idx % 31) / 10.0,
-      100.05 + idx + cycle_id,
-      99.95 + idx + cycle_id,
-      99 + idx + cycle_id,
-      1000000 + (idx * 10000),
-      ${FIRST_PAPER_ID + 500000} + idx,
-      2,
-      1,
-      CASE WHEN idx % 7 = 0 THEN NULL ELSE idx % 5 END,
-      idx % 3,
+      b.CountryName,
+      b.CountryNameEng,
+      ${numericProjection},
       CAST('{}' AS JSON)
     FROM range(1, ${cycleCount + 1}) AS cycles(cycle_id)
-    CROSS JOIN range(0, ${universeSize}) AS securities(idx)
+    CROSS JOIN isolated_synthetic_basis AS b
   `);
 
   await connection.run(`
     INSERT INTO latest
     SELECT * FROM history WHERE cycle_id = ${cycleCount}
   `);
+
+  return generator;
 }
 
 async function runReadScannerProbe(profile, tempDir) {
@@ -311,7 +469,7 @@ async function runReadScannerProbe(profile, tempDir) {
   };
 
   try {
-    await measure(metrics.seedMs, () =>
+    const generator = await measure(metrics.seedMs, () =>
       seedReadScannerAuthority(database.writerConnection, profile));
 
     const viewer = createViewerReads({
@@ -326,6 +484,12 @@ async function runReadScannerProbe(profile, tempDir) {
     const current = await measure(metrics.currentMs, () => viewer.current());
     assert.equal(current.summary.rowCount, profile.universeSize);
     assert.equal(current.summary.lastCycleId, profile.cycleCount);
+    const firstCurrent = current.rows.find((row) => row.securityId === String(FIRST_PAPER_ID));
+    assert.ok(firstCurrent, "first generated security must be present in Current");
+    assertCurrentMatchesGenerator(
+      firstCurrent,
+      generator.rowForPaperId(FIRST_PAPER_ID, profile.cycleCount)
+    );
 
     const history = await measure(metrics.historyMs, () =>
       viewer.historyPage(String(FIRST_PAPER_ID), null));
@@ -360,6 +524,7 @@ async function runReadScannerProbe(profile, tempDir) {
       cycles: profile.cycleCount,
       cadenceMs: profile.cadenceMs,
       historyRows: profile.universeSize * profile.cycleCount,
+      syntheticSource: "shared-generator-base-delta",
       seedMs: distribution(metrics.seedMs),
       currentMs: distribution(metrics.currentMs),
       historyPageMs: distribution(metrics.historyMs),
