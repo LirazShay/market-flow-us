@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.3"
 blockers: []
-next_action: "TREE 7.2 remains done and repository truth points to Chat 9 / node 7.3, but Chat 9 must not begin yet. Chat 8 final focused re-review of the diff-review fixes passed with no new blocker. Planning/Fast/Browser/Workload CI were green on implementation head 605456940a88f49ab0384d218ba75e9fa659dbc5. This commit changes planning status only. Next: verify the PR checks required for this planning-only head, then squash merge PR #11 and verify main CI green before starting Chat 9."
+next_action: "Chat 8 / TREE 7.2 is complete and merged on main at e108e7ef5c3ada48025fd5a1a81f821d67dadecd. Planning/Fast/Browser/Workload main CI are green and there are no open PRs. Chat 9 / node 7.3 is the first open execution node and is ready to start from fresh main."
 last_review: "R-US-EXEC-REOPEN-004"
