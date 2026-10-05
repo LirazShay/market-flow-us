@@ -76,6 +76,13 @@ function canonicalPaperId(row, index) {
   if (value === null || value === undefined || value === "") {
     throw new Error(`ScreenerHulPaging3 contains row without PaperId at index ${index}.`);
   }
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value)) {
+      throw new Error(`ScreenerHulPaging3 contains invalid numeric PaperId at index ${index}.`);
+    }
+  } else if (typeof value !== "string") {
+    throw new Error(`ScreenerHulPaging3 contains invalid PaperId type at index ${index}.`);
+  }
 
   const securityId = String(value);
   if (securityId.trim().length === 0) {
