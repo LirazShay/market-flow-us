@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.1"
 blockers: []
-next_action: "Chat 7 next executes TREE node 7.1: run the integrated deterministic offline release-candidate gate now that 6.3 workload tooling is closed and ready to land on main."
+next_action: "Chat 7 is executing TREE node 7.1: verify the integrated deterministic offline release candidate with full Fast, Browser and bounded workload gates on one SHA, including feedback-time guidance and sanitized reports."
 last_review: "R-US-EXEC-REOPEN-004"
