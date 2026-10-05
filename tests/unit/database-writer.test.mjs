@@ -134,7 +134,7 @@ test("serialized writer bulk-loads history once and rebuilds identical latest se
   assert.ok(deleteLatest < latestCopy && latestCopy < updateSession);
 });
 
-test("serialized writer flushes buffered history inside the transaction before rollback and preserves the original error", async () => {
+test("rollback discards buffered history without flushing non-authoritative rows", async () => {
   const fake = createFakeConnection();
   const writer = createSerializedWriter(fake.connection);
   const expected = new Error("synthetic F2");
@@ -153,17 +153,49 @@ test("serialized writer flushes buffered history inside the transaction before r
     (error) => error === expected
   );
 
-  const appendIndex = fake.events.findIndex(
-    ([name, table]) => name === "appendDataChunk" && table === "history"
+  assert.equal(
+    fake.events.filter(([name, table]) => name === "createAppender" && table === "history").length,
+    0
   );
-  const flushIndex = fake.events.findIndex(
-    ([name, table]) => name === "flush" && table === "history"
+  assert.equal(
+    fake.events.filter(([name, table]) => name === "flush" && table === "history").length,
+    0
   );
-  const rollbackIndex = fake.events.findIndex(
-    ([name, sql]) => name === "run" && sql === "ROLLBACK"
+  assert.ok(fake.events.some(([name, sql]) => name === "run" && sql === "ROLLBACK"));
+});
+
+test("rollback reaches DuckDB even when flushing the discarded appender buffer would fail", async () => {
+  const events = [];
+  const connection = {
+    async createAppender(table) {
+      events.push(["createAppender", table]);
+      throw new Error("synthetic appender failure");
+    },
+    async run(sql) {
+      events.push(["run", sql.trim()]);
+    }
+  };
+  const writer = createSerializedWriter(connection);
+  const expected = new Error("original transaction failure");
+
+  await assert.rejects(
+    writer.enqueue(async (writerConnection) => {
+      await writerConnection.run("BEGIN TRANSACTION");
+      try {
+        await writerConnection.run(HISTORY_INSERT, params(1, "101", 10));
+        throw expected;
+      } catch (error) {
+        await writerConnection.run("ROLLBACK");
+        throw error;
+      }
+    }),
+    (error) => error === expected
   );
-  assert.ok(appendIndex >= 0 && appendIndex < flushIndex);
-  assert.ok(flushIndex >= 0 && flushIndex < rollbackIndex);
+
+  assert.deepEqual(events, [
+    ["run", "BEGIN TRANSACTION"],
+    ["run", "ROLLBACK"]
+  ]);
 });
 
 test("rollback during latest phase discards an incomplete set-wise copy and preserves prior authority", async () => {
