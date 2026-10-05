@@ -125,7 +125,7 @@ jobs:
           require_text 'ACKNOWLEDGEMENT_UNKNOWN' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text 'targetInScannerContext' docs/AI_INVESTIGATION_PACK.md
           require_text 'returned row position' docs/AI_INVESTIGATION_PACK.md
-          require_text 'sharing-safe evidence projection' docs/DATA_CONTRACT.md
+          require_text 'sharing-safe export projection' docs/DATA_CONTRACT.md
           require_text 'redactedForSharing' docs/AI_INVESTIGATION_PACK.md
           require_text 'redactedForSharing' docs/TECHNICAL_SPEC.md
           require_text 'canary secret/session' docs/TEST_STRATEGY.md
