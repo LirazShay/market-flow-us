@@ -97,17 +97,23 @@ Prove independently of the network/DB:
 
 - capture controls are enabled only with exactly one recognized `securityId`/`security_id` column;
 - `Symbol` is never accepted as identity;
+- rows whose recognized identity cell is null/non-string/blank are not manually selectable;
+- `All`, `Top X` and auto selections refuse a chosen range containing an invalid identity rather than silently skipping it;
 - manual checked selection preserves visible result order;
 - `All` preserves full result order;
 - `Top X` uses the first X rows exactly as returned by SQL;
 - duplicate IDs reduce to first occurrence;
 - `Top X` accepts only 1..5000;
+- `All`/auto-All with more than 5000 unique IDs is visibly refused rather than truncated;
 - empty manual selection cannot submit;
 - auto zero-result generation is a no-op;
 - selection state does not leak to a later result generation;
 - active-generation query provenance remains immutable while another draft/query is edited;
-- automatic Off/All/Top-X emits at most one capture action per successful result generation;
-- one auto-capture failure does not poison later generations.
+- automatic Off/All/Top-X attempts at most one capture per successful result generation;
+- at most one automatic capture request is in flight;
+- a generation arriving while the auto slot is busy is visibly skipped and not queued;
+- one auto-capture failure releases the slot and does not poison later generations;
+- Scanner scheduling continues through auto capture failure/backpressure.
 
 ### Demo Buy evaluation model
 
@@ -120,6 +126,7 @@ Prove pure/model behavior:
 - baseline zero -> percentage NULL;
 - future NULL -> percentage NULL;
 - missing future row -> unavailable;
+- missing immutable baseline link -> integrity error, not unavailable;
 - `>0 => UP`, `<0 => DOWN`, `=0 => FLAT`, null => `UNAVAILABLE`;
 - UI formatting never confuses numeric zero with missing;
 - direction remains understandable without color.
@@ -203,21 +210,23 @@ Using real DuckDB and the real service/protocol, prove:
 4. a market cycle queued before capture may become the baseline;
 5. a market cycle queued after capture cannot retroactively change the baseline;
 6. one unresolved selected security rolls back the complete capture;
-7. duplicate IDs preserve first occurrence/rank only;
-8. >5000 unique IDs is rejected safely;
-9. invalid mode/topX/automatic combinations are rejected;
-10. capture IDs are monotonic under serialized execution;
-11. the same security may be captured again in a later capture;
-12. stored provenance remains unchanged after saved query edits;
-13. persistence fault rolls back capture + items together;
-14. capture failure does not block a later valid capture;
-15. market `history`/`latest` are unchanged by Demo Buy writes.
+7. duplicate IDs within bounded raw input preserve first occurrence/rank only;
+8. raw request length >5000 or >5000 unique IDs is rejected safely;
+9. malformed/blank/non-string identity input is rejected;
+10. invalid mode/topX/automatic combinations are rejected;
+11. capture IDs are monotonic under serialized execution;
+12. the same security may be captured again in a later capture;
+13. stored provenance remains unchanged after saved query edits;
+14. persistence fault rolls back capture + items together;
+15. capture failure does not block a later valid capture;
+16. market `history`/`latest` are unchanged by Demo Buy writes.
 
 ## 6. Demo Buy trusted-read/evaluation integration
 
 Seed exact history timelines and prove the Node read model, not browser arithmetic:
 
 - exact baseline join by `(buy_cycle_id, security_id)`;
+- deliberately broken/missing baseline link returns stable Demo Buy integrity error;
 - target = `captured_at_ms + horizon`;
 - first row `>= target` wins;
 - deterministic tie-break is `collected_at_ms ASC, cycle_id ASC`;
@@ -230,7 +239,8 @@ Seed exact history timelines and prove the Node read model, not browser arithmet
 - keyset continuation has no gaps/duplicates across page boundaries;
 - source label/provenance and baseline display fields are read correctly;
 - restart preserves active-day observations;
-- new-day reset clears Demo Buy tables while preserving saved queries.
+- new-day reset clears Demo Buy tables while preserving saved queries;
+- future evaluation never reaches into the next active-day DB after rollover.
 
 The evaluation SQL must receive static preflight before first execution and then run on a tiny deterministic fixture before larger workload measurement.
 
@@ -301,16 +311,19 @@ At least one composed scenario proves:
 2. select specific rows and create a manual capture;
 3. open Demo Buy and see exact selected identities/order and baseline values;
 4. create `Top X` and prove Scanner SQL order is preserved;
-5. enable automatic Top-X and prove later successful Scanner generations create independent captures;
-6. advance Fake Market time/history and prove horizon cells transition from unavailable to evaluated;
-7. prove one `UP`, one `DOWN`, one `FLAT`, and one still `UNAVAILABLE` result;
-8. prove displayed percentage comes from the Node read model and matches deterministic history;
-9. prove baseline/capture times and delayed actual observation time are visible enough to distinguish stale/delayed sampling;
-10. edit/select another query and prove old capture provenance is unchanged;
-11. prove Scanner without exactly one canonical ID column disables Demo Buy capture;
-12. inject capture failure, show it visibly, and prove Scanner scheduling plus later capture still work;
-13. navigate Current ↔ Scanner ↔ Demo Buy ↔ Detail without breaking existing lifecycle behavior;
-14. direction is not conveyed by color alone.
+5. prove invalid recognized-ID rows cannot be silently captured;
+6. prove oversized All/auto-All is refused without truncation;
+7. enable automatic Top-X and prove later successful Scanner generations create independent captures when the auto slot is free;
+8. hold one auto capture in flight, prove an intervening generation is visibly skipped rather than queued, then prove a later generation captures after the slot releases;
+9. advance Fake Market time/history and prove horizon cells transition from unavailable to evaluated;
+10. prove one `UP`, one `DOWN`, one `FLAT`, and one still `UNAVAILABLE` result;
+11. prove displayed percentage comes from the Node read model and matches deterministic history;
+12. prove baseline/capture times and delayed actual observation time are visible enough to distinguish stale/delayed sampling;
+13. edit/select another query and prove old capture provenance is unchanged;
+14. prove Scanner without exactly one canonical ID column disables Demo Buy capture;
+15. inject capture failure, show it visibly, and prove Scanner scheduling plus later capture still work;
+16. navigate Current ↔ Scanner ↔ Demo Buy ↔ Detail while Scanner remains mounted/scheduled and without breaking existing lifecycle behavior;
+17. direction is not conveyed by color alone.
 
 ## 9. Fast CI contract
 
@@ -426,7 +439,7 @@ The 5-minute end-to-end ceiling remains target-machine acceptance only.
 
 ### D. One-trading-day horizon
 
-Active DB performance is modeled for one trading day. Prior data may be archived; saved queries survive new-day operation; Demo Buy state does not cross into the fresh active DB.
+Active DB performance is modeled for one trading day. Prior data may be archived; saved queries survive new-day operation; Demo Buy state and incomplete horizons do not cross into the fresh active DB.
 
 ## 12. Layer 6 — Local Fake Leumi acceptance kit
 
