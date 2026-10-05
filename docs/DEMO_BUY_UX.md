@@ -40,6 +40,8 @@ When auto mode is off the toolbar may omit the indicator or show `Auto Demo Buy:
 
 Auto configuration is Viewer-session state only; relaunch starts with Auto Off.
 
+One shared browser Demo Buy controller owns auto configuration, capture busy/unknown state and AI-export busy state for all top-level surfaces. Scanner and Demo Buy surfaces consume that shared state; they do not maintain conflicting copies.
+
 ## 3. Scanner generation identity in the UI
 
 Demo Buy controls always operate on the exact last successfully rendered Scanner generation, not whatever text currently exists in the editable draft.
@@ -125,6 +127,8 @@ Rules:
 8. auto capture remains enabled after an ordinary confirmed rejection unless the failure is a deterministic generation-ineligibility condition the user must fix;
 9. after `ACKNOWLEDGEMENT_UNKNOWN`, capture is locked for that Viewer instance until explicit relaunch/recovery as defined by the protocol contract.
 
+Turning Auto Off while an automatic capture is already in flight does **not** cancel that request. The in-flight request reaches its normal confirmed/unknown outcome; Off only prevents later generations from starting another automatic capture. Likewise, changing Auto Top X does not mutate an already-frozen in-flight request.
+
 The UI does not append an unbounded log line for every generation. It shows a bounded status summary:
 
 ```text
@@ -135,7 +139,7 @@ busy-skipped generation count since Auto was enabled
 last skip/error reason
 ```
 
-For a deterministic recurring ineligibility such as oversized SQL or missing identity column, Auto remains configured but is visibly `Blocked for current result: <reason>` and no request is sent for that generation.
+For a deterministic recurring ineligibility such as oversized SQL or missing identity column, Auto remains configured but the persistent indicator also shows `Blocked for current result: <reason>` and no request is sent for that generation.
 
 A zero-row successful generation may update a compact `No candidates in latest generation` status but does not increment failure/skip counters.
 
@@ -372,22 +376,31 @@ A successful generation shows:
 
 ```text
 PARTIAL_OUTCOME | COMPLETE_OUTCOME
-local folder path
+relative export folder
 pack file count
 latest included post-observation time when partial
 ```
 
-It also provides concise user instructions:
+The service returns/displays an export path **relative to the Market Flow US project/export root**, for example:
+
+```text
+exports/ai-investigations/<generated-folder>/
+```
+
+The response, prompt and manifest do not embed an absolute host path or Windows user-profile path. This keeps the evidence portable and avoids leaking machine/user identifiers when the prompt/files are shared externally.
+
+The panel provides concise user instructions:
 
 ```text
 1. Copy the AI prompt.
-2. Attach/upload the files from the generated folder to the AI you choose.
-3. Paste/send the prompt with those files.
+2. Open the shown folder under your Market Flow US project folder.
+3. Attach/upload the files from that folder to the AI you choose.
+4. Paste/send the prompt with those files.
 ```
 
 No AI provider is called automatically.
 
-The browser is not required to launch the OS file manager. Phase 1 uses a visible selectable path plus `Copy folder path`, avoiding a new desktop/shell-integration subsystem.
+The browser is not required to launch the OS file manager. Phase 1 uses a visible selectable relative path plus `Copy folder path`, avoiding a new desktop/shell-integration subsystem.
 
 ## 15. Clipboard fallback
 
@@ -450,6 +463,7 @@ Sanitized support diagnostics may include:
 ```text
 current top-level surface
 auto Demo Buy mode
+auto blocked reason category
 auto busy-skipped count
 capture slot busy/not busy
 last capture outcome category
@@ -458,7 +472,7 @@ AI-export slot busy/not busy
 last AI-export outcome category
 ```
 
-Do not include SQL text, Scanner result rows, history rows, pack prompt/evidence content or authenticated provider/session data in support diagnostics.
+Do not include SQL text, Scanner result rows, history rows, absolute filesystem paths, pack prompt/evidence content or authenticated provider/session data in support diagnostics.
 
 ## 20. Accessibility and interaction safety
 
@@ -499,17 +513,18 @@ Focused unit/Chromium proof must include at least:
 3. new Scanner generation resets selection and an in-flight capture keeps its frozen prior snapshot;
 4. Auto enabled after a result waits for the next generation;
 5. zero-row Auto generation is a no-op and does not count as error/skip;
-6. Auto indicator remains visible when navigating away from Scanner and can be turned off from Demo Buy;
-7. busy-auto skip increments bounded status without creating queued capture requests;
-8. capture confirmed/failed/acknowledgement-unknown states are distinct and actionable;
-9. Demo Buy renders grouped capture headers plus sticky identity columns and one compact cell per horizon;
-10. a capture split across page boundaries still has a visible repeated/continued capture header;
-11. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
-12. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
-13. `Refresh observation` updates an older open target in place while newer Auto captures continue to arrive;
-14. provenance-detail failure does not erase outcomes;
-15. AI investigation panel clearly shows context coverage and partial/complete status;
-16. one export slot prevents repeated Generate/Regenerate queueing;
-17. Copy AI Prompt and Copy folder path both have clipboard fallback;
-18. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
-19. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
+6. persistent Auto indicator survives navigation, exposes blocked state and can be turned off from Demo Buy;
+7. turning Auto Off during an in-flight capture prevents future auto captures but does not pretend to cancel the current request;
+8. busy-auto skip increments bounded status without creating queued capture requests;
+9. capture confirmed/failed/acknowledgement-unknown states are distinct and actionable;
+10. Demo Buy renders grouped capture headers plus sticky identity columns and one compact cell per horizon;
+11. a capture split across page boundaries still has a visible repeated/continued capture header;
+12. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
+13. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
+14. `Refresh observation` updates an older open target in place while newer Auto captures continue to arrive;
+15. provenance-detail failure does not erase outcomes;
+16. AI investigation panel clearly shows context coverage and partial/complete status;
+17. one export slot prevents repeated Generate/Regenerate queueing;
+18. Copy AI Prompt and Copy folder path both have clipboard fallback and only a relative export path is exposed;
+19. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
+20. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
