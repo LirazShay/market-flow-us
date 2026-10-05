@@ -228,5 +228,5 @@ export function formatCliDiagnostic(record) {
   if (!record || record.schemaVersion !== 1 || record.status !== "error") {
     throw new TypeError("A DiagnosticRecord error is required.");
   }
-  return `MARKETSCOPE_DIAGNOSTIC ${JSON.stringify(record)}`;
+  return `MARKET_FLOW_US_DIAGNOSTIC ${JSON.stringify(record)}`;
 }
