@@ -32,7 +32,7 @@ chats:
   "6":
     nodes:
       "6.1": { state: done, result: "Market Flow US packaging is canonical across npm identity, browser/live artifacts, default and demo DuckDB paths, browser globals, Windows launchers, user docs and CI labels; stale Fake Market/E2E branding proofs and a lost-ACK test race were corrected, and full Fast/Browser/Planning CI are green on the closure candidate." }
-      "6.2": { state: in_progress, result: null }
+      "6.2": { state: done, result: "Diagnostics and the SHA-bound live gate now use Market Flow US identities and the production U.S. ScreenerHulPaging3 candidate seam; the gate requires at least 20 durably ACKed complete cycles spanning at least 60 seconds, preserves universe revisions and final Current/Security/History/Scanner/ownership/clean-stop proof, keeps reports sanitized, and unit/schema-v3 service/Fast/Browser/Planning verification is green." }
 
   "7":
     nodes:
