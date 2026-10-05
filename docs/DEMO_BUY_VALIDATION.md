@@ -4,64 +4,46 @@
 
 Demo Buy answers one practical question before real order execution exists:
 
-> When a Scanner query selects a security as a candidate now, does the persisted market `Price` actually rise or fall over the following short time windows?
+> When a Scanner query selects a security as a candidate now, does the persisted market `Price` actually rise, fall or remain flat over the following short time windows?
 
-This is an analytical validation feature only. It is not an order simulator, portfolio, P&L engine, fill simulator, sell engine or liquidity model.
+This is analytical validation only. It is not an order simulator, portfolio, P&L engine, fill simulator, sell engine or liquidity model.
 
-Phase 2 may later investigate traded volume/liquidity and whether a theoretical high price was realistically sellable. Phase 1 deliberately excludes that work.
+Phase 2 may later investigate traded volume/liquidity and whether a theoretical higher price was realistically sellable. Phase 1 deliberately excludes that work.
 
 ## 2. Responsibility architecture
 
-Demo Buy has three explicit responsibility layers. No layer may silently absorb another layer's job.
+Demo Buy has three explicit layers:
 
 ```text
 Persistence
-→ Evaluation / Read Model
+→ Evaluation / trusted read model
 → Viewer UX
 ```
 
-### 2.1 Persistence — what happened
+### Persistence — what happened
 
-DuckDB stores only durable facts needed to reconstruct the observation:
+DuckDB stores only durable facts required to reconstruct the virtual-buy observation:
 
-- the Demo Buy capture event;
-- immutable Scanner provenance for that event;
-- ordered selected `security_id` values;
+- one capture event;
+- immutable Scanner provenance;
+- ordered selected canonical IDs;
 - each item's exact `buy_cycle_id` link to authoritative `history`.
 
-The database does **not** store calculated 10s/20s/... results, direction labels, percentages or periodically updated outcome columns.
+It does **not** store calculated horizon prices, percentages, direction labels or periodically updated outcome columns.
 
-### 2.2 Evaluation / Read Model — what happened afterward
+### Evaluation — what happened afterward
 
-The localhost Node service owns the analytical interpretation of persisted facts.
+The localhost Node service owns analytical interpretation. It loads the exact baseline row, finds each future observation, calculates percentage change and derives `UP` / `DOWN` / `FLAT` / `UNAVAILABLE`.
 
-For every requested Demo Buy page it:
+The browser does not query DuckDB directly and does not independently reconstruct horizon semantics.
 
-1. loads the capture/item and exact linked baseline `history` row;
-2. finds the first authoritative same-security `history` observation at or after each fixed target horizon;
-3. calculates future `Price`, actual observation time, elapsed time and percentage change;
-4. classifies the result as `up`, `down`, `flat` or `unavailable`;
-5. returns one bounded browser-ready read model.
+### Viewer — what the user sees
 
-The browser does not run its own DuckDB SQL and does not independently reconstruct horizon semantics.
-
-### 2.3 Viewer UX — what the user sees
-
-The Viewer owns interaction and presentation:
-
-- creating Demo Buys from Scanner results;
-- navigating to a dedicated Demo Buy screen;
-- showing what would have happened after each virtual buy;
-- rendering every horizon as price + percent + explicit direction;
-- refreshing so previously unavailable horizons become available as new `history` arrives;
-- paging through the day's observations;
-- exposing the source query/provenance without forcing the user to inspect database rows.
-
-The primary user experience is therefore not “a DB record exists”; it is “I can immediately see whether the candidate I would have bought went up, down or stayed flat afterward.”
+The Viewer owns capture interaction and presentation. The user sees, per virtual buy, whether the candidate subsequently went up, down, stayed flat or still lacks enough evidence.
 
 ## 3. User model
 
-The user runs any Scanner SQL that returns exactly one recognized canonical identity column:
+The Scanner result must contain exactly one recognized canonical identity column:
 
 ```text
 securityId
@@ -69,67 +51,73 @@ or
 security_id
 ```
 
-The Scanner result order remains entirely controlled by the SQL.
+Result order remains entirely controlled by SQL.
 
-The user may create Demo Buy observations by:
+Capture modes:
 
 ```text
 manual selected rows
 all result rows
 first X result rows (Top X)
+automatic all
+automatic Top X
 ```
 
-Automatic capture is intentionally limited to:
+`Top X` means the first X rows in exact SQL result order. No hidden ranking/sorting is added.
 
-```text
-auto all
-auto Top X
-```
+## 4. Capture bounds and empty results
 
-Manual checkbox selection is inherently interactive and therefore is not an automatic mode.
+One capture contains at most `5000` unique canonical security IDs.
 
-`Top X` always means the first X rows in the exact result order returned by the active Scanner SQL. Demo Buy adds no hidden ranking or sorting.
+Rules:
 
-## 4. Virtual-buy moment and baseline authority
+- duplicate IDs reduce to first occurrence while preserving rank;
+- `Top X` is limited to 1..5000;
+- manual empty selection does not submit a capture;
+- automatic successful result generation with zero selected rows is a no-op;
+- oversized capture input fails validation before persistence.
+
+The 5000 bound matches the currently proven provider request envelope and keeps Viewer→Node requests bounded. It is not a permanent claim about U.S. market size.
+
+## 5. Virtual-buy moment and baseline authority
 
 The browser never sends a buy price.
 
-The browser sends the selected canonical security IDs plus source-query provenance. The localhost Node service performs the authoritative capture through the existing serialized writer boundary.
+It sends selected canonical IDs plus source-query provenance. Node performs authoritative capture through the existing serialized writer.
 
-Inside that serialized operation, Node:
+Inside that serialized operation:
 
 ```text
-receives ordered selected security IDs
-→ removes duplicate IDs while preserving first occurrence/rank
+validate / dedupe IDs preserving first rank
 → BEGIN
-→ records server-side captured_at_ms
-→ resolves every selected security from the current authoritative latest table
-→ requires every selected security to resolve
-→ stores the exact latest.cycle_id for each security as buy_cycle_id
-→ persists the capture and its items
+→ record Node captured_at_ms
+→ resolve every selected security from authoritative latest
+→ require every selected security to resolve
+→ store exact latest.cycle_id as buy_cycle_id
+→ persist capture + items
 → COMMIT
 ```
 
-If any selected security cannot be resolved from authoritative `latest`, the entire capture fails. Partial Demo Buy events are not created.
+Any unresolved security causes complete rollback.
 
-The baseline market row is identified by the existing history primary key:
+Baseline identity:
 
 ```text
 (buy_cycle_id, security_id)
 → history(cycle_id, security_id)
 ```
 
-The baseline `Price`, `Symbol`, names, exchange and collection time are read from that linked `history` row. They are not copied into the Demo Buy item as independent market facts.
+Baseline `Price`, Symbol, names and baseline collection time come from the linked history row and are not copied as separate market facts into Demo Buy items.
 
-The virtual-buy time used for future horizons is `captured_at_ms`, not the historical row's `collected_at_ms`. The linked row is the most recent authoritative market observation available at the serialized virtual-buy moment.
+The horizon clock starts at `captured_at_ms`, not at the possibly earlier baseline `collected_at_ms`. Both timestamps are exposed by the read model so collection delay/staleness is visible.
 
-## 5. Schema version and migration
+## 6. Schema version and migration
 
-Demo Buy is a persistent product capability, so the Market Flow US schema advances from v3 to v4.
+Demo Buy advances Market Flow US from schema v3 to additive schema v4.
 
-Unlike the old MarketScope-to-U.S. semantic break, v3 → v4 is a safe additive migration and must preserve the current active-day market authority and saved Scanner queries.
+v3→v4 preserves all existing U.S. authority and saved Scanner queries.
 
-Migration is transactional:
+Migration:
 
 ```text
 schema v3
@@ -140,11 +128,9 @@ schema v3
 → COMMIT
 ```
 
-Failure rolls back and leaves the original v3 database usable as v3.
+Failure leaves the original v3 database recoverable without a partial v4 contract. Fresh DBs bootstrap directly as v4.
 
-Fresh databases bootstrap directly as v4.
-
-### 5.1 demo_buy_captures
+## 7. `demo_buy_captures`
 
 Logical columns:
 
@@ -160,26 +146,16 @@ top_x BIGINT NULL
 result_row_count BIGINT NOT NULL
 ```
 
-`selection_mode` is one of:
-
-```text
-manual
-all
-top_x
-```
-
 Rules:
 
-- `top_x` is non-null only when `selection_mode = top_x`;
-- `is_automatic = true` is valid only with `all` or `top_x`;
-- `source_query_id` may identify a built-in or saved user query and may be null for an unsaved draft;
-- `source_query_name` is a display label snapshot and may be null/blank-normalized when the active source is an unnamed draft;
-- `source_query_sql` is the exact active SQL snapshot that produced the result generation being evaluated;
-- later edits to a saved query never rewrite old Demo Buy provenance.
+- `selection_mode ∈ {manual, all, top_x}`;
+- `top_x` is non-null only for `top_x`;
+- automatic capture is valid only for `all`/`top_x`;
+- query provenance is immutable for the capture;
+- source SQL is stored once per capture;
+- no baseline market price and no future horizon outcome is stored here.
 
-The SQL snapshot is stored once per capture event, not once per security.
-
-### 5.2 demo_buy_items
+## 8. `demo_buy_items`
 
 Logical columns:
 
@@ -192,19 +168,19 @@ PRIMARY KEY (capture_id, security_id)
 UNIQUE (capture_id, selection_rank)
 ```
 
-`selection_rank` is zero- or one-based consistently in implementation, but the observable contract is that it preserves chosen Scanner order after duplicate IDs are reduced to first occurrence.
+`selection_rank` preserves selected SQL-result order after first-occurrence dedupe.
 
-The stored `(buy_cycle_id, security_id)` must resolve to exactly one `history` row at capture time and on normal active-day reads.
+The stored `(buy_cycle_id, security_id)` must resolve to exactly one `history` row on normal active-day reads.
 
-No future-horizon price, percent or direction columns are persisted.
+No copied baseline/future price, percentage or direction columns are persisted.
 
-## 6. Capture ID allocation and concurrency
+## 9. Capture ordering and concurrency
 
-Demo Buy writes share the same serialized writer used by market authority writes so the capture has a deterministic ordering relative to cycle commits.
+Demo Buy writes share the same serialized writer as market authority writes.
 
-`capture_id` is allocated monotonically inside that serialized write boundary. No new database service or independent writer is introduced.
+`capture_id` is monotonic inside that boundary.
 
-Observable guarantee:
+Observable ordering:
 
 ```text
 cycle commit before capture in writer order
@@ -214,11 +190,11 @@ capture before cycle commit in writer order
 → capture links the prior latest cycle
 ```
 
-This is the precise meaning of “buy now” for Phase 1.
+No second writer/database service is introduced.
 
-## 7. Source-query provenance
+## 10. Source-query provenance
 
-At Scanner activation time, the browser snapshots the active generation's provenance:
+For every successful Scanner result generation, the browser retains immutable generation provenance:
 
 ```text
 queryId: built-in/user ID or null
@@ -226,17 +202,13 @@ name: active display label or null
 sql: exact activated SQL text
 ```
 
-The active-generation provenance remains stable even if the user subsequently edits another draft or selects another saved query while the previous generation is still running.
+Editing/selecting/saving another draft never rewrites the provenance attached to the already-produced result generation or to an old capture.
 
-Each Demo Buy capture stores that active-generation snapshot.
+Demo Buy does not parse strategy meaning from SQL.
 
-Demo Buy does not interpret the SQL or attempt to infer strategy semantics.
+## 11. Automatic capture
 
-## 8. Automatic capture
-
-Automatic capture is Viewer-session UI state, not durable strategy configuration in Phase 1.
-
-Supported states:
+Automatic mode is Viewer-session state:
 
 ```text
 off
@@ -244,42 +216,43 @@ auto all
 auto Top X
 ```
 
-For every successful Scanner result generation while automatic mode is enabled:
+For each successful Scanner generation:
 
-1. use that generation's exact result rows and active-generation provenance;
-2. choose all rows or first X rows;
-3. reduce duplicate canonical IDs to first occurrence;
-4. issue one Demo Buy capture request;
-5. report capture failure visibly without stopping Scanner execution.
+1. use that generation's exact rows and provenance;
+2. choose all or first X;
+3. dedupe canonical IDs;
+4. if none remain, no-op;
+5. issue at most one capture request;
+6. display capture failure without stopping Scanner scheduling.
 
-The same security may be captured again by a later result generation. These are independent observations, not positions.
+Requests are serialized/bounded client-side so repeated ticks cannot create uncontrolled overlap. A failed capture must not poison later automatic captures.
 
-Automatic capture requests are serialized client-side or otherwise bounded so repeated Scanner ticks cannot create uncontrolled overlapping writes. Failure of one capture must not permanently poison later automatic captures.
+The same security may appear in later captures; captures are observations, not positions.
 
-## 9. Future horizons and evaluation engine
+## 12. Future horizons
 
-Phase-1 horizons are fixed product behavior:
+Fixed Phase-1 horizons:
 
 ```text
-10 seconds
-20 seconds
-30 seconds
-45 seconds
-60 seconds
-90 seconds
-120 seconds
-180 seconds (3 minutes)
-300 seconds (5 minutes)
-600 seconds (10 minutes)
+10s
+20s
+30s
+45s
+60s
+90s
+120s
+180s (3m)
+300s (5m)
+600s (10m)
 ```
 
-For one Demo Buy item and horizon `H`:
+For horizon `H`:
 
 ```text
 target_at_ms = captured_at_ms + H
 ```
 
-The Node evaluation layer selects:
+Future observation:
 
 ```text
 same security_id
@@ -288,63 +261,60 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-This is the first authoritative market observation available at or after the requested horizon.
+If no qualifying future history row exists, the horizon remains unavailable/null even if wall-clock time has passed.
 
-If no such row exists, the outcome is unavailable and its market values remain `NULL`.
+The evaluator exposes:
 
-The read model exposes matched `observed_at_ms` and `actual_elapsed_ms` so a collection gap is distinguishable from an observation collected close to the target horizon.
+```text
+observed_at_ms
+actual_elapsed_ms = observed_at_ms - captured_at_ms
+```
 
-### 9.1 Percentage change
+so collection gaps are visible.
 
-For an available future row:
+## 13. Percentage and outcome
 
 ```text
 change_percent = ((future_price / baseline_price) - 1) * 100
 ```
 
-`change_percent` is `NULL` when:
+`change_percent` is null when:
+
+- no future row exists;
+- baseline `Price` is NULL;
+- baseline `Price` is zero;
+- future `Price` is NULL.
+
+Outcome:
 
 ```text
-baseline Price is NULL
-baseline Price is 0
-future Price is NULL
-no future row exists
+UP           change_percent > 0
+DOWN         change_percent < 0
+FLAT         change_percent = 0
+UNAVAILABLE  change_percent is NULL
 ```
 
-### 9.2 Direction
+No fees, spread, slippage, bid/ask fill or sellability assumptions belong to Phase 1.
 
-Node derives one explicit presentation-safe direction per horizon:
+## 14. Read model and pagination
 
-```text
-change_percent > 0  → up
-change_percent < 0  → down
-change_percent = 0  → flat
-change_percent NULL → unavailable
-```
-
-The Viewer must not rely on color alone. It should render a textual/symbolic indication such as `↑`, `↓`, `=` or unavailable together with the price/percentage.
-
-No fees, spread, slippage, bid/ask fill or sellability assumptions are included in Phase 1.
-
-## 10. Read model and pagination
-
-The Demo Buy evaluation/read service returns observations newest capture first while preserving Scanner selection rank inside each capture:
+Ordering:
 
 ```text
 capture_id DESC
 selection_rank ASC
 ```
 
-Use bounded keyset pagination rather than returning an unbounded trading day. The normal page size should reuse the established 500-row Viewer convention unless implementation evidence requires a smaller bound.
+Use bounded keyset pagination, normally 500 items per page unless measurement justifies a smaller bound.
 
-A browser-ready flattened item contains at least:
+Browser-ready item includes at least:
 
 ```text
 captureId
 capturedAtMs
 sourceQueryId
 sourceQueryName
-sourceQuerySql or bounded display form
+sourceQuerySql or bounded/on-demand form
 selectionMode
 isAutomatic
 selectionRank
@@ -356,7 +326,7 @@ baselinePrice
 horizons[]
 ```
 
-Each horizon entry contains at least:
+Each horizon includes:
 
 ```text
 horizonMs
@@ -365,87 +335,64 @@ observedAtMs
 actualElapsedMs
 price
 changePercent
-direction
+outcome
 ```
 
-Unavailable values are represented as `null` plus `direction = unavailable`, never zero or fabricated data.
+Unavailable market values are null with `outcome=UNAVAILABLE`.
 
-The Node read model is the single authority for these calculations; the Viewer formats it but does not re-query or independently calculate market history.
+The Node read model is the single authority for calculations; the Viewer formats it.
 
-## 11. Protocol/service surface
+## 15. Protocol/service surface
 
-Keep protocol version 1 unless implementation proves an incompatibility. Add Viewer-role operations to the existing transport.
+Keep protocol version 1 unless implementation proves incompatibility.
 
-Conceptual operations:
+Add Viewer-role operations:
 
 ```text
 demo.buy.capture
 demo.buy.page
 ```
 
-### demo.buy.capture
+`demo.buy.capture` validates the capture contract and returns capture identity/count only.
 
-Input contains:
+`demo.buy.page` loads persisted facts, evaluates horizons and returns one bounded browser-ready page plus continuation metadata.
 
-```text
-ordered securityIds
-source-query provenance
-selection mode
-isAutomatic
-topX when applicable
-resultRowCount
-```
+Invalid Demo Buy input uses stable errors distinct from generic DB failure. Missing future horizons are normal data.
 
-Node independently validates identity strings, mode consistency, integer bounds and payload shape.
+## 16. Viewer UX
 
-Output returns capture identity and captured item count. It does not echo copied market prices.
-
-### demo.buy.page
-
-Input contains a nullable keyset cursor.
-
-Node loads persistence facts, performs the horizon evaluation, and returns one bounded browser-ready page plus continuation metadata.
-
-Stable protocol errors distinguish invalid Demo Buy input from database/read failures. Normal absence of a future horizon is not an error.
-
-## 12. Viewer UX
-
-Add a third top-level Viewer destination beside Current and Scanner:
+Add a third top-level destination:
 
 ```text
-Demo Buy
+Current | Scanner | Demo Buy
 ```
 
-### 12.1 Scanner capture controls
+### Scanner capture controls
 
-When the current result contains exactly one recognized canonical security ID column, show compact controls for:
+With exactly one canonical identity column:
 
 ```text
 row checkboxes
 Demo Buy selected
 Demo Buy all
-Top X input + Demo Buy Top X
+Top X + Demo Buy Top X
 automatic: off / all / Top X
 ```
 
-When identity is unavailable or ambiguous, capture controls are unavailable with a clear explanation. The product never guesses identity from `Symbol`.
+Without exactly one recognized identity column, controls are unavailable and identity is never guessed from `Symbol`.
 
-A manual capture uses the currently rendered result generation. A Scanner refresh replaces the visible generation; stale checkbox selection does not silently migrate to new rows.
+Selection belongs to the exact visible result generation and resets/rebuilds when a new generation replaces it.
 
-A successful capture gives immediate visible confirmation including how many observations were stored. A failed capture is visibly reported but does not stop Scanner scheduling.
+### Demo Buy outcome screen
 
-### 12.2 Demo Buy screen
-
-This is a real user-facing analysis screen, not a database inspector.
-
-Each row answers:
+Each item answers:
 
 ```text
 If I had bought this Scanner candidate at the captured moment,
 what happened afterward?
 ```
 
-Visible base columns include:
+Base columns:
 
 ```text
 query/source label
@@ -453,95 +400,56 @@ capture time
 automatic/manual marker
 selection rank
 Symbol / display name
+securityId
+baseline collection time
 baseline Price
 ```
 
-Then each fixed horizon is shown as a compact outcome cell containing:
+For every horizon show:
 
 ```text
 Price
 change %
-direction: ↑ up / ↓ down / = flat / unavailable
+UP / DOWN / FLAT / UNAVAILABLE
 ```
 
-Required horizon columns:
+Direction may be styled visually but must also be textual/symbolic and not color-only.
+
+A wide horizontally scrollable table is acceptable for Phase 1.
+
+### Refresh / progressive completion
+
+New captures initially have unavailable future horizons. As normal collection appends `history`, explicit Refresh recomputes them:
 
 ```text
-10s
-20s
-30s
-45s
-60s
-90s
-120s
-3m
-5m
-10m
+UNAVAILABLE
+→ Price + % + outcome
 ```
 
-Example conceptual cell:
+No background job updates Demo Buy rows.
+
+The surface includes loading/empty/error states, Refresh, Load more/keyset pagination and an on-demand provenance/SQL detail affordance.
+
+Scanner scheduling/automatic capture may continue while the Demo Buy surface is visible.
+
+## 17. Daily lifecycle
+
+Demo Buy observations belong to the active trading day's evidence because their baselines reference active-day history.
+
+New day:
 
 ```text
-10s
-101.25
-+0.42% ↑
+optionally archive prior DB
+→ create fresh schema-v4 authority
+→ preserve scanner_saved_queries
+→ start demo_buy_captures/demo_buy_items empty
 ```
 
-or, before enough future evidence exists:
+An archived prior-day DB remains self-contained with its history and Demo Buy references.
 
-```text
-10s
-—
-not available yet
-```
+## 18. Diagnostics and failure behavior
 
-Positive/negative/flat state may receive visual styling, but direction must remain understandable without color.
-
-A wide horizontally scrollable table is acceptable for Phase 1 because direct per-horizon inspection is the primary goal.
-
-### 12.3 Refresh and progressive completion
-
-A newly captured row begins with future horizons unavailable.
-
-As normal market collection appends `history`, refreshing Demo Buy recomputes the page so horizons progressively transition:
-
-```text
-unavailable
-→ observed Price + % + direction
-```
-
-No background job mutates the Demo Buy records.
-
-The screen provides:
-
-- explicit Refresh;
-- Load more / keyset pagination;
-- visible loading/empty/error states;
-- access to the captured query SQL/provenance through a compact details affordance;
-- stable rows while later horizons become available.
-
-Automatic Scanner capture may continue while the user views Demo Buy because Scanner scheduling remains independent of the active top-level Viewer surface.
-
-## 13. Daily lifecycle
-
-Demo Buy observations are active-trading-day analytical state because their baseline links point into active-day `history`.
-
-The new-day operation therefore:
-
-```text
-archives prior DB optionally
-→ creates/resets fresh market authority
-→ preserves scanner_saved_queries
-→ does NOT copy demo_buy_captures or demo_buy_items into the fresh active DB
-```
-
-The archived prior-day DB, when retained, remains self-contained and can preserve its own Demo Buy observations together with the history rows they reference.
-
-## 14. Diagnostics and failure behavior
-
-Demo Buy follows the existing diagnosability model.
-
-Useful stable checkpoints distinguish at least:
+Stable checkpoints include:
 
 ```text
 demo_buy.capture
@@ -550,93 +458,45 @@ demo_buy.read
 demo_buy.viewer
 ```
 
-Failures expose sanitized stable codes/messages. They must not include raw authenticated provider data or private browser/session material.
+Capture failure leaves both Demo Buy tables unchanged. Read/evaluation failure mutates nothing. Scanner execution remains independent of Demo Buy failure.
 
-Capture failure leaves both Demo Buy tables unchanged for that event.
+Diagnostics remain sanitized and never include authenticated session material or raw provider dumps.
 
-Evaluation/read failure does not mutate observations.
+## 19. SQL/performance discipline
 
-Scanner execution remains independent: Demo Buy persistence/evaluation failure must not stop or corrupt the active Scanner generation.
+All new/materially changed Demo Buy SQL requires the repository's mandatory static SQL preflight before first execution.
 
-## 15. SQL/performance discipline
-
-Demo Buy introduces materially new SQL for capture resolution and horizon reads. Before first execution, each new/materially changed query must pass the repository's mandatory 10+ stage static SQL preflight.
-
-The implementation should first prove correctness on a tiny deterministic fixture, then measure a representative active-day page shape.
-
-Do not add:
+Then:
 
 ```text
-background horizon updater
-materialized 10s/20s/... columns
-temporal feature engine
-new database
-new transport
-strategy engine
+tiny deterministic fixture
+→ bounded representative active-day measurement
+→ optimize only on evidence
 ```
 
-unless measured evidence proves direct `history` reads materially insufficient.
+Do not add background horizon updates, materialized horizon columns, temporal feature engines, a new DB/transport or a Strategy Engine unless measured evidence proves direct bounded reads insufficient.
 
-The intended read shape is one bounded Viewer page × ten horizons, not every Demo Buy observation for the whole day at once.
+Use a set-wise bounded read shape rather than N browser calls × ten horizons.
 
-## 16. Verification contract
+## 20. Verification contract
 
 ### Unit
 
-Prove:
-
-- recognized identity-column gating;
-- manual selected/all/Top-X row selection;
-- duplicate-ID first-occurrence reduction;
-- active-generation provenance stability;
-- auto off/all/Top-X behavior and failure recovery;
-- evaluation horizon selection semantics;
-- percentage and `up/down/flat/unavailable` classification edge cases;
-- Viewer outcome formatting and missing-value behavior;
-- Demo Buy screen state and pagination controls.
+Prove identity gating, selected/all/Top-X order, duplicate reduction, 5000 bound, zero-result no-op, immutable provenance, auto modes/recovery, horizon/null/outcome model and Viewer state/formatting.
 
 ### Real DuckDB/service
 
-Prove:
-
-- fresh v4 bootstrap;
-- transactional v3 → v4 migration preserving market authority and saved queries;
-- failed migration rollback;
-- serialized capture links exact `latest.cycle_id` visible at its writer-order point;
-- all-or-nothing capture when one requested security is unavailable;
-- exact baseline join through `(buy_cycle_id, security_id)`;
-- same security may exist in multiple later captures;
-- nearest-at-or-after horizon semantics;
-- percentage and direction calculation;
-- unavailable horizons return null/unavailable;
-- delayed observations expose actual observation/elapsed time;
-- 500-row keyset pagination and deterministic ordering;
-- restart preserves active-day Demo Buy observations;
-- new-day reset clears Demo Buy state while preserving saved queries.
+Prove fresh v4, transactional v3→v4, migration rollback, exact writer-order baseline linkage, all-or-nothing capture, repeated security across captures, future nearest-at-or-after semantics, actual elapsed time, percentage/outcome edge cases, bounded keyset paging, restart persistence and new-day clearing with saved queries preserved.
 
 ### Browser E2E
 
-Using normal runtime + Fake Market + real service/DuckDB, prove at least:
-
-1. activate a Scanner query returning ordered canonical security IDs;
-2. capture selected rows and open the Demo Buy screen;
-3. capture Top X and prove SQL order is respected;
-4. enable automatic Top X and prove later Scanner generations create later independent captures;
-5. initially see future horizons as unavailable;
-6. advance deterministic market cycles, refresh, and see those horizons become price + percentage + up/down/flat outcomes;
-7. prove both positive and negative outcomes from deterministic prices;
-8. prove query editing after capture does not alter old provenance;
-9. prove Scanner without one canonical ID column cannot create Demo Buys;
-10. prove capture/evaluation service error is visible and Scanner can continue;
-11. prove Load more and refresh preserve coherent display state.
+Prove selected capture, Top-X order, automatic Top-X over later generations, unavailable→observed transitions, UP/DOWN/FLAT/UNAVAILABLE display, provenance immutability, identity-column refusal, recoverable capture failure and existing Viewer regressions through normal runtime + Fake Market + real service/DuckDB.
 
 ### Workload
 
-Add bounded correctness/performance coverage for Demo Buy evaluation reads using directly seeded active-day history and a realistic bounded number of capture items. Hosted CI records timing diagnostically and must not run an unnecessarily huge full-day Demo Buy matrix merely to establish correctness.
+Add bounded Demo Buy capture/evaluation correctness and timing over directly seeded active-day history. Do not create an unnecessarily huge full-day Demo Buy matrix.
 
-The final target-machine acceptance bundle is rerun only after this feature is implemented, merged and all deterministic gates are green, so the accepted SHA includes Demo Buy.
-
-## 17. Explicit Phase-1 non-goals
+## 21. Explicit Phase-1 non-goals
 
 Not included:
 
@@ -653,8 +513,8 @@ capital allocation
 trade quantity
 volume-after-buy validation
 liquidity/sellability proof
-strategy aggregate statistics or scorecards
+strategy aggregate statistics/scorecards
 multi-day active analytics
 ```
 
-The next logical Phase 2, only after Phase 1 is complete, is to evaluate whether enough subsequent trading/volume occurred around favorable prices to make the theoretical exit plausible.
+Phase 2 may revisit volume/liquidity/fillability only after Phase 1 is complete and verified.
