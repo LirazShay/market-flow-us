@@ -50,6 +50,14 @@ Canonical product identity is:
 securityId = String(PaperId)
 ```
 
+but only after fail-closed U.S. source-type validation:
+
+- string: accepted only when non-blank;
+- number: accepted only when `Number.isSafeInteger`;
+- object/array/boolean/non-safe numeric identities: rejected.
+
+Browser acquisition and Node universe authority independently enforce that same boundary. Generic `String(object)` canonicalization is not permitted on the U.S. release path.
+
 `Symbol`, provider row order, names and `PaperIdYatab` are never primary identity.
 
 ## 4. Provider adapter boundary
@@ -63,7 +71,7 @@ Provider responsibilities:
 - build same-origin screener URL;
 - fetch;
 - parse;
-- validate exact completeness/identity;
+- validate exact completeness and the strict `PaperId` identity boundary;
 - shape one-segment cycle;
 - expose canonical membership from the same response;
 - attach safe source metadata.
@@ -467,9 +475,42 @@ Preserve:
 
 ## 22. Live verification boundary
 
-Live verification uses the production U.S. adapter/protocol for a bounded sustained run of at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence. Every cycle must validate and receive COMMIT ACK; final Current/History/Scanner authority is then checked before clean stop.
+Live verification keeps two acceptance facts separate in one SHA-bound report.
 
-This proves short-run continuous provider/browser operation and product authority end-to-end but never substitutes for deterministic offline tests, target-machine load/performance acceptance, or claims a long-duration provider SLA.
+### Base authenticated boundary
+
+The production U.S. adapter/protocol runs at least 20 consecutive complete cycles spanning at least 60 seconds at candidate cadence. Every cycle must validate and receive COMMIT ACK; final Current/History/Scanner authority is checked before clean stop. A base `overall: "PASS"` remains valid when provider market values are static.
+
+### Market-open movement evidence
+
+After a base PASS, the gate executes one already-preflighted bounded read-only Scanner query over exactly the committed live cycle-id range. It considers only persisted provider market/freshness fields:
+
+```text
+Price
+ChangePercent
+BidRate
+AskRate
+DailyVolume
+TradeDateTime
+```
+
+Local `collected_at_ms` is not movement evidence.
+
+When no committed provider field changes, the report records:
+
+```text
+movement.status = "PENDING"
+```
+
+When a witness exists, trusted Current and History reads must prove that the changed field is represented in committed authority through the final cycle before:
+
+```text
+movement.status = "PASS"
+```
+
+If a change is detected but reflection cannot be proven, movement is `FAIL`. The movement report contains only bounded witness metadata (security identity/field/status), not raw provider responses or market-value dumps.
+
+This proves short-run continuous provider/browser operation and, when movement is PASS, the final TREE `7.4` moving-provider boundary. It never substitutes for deterministic offline tests, target-machine load/performance acceptance, or claims a long-duration provider SLA.
 
 ## 23. Daily active-DB lifecycle
 
