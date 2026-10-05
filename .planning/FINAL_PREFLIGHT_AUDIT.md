@@ -2,294 +2,134 @@
 
 ## Purpose
 
-This is the last code-level adversarial review before the user starts TREE `7.4` / `FR-0..FR-14` on the target Windows machine.
+Final code-level adversarial review under TREE `7.4`, before target-machine first-run acceptance.
 
-It is **not** a new product capability and does not replace the frozen TREE, contracts, CI, or first-run acceptance plan. It is a preflight defect-discovery work unit under the already-active `7.4` boundary.
+This audit is not a new TREE node and does not replace the frozen contracts or `FR-0..FR-14` flow.
 
 Baseline:
 
 - repository: `LirazShay/market-flow-us`
-- baseline branch: `main`
-- baseline SHA: `80d3bb7028051ced74e87088d8eb0cd716a4ed91`
-- working branch: `audit/final-preflight`
-- TREE leaf remains: `7.4` (`in_progress`)
-- first-run execution resumes at `FR-0` only after this audit closes green
+- baseline `main`: `80d3bb7028051ced74e87088d8eb0cd716a4ed91`
+- audit branch: `audit/final-preflight`
+- draft PR: `#16`
+- TREE node: `7.4` remains `in_progress`
 
 ## Audit rules
 
-For every reviewed production/tooling file or coherent file family:
+For each production/tooling boundary:
 
-1. compare behavior to the routed durable contract, not chat history;
-2. inspect happy path **and** malformed/empty/null/failure/restart/cleanup paths relevant to that boundary;
-3. inspect state ownership, lifecycle, concurrency/non-overlap and resource cleanup where applicable;
-4. inspect boundary validation and fail-closed behavior;
-5. inspect data identity/cardinality/ordering/transaction assumptions;
-6. inspect Windows path/quoting/process/port behavior for user-facing launchers and scripts;
-7. inspect error propagation/diagnostics for swallowed, ambiguous or unsanitized failures;
-8. inspect tests for false confidence: missing assertions, over-mocking, race sensitivity, hidden retry/timeout masking, skipped paths, or tests that prove a different composition than production;
-9. inspect code/docs/launcher/config drift;
-10. prefer the smallest root-cause fix plus regression proof; no speculative subsystem or rewrite.
+1. compare executable behavior to the routed durable contract;
+2. inspect happy, malformed, null/empty, failure, restart and cleanup paths;
+3. inspect state ownership, concurrency, ordering and lifecycle;
+4. fail closed at Browser/Node/protocol/filesystem boundaries;
+5. verify identity, cardinality, transaction and time assumptions;
+6. inspect Windows quoting/process/port/runtime behavior;
+7. keep diagnostics bounded and public-safe;
+8. reject false-confidence tests, over-mocking, hidden retries and path-filter gaps;
+9. reconcile code/docs/launchers/config;
+10. fix root causes with the smallest sufficient change plus deterministic regression proof.
 
-A finding is not closed by code inspection alone when deterministic proof is practical.
+Any new/materially changed SQL must pass the AGENTS 10+ stage static preflight before first execution.
 
 ## Severity
 
-- **BLOCKER** — can corrupt authority, run the wrong product path, break first-run/acceptance, leak protected data, or invalidate release evidence. Must be fixed before `FR-0`.
-- **HIGH** — credible production/acceptance failure or silent wrong result under a realistic path. Fix before `FR-0` unless disproven by stronger evidence.
-- **MEDIUM** — bounded correctness/diagnosability/operability defect with a realistic trigger. Fix when root-cause correction is small and safe; otherwise document exact rationale.
-- **LOW** — non-blocking maintainability/readability concern. Do not churn release code without concrete value.
+- **BLOCKER** — authority corruption, wrong release path, acceptance invalidation or protected-data leakage.
+- **HIGH** — credible production/acceptance failure or silent wrong result.
+- **MEDIUM** — bounded correctness/diagnosability/operability defect with realistic trigger.
+- **LOW** — non-blocking maintainability/readability concern; avoid release churn without concrete value.
 
-## Staged execution
+No BLOCKER/HIGH finding may remain open before closure.
 
-### A0 — Baseline, authority and coverage map
+## Stage status
 
-Status: **done**
+| Stage | Scope | Status |
+|---|---|---|
+| A0 | Baseline / authority / coverage map | done |
+| A1 | Browser provider / Recorder / runtime / diagnostics | done |
+| A2 | Local service / DuckDB / persistence / protocol / recovery | done |
+| A3 | Trusted reads / Viewer / Scanner | done |
+| A4 | Build / setup / Windows launchers | done |
+| A5 | Fake Market / acceptance / workload / new-day lifecycle | done |
+| A6 | Test-suite / CI adversarial review and critical data proofs | done |
+| A7 | Repository-wide cross-cutting defect sweep | done |
+| A8 | Contract / docs / runtime reconciliation | done |
+| A9 | Integrated proof after all fixes | done |
+| A10 | Closure / PR / merge / main-green / external-boundary handoff | pending |
 
-- fresh `main` identified and exact SHA recorded;
-- root/planning status verified: implementation / frozen / TREE `7.4` in progress;
-- TREE `7.4` and first-run mini-project routing confirmed;
-- open PR audit: none;
-- repository families mapped;
-- dedicated audit branch created;
-- no production code changed in A0.
+Detailed findings, fixes, regressions and reviewed non-findings are authoritative in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
-### A1 — Browser acquisition, provider, Recorder, runtime and diagnostics
+## Critical correctness facts already proven
 
-Status: **done**
+The audit now has deterministic proof for the release-critical data path:
 
-Review all production code under:
+- every promoted U.S. provider field round-trips through the real Browser/service/DuckDB path into the correct `history` and `latest` column;
+- `0`, `NULL`, missing and raw-source preservation remain distinct as contracted;
+- staged Scanner anchors `10/20/30/45/60/90/120` seconds independently resolve the latest row at or before each target, including equal-timestamp cycle tie-break, missing-history stop, old fallback and recent-NULL preservation;
+- canonical U.S. identity is fail-closed at both Browser and Node boundaries;
+- successful cycle transaction authority, rollback, producer singleton and restart recovery remain mechanically guarded;
+- Current/Security/History/Scanner read the committed authority rather than browser-owned state;
+- FR-13 market-open evidence is now mechanical: base authenticated `overall=PASS` remains separate from `movement.status=PASS|PENDING|FAIL`; local collection timestamps cannot fabricate movement.
 
-- `browser/provider/`
-- `browser/collector/`
-- `browser/recorder/`
-- `browser/runtime/`
-- `browser/diagnostics/`
-- `browser/live-verification/`
+## SQL preflights created during audit
 
-Cross-check especially:
+- `.planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md` — durable running-producer singleton guard.
+- `.planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md` — bounded live movement witness.
 
-- exact ScreenerHulPaging3 request/response validation;
-- canonical `PaperId` identity and membership revision behavior;
-- same-response universe+cycle coupling;
-- cadence/non-overlap/stop/recovery races;
-- ProducerBridge/WebSocket ACK ownership and stale-message handling;
-- browser/runtime composition actually using the reviewed U.S. path;
-- sanitized diagnostics/live evidence.
+Both were documented before first real DuckDB execution and subsequently passed deterministic regression proof.
 
-### A2 — Local service, DuckDB schema, persistence, protocol and recovery
+## A9 integrated proof
 
-Status: **done**
+Integrated candidate reviewed:
 
-Review all production code under:
+```text
+fc5dda80c9b45a6430d8f61cfe0c2e4e2641d4c6
+```
 
-- `local-service/database/`
-- `local-service/persistence/`
-- `local-service/server/`
+Results on that exact audit head / PR merge composition:
 
-Cross-check especially:
+- Fast CI: green;
+  - unit: `128/128`, zero skipped/todo;
+  - service: `95/95`, zero skipped/todo;
+  - longest layer about `26.5s`, within the documented ~30s recurring broad-suite target;
+- Browser CI: green;
+  - browser build succeeded;
+  - Chromium E2E `22/22`, one worker, no retry/skip masking, about `25.0s`;
+  - local static acceptance entry proof green;
+- Workload CI: green;
+  - isolated persistence/read/Scanner proof green;
+  - `4096`-security width single-cycle sanity green;
+  - bounded end-to-end `64 x 45 = 2880` history rows with exact authority counts green;
+- Planning Docs CI: green.
 
-- schema-v3 bootstrap/reopen/rejection semantics;
-- transaction atomicity and rollback at every phase;
-- history/latest/session/universe authority invariants;
-- serialized ownership/cycle IDs/restart recovery;
-- connection/statement/server cleanup;
-- malformed/out-of-order/duplicate protocol messages;
-- no accidental legacy schema/DB path.
+Final PR diff review found no accidental subsystem/rewrite or unrelated product expansion. Changed files are confined to audit fixes, regression tests, CI routing, launchers and contract/runbook reconciliation.
 
-### A3 — Trusted reads, Viewer and Scanner
+Public-safe review found no committed credentials, cookies, authorization/session material, account identifiers, private browser dumps, private machine paths, DuckDB/data artifacts or generated `dist` outputs. `SENTINEL_*` values in tests are synthetic fixtures used to prove sanitization.
 
-Status: **done**
+## External boundary
 
-Review all production code under:
+Heavy target-machine and authenticated-provider acceptance is **not** fabricated by this audit. The current user is unavailable for those physical/external checks, so after A10 they must remain explicitly:
 
-- `local-service/reads/`
-- `local-service/scanner/`
-- `browser/viewer/`
+```text
+pending_external
+```
 
-Cross-check especially:
+This includes the Windows target-machine acceptance and authenticated closed/static and market-open provider evidence that cannot be truthfully produced from GitHub-hosted execution alone.
 
-- Current/Security/History U.S. projections;
-- paging/cursor binding, deterministic ordering and historical-only lookup;
-- zero vs missing semantics and display-name fallback;
-- Current/Detail refresh/navigation/state restoration;
-- Scanner admission/read-only boundary, saved-query state machine and scheduler;
-- built-in staged SQL behavior and `securityId` navigation;
-- query/result bounds and error isolation.
+Already-green offline/CI evidence remains valid; `pending_external` is not a failure and is not a live PASS.
 
-Any new/materially changed SQL discovered during fixes must re-enter the AGENTS 10+ stage static SQL preflight before execution.
+## A10 closure checklist
 
-### A4 — Build, setup, launchers and Windows process orchestration
+A10 must:
 
-Status: **done**
-
-Review:
-
-- `package.json` / lockfile assumptions;
-- `scripts/build-browser.mjs`;
-- `scripts/build-live-verification.mjs`;
-- `SETUP.cmd`;
-- `RUN_TESTS.cmd`;
-- `START_DEMO.cmd`;
-- `RESET_DEMO.cmd`;
-- `START_MARKET_FLOW_US.cmd`;
-- `PREPARE_LIVE_VERIFICATION.cmd`;
-- any helper invoked by those entry points.
-
-Cross-check:
-
-- Node 24 enforcement;
-- `npm ci` / pinned Chromium assumptions;
-- paths with spaces and shell quoting;
-- exit-code propagation;
-- port/process ownership and clean stop;
-- generated artifact names/locations;
-- provider Origin handling without auth/session capture;
-- production/default/demo DB separation.
-
-### A5 — Fake Market, acceptance, workload and trading-day lifecycle
-
-Status: **done**
-
-Review:
-
-- `tests/fake-market/` reusable support that participates in executable product acceptance;
-- `scripts/demo-fake-market.mjs`;
-- `scripts/run-local-acceptance.mjs`;
-- `scripts/run-workload-profile.mjs`;
-- `scripts/new-trading-day.mjs`;
-- `RUN_LOCAL_ACCEPTANCE.cmd`;
-- `NEW_TRADING_DAY.cmd`;
-- workload support and report generation.
-
-Cross-check:
-
-- static/moving/membership/failure/recovery/restart modes exercise the normal path;
-- target profiles mean what the reports claim;
-- count/integrity assertions cannot PASS on partial work;
-- subprocess failures/timeouts/signals propagate;
-- temporary DB/files/processes clean up;
-- new-day rollover cannot destroy saved queries or active DB accidentally;
-- archive/reset behavior is safe and deterministic;
-- reports remain sanitized and SHA-bound where required.
-
-### A6 — Test-suite and CI adversarial review
-
-Status: **done**
-
-Review all:
-
-- `tests/unit/`
-- `tests/service/`
-- `tests/e2e/`
-- `tests/workload/`
-- Playwright config/support;
-- `.github/workflows/*.yml`.
-
-Look specifically for:
-
-- production code paths with no meaningful regression proof;
-- assertions that only check process success instead of authority/result correctness;
-- mocks/stubs that bypass the production constructor/composition seam;
-- races/flaky sleeps/retries/oversized timeouts;
-- accidental test ordering/shared-state dependence;
-- workflow path filters that can let a code change skip required CI;
-- duplicated or missing gates versus `TEST_STRATEGY`;
-- green-but-materially-slow recurring setup/work.
-
-A6 additionally prioritized release-critical data correctness before lower-value CI noise: every typed U.S. provider projection was round-tripped through the real service/DuckDB authority, and all `10/20/30/45/60/90/120` second staged anchors were proven independently with distinct expected values and after-target decoys.
-
-### A7 — Cross-cutting defect sweep
-
-Repository-wide static review for:
-
-- `TODO` / `FIXME` / temporary migration compatibility;
-- swallowed exceptions / empty catches;
-- fire-and-forget async work;
-- unhandled promise/event listener errors;
-- timers/listeners/sockets/processes not disposed;
-- magic ports/paths/old product names/provider names;
-- hidden hard-coded universe size/cycle assumptions;
-- stale Israel typed fields or authoritative MapHeat/GetSecuritiesData paths;
-- unsafe/raw diagnostics, credentials/session/cookie/account data;
-- path traversal/destructive filesystem behavior;
-- race-prone mutable global/session state;
-- dead code reachable from normal composition.
-
-Every hit must be classified as defect, intentional provenance/test fixture, or harmless dead text with evidence.
-
-### A8 — Contract/documentation/runtime drift review
-
-Mechanically reconcile implementation and entry points against:
-
-- `docs/DATA_CONTRACT.md`
-- `docs/PRODUCT_REQUIREMENTS.md`
-- `docs/PRODUCT_SPEC.md`
-- `docs/TECHNICAL_SPEC.md`
-- `docs/TEST_STRATEGY.md`
-- `docs/SCANNER_SQL_GUIDE.md`
-- `docs/FIRST_RUN_ACCEPTANCE.md`
-- `docs/LOCAL_FAKE_ACCEPTANCE.md`
-- `docs/LIVE_VERIFICATION.md`
-- `START_HERE.md`
-- `README.md`
-
-The question is not whether prose sounds plausible; commands, filenames, defaults, expected outputs and failure routing must match executable reality.
-
-### A9 — Integrated proof after fixes
-
-After all findings are fixed/closed:
-
-- focused regression tests per finding;
-- full Fast suite;
-- browser build + full Browser suite;
-- bounded workload suite;
-- planning/docs verification;
-- inspect recurring wall-clock cost for any regression;
-- inspect final diff for accidental scope expansion;
-- inspect branch for secrets/private material.
-
-No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
-
-### A10 — Closure and return to first-run flow
-
-- finding ledger has no open BLOCKER/HIGH defect;
-- all required verification green;
-- update durable operational truth only where genuinely changed;
-- PR the coherent audit/fix work unit;
-- CI green;
-- review diff;
-- squash merge;
-- verify `main` CI green;
-- verify no unexpected open PR;
-- record the new exact `main` SHA;
-- resume TREE `7.4` at `FR-0`.
-
-## Finding ledger
-
-| ID | Stage | Severity | Area/file | Finding/root cause | Fix | Regression proof | State |
-|---|---|---|---|---|---|---|---|
-| A1-001 | A1 | HIGH | `browser/provider/us-screener.js` | Provider acquisition/JSON had no hard failure bound, so a stalled request could hold `cycleInFlight` and stop/relaunch indefinitely. | Added a 10-second AbortController/Promise.race bound. | `tests/unit/final-preflight-a1.test.mjs` | fixed; A1 CI green |
-| A1-002 | A1 | HIGH | `browser/runtime/producer-bridge.js`, `application.js` | Stop rejection could re-arm heartbeat; partial launch failure could leave a producer session alive. | Stop now fails closed; launch failure cleans Recorder/session authority before remaining in error. | `tests/unit/final-preflight-a1.test.mjs` | fixed; A1 CI green |
-| A1-003 | A1 | MEDIUM | browser runtime/support diagnostics | Reviewed A1 diagnostics still exposed old MarketScope product naming. | Rebranded reviewed producer/support diagnostic strings and producer identity. | existing branding/diagnostic suites | fixed; A1 CI green |
-| A2-001 | A2 | HIGH | `browser/recorder/recorder.js` -> failed-cycle authority | Raw provider/network error text crossed Browser→Node and could be persisted in cycle/session error JSON. | Keep raw error only in Browser local state; send fixed phase-specific safe failure descriptors across authority boundary. | `tests/unit/final-preflight-a2.test.mjs`, `recorder-scheduling.test.mjs` | fixed; A2 CI green |
-| A2-002 | A2 | HIGH | `local-service/database/writer.js` | `ROLLBACK` flushed pending Appender buffers first; an Appender failure could prevent DuckDB from ever receiving rollback and poison the serialized connection. | Rollback discards all pending non-authoritative buffers/copy state and runs directly on the underlying connection. | `tests/unit/database-writer.test.mjs`, existing U.S. F1-F5 rollback suite | fixed; A2 CI green |
-| A3-001 | A3 | HIGH | `local-service/reads/viewer-reads.js` | Status reads could re-emit arbitrary legacy `last_error_json` text persisted before A2 hardening. | Treat persisted failure JSON only as an error-presence signal and return a fixed safe collection descriptor. | `tests/service/final-preflight-a3.test.mjs`, `viewer-reads.test.mjs` | fixed; A3 CI green |
-| A3-002 | A3 | MEDIUM | `browser/viewer/client.js` | Concurrent requests recorded diagnostic operation IDs from the global post-await sequence, so out-of-order completion could mis-correlate diagnostics. | Capture and propagate each request's exact requestId through completion. | `tests/unit/viewer-client.test.mjs` | fixed; A3 CI green |
-| A3-003 | A3 | MEDIUM | `browser/viewer/client.js` | Viewer defaults and connection/error strings still exposed old MarketScope branding. | Rebranded Viewer identity and local-service messages to Market Flow US. | `viewer-client.test.mjs`, branding suites | fixed; A3 CI green |
-| A3-004 | A3 | MEDIUM | `browser/viewer/detail-surface.js` | A live authoritative refresh could supersede an in-flight History `loadMore` while leaving `loadingMore=true`, permanently disabling pagination in that Detail session. | Refresh now releases stale pagination ownership before starting the new generation; stale continuation data remains ignored. | `tests/unit/detail-surface.test.mjs` | fixed; A3 CI green |
-| A4-001 | A4 | HIGH | Windows launchers | Node 24 was enforced only by setup, so later Node-version drift could run the installed product/tests on an unsupported runtime. | Added one shared Node-24 preflight and invoke it before work from every post-setup launcher. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
-| A4-002 | A4 | MEDIUM | `START_DEMO.cmd` | The asynchronous browser opener trusted any HTTP 200 on port 4173, so an older demo could be opened while the new demo failed to bind. | Preflight both demo/service loopback ports before launching the opener. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
-| A5-001 | A5 | HIGH | `scripts/run-local-acceptance.mjs`, `scripts/acceptance-process.mjs` | Acceptance subprocesses had no runner-level hard bound, so a hung child/descendant could leave FR-7/8/9 waiting indefinitely. | Added bounded subprocess execution plus process-tree termination on timeout. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
-| A5-002 | A5 | MEDIUM | `tests/workload/us-workload-support.mjs` | Workload failure reports could retain repo/home/temp paths or URLs, including through a rethrown raw `Error.message`. | Redact machine paths/URLs, cap diagnostics and sanitize the rethrown error before outer report generation. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
-| A5-003 | A5 | HIGH | `scripts/run-workload-profile.mjs` | Authoritative target profiles inherited ambient custom shape/pattern/failure variables, allowing an FR-9 target label to describe a reduced experiment. | Non-custom profiles scrub shape overrides; explicit `custom` remains configurable. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
-| A5-004 | A5 | MEDIUM | `scripts/new-trading-day.mjs` | In no-archive mode, failure after fresh DB installation could return FAIL while leaving fresh authority active and prior authority at a temporary path. | Post-install failure restores the exact prior active DB and removes the failed fresh candidate. | `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
-| A5-005 | A5 | MEDIUM | `scripts/new-trading-day.mjs` CLI | Missing path-option values could be consumed as empty/flag values and resolve to unintended paths. | Require explicit non-flag values and reject empty `archiveDir`. | `tests/unit/final-preflight-a5.test.mjs`, `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
-| A6-001 | A6 | HIGH | `.github/workflows/fast-ci.yml` | Fast CI could skip tests that directly enforce root Windows launchers plus first-run/Scanner docs because those consumed files were absent from path filters. | Added `*.cmd`, `START_HERE.md`, `docs/FIRST_RUN_ACCEPTANCE.md` and `docs/SCANNER_SQL_GUIDE.md` to push/PR filters. | `tests/unit/final-preflight-a6-ci.test.mjs` | fixed; A6 CI green |
-| A6-002 | A6 | MEDIUM | `.github/workflows/browser-ci.yml` | Browser E2E consumes `tests/service/helpers/**`, but changes there could skip Browser CI. | Added the shared helper path to both push/PR filters. | `tests/unit/final-preflight-a6-ci.test.mjs` | fixed; A6 CI green |
-| A6-003 | A6 | HIGH | critical U.S. data/calculation proof | No single systematic proof caught every public typed-field mapping or an accidental swap among all seven staged anchor output columns. | Added full-path all-field sentinels and distinct exact anchor sentinels with after-target decoys through real DuckDB/service/Scanner. | `tests/service/final-preflight-a6-data-integrity.test.mjs` | proof gap closed; A6 CI green |
-
-Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
+1. confirm the detailed ledger contains no open BLOCKER/HIGH finding;
+2. confirm the final branch head has all required CI green;
+3. update durable status truth for the post-audit state;
+4. review PR #16 one final time;
+5. make the PR merge-ready and squash merge it;
+6. verify `main` CI green after merge;
+7. verify open-PR state and record the exact new `main` SHA;
+8. leave TREE `7.4` / target-machine + authenticated-provider acceptance accurately marked `pending_external`, not falsely complete.
 
 ## Current pointer
 
-`A0` through `A6` are complete. Next stage is **A7 — Cross-cutting defect sweep**.
+`A0` through `A9` are complete. Next stage is **A10 — closure, merge and main-green verification**.
