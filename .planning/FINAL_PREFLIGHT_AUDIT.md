@@ -98,6 +98,8 @@ Cross-check especially:
 
 ### A3 — Trusted reads, Viewer and Scanner
 
+Status: **done**
+
 Review all production code under:
 
 - `local-service/reads/`
@@ -263,9 +265,13 @@ No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
 | A1-003 | A1 | MEDIUM | browser runtime/support diagnostics | Reviewed A1 diagnostics still exposed old MarketScope product naming. | Rebranded reviewed producer/support diagnostic strings and producer identity. | existing branding/diagnostic suites | fixed; A1 CI green |
 | A2-001 | A2 | HIGH | `browser/recorder/recorder.js` -> failed-cycle authority | Raw provider/network error text crossed Browser→Node and could be persisted in cycle/session error JSON. | Keep raw error only in Browser local state; send fixed phase-specific safe failure descriptors across authority boundary. | `tests/unit/final-preflight-a2.test.mjs`, `recorder-scheduling.test.mjs` | fixed; A2 CI green |
 | A2-002 | A2 | HIGH | `local-service/database/writer.js` | `ROLLBACK` flushed pending Appender buffers first; an Appender failure could prevent DuckDB from ever receiving rollback and poison the serialized connection. | Rollback discards all pending non-authoritative buffers/copy state and runs directly on the underlying connection. | `tests/unit/database-writer.test.mjs`, existing U.S. F1-F5 rollback suite | fixed; A2 CI green |
+| A3-001 | A3 | HIGH | `local-service/reads/viewer-reads.js` | Status reads could re-emit arbitrary legacy `last_error_json` text persisted before A2 hardening. | Treat persisted failure JSON only as an error-presence signal and return a fixed safe collection descriptor. | `tests/service/final-preflight-a3.test.mjs`, `viewer-reads.test.mjs` | fixed; A3 CI green |
+| A3-002 | A3 | MEDIUM | `browser/viewer/client.js` | Concurrent requests recorded diagnostic operation IDs from the global post-await sequence, so out-of-order completion could mis-correlate diagnostics. | Capture and propagate each request's exact requestId through completion. | `tests/unit/viewer-client.test.mjs` | fixed; A3 CI green |
+| A3-003 | A3 | MEDIUM | `browser/viewer/client.js` | Viewer defaults and connection/error strings still exposed old MarketScope branding. | Rebranded Viewer identity and local-service messages to Market Flow US. | `viewer-client.test.mjs`, branding suites | fixed; A3 CI green |
+| A3-004 | A3 | MEDIUM | `browser/viewer/detail-surface.js` | A live authoritative refresh could supersede an in-flight History `loadMore` while leaving `loadingMore=true`, permanently disabling pagination in that Detail session. | Refresh now releases stale pagination ownership before starting the new generation; stale continuation data remains ignored. | `tests/unit/detail-surface.test.mjs` | fixed; A3 CI green |
 
 Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
 ## Current pointer
 
-`A0`, `A1` and `A2` are complete. Next stage is **A3 — Trusted reads, Viewer and Scanner**.
+`A0`, `A1`, `A2` and `A3` are complete. Next stage is **A4 — Build, setup, launchers and Windows process orchestration**.
