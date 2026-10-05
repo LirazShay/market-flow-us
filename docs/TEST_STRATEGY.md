@@ -40,7 +40,7 @@ Prove:
 - All selects all source rows before dedupe;
 - Top X selects exactly first X source rows before dedupe;
 - duplicate IDs reduce to first chosen occurrence and never backfill beyond X;
-- submitted IDs/ranks are unique and ranks strictly increasing;
+- submitted IDs/positions are unique and positions strictly increasing;
 - Top X accepts only `1..5000` source rows;
 - All above 5000 unique items is refused, never truncated;
 - empty manual selection cannot submit;
@@ -66,7 +66,7 @@ selected unique items <= 5000
 
 Cover exact-limit and limit+1 cases, including multi-byte UTF-8.
 
-Also prove identity column beyond source column 64 is retained, non-identity columns preserve earliest source order, original source indexes/names are kept, omitted row/column metadata is explicit, arrays preserve order, object keys canonicalize deterministically, clipping is marked, and context failure never changes selection/ranks.
+Also prove identity column beyond source column 64 is retained, non-identity columns preserve earliest source order, original source indexes/names are kept, omitted row/column metadata is explicit, arrays preserve order, object keys canonicalize deterministically, clipping is marked, and context failure never changes selection/positions.
 
 ## 5. Unit — Capture controller / Auto UX
 
@@ -99,16 +99,29 @@ Prove target = `capturedAtMs + horizonMs`; future row requires `cycle_id > buy_c
 
 ## 8. Unit — Demo Buy UI model
 
-Prove capture grouping, page-mid-capture header repetition, sticky identity/base context, one compact cell per horizon, Pending presentation for `NO_FUTURE_OBSERVATION`, warning presentation for non-temporal unavailable reasons, color-independent direction, horizon progress, `Refresh latest` reset semantics, `Load more` append semantics, `Refresh observation` in-place replacement, and smallest-surface error preservation.
+Prove capture grouping, page-mid-capture header repetition, sticky identity/base context, neutral `Position`/`Scanner position` wording for `resultRank`, one compact cell per horizon, Pending presentation for `NO_FUTURE_OBSERVATION`, warning presentation for non-temporal unavailable reasons, color-independent direction, horizon progress, `Refresh latest` reset semantics, `Load more` append semantics, `Refresh observation` in-place replacement, and smallest-surface error preservation.
 
 ## 9. Unit — AI Investigation model
 
-Prove prediction/outcome separation; prediction-time history requires `cycle_id <= buy_cycle_id` plus the 30-minute window; outcome history requires `cycle_id > buy_cycle_id` plus capture→10-minute window; no post-watermark row leaks backward even with anomalous timestamps; Top-50/rank>50 context behavior; missing expected Top-50 target is integrity error; `COMPLETE_OUTCOME` depends on committed post-watermark evidence reaching the 10-minute boundary rather than wall clock; prompt requests minimal SQL hypothesis, concrete pre-buy evidence, benefit, false-negative cost, overfitting risk and multi-observation validation; no automatic query activation; pack format/manifest/field-guide output is deterministic.
+Prove prediction/outcome separation; prediction-time history requires `cycle_id <= buy_cycle_id` plus the 30-minute window; outcome history requires `cycle_id > buy_cycle_id` plus capture→10-minute window; no post-watermark row leaks backward even with anomalous timestamps; Top-50/position>50 context behavior; missing expected Top-50 target is integrity error; `COMPLETE_OUTCOME` depends on committed post-watermark evidence reaching the 10-minute boundary rather than wall clock; prompt requests minimal SQL hypothesis, concrete pre-buy evidence, benefit, false-negative cost, overfitting risk and multi-observation validation; no automatic query activation; pack format/manifest/field-guide output is deterministic.
 
 Also prove ranking-language discipline with at least two fixtures:
 
 1. an unordered/select-only query where `resultRank=1` must be described only as **returned position 1** and the prompt explicitly refuses to call it best/top-ranked;
 2. a deterministic query with explicit `ORDER BY`/tie-breaks where the prompt may explain why the target occupied that ordered position using only retained prediction-time evidence.
+
+Prove sharing-safe projection rules independently of filesystem publication:
+
+- history/baseline export allowlists authority keys + documented provider market fields + provider `raw_data`;
+- `session_id`, producer/session/config/error/request metadata, `source_metadata_json` and absolute paths are absent;
+- Scanner-context numeric/null/boolean values survive;
+- documented market-text columns survive subject to existing bounded capture clipping;
+- arbitrary other string/array/object values are replaced by structural metadata with `redactedForSharing=true` and no original content;
+- manifest counts preserved/redacted/omitted values without including redacted content;
+- prompt/README/response/diagnostics contain no redacted content;
+- exact user-authored SQL remains verbatim and the pre-share warning is present.
+
+Use canary secret/session-like fixture values and assert those byte sequences do not occur anywhere in the generated shareable semantic model.
 
 ## 10. Real DuckDB — schema v4
 
@@ -139,7 +152,7 @@ Using real `ws` + DuckDB prove:
 1. valid response returns capture ID/time/item count;
 2. no buy-price input exists;
 3. Node rejects duplicate/rank/order/range/mode/topX/bound errors;
-4. Node validates context-to-item rank/identity for captured rank <=50;
+4. Node validates context-to-item position/identity for captured position <=50;
 5. identity-column-beyond-64 context remains valid;
 6. oversized SQL/context fails before commit;
 7. each item links exact latest cycle at writer point;
@@ -183,9 +196,9 @@ Using a temporary export root prove:
 2. SQL/context/baseline come from immutable persisted evidence, never re-running Scanner;
 3. pre/post history obey watermark + time windows;
 4. `OUTCOME.json` reuses trusted evaluator;
-5. Top-50/rank>50 behavior is correct;
+5. Top-50/position>50 behavior is correct;
 6. partial→complete regeneration happens only after qualifying committed evidence reaches boundary;
-7. immutable SQL/context/baseline remain identical across regeneration;
+7. immutable SQL/context/baseline authority remains identical across regeneration;
 8. every required file exists with deterministic contract content;
 9. browser cannot choose output path;
 10. response/manifest path is repository-relative, not absolute machine path;
@@ -194,22 +207,26 @@ Using a temporary export root prove:
 13. successful pack is never overwritten;
 14. export mutates no DB authority;
 15. restart can regenerate semantically equivalent evidence;
-16. diagnostics never dump SQL/history/prompt/evidence;
-17. `FIELD_GUIDE.md` and `PROMPT.md` define `resultRank` as returned row position and do not infer semantic rank without deterministic SQL ordering.
+16. diagnostics never dump SQL/history/prompt/evidence/redacted source values;
+17. `FIELD_GUIDE.md` and `PROMPT.md` define `resultRank` as returned row position and do not infer semantic rank without deterministic SQL ordering;
+18. history/baseline files contain the explicit sharing-safe market projection and no `session_id`, producer/session/config/error/request metadata, `source_metadata_json` or absolute paths;
+19. Scanner context emits arbitrary non-market strings/arrays/objects only as redaction metadata, while numeric/null/boolean and safe market-text values follow contract;
+20. a canary secret/session token placed in operational fields and arbitrary Scanner text is absent byte-for-byte from every generated file, `promptText`, response metadata and diagnostics;
+21. README/UI-facing pack metadata contains the pre-share warning that exact SQL is exported verbatim and generated files should be reviewed before external upload.
 
 Lost export ACK may be safely regenerated after reconnect because no DB authority changes; it creates a new collision-safe pack rather than reusing capture lost-ACK rules.
 
 ## 15. Chromium — Scanner capture UX
 
-Prove accessible capture controls; checkbox never opens Detail; source-row-first Top-X/rank behavior; actionable invalid/oversized refusal; frozen generation during concurrent refresh; Auto starts with next generation only; persistent Auto indicator across Current/Scanner/Demo Buy and Turn off; busy-skip bounded summary; resumable Stop recurring scan with stale-result suppression; distinct committed/rejected/acknowledgement-unknown UI.
+Prove accessible capture controls; checkbox never opens Detail; source-row-first Top-X/position behavior; actionable invalid/oversized refusal; frozen generation during concurrent refresh; Auto starts with next generation only; persistent Auto indicator across Current/Scanner/Demo Buy and Turn off; busy-skip bounded summary; resumable Stop recurring scan with stale-result suppression; distinct committed/rejected/acknowledgement-unknown UI.
 
 ## 16. Chromium — Demo Buy outcome UX
 
-Prove empty guidance, capture-grouped rendering, header continuity across page split, compact ten-horizon cells, sticky identity context, Pending vs warning unavailable presentation, progressive UP/DOWN/FLAT/unavailable transitions, Refresh latest vs Load more, targeted Refresh observation on an item pushed off page one by newer Auto captures, provenance-detail error isolation, and Scanner continued operation while Demo Buy is visible.
+Prove empty guidance, capture-grouped rendering, header continuity across page split, compact ten-horizon cells, sticky identity context, neutral position label, Pending vs warning unavailable presentation, progressive UP/DOWN/FLAT/unavailable transitions, Refresh latest vs Load more, targeted Refresh observation on an item pushed off page one by newer Auto captures, provenance-detail error isolation, and Scanner continued operation while Demo Buy is visible.
 
 ## 17. Chromium — AI Investigation UX
 
-Prove a failed returned-position-1 candidate workflow with both an explicitly ordered Scanner query and an unordered query; for the unordered query UI/prompt must not imply “best/top-ranked” merely from position 1. Also prove context coverage and partial/complete state; one export slot; relative folder path/file count; Copy AI Prompt and Copy folder path clipboard fallbacks; targeted observation refresh before generation; partial regeneration; rank>50 reduced-context pack; export error isolation; safe lost-export-ACK guidance; and absence of automatic AI upload/call/SQL activation.
+Prove a failed returned-position-1 candidate workflow with both an explicitly ordered Scanner query and an unordered query; for the unordered query UI/prompt must not imply “best/top-ranked” merely from position 1. Also prove context coverage and partial/complete state; one export slot; relative folder path/file count; visible pre-share warning for exact SQL/evidence; Copy AI Prompt and Copy folder path clipboard fallbacks; targeted observation refresh before generation; partial regeneration; position>50 reduced-context pack; export error isolation; safe lost-export-ACK guidance; and absence of automatic AI upload/call/SQL activation.
 
 ## 18. Fake Market scenarios
 
@@ -226,16 +243,17 @@ FUTURE_PRICE_UNAVAILABLE
 ordered position-1 candidate later declines
 unordered result position 1
 Top-50 peer differences
-rank>50 target
+position>50 target
 post-capture cycle with anomalously early collected_at_ms
 wall-clock regression diagnostics
+AI-sharing operational/session/string canaries
 ```
 
 Fixtures are synthetic/sanitized.
 
 ## 19. Hosted workload
 
-Hosted CI is correctness-first and bounded. Cover exact counts, restart, Current/History reads, general/staged Scanner, approximately-4k width sanity, 50-item Demo Buy page evaluation, targeted observation read, Scanner+Demo Buy coexistence, one bounded AI export and sanitized reporting.
+Hosted CI is correctness-first and bounded. Cover exact counts, restart, Current/History reads, general/staged Scanner, approximately-4k width sanity, 50-item Demo Buy page evaluation, targeted observation read, Scanner+Demo Buy coexistence, one bounded sharing-safe AI export and sanitized reporting.
 
 No hosted timing becomes a product SLO.
 
@@ -253,7 +271,7 @@ Also run isolated one-day persistence/read/Scanner/Demo Buy/AI probes using dire
 
 ## 21. Local Fake Leumi acceptance
 
-On exact post-feature candidate prove deterministic static/moving/membership/failure/restart behavior, schema-v4 Demo Buy capture/evaluation, progressive + targeted observation refresh, AI pack generation/copy/regeneration, v3/v4→fresh-v4 new-day lifecycle and bounded workload reports through the normal runtime/service/DuckDB.
+On exact post-feature candidate prove deterministic static/moving/membership/failure/restart behavior, schema-v4 Demo Buy capture/evaluation, progressive + targeted observation refresh, AI pack generation/copy/regeneration, sharing-safe no-operational/session-leak export, v3/v4→fresh-v4 new-day lifecycle and bounded workload reports through the normal runtime/service/DuckDB.
 
 ## 22. Authenticated static smoke
 
@@ -272,6 +290,7 @@ plan frozen
 TREE structurally valid
 28 implementation leaves allocated exactly once
 R-US-DEMO-BUY-FINAL recorded
+final external-user review recorded
 Planning Docs CI green
 planning PR reviewed and merged
 main Planning CI green
