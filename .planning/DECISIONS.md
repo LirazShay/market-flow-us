@@ -340,6 +340,8 @@ Development and release cleanup do not wait for market movement or the final hea
 
 The final target-machine leaf remains pending until the user performs the required checks. Overall product completion is not declared before those required acceptance results are PASS.
 
+D-US-025 extends this sequencing rule for the later Demo Buy feature: all Demo Buy implementation and deterministic re-closure must finish before the final target-machine leaf starts.
+
 ## D-US-020 — Recurring automation speed is a first-class engineering requirement
 
 **Status:** resolved
@@ -422,3 +424,63 @@ Performance acceptance therefore uses one-day-bounded synthetic history shapes. 
 Saved-query state is user configuration rather than disposable daily market data and must remain available across the new-day reset/rotation path.
 
 The release should document and prove the smallest safe new-day lifecycle; it does not need an analytics warehouse or long-term multi-day query subsystem.
+
+## D-US-023 — Demo Buy is strategy-validation evidence, not simulated execution
+
+**Status:** resolved
+
+Phase 1 exists only to answer whether Scanner-selected candidates subsequently move up or down in persisted source `Price` over short horizons.
+
+It therefore supports manual selected rows, all rows, Top X in exact Scanner-result order, and optional automatic All/Top-X capture. It does **not** introduce real orders, manual buy-price entry, fills, portfolio state, fees/slippage, sell rules, trade quantity, liquidity proof or strategy scorecards.
+
+The same security may be captured again in a later Scanner generation because each capture is an independent observation, not an open position.
+
+Phase 2 may later evaluate volume/liquidity/sellability evidence, but that work is not allowed to expand Phase 1.
+
+## D-US-024 — Demo Buy uses additive schema v4, exact history linkage and direct future-history reads
+
+**Status:** resolved
+
+Advance the Market Flow US product schema from v3 to v4 with a transactional additive migration that preserves existing active-day market authority and saved Scanner queries.
+
+Persist only two Demo Buy concepts:
+
+```text
+demo_buy_captures   = capture event + immutable Scanner provenance snapshot
+demo_buy_items      = selected ordered security IDs + exact buy_cycle_id linkage
+```
+
+Each item links the precise baseline row through:
+
+```text
+(buy_cycle_id, security_id)
+→ history(cycle_id, security_id)
+```
+
+The capture write uses the existing serialized writer so its ordering relative to market-cycle commits is deterministic. No user-supplied price is accepted.
+
+Future observations are not materialized. For each fixed Phase-1 horizon, read the first same-security `history` row whose `collected_at_ms >= captured_at_ms + horizon`, ordered by `collected_at_ms ASC, cycle_id ASC`. Missing future evidence remains `NULL`; percentage change is computed only from valid non-null prices and a non-zero baseline denominator.
+
+Do not add a background horizon updater, temporal-feature subsystem, second database, second transport or dynamic horizon schema unless measured evidence later proves the direct bounded read model insufficient.
+
+Demo Buy state is active-day analytical state. A new-day reset does not copy Demo Buy rows into the fresh active DB; an optional archived prior-day DB remains self-contained with both the observations and referenced history.
+
+## D-US-025 — Demo Buy development precedes final target-machine acceptance
+
+**Status:** resolved
+
+The user's intended release sequence is now:
+
+```text
+preserve completed U.S. migration evidence
+→ implement Demo Buy backend/schema/read authority
+→ implement Scanner capture + Demo Buy Viewer workflow
+→ rerun deterministic release closure on the new candidate
+→ only then execute final target-machine/authenticated acceptance
+```
+
+The previously unexecuted `7.4` evidence is not discarded; it is deferred because the accepted SHA must include Demo Buy.
+
+Completed nodes `1.1` through `7.3` remain historical valid evidence for the work they proved. A new post-feature release-closure leaf owns all deterministic gates/docs/status/open-PR/main-readiness work that must be refreshed after Demo Buy. `7.4` then depends on that refreshed candidate rather than the older `7.3` SHA.
+
+This is the smallest sequencing change that satisfies the user's preference to finish development before target-machine testing without reopening already-proven migration work.
