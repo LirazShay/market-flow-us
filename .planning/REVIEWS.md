@@ -73,7 +73,7 @@ No real execution/fill/portfolio/liquidity scope was introduced.
 Corrections:
 
 - Schema v4 remains additive and stores only Demo Buy facts/provenance, not derived future outcomes.
-- `result_rank` is original Scanner rank, not a dense selection rank.
+- `result_rank` stores original Scanner returned position, not a dense selection position; later external review further clarified that returned position is not semantic rank by itself.
 - Capture stores immutable query ID/name/SQL, interval, result start/completion/count and bounded original Scanner context.
 - Valid v3→v4 migration is transactional; suspicious partial-v3 Demo structures fail closed; migration failure leaves v3 usable.
 - New Trading Day accepts valid v3 or v4, preserves saved queries only and always installs fresh v4.
@@ -128,7 +128,7 @@ serialized context <= 256 KiB UTF-8
 
 The lower context bound is deliberate daily-storage protection for repeated Auto capture, not merely transport protection.
 
-Node cross-checks selected item rank/identity against retained Top-50 context before commit.
+Node cross-checks selected item returned-position/identity against retained Top-50 context before commit.
 
 ### Export
 
@@ -183,9 +183,9 @@ docs/AI_INVESTIGATION_PACK.md
 Material corrections:
 
 - TREE format was repaired to the double-quoted/inline-list form actually parsed by Planning CI and `verify-handoff.mjs`.
-- Planning CI now requires all Demo Buy/AI contract files and checks schema v4, the five Demo Buy operations, watermark semantics, current protocol bounds, targeted refresh/Auto UX, 39-node/28-leaf structure and the current final-review marker.
-- TEST_STRATEGY now owns explicit proof for every current bound, watermark/timing edge, lost ACK, Auto/Stop behavior, targeted observation refresh, AI export atomicity/path/clipboard behavior and v3/v4 new-day lifecycle.
-- Durable decisions were consolidated through D-US-031 so no older contradictory numeric/authority wording remains current.
+- Planning CI requires all Demo Buy/AI contract files and checks schema v4, the five Demo Buy operations, watermark semantics, current protocol bounds, targeted refresh/Auto UX, 39-node/28-leaf structure and current review markers.
+- TEST_STRATEGY owns explicit proof for every current bound, watermark/timing edge, lost ACK, Auto/Stop behavior, targeted observation refresh, AI export atomicity/path/clipboard behavior and v3/v4 new-day lifecycle.
+- Durable decisions were consolidated so no older contradictory numeric/authority wording remains current.
 - Handoff routes each new leaf to the exact current contracts and forbids implementation before freeze/authorization.
 
 ### Structural S&T result
@@ -236,9 +236,9 @@ No new leaf can be removed without leaving an explicit requirement unowned.
 
 ### Sufficiency / outside-in walkthrough
 
-PASS.
+PASS after the later external-user corrections recorded below.
 
-Fresh-user path is completely owned:
+Fresh-user path is owned:
 
 ```text
 run/activate Scanner
@@ -296,44 +296,103 @@ Chat 17: 7.4
 
 Completed historical nodes remain a contiguous done prefix. During planning reopen `4.3.1` is blocked and later new leaves are pending; no node is in progress.
 
-## R-US-DEMO-BUY-FINAL — Final Demo Buy + AI Investigation Planning Review
+## R-US-DEMO-BUY-FINAL — Five-pass Demo Buy + AI Investigation Planning Review
 
-**Result:** PASS — PLAN READY TO FREEZE; IMPLEMENTATION AUTHORIZATION STILL REQUIRES PLANNING CI/MERGE GATE
+**Result:** PASS AFTER CORRECTIONS; SUBSEQUENT EXTERNAL REVIEW REQUIRED AND RECORDED BELOW
 
-A final fresh pass was performed over product intent, data/schema, protocol/concurrency/failure semantics, UX/operability, S&T necessity/sufficiency/KISS, tests, allocation, handoff and Planning CI.
+The five formal passes closed product intent, data/schema, protocol/concurrency/failure semantics, UX/operability, S&T necessity/sufficiency/KISS, tests, allocation, handoff and Planning CI. They established the 39-node / 28-leaf plan and the core Demo Buy + AI Investigation architecture.
 
-No remaining material planning ambiguity was found after the corrections above.
+The user then explicitly required a separate outside user-from-zero review. That review found two additional material interpretation/sharing defects, so this five-pass PASS is not the final authority by itself.
 
-Current durable invariants are mutually consistent:
+## R-US-DEMO-BUY-EXTERNAL — Final external-user-from-zero adversarial review
 
-```text
-identity                  = validated securityId / security_id
-virtual-buy authority     = serialized capture + buy_cycle_id watermark
-horizon anchor            = captured_at_ms + H
-post-capture row          = cycle_id > buy_cycle_id AND collected_at_ms >= target
-capture dedupe            = browser first occurrence; Node requires unique payload
-capture context           = first 50 rows / <=64 retained cols / identity mandatory / <=256 KiB
-page size                 = 50 items
-progressive single refresh= demo.buy.observation.get
-capture lost ACK          = ACKNOWLEDGEMENT_UNKNOWN, never blind replay
-AI evidence pre/post      = same buy_cycle_id authority watermark
-AI export                 = local/atomic/relative-path/non-mutating
-new day                   = valid v3/v4 source → fresh v4, saved queries only
-```
+**Result:** PASS AFTER TWO MATERIAL CORRECTIONS — READY TO RE-FREEZE; IMPLEMENTATION STILL REQUIRES PR/MAIN GATES
 
-### Freeze decision
-
-PASS.
-
-The plan may be frozen now. However, production implementation remains unauthorized until the planning branch/PR passes required Planning Docs CI and repository merge workflow and root STATUS is deliberately advanced to `phase: implementation` with `implementation_authorized: true`.
-
-If CI is still unavailable, safe repository truth is:
+The complete feature was walked again as if by an external user with no reliance on the earlier review conclusions:
 
 ```text
-plan_state: frozen
-phase: planning
-implementation_authorized: false
-current implementation leaf remains blocked
+Scanner query/result
+→ Selected / All / Top X / Auto capture
+→ virtual-buy authority
+→ progressive outcomes
+→ old-observation targeted refresh
+→ provenance inspection
+→ AI Investigation generation/share workflow
+→ failures/recovery
+→ new-day lifecycle
+→ implementation allocation
+→ deterministic reclosure
+→ final target-machine/provider acceptance
 ```
 
-This is a completed plan waiting on the required verification/merge gate, not permission to code.
+### External defect 1 — returned position was being over-interpreted as semantic rank
+
+A Scanner row at `resultRank=1` is not necessarily “the best candidate”. Without deterministic SQL ordering, it is only the first returned row.
+
+Correction:
+
+- `resultRank` / `result_rank` is now explicitly defined as original 1-based **returned position**;
+- Viewer uses neutral Position/Scanner position wording;
+- AI prompt must inspect exact SQL before using ranking language;
+- unordered/ambiguous SQL must state that position does not prove strategy preference;
+- ordered-vs-unordered regression fixtures protect this distinction;
+- durable decision `D-US-032` owns the rule.
+
+No SQL parser or new subsystem was added.
+
+### External defect 2 — shareable AI pack could have leaked local operational/session fields
+
+The prior wording promised no session data but also described history/context evidence too much like raw local rows. `history` includes `session_id`, and arbitrary Scanner SQL can return operational/string fields. A raw export would therefore violate the sharing promise even though the DB itself was correct.
+
+Correction:
+
+- persisted DB/context remains full local provenance;
+- AI export now derives a separate deterministic **sharing-safe projection** before file creation;
+- target-history/baseline files allowlist authority keys + documented provider market fields + provider `raw_data` and exclude session/producer/config/error/request/source_metadata/path fields;
+- Scanner context preserves structural metadata, identity, numeric/null/boolean and documented market-text values; arbitrary other string/array/object contents are exported only as redaction metadata with `redactedForSharing=true`;
+- redacted contents may not enter files, prompt, README, manifest, response metadata or diagnostics;
+- exact user-authored SQL remains verbatim, with an explicit pre-share warning to review it and never put secrets in Scanner SQL;
+- canary tests require operational/session/arbitrary-string byte sequences to be absent from every shareable artifact/surface;
+- durable decision `D-US-033` owns the boundary.
+
+This is an export projection, not a second DB/sanitization subsystem.
+
+### Re-run necessity / sufficiency / KISS
+
+**PASS.**
+
+The two corrections fit existing leaves `4.4.2`, `4.5.1`, `4.5.2`, `7.5` and `7.4`; no new capability leaf is independently necessary. The existing 39-node / 28-leaf decomposition remains valid, dependencies remain unchanged, and the corrections strengthen existing success evidence rather than creating a new subsystem.
+
+### Final negative-space challenge
+
+No remaining material gap was found in:
+
+```text
+identity
+selection/dedupe
+returned-position semantics
+capture ordering/baseline
+wall-clock anomalies
+horizon calculation
+paging/targeted refresh
+Auto visibility/backpressure/Stop
+lost capture ACK
+migration/new-day
+AI anti-hindsight
+AI sharing safety
+export atomicity/lost ACK
+privacy/diagnostics
+verification/allocation/release sequence
+```
+
+### Final planning truth
+
+```text
+root capability branches: 7
+TREE nodes:              39
+implementation leaves:   28
+new implementation allocation: Chats 10–17
+implementation_authorized: false until planning PR merge + main Planning CI/open-PR verification
+```
+
+The plan may be re-frozen once the updated Planning Docs CI is green. Production code remains unauthorized until PR #17 is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean; only then may repository truth deliberately advance to `phase: implementation`, Chat 10 / TREE `4.3.1`.
