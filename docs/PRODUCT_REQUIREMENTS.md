@@ -20,7 +20,7 @@ continuous validated U.S. market snapshots
 
 The product is a controlled U.S. conversion of the proven MarketScope product. The goal is to preserve the product model that already worked in Israel and change only what the U.S. provider/data contract or an explicitly requested new product capability requires.
 
-Demo Buy exists to test whether a Scanner query is directionally useful before any real order-execution work: when the query selects a security and the user treats that moment as a virtual buy, the product must later show whether observed `Price` rose or fell over short future horizons.
+Demo Buy exists to test whether a Scanner query is directionally useful before any real order-execution work: when the query selects a security and the user treats that moment as a virtual buy, the product must later show whether observed `Price` rose, fell or stayed flat over short future horizons.
 
 ## 2. Primary user outcomes
 
@@ -39,8 +39,8 @@ The user must be able to:
 11. create Demo Buy observations from all Scanner results or the first X ordered results;
 12. optionally enable automatic Demo Buy capture so each successful Scanner result generation captures all results or its first X results without another click;
 13. inspect each captured security on a separate Demo Buy surface using the exact authoritative market row linked as the virtual-buy baseline;
-14. see observed future `Price` and percentage change from that baseline at 10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m and 10m;
-15. see `NULL` for a horizon whose future observation is not yet available rather than a fabricated result;
+14. see observed future `Price`, percentage change and an explicit `UP` / `DOWN` / `FLAT` outcome at 10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m and 10m;
+15. see `UNAVAILABLE`/`NULL` for a horizon whose future observation is not yet available rather than a fabricated result;
 16. understand which Scanner query/draft produced a Demo Buy observation well enough that later query edits do not silently rewrite the meaning of old observations;
 17. understand collection/service health and the last committed authority;
 18. restart the local service without losing committed active-day history or active-day Demo Buy observations;
@@ -108,17 +108,28 @@ capture time
 Symbol / display name
 securityId
 baseline Price from the linked buy history row
-10s Price / change %
-20s Price / change %
-30s Price / change %
-45s Price / change %
-60s Price / change %
-90s Price / change %
-120s Price / change %
-3m Price / change %
-5m Price / change %
-10m Price / change %
+10s Price / change % / outcome
+20s Price / change % / outcome
+30s Price / change % / outcome
+45s Price / change % / outcome
+60s Price / change % / outcome
+90s Price / change % / outcome
+120s Price / change % / outcome
+3m Price / change % / outcome
+5m Price / change % / outcome
+10m Price / change % / outcome
 ```
+
+Outcome values are:
+
+```text
+UP          changePercent > 0
+DOWN        changePercent < 0
+FLAT        changePercent = 0
+UNAVAILABLE no trustworthy percentage exists yet
+```
+
+The UI must not rely on color alone to communicate direction.
 
 The surface is allowed to be horizontally scrollable. Phase 1 prioritizes direct inspectability over dashboards, scores or aggregate strategy analytics.
 
@@ -131,6 +142,8 @@ Percentage change for a horizon is:
 ```
 
 and is `NULL` when the required future observation, baseline `Price`, future `Price`, or valid non-zero denominator is unavailable.
+
+The screen also exposes the capture time and the baseline row's collection time so the user can distinguish the virtual-buy moment from an older latest observation when collection was delayed.
 
 ## 4. U.S. source requirement
 
@@ -231,15 +244,18 @@ A successful Demo Buy capture has these semantics:
 ```text
 Scanner result security IDs
 → choose manual selected rows OR all rows OR first X rows
-→ resolve each chosen security against current authoritative latest at capture commit time
-→ persist a Demo Buy observation linked to that exact history key
+→ reduce duplicate IDs to first occurrence
+→ resolve each chosen security against current authoritative latest at serialized capture time
+→ persist one capture plus observations linked to exact history keys
 ```
 
 The capture does not accept a user-supplied buy price.
 
-For manual capture, the click/command is the virtual-buy moment. For automatic capture, the automatic action triggered by each successful Scanner result generation is the virtual-buy moment.
+For manual capture, the accepted Node capture operation defines the virtual-buy moment. For automatic capture, the accepted Node capture operation triggered by each successful Scanner result generation defines the virtual-buy moment.
 
 Within one capture event, duplicate result rows for the same canonical security are reduced to the first occurrence so the result ranking remains meaningful without inserting duplicate observations for the same security in the same event.
+
+A capture contains at most `5000` unique canonical security IDs. `Top X` must therefore be between `1` and `5000`. A manual action with no selected rows is disabled/rejected; a successful automatic Scanner generation with zero selected rows is a no-op and does not create an empty capture.
 
 If the Scanner result does not expose exactly one recognized canonical security column, Demo Buy capture is unavailable for that result rather than guessing identity from `Symbol` or another field.
 
@@ -265,10 +281,14 @@ The fixed Phase-1 horizons are:
 For each horizon, evaluation uses persisted `history` for the same canonical security and selects the first authoritative observation at or after:
 
 ```text
-baseline collected_at_ms + horizon
+captured_at_ms + horizon
 ```
 
+The baseline `Price` still comes from the immutable linked buy-history row. The horizon clock starts at the Node-authoritative virtual-buy moment, not at the possibly earlier `baseline collected_at_ms`.
+
 No future row means `NULL`. A target whose wall-clock duration has passed but for which no authoritative future history row exists is still `NULL`; elapsed wall time alone is never evidence.
+
+For each matched future row the read model also exposes `observed_at_ms` and `actual_elapsed_ms = observed_at_ms - captured_at_ms`, so delayed collection is visible instead of being silently treated as an exact-timing sample.
 
 Phase 1 is intentionally approximate market-strategy validation. It assumes the source `Price` can be used as the virtual baseline and later comparison value. It does not claim that a real order could have filled at that value.
 
@@ -293,7 +313,9 @@ Preserve MarketScope fail-closed behavior:
 - recovery is explicit;
 - stale sessions are recovered on service restart;
 - failed Demo Buy capture does not partially create a capture event;
-- restart preserves active-day Demo Buy observations together with the active-day market DB.
+- restart preserves active-day Demo Buy observations together with the active-day market DB;
+- Demo Buy read failure never mutates stored observations;
+- Demo Buy capture failure never stops or corrupts Scanner scheduling.
 
 Automatic reconnect/replay is not required.
 
@@ -335,7 +357,7 @@ If staged SQL, Demo Buy reads or persistence are materially too slow for practic
 
 Demo Buy observations are part of the active trading day's analytical evidence.
 
-The normal new-day operation may archive the prior DuckDB with its market history and Demo Buy observations, then create a fresh active-day market/Demo-Buy authority while preserving saved Scanner queries according to the existing new-day contract.
+The normal new-day operation may archive the prior DuckDB with its market history and Demo Buy observations, then create a fresh schema-v4 active-day market/Demo-Buy authority while preserving saved Scanner queries according to the existing new-day contract.
 
 Phase 1 does not create a multi-day strategy warehouse or cross-day aggregate database.
 
@@ -378,7 +400,7 @@ The current product increment is complete only when:
 - Scanner and saved-query behavior remain intact;
 - staged-ranking SQL remains executable and measured;
 - Demo Buy manual/all/Top-X/automatic capture is executable against exact authoritative buy-history rows;
-- Demo Buy displays the fixed Phase-1 future `Price`/percentage horizons with correct `NULL` behavior;
+- Demo Buy displays the fixed Phase-1 future `Price`/percentage/outcome horizons with correct `NULL`/`UNAVAILABLE` behavior;
 - Fake Market, Fast, Browser and representative workload gates are green for the post-feature candidate;
 - target-machine local acceptance and one-day lifecycle evidence are green on that candidate;
 - the SHA-bound authenticated boundary passes for closed/static compatibility;
