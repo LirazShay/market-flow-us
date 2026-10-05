@@ -82,30 +82,17 @@ export function resolveEndToEndProfiles(env = process.env) {
     }];
   }
 
-  return [
-    {
-      name: "ci-correctness",
-      universeSize: 64,
-      cycleCount: 45,
-      cadenceMs: DEFAULT_CADENCE_MS,
-      dataPattern: "moving",
-      failureCycles: [],
-      proveScanner: true,
-      proveRestart: true,
-      targetAuthority: false
-    },
-    {
-      name: "ci-width-4096",
-      universeSize: 4096,
-      cycleCount: 1,
-      cadenceMs: DEFAULT_CADENCE_MS,
-      dataPattern: "moving",
-      failureCycles: [],
-      proveScanner: false,
-      proveRestart: false,
-      targetAuthority: false
-    }
-  ];
+  return [{
+    name: "ci-correctness",
+    universeSize: 64,
+    cycleCount: 45,
+    cadenceMs: DEFAULT_CADENCE_MS,
+    dataPattern: "moving",
+    failureCycles: [],
+    proveScanner: true,
+    proveRestart: true,
+    targetAuthority: false
+  }];
 }
 
 export function resolveIsolatedProfile(env = process.env) {
@@ -128,6 +115,7 @@ export function resolveIsolatedProfile(env = process.env) {
         universeSize
       ),
       persistenceCycles: readPositiveInteger(env, "MARKET_FLOW_US_PERSISTENCE_CYCLES", 10),
+      widthUniverseSize: universeSize,
       targetAuthority: true
     };
   }
@@ -143,6 +131,7 @@ export function resolveIsolatedProfile(env = process.env) {
       cadenceMs,
       persistenceUniverseSize: Math.min(universeSize, 512),
       persistenceCycles: Math.min(cycleCount, 5),
+      widthUniverseSize: universeSize,
       targetAuthority: false
     };
   }
@@ -154,6 +143,7 @@ export function resolveIsolatedProfile(env = process.env) {
     cadenceMs: DEFAULT_CADENCE_MS,
     persistenceUniverseSize: 128,
     persistenceCycles: 3,
+    widthUniverseSize: 4096,
     targetAuthority: false
   };
 }
