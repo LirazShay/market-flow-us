@@ -148,6 +148,8 @@ Cross-check:
 
 ### A5 — Fake Market, acceptance, workload and trading-day lifecycle
 
+Status: **done**
+
 Review:
 
 - `tests/fake-market/` reusable support that participates in executable product acceptance;
@@ -273,9 +275,14 @@ No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
 | A3-004 | A3 | MEDIUM | `browser/viewer/detail-surface.js` | A live authoritative refresh could supersede an in-flight History `loadMore` while leaving `loadingMore=true`, permanently disabling pagination in that Detail session. | Refresh now releases stale pagination ownership before starting the new generation; stale continuation data remains ignored. | `tests/unit/detail-surface.test.mjs` | fixed; A3 CI green |
 | A4-001 | A4 | HIGH | Windows launchers | Node 24 was enforced only by setup, so later Node-version drift could run the installed product/tests on an unsupported runtime. | Added one shared Node-24 preflight and invoke it before work from every post-setup launcher. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
 | A4-002 | A4 | MEDIUM | `START_DEMO.cmd` | The asynchronous browser opener trusted any HTTP 200 on port 4173, so an older demo could be opened while the new demo failed to bind. | Preflight both demo/service loopback ports before launching the opener. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
+| A5-001 | A5 | HIGH | `scripts/run-local-acceptance.mjs`, `scripts/acceptance-process.mjs` | Acceptance subprocesses had no runner-level hard bound, so a hung child/descendant could leave FR-7/8/9 waiting indefinitely. | Added bounded subprocess execution plus process-tree termination on timeout. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
+| A5-002 | A5 | MEDIUM | `tests/workload/us-workload-support.mjs` | Workload failure reports could retain repo/home/temp paths or URLs, including through a rethrown raw `Error.message`. | Redact machine paths/URLs, cap diagnostics and sanitize the rethrown error before outer report generation. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
+| A5-003 | A5 | HIGH | `scripts/run-workload-profile.mjs` | Authoritative target profiles inherited ambient custom shape/pattern/failure variables, allowing an FR-9 target label to describe a reduced experiment. | Non-custom profiles scrub shape overrides; explicit `custom` remains configurable. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
+| A5-004 | A5 | MEDIUM | `scripts/new-trading-day.mjs` | In no-archive mode, failure after fresh DB installation could return FAIL while leaving fresh authority active and prior authority at a temporary path. | Post-install failure restores the exact prior active DB and removes the failed fresh candidate. | `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
+| A5-005 | A5 | MEDIUM | `scripts/new-trading-day.mjs` CLI | Missing path-option values could be consumed as empty/flag values and resolve to unintended paths. | Require explicit non-flag values and reject empty `archiveDir`. | `tests/unit/final-preflight-a5.test.mjs`, `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
 
 Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
 ## Current pointer
 
-`A0` through `A4` are complete. Next stage is **A5 — Fake Market, acceptance, workload and trading-day lifecycle**.
+`A0` through `A5` are complete. Next stage is **A6 — Test-suite and CI adversarial review**.
