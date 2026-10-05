@@ -84,29 +84,112 @@ LIMIT 20;`,
     queryId: "builtin:staged-candidate-ranking",
     source: "builtin",
     name: "Staged candidate ranking",
-    sql: `WITH anchors AS (
+    sql: `WITH stage_offsets(age_ms) AS (
+  VALUES
+    (10000),
+    (20000),
+    (30000),
+    (45000),
+    (60000),
+    (90000),
+    (120000)
+),
+latest_bounds AS (
+  SELECT
+    min(collected_at_ms) AS min_collected_at_ms,
+    max(collected_at_ms) AS max_collected_at_ms
+  FROM latest
+),
+targets AS (
   SELECT
     l.security_id,
     l.collected_at_ms,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 10000) AS price_10s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 20000) AS price_20s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 30000) AS price_30s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 45000) AS price_45s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 60000) AS price_60s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 90000) AS price_90s_ago,
-    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
-      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 120000) AS price_120s_ago
+    o.age_ms,
+    l.collected_at_ms - o.age_ms AS target_at_ms
   FROM latest AS l
-  LEFT JOIN history AS h
-    ON h.security_id = l.security_id
-   AND h.collected_at_ms <= l.collected_at_ms - 10000
-  GROUP BY l.security_id, l.collected_at_ms
+  CROSS JOIN stage_offsets AS o
+),
+recent_history AS (
+  SELECT
+    h.security_id,
+    h.collected_at_ms,
+    h.cycle_id,
+    h.Price
+  FROM history AS h
+  CROSS JOIN latest_bounds AS b
+  WHERE h.collected_at_ms >= b.min_collected_at_ms - 150000
+    AND h.collected_at_ms <= b.max_collected_at_ms - 10000
+  QUALIFY row_number() OVER (
+    PARTITION BY h.security_id, h.collected_at_ms
+    ORDER BY h.cycle_id DESC
+  ) = 1
+),
+recent_matches AS (
+  SELECT
+    t.security_id,
+    t.collected_at_ms,
+    t.age_ms,
+    t.target_at_ms,
+    h.cycle_id AS matched_cycle_id,
+    h.Price AS matched_price
+  FROM targets AS t
+  ASOF LEFT JOIN recent_history AS h
+    ON t.security_id = h.security_id
+   AND t.target_at_ms >= h.collected_at_ms
+),
+fallback_matches AS (
+  SELECT
+    r.security_id,
+    r.collected_at_ms,
+    r.age_ms,
+    f.cycle_id AS matched_cycle_id,
+    f.Price AS matched_price
+  FROM recent_matches AS r
+  LEFT JOIN LATERAL (
+    SELECT
+      h.cycle_id,
+      h.Price
+    FROM history AS h
+    WHERE h.security_id = r.security_id
+      AND h.collected_at_ms <= r.target_at_ms
+    ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
+    LIMIT 1
+  ) AS f ON true
+  WHERE r.matched_cycle_id IS NULL
+),
+resolved_matches AS (
+  SELECT
+    security_id,
+    collected_at_ms,
+    age_ms,
+    matched_cycle_id,
+    matched_price
+  FROM recent_matches
+  WHERE matched_cycle_id IS NOT NULL
+
+  UNION ALL
+
+  SELECT
+    security_id,
+    collected_at_ms,
+    age_ms,
+    matched_cycle_id,
+    matched_price
+  FROM fallback_matches
+),
+anchors AS (
+  SELECT
+    security_id,
+    collected_at_ms,
+    max(CASE WHEN age_ms = 10000 THEN matched_price END) AS price_10s_ago,
+    max(CASE WHEN age_ms = 20000 THEN matched_price END) AS price_20s_ago,
+    max(CASE WHEN age_ms = 30000 THEN matched_price END) AS price_30s_ago,
+    max(CASE WHEN age_ms = 45000 THEN matched_price END) AS price_45s_ago,
+    max(CASE WHEN age_ms = 60000 THEN matched_price END) AS price_60s_ago,
+    max(CASE WHEN age_ms = 90000 THEN matched_price END) AS price_90s_ago,
+    max(CASE WHEN age_ms = 120000 THEN matched_price END) AS price_120s_ago
+  FROM resolved_matches
+  GROUP BY security_id, collected_at_ms
 )
 SELECT
   l.security_id AS securityId,
