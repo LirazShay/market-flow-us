@@ -48,7 +48,7 @@ async function bundle({ minify, candidateCommit }) {
     legalComments: "none",
     sourcemap: false,
     define: {
-      __MARKET_SCOPE_CANDIDATE_COMMIT__: JSON.stringify(candidateCommit)
+      __MARKET_FLOW_US_CANDIDATE_COMMIT__: JSON.stringify(candidateCommit)
     }
   });
 
@@ -75,10 +75,10 @@ export async function buildLiveVerification({
   const bookmarklet = packageBookmarklet(compactRuntime);
   await mkdir(outDir, { recursive: true });
 
-  const runtimePath = path.join(outDir, "market-scope-live-verification.js");
+  const runtimePath = path.join(outDir, "market-flow-us-live-verification.js");
   const bookmarkletPath = path.join(
     outDir,
-    "market-scope-live-verification.bookmarklet.txt"
+    "market-flow-us-live-verification.bookmarklet.txt"
   );
 
   await Promise.all([
@@ -100,6 +100,6 @@ const isDirect = process.argv[1] && path.resolve(process.argv[1]) === fileURLToP
 if (isDirect) {
   const result = await buildLiveVerification();
   process.stdout.write(
-    `Built live-verification gate for ${result.candidateCommit} (${result.bookmarkletBytes} bookmarklet bytes).\n`
+    `Built Market Flow US live-verification gate for ${result.candidateCommit} (${result.bookmarkletBytes} bookmarklet bytes).\n`
   );
 }
