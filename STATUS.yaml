@@ -4,9 +4,9 @@ overall_status: in_progress
 
 current:
   chat: 7
-  node: "6.3"
-  title: "Scalable U.S. workload tooling"
-  status: in_progress
+  node: "7.1"
+  title: "Integrated offline release candidate gate"
+  status: pending
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -30,4 +30,4 @@ execution:
   chats_total: 10
   implementation_leaves_total: 20
   current_chat: 7
-  current_node: "6.3"
+  current_node: "7.1"
