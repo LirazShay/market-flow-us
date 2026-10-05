@@ -55,6 +55,8 @@ Status: **done**
 
 ### A1 — Browser acquisition, provider, Recorder, runtime and diagnostics
 
+Status: **done**
+
 Review all production code under:
 
 - `browser/provider/`
@@ -75,6 +77,8 @@ Cross-check especially:
 - sanitized diagnostics/live evidence.
 
 ### A2 — Local service, DuckDB schema, persistence, protocol and recovery
+
+Status: **done**
 
 Review all production code under:
 
@@ -254,8 +258,14 @@ No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
 
 | ID | Stage | Severity | Area/file | Finding/root cause | Fix | Regression proof | State |
 |---|---|---|---|---|---|---|---|
-| — | — | — | — | No findings recorded yet | — | — | open audit |
+| A1-001 | A1 | HIGH | `browser/provider/us-screener.js` | Provider acquisition/JSON had no hard failure bound, so a stalled request could hold `cycleInFlight` and stop/relaunch indefinitely. | Added a 10-second AbortController/Promise.race bound. | `tests/unit/final-preflight-a1.test.mjs` | fixed; A1 CI green |
+| A1-002 | A1 | HIGH | `browser/runtime/producer-bridge.js`, `application.js` | Stop rejection could re-arm heartbeat; partial launch failure could leave a producer session alive. | Stop now fails closed; launch failure cleans Recorder/session authority before remaining in error. | `tests/unit/final-preflight-a1.test.mjs` | fixed; A1 CI green |
+| A1-003 | A1 | MEDIUM | browser runtime/support diagnostics | Reviewed A1 diagnostics still exposed old MarketScope product naming. | Rebranded reviewed producer/support diagnostic strings and producer identity. | existing branding/diagnostic suites | fixed; A1 CI green |
+| A2-001 | A2 | HIGH | `browser/recorder/recorder.js` -> failed-cycle authority | Raw provider/network error text crossed Browser→Node and could be persisted in cycle/session error JSON. | Keep raw error only in Browser local state; send fixed phase-specific safe failure descriptors across authority boundary. | `tests/unit/final-preflight-a2.test.mjs`, `recorder-scheduling.test.mjs` | fixed; A2 CI green |
+| A2-002 | A2 | HIGH | `local-service/database/writer.js` | `ROLLBACK` flushed pending Appender buffers first; an Appender failure could prevent DuckDB from ever receiving rollback and poison the serialized connection. | Rollback discards all pending non-authoritative buffers/copy state and runs directly on the underlying connection. | `tests/unit/database-writer.test.mjs`, existing U.S. F1-F5 rollback suite | fixed; A2 CI green |
+
+Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
 ## Current pointer
 
-`A0` is complete. Next stage is **A1 — Browser acquisition, provider, Recorder, runtime and diagnostics**.
+`A0`, `A1` and `A2` are complete. Next stage is **A3 — Trusted reads, Viewer and Scanner**.
