@@ -4,7 +4,7 @@
 
 Demo Buy answers one practical question before real order execution exists:
 
-> When a Scanner query selects a security as a candidate now, does the persisted market `Price` actually rise, fall or remain flat over the following short time windows?
+> When a Scanner result selects a security and we virtually buy it when the Demo Buy capture is accepted, what does persisted source `Price` do afterward over the requested short horizons?
 
 This is analytical validation only. It is not an order simulator, portfolio, P&L engine, fill simulator, sell engine or liquidity model.
 
@@ -15,35 +15,64 @@ Phase 2 may later investigate traded volume/liquidity and whether a theoretical 
 Demo Buy has three explicit layers:
 
 ```text
-Persistence
+Persistence facts
 → Evaluation / trusted read model
 → Viewer UX
 ```
 
 ### Persistence — what happened
 
-DuckDB stores only durable facts required to reconstruct the virtual-buy observation:
+DuckDB stores only durable facts required to reconstruct the observation:
 
 - one capture event;
-- immutable Scanner provenance;
-- ordered selected canonical IDs;
+- immutable Scanner-generation provenance;
+- ordered selected canonical IDs with their original Scanner result rank;
 - each item's exact `buy_cycle_id` link to authoritative `history`.
 
-It does **not** store calculated horizon prices, percentages, direction labels or periodically updated outcome columns.
+It does **not** store calculated horizon prices, percentages, outcome labels or periodically updated outcome columns.
 
 ### Evaluation — what happened afterward
 
-The localhost Node service owns analytical interpretation. It loads the exact baseline row, finds each future observation, calculates percentage change and derives `UP` / `DOWN` / `FLAT` / `UNAVAILABLE`.
+The localhost Node service owns analytical interpretation. It loads the exact baseline row, finds each future observation, calculates percentage change and derives `UP` / `DOWN` / `FLAT` / `UNAVAILABLE` plus an explicit unavailable reason.
 
 The browser does not query DuckDB directly and does not independently reconstruct horizon semantics.
 
 ### Viewer — what the user sees
 
-The Viewer owns capture interaction and presentation. The user sees, per virtual buy, whether the candidate subsequently went up, down, stayed flat or still lacks enough evidence.
+The Viewer owns capture interaction and presentation. The user sees, per virtual buy, the source query, original result rank, signal/capture timing and whether the candidate subsequently went up, down, stayed flat or still lacks usable evidence.
 
-## 3. User model
+## 3. Scanner generation provenance
 
-The Scanner result must contain exactly one recognized canonical identity column:
+Every successful Scanner execution already has Node-produced execution timing. The browser freezes one immutable generation snapshot containing:
+
+```text
+queryId: built-in/user ID or null
+name: active display label or null
+sql: exact activated SQL text
+intervalMs: active Scanner interval
+startedAtMs: Scanner result startedAtMs
+completedAtMs: Scanner result completedAtMs
+rowCount
+columns
+rows
+```
+
+Editing/selecting/saving another draft never rewrites the provenance of an already-produced result generation.
+
+`completedAtMs` is the **signal/result-ready time**. `captured_at_ms` is the later **virtual-buy acceptance time**. They are intentionally distinct.
+
+The read model exposes:
+
+```text
+captureLatencyMs = capturedAtMs - sourceResultCompletedAtMs
+baselineAgeMs = capturedAtMs - baselineCollectedAtMs
+```
+
+when the timestamps permit a non-negative local calculation. These are diagnostics for staleness/latency, not broker execution claims.
+
+## 4. Identity and selection semantics
+
+A Scanner result is Demo-Buy-capable only when it contains exactly one recognized identity column named:
 
 ```text
 securityId
@@ -51,7 +80,7 @@ or
 security_id
 ```
 
-Result order remains entirely controlled by SQL.
+Identity is never guessed from `Symbol`.
 
 Capture modes:
 
@@ -63,42 +92,55 @@ automatic all
 automatic Top X
 ```
 
-`Top X` means the first X rows in exact SQL result order. No hidden ranking/sorting is added.
+Selection order is defined before dedupe:
 
-## 4. Capture bounds, invalid identities and empty results
+1. `manual` chooses the checked source rows.
+2. `all` chooses every source row.
+3. `top_x` chooses exactly the first X source rows in Scanner SQL result order.
+4. every chosen row must contain a valid non-blank canonical identity string;
+5. duplicate canonical IDs inside the chosen set reduce to the **first chosen occurrence**;
+6. each remaining item retains its original 1-based Scanner `resultRank`.
+
+Therefore duplicate rows never cause Top X to pull in a later row beyond X. A Top-10 result may legitimately produce fewer than ten Demo Buy items when duplicates existed inside the first ten rows.
+
+For manual selection, original ranks may contain gaps (for example 2, 7, 20). Those gaps are meaningful strategy provenance and are preserved.
+
+## 5. Capture bounds and malformed rows
 
 One capture contains at most `5000` unique canonical security IDs.
 
 Rules:
 
-- duplicate IDs reduce to first occurrence while preserving rank;
-- `Top X` is limited to 1..5000;
+- `Top X` is limited to 1..5000 source rows;
 - manual empty selection does not submit a capture;
-- automatic successful result generation with zero selected rows is a no-op;
-- a recognized identity cell is valid only when it is a non-blank canonical string;
-- manual invalid-identity rows are not selectable;
-- `All`, `Top X` and automatic selections that would include an invalid identity are refused visibly rather than silently skipping the row;
-- `All` / auto-All never silently truncate an oversized result: after first-occurrence dedupe, more than 5000 unique IDs is refused with a clear instruction to use `Top X` or narrower SQL;
-- oversized or malformed capture input fails validation before persistence.
+- automatic successful generation with zero chosen rows is a no-op;
+- manual invalid-identity rows are visibly non-selectable;
+- `All`, `Top X` and automatic selections whose chosen source range contains an invalid identity are refused visibly rather than silently skipping it;
+- `All` / auto-All never silently truncate: if first-occurrence dedupe still produces more than 5000 unique IDs, the action is refused with guidance to use `Top X` or narrower SQL;
+- the browser sends only already-deduped ordered items;
+- Node independently validates the request and **rejects duplicate `securityId` or duplicate `resultRank` values** rather than silently repairing malformed protocol input;
+- every `resultRank` must be a positive safe integer no greater than `sourceResultRowCount`;
+- for `top_x`, every submitted `resultRank` must be `<= topX`.
 
-The 5000 bound matches the currently proven provider request envelope and keeps Viewer→Node requests bounded. It is not a permanent claim about U.S. market size.
+The 5000 bound is a product/transport safety bound aligned with the current provider envelope; it is not a permanent claim about U.S. market size.
 
-## 5. Virtual-buy moment and baseline authority
+## 6. Virtual-buy moment and baseline authority
 
 The browser never sends a buy price.
 
-It sends selected canonical IDs plus source-query provenance. Node performs authoritative capture through the existing serialized writer.
+It sends ordered `{ securityId, resultRank }` items plus immutable Scanner-generation provenance. Node performs authoritative capture through the existing serialized writer.
 
 Inside that serialized operation:
 
 ```text
-validate / dedupe IDs preserving first rank
+validate bounded request
+→ enqueue behind prior writer work
 → BEGIN
-→ record Node captured_at_ms
+→ captured_at_ms = Node clock
 → resolve every selected security from authoritative latest
 → require every selected security to resolve
-→ store exact latest.cycle_id as buy_cycle_id
-→ persist capture + items
+→ allocate capture_id
+→ persist capture + ordered items
 → COMMIT
 ```
 
@@ -113,9 +155,19 @@ Baseline identity:
 
 Baseline `Price`, Symbol, names and baseline collection time come from the linked history row and are not copied as separate market facts into Demo Buy items.
 
-The horizon clock starts at `captured_at_ms`, not at the possibly earlier baseline `collected_at_ms`. Both timestamps are exposed by the read model so collection delay/staleness is visible.
+Writer ordering defines “buy now”:
 
-## 6. Schema version and migration
+```text
+cycle commit before capture in writer order
+→ capture may link that cycle
+
+capture before cycle commit in writer order
+→ capture links the prior latest cycle
+```
+
+The horizon clock starts at `captured_at_ms`, not at Scanner completion time and not at the potentially older baseline `collected_at_ms`.
+
+## 7. Schema version and migration
 
 Demo Buy advances Market Flow US from schema v3 to additive schema v4.
 
@@ -132,9 +184,9 @@ schema v3
 → COMMIT
 ```
 
-Failure leaves the original v3 database recoverable without a partial v4 contract. Fresh DBs bootstrap directly as v4.
+Failure leaves the original v3 database recoverable without a partial accepted v4 contract. Fresh DBs bootstrap directly as v4.
 
-## 7. `demo_buy_captures`
+## 8. `demo_buy_captures`
 
 Logical columns:
 
@@ -144,10 +196,13 @@ captured_at_ms BIGINT NOT NULL
 source_query_id VARCHAR NULL
 source_query_name VARCHAR NULL
 source_query_sql VARCHAR NOT NULL
+source_interval_ms BIGINT NOT NULL
+source_result_started_at_ms BIGINT NOT NULL
+source_result_completed_at_ms BIGINT NOT NULL
+source_result_row_count BIGINT NOT NULL
 selection_mode VARCHAR NOT NULL
 is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
-result_row_count BIGINT NOT NULL
 ```
 
 Rules:
@@ -155,87 +210,92 @@ Rules:
 - `selection_mode ∈ {manual, all, top_x}`;
 - `top_x` is non-null only for `top_x`;
 - automatic capture is valid only for `all`/`top_x`;
-- query provenance is immutable for the capture;
+- `source_interval_ms > 0`;
+- source result times/count and query provenance are immutable snapshots;
 - source SQL is stored once per capture;
 - no baseline market price and no future horizon outcome is stored here.
 
-## 8. `demo_buy_items`
+Basic shape/mode constraints should be enforced in both protocol authority and schema CHECK constraints where DuckDB supports them simply.
+
+## 9. `demo_buy_items`
 
 Logical columns:
 
 ```text
 capture_id BIGINT NOT NULL
-selection_rank BIGINT NOT NULL
+result_rank BIGINT NOT NULL
 security_id VARCHAR NOT NULL
 buy_cycle_id BIGINT NOT NULL
 PRIMARY KEY (capture_id, security_id)
-UNIQUE (capture_id, selection_rank)
+UNIQUE (capture_id, result_rank)
 ```
 
-`selection_rank` preserves selected SQL-result order after first-occurrence dedupe.
+`result_rank` is the original **1-based Scanner result row position**, not a re-numbered dense selection rank.
 
 The stored `(buy_cycle_id, security_id)` must resolve to exactly one `history` row on normal active-day reads. A missing linked baseline row is an integrity failure, not a normal `UNAVAILABLE` horizon.
 
 No copied baseline/future price, percentage or direction columns are persisted.
 
-## 9. Capture ordering and concurrency
+## 10. Capture request contract
 
-Demo Buy writes share the same serialized writer as market authority writes.
-
-`capture_id` is monotonic inside that boundary.
-
-Observable ordering:
+`demo.buy.capture` payload:
 
 ```text
-cycle commit before capture in writer order
-→ capture may link that cycle
-
-capture before cycle commit in writer order
-→ capture links the prior latest cycle
+items: [
+  { securityId: string, resultRank: positive integer }
+]
+sourceQuery:
+  queryId: string | null
+  name: string | null
+  sql: string
+  intervalMs: positive integer
+sourceResult:
+  startedAtMs: non-negative safe integer
+  completedAtMs: non-negative safe integer
+  rowCount: non-negative safe integer
+selectionMode: manual | all | top_x
+isAutomatic: boolean
+topX: integer | null
 ```
 
-No second writer/database service is introduced.
+Node validates exact keys, bounds, unique IDs/ranks, rank range, mode/topX/automatic consistency and provenance shape. It does not accept a price.
 
-## 10. Source-query provenance
-
-For every successful Scanner result generation, the browser retains immutable generation provenance:
+Successful response returns only capture authority facts such as:
 
 ```text
-queryId: built-in/user ID or null
-name: active display label or null
-sql: exact activated SQL text
+captureId
+capturedAtMs
+capturedItemCount
 ```
 
-Editing/selecting/saving another draft never rewrites the provenance attached to the already-produced result generation or to an old capture.
+## 11. Browser capture backpressure and double-submit prevention
 
-Demo Buy does not parse strategy meaning from SQL.
+The Viewer owns one small Demo Buy capture controller with **at most one capture request in flight across manual and automatic capture**.
 
-## 11. Automatic capture and backpressure
-
-Automatic mode is Viewer-session state:
+Behavior:
 
 ```text
-off
-auto all
-auto Top X
+manual action while slot free
+→ disable/refuse further capture actions until response
+→ submit once
+→ release slot on success/failure
+
+auto generation while slot free
+→ submit once
+→ release slot on success/failure
+
+auto generation while slot busy
+→ visibly record that generation as skipped
+→ never queue/replay it
+
+manual action while slot busy
+→ controls remain disabled / visible busy state
+→ no hidden queue and no duplicate submission
 ```
 
-For each successful Scanner generation:
+This avoids accidental double clicks, unbounded Promise queues and contention against the service's per-connection request sequencing while preserving Scanner scheduling.
 
-1. use that generation's exact rows and provenance;
-2. choose all or first X;
-3. validate the selected identity cells;
-4. dedupe canonical IDs;
-5. if none remain, no-op;
-6. if no previous automatic capture is still in flight, issue one capture request;
-7. if the single automatic-capture slot is still busy, skip that generation visibly rather than queueing it indefinitely;
-8. display capture failure without stopping Scanner scheduling.
-
-There is at most one automatic Demo Buy capture request in flight. Phase 1 intentionally does not maintain an unbounded or replayable client queue. A busy-skipped generation is visible to the user/diagnostics and is not silently represented as captured.
-
-A failed capture clears the slot so later generations may capture normally. Scanner scheduling remains independent and continues running.
-
-The same security may appear in later captures; captures are observations, not positions.
+A failed capture releases the slot; Scanner scheduling continues independently.
 
 ## 12. Future horizons
 
@@ -269,51 +329,68 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-If no qualifying future history row exists, the horizon remains unavailable/null even if wall-clock time has passed.
+The evaluator uses the first authoritative row at/after the target even if that row's `Price` is NULL. It does not skip unusable rows to cherry-pick a later price.
+
+If no qualifying future history row exists, the horizon remains unavailable even if wall-clock time has passed.
 
 The evaluator exposes:
 
 ```text
-observed_at_ms
-actual_elapsed_ms = observed_at_ms - captured_at_ms
+observedAtMs
+actualElapsedMs = observedAtMs - capturedAtMs
 ```
 
 so collection gaps are visible.
 
-## 13. Percentage and outcome
+## 13. Percentage, outcome and unavailable reason
 
 ```text
-change_percent = ((future_price / baseline_price) - 1) * 100
+changePercent = ((futurePrice / baselinePrice) - 1) * 100
 ```
-
-`change_percent` is null when:
-
-- no future row exists;
-- baseline `Price` is NULL;
-- baseline `Price` is zero;
-- future `Price` is NULL.
 
 Outcome:
 
 ```text
-UP           change_percent > 0
-DOWN         change_percent < 0
-FLAT         change_percent = 0
-UNAVAILABLE  change_percent is NULL
+UP           changePercent > 0
+DOWN         changePercent < 0
+FLAT         changePercent = 0
+UNAVAILABLE  changePercent is null
 ```
+
+When outcome is `UNAVAILABLE`, the read model also returns exactly one reason:
+
+```text
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+```
+
+Precedence is:
+
+1. no future row → `NO_FUTURE_OBSERVATION`;
+2. baseline Price NULL → `BASELINE_PRICE_UNAVAILABLE`;
+3. baseline Price zero → `BASELINE_PRICE_ZERO`;
+4. matched future Price NULL → `FUTURE_PRICE_UNAVAILABLE`.
+
+A missing baseline **row** is not one of these states; it is a stable integrity/read error because capture-time invariants promise the row exists.
 
 No fees, spread, slippage, bid/ask fill or sellability assumptions belong to Phase 1.
 
-## 14. Read model and pagination
+## 14. Trusted read model and snapshot consistency
 
-Ordering:
+Ordering is:
 
 ```text
 capture_id DESC
-selection_rank ASC
+result_rank ASC
 ```
 
-Use bounded keyset pagination, normally 500 items per page unless measurement justifies a smaller bound.
+`demo.buy.page` uses a fixed Phase-1 page size of **50 items**. A page is intentionally smaller than 500-row History because each Demo Buy item contains ten derived horizons and is materially wider/heavier.
+
+The opaque keyset cursor binds the last `(capture_id, result_rank)` and supports stable continuation while newer automatic captures are inserted. New captures appear only when the user refreshes from the first page; they do not cause gaps or duplicates in an existing continuation walk.
+
+Each page's baseline/horizon evaluation must be produced from one transactionally consistent DuckDB read snapshot. Prefer one set-wise SQL statement/CTE for the bounded page; do not issue ten independent browser requests or independently timed horizon queries.
 
 Browser-ready item includes at least:
 
@@ -322,15 +399,21 @@ captureId
 capturedAtMs
 sourceQueryId
 sourceQueryName
-sourceQuerySql or bounded/on-demand form
+sourceIntervalMs
+sourceResultStartedAtMs
+sourceResultCompletedAtMs
+sourceResultRowCount
 selectionMode
 isAutomatic
-selectionRank
+topX
+resultRank
 securityId
 Symbol
 displayName
 baselineCollectedAtMs
 baselinePrice
+baselineAgeMs
+captureLatencyMs
 horizons[]
 ```
 
@@ -344,32 +427,71 @@ actualElapsedMs
 price
 changePercent
 outcome
+unavailableReason
 ```
 
-Unavailable market values are null with `outcome=UNAVAILABLE`.
+The page response does **not** repeat `sourceQuerySql` in every item.
 
-A missing baseline link is returned as a stable integrity/read error; it is never downgraded to `UNAVAILABLE` because capture-time invariants promise that baseline row exists.
+## 15. Capture provenance detail read
 
-The Node read model is the single authority for calculations; the Viewer formats it.
+Add Viewer-role operation:
 
-## 15. Protocol/service surface
+```text
+demo.buy.capture.get
+```
+
+Payload:
+
+```text
+captureId
+```
+
+It returns immutable capture-level provenance/details once:
+
+```text
+captureId
+capturedAtMs
+sourceQueryId
+sourceQueryName
+sourceQuerySql
+sourceIntervalMs
+sourceResultStartedAtMs
+sourceResultCompletedAtMs
+sourceResultRowCount
+selectionMode
+isAutomatic
+topX
+capturedItemCount
+```
+
+This operation backs the Viewer expand/details affordance and avoids repeating potentially large SQL text in every `demo.buy.page` item.
+
+## 16. Protocol/service surface
 
 Keep protocol version 1 unless implementation proves incompatibility.
 
-Add Viewer-role operations:
+Viewer-role operations are:
 
 ```text
 demo.buy.capture
 demo.buy.page
+demo.buy.capture.get
 ```
 
-`demo.buy.capture` validates the capture contract and returns capture identity/count only.
+Stable errors distinguish at least:
 
-`demo.buy.page` loads persisted facts, evaluates horizons and returns one bounded browser-ready page plus continuation metadata.
+```text
+DEMO_BUY_INVALID
+DEMO_BUY_BUSY (browser-facing busy is normally prevented before transport)
+DEMO_BUY_INTEGRITY
+DB_ERROR
+```
 
-Invalid Demo Buy input uses stable errors distinct from generic DB failure. Missing future horizons are normal data. Missing immutable baseline linkage is an integrity error.
+Exact code names may be normalized with the repository's existing naming style before implementation, but the semantic distinction is mandatory.
 
-## 16. Viewer UX
+Missing future horizons are normal data. Missing immutable baseline linkage is an integrity error.
+
+## 17. Viewer UX
 
 Add a third top-level destination:
 
@@ -389,35 +511,25 @@ Top X + Demo Buy Top X
 automatic: off / all / Top X
 ```
 
-Without exactly one recognized identity column, controls are unavailable and identity is never guessed from `Symbol`.
-
-Rows with invalid canonical identity cells are visibly non-selectable. Any All/Top-X/automatic operation whose chosen range includes such a row is refused rather than silently changing the meaning of the requested selection.
+Without exactly one recognized identity column, controls are unavailable.
 
 Selection belongs to the exact visible result generation and resets/rebuilds when a new generation replaces it.
 
-Oversized All/auto-All is visibly refused; the user can choose `Top X` or narrow the SQL. No hidden truncation occurs.
-
-Successful, failed and busy-skipped automatic captures receive visible feedback without requiring the user to inspect the database.
+The surface visibly reports successful, failed and busy-skipped captures. No manual price input exists.
 
 ### Demo Buy outcome screen
 
-Each item answers:
-
-```text
-If I had bought this Scanner candidate at the captured moment,
-what happened afterward?
-```
-
-Base columns:
+Base columns include:
 
 ```text
 query/source label
 capture time
-automatic/manual marker
-selection rank
+signal/result-completed time or capture latency indicator
+manual/automatic marker
+original result rank
 Symbol / display name
 securityId
-baseline collection time
+baseline collection time / baseline age
 baseline Price
 ```
 
@@ -429,26 +541,17 @@ change %
 UP / DOWN / FLAT / UNAVAILABLE
 ```
 
+For `UNAVAILABLE`, the UI can keep the table compact while exposing the explicit unavailable reason via text/tooltip/details; it must not imply that every unavailable value simply means “wait longer”.
+
 Direction may be styled visually but must also be textual/symbolic and not color-only.
 
 A wide horizontally scrollable table is acceptable for Phase 1.
 
-### Refresh / progressive completion
+The screen includes loading/empty/error states, Refresh, Load more and on-demand capture provenance/SQL details through `demo.buy.capture.get`.
 
-New captures initially have unavailable future horizons. As normal collection appends `history`, explicit Refresh recomputes them:
+The current Viewer architecture keeps Scanner mounted while other top-level surfaces are shown, so Scanner scheduling/automatic capture may continue while Demo Buy is visible. Viewer disposal stops Scanner scheduling as it does today.
 
-```text
-UNAVAILABLE
-→ Price + % + outcome
-```
-
-No background job updates Demo Buy rows.
-
-The surface includes loading/empty/error states, Refresh, Load more/keyset pagination and an on-demand provenance/SQL detail affordance.
-
-The current Viewer architecture keeps the Scanner surface alive while other top-level surfaces are shown, so Scanner scheduling/automatic capture may continue while Demo Buy is visible. Closing/disposal of the Viewer stops the Scanner scheduler as it does today.
-
-## 17. Daily lifecycle
+## 18. Daily lifecycle
 
 Demo Buy observations belong to the active trading day's evidence because their baselines reference active-day history.
 
@@ -463,9 +566,9 @@ optionally archive prior DB
 
 An archived prior-day DB remains self-contained with its history and Demo Buy references.
 
-Horizon evaluation does not bridge into the next active-day database. A late-day capture whose future horizon was never observed before the active day ended remains unavailable in that day's self-contained evidence; Phase 1 does not invent cross-day market observations.
+Horizon evaluation does not bridge into the next active-day database. A late-day capture whose future horizon was never observed before rollover remains unavailable in that day's evidence.
 
-## 18. Diagnostics and failure behavior
+## 19. Diagnostics and failure behavior
 
 Stable checkpoints include:
 
@@ -473,14 +576,15 @@ Stable checkpoints include:
 demo_buy.capture
 demo_buy.evaluate
 demo_buy.read
+demo_buy.provenance_read
 demo_buy.viewer
 ```
 
-Capture failure leaves both Demo Buy tables unchanged. Read/evaluation failure mutates nothing. Scanner execution remains independent of Demo Buy failure or auto-capture backpressure.
+Capture failure leaves both Demo Buy tables unchanged. Read/evaluation failure mutates nothing. Scanner execution remains independent of Demo Buy failure or capture backpressure.
 
-Diagnostics remain sanitized and never include authenticated session material or raw provider dumps.
+Diagnostics remain sanitized and never dump stored SQL, authenticated session material or raw provider dumps.
 
-## 19. SQL/performance discipline
+## 20. SQL/performance discipline
 
 All new/materially changed Demo Buy SQL requires the repository's mandatory static SQL preflight before first execution.
 
@@ -492,29 +596,29 @@ tiny deterministic fixture
 → optimize only on evidence
 ```
 
-Do not add background horizon updates, materialized horizon columns, temporal feature engines, a new DB/transport or a Strategy Engine unless measured evidence proves direct bounded reads insufficient.
+Use set-wise bounded evaluation. Because Viewer requests on one socket are serialized by the existing service, workload/browser proof must verify that a 50-item Demo Buy refresh does not materially starve recurring Scanner use under the intended bounded workload.
 
-Use a set-wise bounded read shape rather than N browser calls × ten horizons.
+Do not add background horizon updates, materialized horizon columns, a temporal feature engine, new DB/transport or Strategy Engine unless measured evidence proves direct bounded reads insufficient.
 
-## 20. Verification contract
+## 21. Verification contract
 
 ### Unit
 
-Prove identity gating, invalid-identity refusal, selected/all/Top-X order, duplicate reduction, no silent truncation, 5000 bound, zero-result no-op, immutable provenance, one-in-flight auto backpressure/recovery, horizon/null/outcome model and Viewer state/formatting.
+Prove identity gating, source-row-first Top-X semantics, original result-rank preservation, invalid-row refusal, browser dedupe + Node duplicate rejection, no silent truncation, immutable generation provenance/timing, one shared in-flight capture slot, manual double-submit prevention, auto busy-skip/recovery, horizon/outcome/reason model and Viewer formatting.
 
 ### Real DuckDB/service
 
-Prove fresh v4, transactional v3→v4, migration rollback, exact writer-order baseline linkage, all-or-nothing capture, repeated security across captures, baseline-link integrity failure, future nearest-at-or-after semantics, actual elapsed time, percentage/outcome edge cases, bounded keyset paging, restart persistence and new-day clearing with saved queries preserved.
+Prove fresh v4, transactional v3→v4, migration rollback, exact writer-order baseline linkage, all-or-nothing capture, provenance persistence, original ranks, repeated security across captures, baseline-link integrity failure, one-snapshot set-wise future evaluation, nearest-at-or-after semantics, unavailable reasons, 50-item cursor paging, continuation stability while newer captures are inserted, on-demand provenance read, restart persistence and new-day clearing with saved queries preserved.
 
 ### Browser E2E
 
-Prove selected capture, Top-X order, oversized-All refusal, invalid-row refusal, automatic Top-X over later generations, busy-auto visible skip/recovery, unavailable→observed transitions, UP/DOWN/FLAT/UNAVAILABLE display, provenance immutability, identity-column refusal, recoverable capture failure and existing Viewer regressions through normal runtime + Fake Market + real service/DuckDB.
+Prove selected capture with non-contiguous original ranks, Top-X-before-dedupe semantics, oversized-All refusal, invalid-row refusal, automatic Top-X across generations, global capture busy state, busy-auto visible skip/recovery, unavailable→observed transitions, UP/DOWN/FLAT/UNAVAILABLE reasons, provenance immutability/details, identity-column refusal, recoverable capture failure and existing Viewer regressions through normal runtime + Fake Market + real service/DuckDB.
 
 ### Workload
 
-Add bounded Demo Buy capture/evaluation correctness and timing over directly seeded active-day history. Do not create an unnecessarily huge full-day Demo Buy matrix.
+Add bounded Demo Buy capture/evaluation correctness and timing over directly seeded active-day history. Include Scanner + Demo Buy refresh coexistence on the existing single Viewer transport. Do not create an unnecessarily huge full-day Demo Buy matrix.
 
-## 21. Explicit Phase-1 non-goals
+## 22. Explicit Phase-1 non-goals
 
 Not included:
 
@@ -533,6 +637,8 @@ volume-after-buy validation
 liquidity/sellability proof
 strategy aggregate statistics/scorecards
 multi-day active analytics
+background horizon materialization
+auto-capture replay queue
 ```
 
 Phase 2 may revisit volume/liquidity/fillability only after Phase 1 is complete and verified.
