@@ -241,7 +241,7 @@ Projection rule:
 
 `PaperId` is represented separately as canonical `security_id`.
 
-## 9. Source semantics that remain intentionally unnormalized
+## 9. Source and local-time semantics that remain intentionally distinct
 
 ### Price
 
@@ -275,13 +275,28 @@ Browser-generated collection time is the authoritative local acquisition timesta
 
 It is independent from `TradeDateTime`.
 
+### Scanner result timing
+
+A successful Scanner result already carries Node-produced local execution times:
+
+```text
+startedAtMs
+completedAtMs
+```
+
+Demo Buy stores those values as immutable **Scanner-generation provenance** together with the active Scanner interval. They describe when the analytical result was produced; they are not provider/exchange timestamps and do not become market authority.
+
+`source_result_completed_at_ms` is the result/signal-ready time used only to explain the delay between a Scanner result and the later virtual-buy acceptance.
+
 ### captured_at_ms
 
-`captured_at_ms` is a Node-generated local timestamp for one accepted Demo Buy capture. It marks the virtual-buy event in local product time.
+`captured_at_ms` is a Node-generated local timestamp assigned inside the serialized Demo Buy writer operation. It marks the virtual-buy event in local product time.
 
 It is not a provider timestamp, exchange timestamp or claim about real order execution.
 
 Demo Buy future-horizon targets are measured from `captured_at_ms`. The baseline market row may have an earlier `collected_at_ms` because it is the latest authoritative observation available when the capture is serialized.
+
+Derived timing diagnostics such as `captureLatencyMs = capturedAtMs - sourceResultCompletedAtMs` and `baselineAgeMs = capturedAtMs - baselineCollectedAtMs` are exposed only when the local timestamps make a non-negative value meaningful; they are not persisted market facts.
 
 ## 10. Validated snapshot/cycle shape
 
@@ -367,7 +382,7 @@ Typed SQL projection may map wrong-type/missing values to SQL NULL, but `raw_dat
 
 UI formatting must never display numeric zero as missing.
 
-For Demo Buy evaluation, absence of a qualifying future history row is also distinct from a future row whose `Price` is SQL NULL. Both produce an unavailable percentage, but trusted reads may preserve enough detail to diagnose which condition occurred.
+For Demo Buy evaluation, absence of a qualifying future history row is also distinct from a future row whose `Price` is SQL NULL. Both produce an unavailable percentage, but the trusted read model preserves that distinction through an explicit unavailable reason.
 
 A missing immutable baseline row is different again: it violates a persisted Demo Buy integrity invariant and must surface as an integrity/read error rather than `UNAVAILABLE`.
 
@@ -400,10 +415,13 @@ captured_at_ms BIGINT NOT NULL
 source_query_id VARCHAR NULL
 source_query_name VARCHAR NULL
 source_query_sql VARCHAR NOT NULL
+source_interval_ms BIGINT NOT NULL
+source_result_started_at_ms BIGINT NOT NULL
+source_result_completed_at_ms BIGINT NOT NULL
+source_result_row_count BIGINT NOT NULL
 selection_mode VARCHAR NOT NULL
 is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
-result_row_count BIGINT NOT NULL
 ```
 
 `selection_mode` is exactly one of:
@@ -414,7 +432,18 @@ all
 top_x
 ```
 
-The query fields are provenance snapshots for the Scanner generation that produced the selected rows. They are not provider data and later query edits do not mutate old captures.
+Rules:
+
+- `capture_id > 0` for committed captures;
+- `captured_at_ms`, source result times and row count are non-negative safe-integer values at the application boundary;
+- `source_interval_ms > 0`;
+- `top_x` is non-null only when `selection_mode = top_x` and is in `1..5000`;
+- `is_automatic = true` is valid only for `all` or `top_x`;
+- query/result timing fields are immutable Scanner-generation provenance, not market authority;
+- source SQL is stored once per capture rather than per item;
+- later query edits never mutate old capture provenance.
+
+The schema should enforce simple shape/mode invariants with CHECK constraints where DuckDB supports them cleanly, while protocol/service validation remains the primary semantic boundary.
 
 ### `demo_buy_items`
 
@@ -422,12 +451,14 @@ Persisted local facts:
 
 ```text
 capture_id BIGINT NOT NULL
-selection_rank BIGINT NOT NULL
+result_rank BIGINT NOT NULL
 security_id VARCHAR NOT NULL
 buy_cycle_id BIGINT NOT NULL
 PRIMARY KEY (capture_id, security_id)
-UNIQUE (capture_id, selection_rank)
+UNIQUE (capture_id, result_rank)
 ```
+
+`result_rank` is the original 1-based Scanner row position in that generation. It is not re-numbered after manual selection or duplicate reduction, so ranks such as `2, 7, 20` remain meaningful provenance.
 
 The authoritative baseline relation is:
 
@@ -436,30 +467,77 @@ The authoritative baseline relation is:
 → history(cycle_id, security_id)
 ```
 
-The Demo Buy item does **not** persist a copied baseline price, Symbol, name, future price, percentage or directional result.
+The Demo Buy item does **not** persist a copied baseline price, Symbol, name, future price, percentage, outcome or unavailable reason. Those values are read/derived from market history.
 
-Those values are read/derived from market history.
+A physical foreign key is not required for Phase 1. The capture transaction resolves the baseline before insertion and trusted reads treat a missing semantic baseline as corruption. Do not add foreign-key/index complexity unless implementation evidence shows a concrete safety/performance benefit.
 
-## 15. Demo Buy capture semantics
+## 15. Schema-v3 → v4 migration integrity
+
+A valid v3 database contains the proven U.S. authority tables plus `scanner_saved_queries` and **no Demo Buy tables**.
+
+Migration contract:
+
+```text
+validate exact v3 prerequisites
+→ reject suspicious partial Demo Buy table state
+→ BEGIN
+→ create demo_buy_captures
+→ create demo_buy_items
+→ update schema_info.schema_version = 4 and product_version
+→ COMMIT
+```
+
+If a DB claims schema v3 while either Demo Buy table already exists, startup fails closed with an unsupported/corrupt-schema error. The implementation must not use `CREATE TABLE IF NOT EXISTS` to normalize a partial migration silently.
+
+Migration failure at any injected phase must leave the original v3 database semantically usable as v3 with its market authority and saved queries intact.
+
+Fresh databases bootstrap directly as v4. Existing valid v4 databases require both Demo Buy tables in addition to the established U.S. tables.
+
+MarketScope v1/v2 remain incompatible and are rejected without mutation.
+
+No new `history` index is required by the schema contract up front. The existing history authority remains unchanged; add an evaluation-oriented index only if representative Demo Buy workload evidence proves the direct bounded read model materially insufficient and a focused replan approves that schema change.
+
+## 16. Demo Buy selection and capture semantics
+
+Selection is defined against one immutable Scanner generation **before** duplicate reduction:
+
+1. `manual` chooses the checked source rows;
+2. `all` chooses every source row;
+3. `top_x` chooses exactly the first X source rows in SQL result order;
+4. every chosen row must contain a valid non-blank canonical identity string;
+5. duplicate canonical IDs reduce to the first chosen occurrence in the browser;
+6. each remaining item retains its original 1-based `result_rank`.
+
+Therefore Top X never backfills from a later row after a duplicate. For example, if duplicate identities occur inside the first ten source rows, Top-10 may persist fewer than ten unique Demo Buy items.
+
+The browser sends already-deduped ordered `{securityId, resultRank}` items. Node independently validates but does **not** silently dedupe malformed protocol input:
+
+- 1..5000 items are required for an actual capture;
+- every `securityId` is canonical/non-blank/bounded;
+- every `resultRank` is positive, unique and within `source_result_row_count`;
+- item ranks are strictly increasing in Scanner result order;
+- every `securityId` is unique in the request;
+- for `top_x`, every rank is `<= top_x`;
+- invalid/duplicate/out-of-order input is rejected atomically.
 
 At one serialized capture boundary:
 
-1. preserve Scanner result order;
-2. reduce duplicate canonical IDs to first occurrence;
-3. reject malformed/blank identities;
-4. reject more than 5000 selected/raw or unique IDs at the protocol/authority boundary;
-5. require at least one selected ID for an actual capture;
-6. resolve every selected ID against authoritative `latest`;
-7. store each resolved row's `cycle_id` as `buy_cycle_id`;
-8. persist one capture plus all items atomically.
+1. validate request/provenance/mode bounds;
+2. enqueue behind prior serialized writer work;
+3. begin one transaction;
+4. assign Node `captured_at_ms`;
+5. resolve every selected `security_id` against authoritative `latest`;
+6. require every selected security to resolve;
+7. allocate a positive monotonic committed `capture_id`;
+8. store each resolved latest row's `cycle_id` as `buy_cycle_id`;
+9. persist one capture plus all items atomically;
+10. commit.
 
-Failure to resolve any selected security fails the entire capture.
+Failure to resolve any selected security fails the entire capture. The same security may appear in multiple later captures because these are observations, not positions.
 
-A zero-row automatic Scanner result is a no-op and creates no empty capture.
+A zero-row automatic Scanner result is a browser-side no-op and creates no empty capture.
 
-The same security may appear in multiple later captures because these are observations, not positions.
-
-## 16. Demo Buy derived evaluation facts
+## 17. Demo Buy derived evaluation facts
 
 Demo Buy evaluation is a trusted read model, not additional stored market authority.
 
@@ -493,6 +571,8 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
+The first qualifying authoritative row wins even when its `Price` is SQL NULL. The evaluator must not skip that row and cherry-pick a later non-null price.
+
 The baseline value comes from the linked `(buy_cycle_id, security_id)` history row. That row must exist; its absence is a Demo Buy integrity failure rather than an unavailable horizon.
 
 Derived values include:
@@ -500,18 +580,13 @@ Derived values include:
 ```text
 baselinePrice
 baselineCollectedAtMs
+baselineAgeMs
+captureLatencyMs
 futurePrice
 observedAtMs
 actualElapsedMs = observedAtMs - capturedAtMs
 changePercent = ((futurePrice / baselinePrice) - 1) * 100
 ```
-
-`changePercent` is NULL when:
-
-- no qualifying future row exists;
-- baseline `Price` is NULL;
-- baseline `Price` is zero;
-- future `Price` is NULL.
 
 Derived outcome is:
 
@@ -522,9 +597,22 @@ FLAT         when changePercent = 0
 UNAVAILABLE  when changePercent is NULL
 ```
 
-These are application-derived analytical labels. They are not provider fields and are not persisted as market facts.
+When outcome is `UNAVAILABLE`, one reason is exposed with this precedence:
 
-## 17. Daily lifecycle relation
+```text
+NO_FUTURE_OBSERVATION     no qualifying future row
+BASELINE_PRICE_UNAVAILABLE baseline Price is NULL
+BASELINE_PRICE_ZERO        baseline Price is zero
+FUTURE_PRICE_UNAVAILABLE   matched future row exists but Price is NULL
+```
+
+A missing baseline row is never converted into one of these reasons; it remains an integrity error.
+
+These prices/percentages/outcomes/reasons are application-derived analytical facts. They are not provider fields and are not persisted as market authority.
+
+A bounded evaluated page must observe one transactionally consistent DuckDB read snapshot so baseline and all ten horizons for that page cannot be assembled from different writer commit points.
+
+## 18. Daily lifecycle relation
 
 Demo Buy observations belong to the same active-day evidence boundary as the `history` rows they reference.
 
@@ -538,7 +626,7 @@ At new-day reset:
 - no Demo Buy row is copied into a DB that does not contain its referenced history;
 - horizon evaluation never joins into the new active-day DB; any prior-day horizon without a qualifying row before rollover remains unavailable in that prior day's self-contained evidence.
 
-## 18. External facts reserved for live verification
+## 19. External facts reserved for live verification
 
 Still empirical:
 
