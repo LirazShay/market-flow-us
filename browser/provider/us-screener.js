@@ -1,4 +1,5 @@
 export const SCREENER_HUL_ENDPOINT = "/lti/lti-app/api/Market/ScreenerHulPaging3";
+export const DEFAULT_PROVIDER_REQUEST_TIMEOUT_MS = 10_000;
 
 const SCREENER_PARAMS = Object.freeze({
   region: "1",
@@ -31,6 +32,12 @@ const SCREENER_PARAMS = Object.freeze({
 function assertNonNegativeFinite(value, name) {
   if (!Number.isFinite(value) || value < 0) {
     throw new TypeError(`${name} must be a non-negative finite number.`);
+  }
+}
+
+function assertPositiveFinite(value, name) {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new TypeError(`${name} must be a positive finite number.`);
   }
 }
 
@@ -180,7 +187,8 @@ export function buildValidatedSnapshot({
 
 export async function fetchValidatedSnapshot({
   fetchImpl = globalThis.fetch,
-  now = () => Date.now()
+  now = () => Date.now(),
+  requestTimeoutMs = DEFAULT_PROVIDER_REQUEST_TIMEOUT_MS
 } = {}) {
   if (typeof fetchImpl !== "function") {
     throw new TypeError("fetchImpl must be a function.");
@@ -188,25 +196,47 @@ export async function fetchValidatedSnapshot({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
-
-  const startedAtMs = now();
-  const response = await fetchImpl(buildScreenerHulUrl());
-  const responseReceivedAtMs = now();
-
-  if (!response?.ok) {
-    throw new Error(`ScreenerHulPaging3 failed: HTTP ${response?.status ?? "unknown"}.`);
+  assertPositiveFinite(requestTimeoutMs, "requestTimeoutMs");
+  if (typeof globalThis.AbortController !== "function") {
+    throw new Error("AbortController is required for bounded provider requests.");
   }
 
-  const responseJson = await response.json();
-  const completedAtMs = now();
+  const startedAtMs = now();
+  const controller = new globalThis.AbortController();
+  let timeoutHandle = null;
 
-  return buildValidatedSnapshot({
-    responseJson,
-    timing: {
-      startedAtMs,
-      responseReceivedAtMs,
-      completedAtMs
-    },
-    httpStatus: response.status
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutHandle = setTimeout(() => {
+      controller.abort();
+      reject(new Error(`ScreenerHulPaging3 request timed out after ${requestTimeoutMs} ms.`));
+    }, requestTimeoutMs);
   });
+
+  const requestPromise = (async () => {
+    const response = await fetchImpl(buildScreenerHulUrl(), { signal: controller.signal });
+    const responseReceivedAtMs = now();
+
+    if (!response?.ok) {
+      throw new Error(`ScreenerHulPaging3 failed: HTTP ${response?.status ?? "unknown"}.`);
+    }
+
+    const responseJson = await response.json();
+    const completedAtMs = now();
+
+    return buildValidatedSnapshot({
+      responseJson,
+      timing: {
+        startedAtMs,
+        responseReceivedAtMs,
+        completedAtMs
+      },
+      httpStatus: response.status
+    });
+  })();
+
+  try {
+    return await Promise.race([requestPromise, timeoutPromise]);
+  } finally {
+    if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+  }
 }
