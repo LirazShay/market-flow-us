@@ -238,7 +238,6 @@ test("browser producer bridge drives real session/universe/cycle/failure/stop au
   }
 });
 
-
 function createManualScheduler() {
   const queue = [];
   let nextId = 1;
@@ -386,6 +385,7 @@ test("lost commit ACK fails pending Browser authority work, stops Recorder, and 
       return rows[0]?.complete_cycles === "1";
     });
 
+    await eventually(() => transportSocket.held.length === 1);
     assert.equal(transportSocket.held.length, 1);
     assert.equal(recorder.getState().completedCycles, 0);
 

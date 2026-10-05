@@ -19,14 +19,14 @@ import { createViewerRefreshController } from "../viewer/refresh-controller.js";
 import { createScannerSurface } from "../viewer/scanner-surface.js";
 import { createProducerBridge } from "./producer-bridge.js";
 
-export const RUNTIME_KEY = "__MARKET_SCOPE_RUNTIME_V1__";
-export const VIEWER_SHELL_KEY = "__MARKET_SCOPE_VIEWER_SHELL_V1__";
-export const VIEWER_WINDOW_NAME = "market-scope-viewer-v1";
+export const RUNTIME_KEY = "__MARKET_FLOW_US_RUNTIME_V1__";
+export const VIEWER_SHELL_KEY = "__MARKET_FLOW_US_VIEWER_SHELL_V1__";
+export const VIEWER_WINDOW_NAME = "market-flow-us-viewer-v1";
 
 const DEFAULT_PRODUCT_VERSION = "0.1.0";
 const DEFAULT_SERVICE_URL = "ws://127.0.0.1:8765";
 
-function normalizeError(error, fallback = "MarketScope runtime failed.") {
+function normalizeError(error, fallback = "Market Flow US runtime failed.") {
   if (error instanceof Error) return error;
   return new Error(error === undefined || error === null ? fallback : String(error));
 }
@@ -46,7 +46,7 @@ function delay(target, delayMs) {
 
 function createShellDocument(viewerWindow) {
   const document = viewerWindow.document;
-  document.title = "MarketScope";
+  document.title = "Market Flow US";
   document.documentElement.lang = "he";
   document.documentElement.dir = "rtl";
 
@@ -54,32 +54,32 @@ function createShellDocument(viewerWindow) {
   style.textContent = `
     :root { font-family: Arial, sans-serif; color-scheme: light; }
     body { margin: 0; background: #f6f7f9; color: #1b1f24; }
-    .market-scope-shell { max-width: 1600px; margin: 0 auto; padding: 16px; }
-    .market-scope-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .market-scope-toolbar button { padding: 8px 12px; cursor: pointer; }
-    .market-scope-runtime-status { margin: 12px 0; }
-    .market-scope-view { margin-top: 12px; }
+    .market-flow-us-shell { max-width: 1600px; margin: 0 auto; padding: 16px; }
+    .market-flow-us-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .market-flow-us-toolbar button { padding: 8px 12px; cursor: pointer; }
+    .market-flow-us-runtime-status { margin: 12px 0; }
+    .market-flow-us-view { margin-top: 12px; }
     table { border-collapse: collapse; width: 100%; }
     th, td { border: 1px solid #d7dce2; padding: 6px 8px; text-align: right; white-space: nowrap; }
     th { background: #eef1f4; }
-    .market-scope-diagnostics { display: flex; gap: 12px; flex-wrap: wrap; }
-    .market-scope-diagnostics div { display: flex; gap: 4px; }
+    .market-flow-us-diagnostics { display: flex; gap: 12px; flex-wrap: wrap; }
+    .market-flow-us-diagnostics div { display: flex; gap: 4px; }
     textarea { width: min(100%, 900px); }
   `;
 
   const shell = document.createElement("main");
-  shell.className = "market-scope-shell";
+  shell.className = "market-flow-us-shell";
 
   const title = document.createElement("h1");
-  title.textContent = "MarketScope";
+  title.textContent = "Market Flow US";
 
   const runtimeStatus = document.createElement("p");
-  runtimeStatus.className = "market-scope-runtime-status";
+  runtimeStatus.className = "market-flow-us-runtime-status";
   runtimeStatus.setAttribute("aria-live", "polite");
 
   const toolbar = document.createElement("nav");
-  toolbar.className = "market-scope-toolbar";
-  toolbar.setAttribute("aria-label", "MarketScope");
+  toolbar.className = "market-flow-us-toolbar";
+  toolbar.setAttribute("aria-label", "Market Flow US");
 
   const currentButton = document.createElement("button");
   currentButton.type = "button";
@@ -90,7 +90,7 @@ function createShellDocument(viewerWindow) {
   scannerButton.textContent = "Scanner";
 
   const refreshControls = document.createElement("span");
-  refreshControls.className = "market-scope-refresh-controls";
+  refreshControls.className = "market-flow-us-refresh-controls";
 
   toolbar.append(currentButton, scannerButton, refreshControls);
 
@@ -98,23 +98,23 @@ function createShellDocument(viewerWindow) {
   diagnostics.setAttribute("aria-label", "אבחון תפעולי");
 
   const operationalDiagnostics = document.createElement("div");
-  operationalDiagnostics.className = "market-scope-operational-diagnostics";
+  operationalDiagnostics.className = "market-flow-us-operational-diagnostics";
 
   const supportDiagnostics = document.createElement("section");
-  supportDiagnostics.className = "market-scope-support-diagnostics";
+  supportDiagnostics.className = "market-flow-us-support-diagnostics";
   supportDiagnostics.setAttribute("aria-label", "Support Snapshot");
 
   diagnostics.append(operationalDiagnostics, supportDiagnostics);
 
   const currentRoot = document.createElement("section");
-  currentRoot.className = "market-scope-view";
+  currentRoot.className = "market-flow-us-view";
 
   const detailRoot = document.createElement("section");
-  detailRoot.className = "market-scope-view";
+  detailRoot.className = "market-flow-us-view";
   detailRoot.hidden = true;
 
   const scannerRoot = document.createElement("section");
-  scannerRoot.className = "market-scope-view";
+  scannerRoot.className = "market-flow-us-view";
   scannerRoot.hidden = true;
 
   shell.append(
@@ -162,7 +162,7 @@ function createViewerShell({
   const client = createViewerClient({
     url: serviceUrl,
     productVersion,
-    clientInstanceId: `market-scope-viewer-${Date.now()}`,
+    clientInstanceId: `market-flow-us-viewer-${Date.now()}`,
     diagnosticTracker
   });
 
@@ -317,19 +317,19 @@ function createViewerShell({
     }
 
     if (state === "starting") {
-      elements.runtimeStatus.textContent = "מתחבר לשירות MarketScope…";
+      elements.runtimeStatus.textContent = "מתחבר לשירות Market Flow US…";
       return;
     }
 
     if (state === "error") {
       elements.runtimeStatus.setAttribute("role", "alert");
       elements.runtimeStatus.textContent =
-        "שירות MarketScope אינו זמין. הפעלה מחדש נדרשת לאחר שהשירות זמין.";
+        "שירות Market Flow US אינו זמין. הפעלה מחדש נדרשת לאחר שהשירות זמין.";
       if (error?.message) elements.runtimeStatus.title = error.message;
       return;
     }
 
-    elements.runtimeStatus.textContent = "MarketScope מוכן.";
+    elements.runtimeStatus.textContent = "Market Flow US מוכן.";
   }
 
   function dispose() {
@@ -371,9 +371,9 @@ function createViewerShell({
 export function createMarketScopeRuntime({
   target = globalThis,
   now = () => Date.now(),
-  serviceUrl = target?.__MARKET_SCOPE_CONFIG__?.serviceUrl ?? DEFAULT_SERVICE_URL,
+  serviceUrl = target?.__MARKET_FLOW_US_CONFIG__?.serviceUrl ?? DEFAULT_SERVICE_URL,
   productVersion = DEFAULT_PRODUCT_VERSION,
-  recorderConfig = target?.__MARKET_SCOPE_CONFIG__?.recorder ?? {},
+  recorderConfig = target?.__MARKET_FLOW_US_CONFIG__?.recorder ?? {},
   openWindow = (...args) => target.open(...args),
   producerBridgeFactory = createProducerBridge,
   recorderFactory = createRecorder,
@@ -479,7 +479,7 @@ export function createMarketScopeRuntime({
     }
 
     if (!candidate) {
-      const error = new Error("MarketScope Viewer popup was blocked.");
+      const error = new Error("Market Flow US Viewer popup was blocked.");
       lastError = error;
       return Object.freeze({ opened: false, reused: false });
     }
@@ -509,7 +509,7 @@ export function createMarketScopeRuntime({
     if (owningGeneration !== generation) return;
     recorder?.stop("service_disconnect");
     state = "error";
-    lastError = normalizeError(error, "MarketScope service disconnected.");
+    lastError = normalizeError(error, "Market Flow US service disconnected.");
     publishState();
   }
 
@@ -553,7 +553,7 @@ export function createMarketScopeRuntime({
     bridge = producerBridgeFactory({
       url: serviceUrl,
       productVersion,
-      clientInstanceId: `market-scope-browser-producer-${owningGeneration}`,
+      clientInstanceId: `market-flow-us-browser-producer-${owningGeneration}`,
       now,
       diagnosticTracker,
       onDisconnect(error) {
@@ -660,7 +660,7 @@ export function createMarketScopeRuntime({
       } catch (error) {
         recorder?.stop("launch_failed");
         state = "error";
-        lastError = normalizeError(error, "MarketScope launch failed.");
+        lastError = normalizeError(error, "Market Flow US launch failed.");
         openViewer({ rebuild: true });
         publishState();
         throw lastError;
@@ -714,7 +714,7 @@ export function createMarketScopeRuntime({
         return snapshot();
       } catch (error) {
         state = "error";
-        lastError = normalizeError(error, "MarketScope producer stop failed.");
+        lastError = normalizeError(error, "Market Flow US producer stop failed.");
         publishState();
         throw lastError;
       }

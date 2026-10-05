@@ -16,13 +16,14 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
     launcher("START_DEMO.cmd"),
     launcher("RESET_DEMO.cmd"),
     launcher("RUN_TESTS.cmd"),
-    launcher("START_MARKETSCOPE.cmd"),
+    launcher("START_MARKET_FLOW_US.cmd"),
     launcher("PREPARE_LIVE_VERIFICATION.cmd")
   ]);
 
   assert.match(setup, /npm ci/);
   assert.match(setup, /playwright install chromium/);
   assert.match(setup, /Node\.js 24\.x/);
+  assert.match(setup, /START_MARKET_FLOW_US\.cmd/);
 
   assert.match(demo, /npm run demo:fake-market/);
   assert.match(demo, /http:\/\/127\.0\.0\.1:4173\//);
@@ -35,15 +36,18 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(tests, /npm run test:e2e/);
 
   assert.match(real, /npm run build:browser/);
-  assert.match(real, /npm run service -- --allowed-origin "%MARKETSCOPE_ORIGIN%"/);
-  assert.match(real, /market-scope\.bookmarklet\.txt/);
+  assert.match(real, /npm run service -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
+  assert.match(real, /market-flow-us\.bookmarklet\.txt/);
+  assert.doesNotMatch(real, /MarketScope|MARKETSCOPE|market-scope/i);
 
   assert.match(live, /npm run build:live-verification/);
-  assert.match(live, /--allowed-origin "%MARKETSCOPE_ORIGIN%"/);
+  assert.match(live, /--allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
   assert.match(live, /--db data\/live-verification\.duckdb/);
-  assert.match(live, /market-scope-live-verification\.bookmarklet\.txt/);
+  assert.match(live, /market-flow-us-live-verification\.bookmarklet\.txt/);
+  assert.doesNotMatch(live, /MarketScope|MARKETSCOPE|market-scope/i);
 
   for (const content of [setup, demo, reset, tests, real, live]) {
     assert.match(content, /pushd "%~dp0"/);
+    assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }
 });

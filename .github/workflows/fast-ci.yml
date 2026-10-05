@@ -1,4 +1,4 @@
-name: MarketScope Fast CI
+name: Market Flow US Fast CI
 
 on:
   push:

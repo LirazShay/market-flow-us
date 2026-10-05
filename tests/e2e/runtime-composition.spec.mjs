@@ -37,7 +37,7 @@ async function fakeState(fake) {
 async function waitForRunning(page) {
   await expect.poll(async () => {
     return await page.evaluate(() => {
-      const state = globalThis.__MARKET_SCOPE_RUNTIME_V1__?.getState?.() ?? null;
+      const state = globalThis.__MARKET_FLOW_US_RUNTIME_V1__?.getState?.() ?? null;
       return JSON.stringify(state);
     });
   }).toContain('"state":"running"');
@@ -51,7 +51,7 @@ async function waitForCurrentRows(viewer, count = 4) {
 
 async function stopRuntime(page) {
   await page.evaluate(async () => {
-    const runtime = globalThis.__MARKET_SCOPE_RUNTIME_V1__;
+    const runtime = globalThis.__MARKET_FLOW_US_RUNTIME_V1__;
     if (runtime?.getState?.().state === "running") {
       await runtime.stop("test_cleanup");
     }
@@ -70,12 +70,12 @@ test("normal built runtime starts one producer, reuses one Viewer and composes C
     await waitForRunning(page);
     await waitForCurrentRows(viewer);
 
-    const firstRuntime = await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__.getState());
+    const firstRuntime = await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__.getState());
     expect(firstRuntime.producerState).toBe("ready");
 
     const pageCountBefore = context.pages().length;
     await page.evaluate(async () => {
-      await globalThis.__MARKET_SCOPE_RUNTIME_V1__.launch();
+      await globalThis.__MARKET_FLOW_US_RUNTIME_V1__.launch();
     });
     expect(context.pages().length).toBe(pageCountBefore);
 
@@ -122,7 +122,7 @@ test("closing/reopening Viewer is producer-independent and clean stop/relaunch n
 
   try {
     await page.addInitScript(() => {
-      globalThis.__MARKET_SCOPE_CONFIG__ = {
+      globalThis.__MARKET_FLOW_US_CONFIG__ = {
         recorder: {
           snapshotIntervalMs: 100
         }
@@ -144,19 +144,19 @@ test("closing/reopening Viewer is producer-independent and clean stop/relaunch n
     }, { timeout: 10_000 }).toBeGreaterThan(beforeRows);
 
     await page.evaluate(async () => {
-      await globalThis.__MARKET_SCOPE_RUNTIME_V1__.stop("test_manual_stop");
+      await globalThis.__MARKET_FLOW_US_RUNTIME_V1__.stop("test_manual_stop");
     });
     await expect.poll(async () => {
-      return await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__.getState().state);
+      return await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__.getState().state);
     }).toBe("stopped");
 
     const reopenPromise = page.waitForEvent("popup");
-    await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__.openViewer());
+    await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__.openViewer());
     const reopened = await reopenPromise;
     await waitForCurrentRows(reopened);
 
     await page.evaluate(async () => {
-      await globalThis.__MARKET_SCOPE_RUNTIME_V1__.launch();
+      await globalThis.__MARKET_FLOW_US_RUNTIME_V1__.launch();
     });
     await waitForRunning(page);
 
@@ -190,9 +190,9 @@ test("service-unavailable launch makes no provider calls and an explicit relaunc
     const viewer = await popupPromise;
 
     await expect.poll(async () => {
-      return await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__?.getState?.().state ?? null);
+      return await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__?.getState?.().state ?? null);
     }).toBe("error");
-    await expect(viewer.getByText("שירות MarketScope אינו זמין. הפעלה מחדש נדרשת לאחר שהשירות זמין.", { exact: true })).toBeVisible();
+    await expect(viewer.getByText("שירות Market Flow US אינו זמין. הפעלה מחדש נדרשת לאחר שהשירות זמין.", { exact: true })).toBeVisible();
 
     const beforeService = await fakeState(fake);
     expect(beforeService.requestLog).toEqual([]);
@@ -212,7 +212,7 @@ test("service-unavailable launch makes no provider calls and an explicit relaunc
     service = await startService(fake);
 
     await page.evaluate(async () => {
-      await globalThis.__MARKET_SCOPE_RUNTIME_V1__.launch();
+      await globalThis.__MARKET_FLOW_US_RUNTIME_V1__.launch();
     });
     await waitForRunning(page);
 
@@ -321,7 +321,7 @@ test("Scanner Query Library supports built-ins, CRUD, reopen persistence and act
     await viewer.close();
 
     const reopenPromise = page.waitForEvent("popup");
-    await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__.openViewer());
+    await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__.openViewer());
     const reopened = await reopenPromise;
     await waitForCurrentRows(reopened);
     await reopened.getByRole("button", { name: "Scanner" }).click();

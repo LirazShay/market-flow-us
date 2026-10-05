@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 export const SCREENER_HUL_PATH = "/lti/lti-app/api/Market/ScreenerHulPaging3";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const DEFAULT_RUNTIME_PATH = path.join(ROOT, "dist", "browser", "market-scope.runtime.js");
+const DEFAULT_RUNTIME_PATH = path.join(ROOT, "dist", "browser", "market-flow-us.runtime.js");
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 const SCENARIOS = new Set(Array.from({ length: 16 }, (_, index) => `US-${String(index + 1).padStart(2, "0")}`));
 const ADVANCING_SCENARIOS = new Set([
@@ -396,13 +396,13 @@ export async function startUsFakeMarket({
         text(
           response,
           200,
-          '<!doctype html><html><head><meta charset="utf-8"><title>Market Flow US Fake Market</title></head><body><main id="market-flow-us-fake-market">Market Flow US Fake Market</main><script src="/assets/market-scope.runtime.js"></script></body></html>',
+          '<!doctype html><html><head><meta charset="utf-8"><title>Market Flow US Fake Market</title></head><body><main id="market-flow-us-fake-market">Market Flow US Fake Market</main><script src="/assets/market-flow-us.runtime.js"></script></body></html>',
           "text/html; charset=utf-8"
         );
         return;
       }
 
-      if (request.method === "GET" && url.pathname === "/assets/market-scope.runtime.js") {
+      if (request.method === "GET" && url.pathname === "/assets/market-flow-us.runtime.js") {
         try {
           const runtime = await readFile(runtimePath, "utf8");
           text(response, 200, runtime, "application/javascript; charset=utf-8");

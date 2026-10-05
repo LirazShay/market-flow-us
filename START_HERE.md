@@ -1,6 +1,6 @@
-# MarketScope — מתחילים כאן
+# Market Flow US — מתחילים כאן
 
-המטרה של הקובץ הזה היא לאפשר להפעיל את MarketScope בלי לזכור פקודות `npm`.
+המטרה של הקובץ הזה היא לאפשר להפעיל את Market Flow US בלי לזכור פקודות `npm`.
 
 > Windows: ברוב המקרים פשוט מפעילים קובץ `.cmd` בלחיצה כפולה מתוך תיקיית הפרויקט.
 
@@ -24,11 +24,11 @@ SETUP.cmd
 START_DEMO.cmd
 ```
 
-הוא מרים את Fake Market, את שירות MarketScope ואת DuckDB המקומי, ומנסה לפתוח אוטומטית את הדפדפן ב־`http://127.0.0.1:4173/`.
+הוא מרים את Fake Market, את שירות Market Flow US ואת DuckDB המקומי, ומנסה לפתוח אוטומטית את הדפדפן ב־`http://127.0.0.1:4173/`.
 
 השאר את חלון הפקודה פתוח. לעצירה: `Ctrl+C`.
 
-נתוני הדמו נשמרים רק תחת `.demo/`.
+נתוני הדמו נשמרים רק תחת `.demo/market-flow-us.duckdb`.
 
 ## רוצה למחוק את נתוני הדמו?
 
@@ -38,21 +38,21 @@ START_DEMO.cmd
 RESET_DEMO.cmd
 ```
 
-הפעולה מוחקת רק את מצב ה־Demo. היא אינה מוחקת את מסד הנתונים הרגיל של MarketScope.
+הפעולה מוחקת רק את מצב ה־Demo. היא אינה מוחקת את מסד הנתונים הרגיל של Market Flow US.
 
-## רוצה להפעיל MarketScope מול האתר האמיתי?
+## רוצה להפעיל Market Flow US מול האתר האמיתי?
 
 1. היכנס לאתר הספק בדפדפן והשאר את העמוד המחובר פתוח.
 2. הפעל:
    ```text
-   START_MARKETSCOPE.cmd
+   START_MARKET_FLOW_US.cmd
    ```
 3. כאשר הקובץ מבקש URL, העתק את כתובת העמוד מה־Address Bar והדבק אותה. אפשר להדביק URL מלא; הקובץ מצמצם אותו אוטומטית ל־Origin המדויק.
-4. הקובץ בונה את ה־bookmarklet העדכני, מעתיק אותו ל־Clipboard וגם פותח אותו ב־Notepad.
+4. הקובץ בונה את ה־bookmarklet העדכני `dist/browser/market-flow-us.bookmarklet.txt`, מעתיק אותו ל־Clipboard וגם פותח אותו ב־Notepad.
 5. הפעל את ה־bookmarklet כ־Bookmark בדפדפן מתוך העמוד המחובר.
 6. השאר את חלון השירות פתוח בזמן העבודה. לעצירה: `Ctrl+C`.
 
-נתוני העבודה הרגילים נשמרים כברירת מחדל ב־`data/market-scope.duckdb`.
+נתוני העבודה הרגילים נשמרים כברירת מחדל ב־`data/market-flow-us.duckdb`.
 
 ## רוצה להריץ את הבדיקות הרגילות?
 
@@ -84,11 +84,11 @@ npm run test:workload
 PREPARE_LIVE_VERIFICATION.cmd
 ```
 
-הקובץ מכין את ה־gate, משתמש במסד ייעודי `data/live-verification.duckdb`, מעתיק את ה־bookmarklet הייעודי ומרים את השירות המקומי. את ה־bookmarklet עצמו מפעילים ידנית בעמוד הספק המחובר.
+הקובץ מכין את ה־gate, משתמש במסד ייעודי `data/live-verification.duckdb`, מייצר את `dist/live-verification/market-flow-us-live-verification.bookmarklet.txt`, מעתיק אותו ומרים את השירות המקומי. את ה־bookmarklet עצמו מפעילים ידנית בעמוד הספק המחובר.
 
 החוזה המדויק ותנאי ה־PASS נמצאים ב־`docs/LIVE_VERIFICATION.md`. אין לסמן PASS ידנית — רק ה־gate רשאי לדווח `overall: "PASS"`.
 
-## מה רואים בתוך MarketScope?
+## מה רואים בתוך Market Flow US?
 
 החלון הראשי כולל שלושה אזורים עיקריים:
 

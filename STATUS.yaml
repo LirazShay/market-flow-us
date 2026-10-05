@@ -4,8 +4,8 @@ overall_status: ready
 
 current:
   chat: 6
-  node: "6.1"
-  title: "Market Flow US packaging and branding"
+  node: "6.2"
+  title: "U.S. diagnostics and live-verification harness"
   status: ready
 
 authority:
@@ -30,4 +30,4 @@ execution:
   chats_total: 9
   implementation_leaves_total: 19
   current_chat: 6
-  current_node: "6.1"
+  current_node: "6.2"

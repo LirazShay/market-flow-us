@@ -1,4 +1,4 @@
-# MarketScope — מדריך משתמש
+# Market Flow US — מדריך משתמש
 
 המדריך הזה מיועד להפעלה ושימוש במוצר. הוא אינו מסמך ארכיטקטורה או מסמך פיתוח.
 
@@ -17,13 +17,13 @@
 
 הפעל `START_DEMO.cmd`.
 
-ה־Demo משתמש בדיוק ברכיבי ה־Browser/Service/Database הרגילים של MarketScope, אבל במקום אתר אמיתי הוא משתמש ב־Fake Market מקומי ודטרמיניסטי.
+ה־Demo משתמש בדיוק ברכיבי ה־Browser/Service/Database הרגילים של Market Flow US, אבל במקום אתר אמיתי הוא משתמש ב־Fake Market מקומי ודטרמיניסטי.
 
 הזרימה היא:
 
 ```text
 Fake Market
-→ MarketScope browser runtime
+→ Market Flow US browser runtime
 → loopback WebSocket
 → local Node.js service
 → DuckDB
@@ -50,14 +50,14 @@ http://127.0.0.1:4173/
 
 התחבר לספק בדפדפן והשאר את העמוד המתאים פתוח.
 
-MarketScope משתמש בסשן הקיים בתוך אותו דפדפן. אין להעביר cookie, token, Authorization header, מזהה חשבון או dump של הדפדפן לשורת פקודה או לריפו.
+Market Flow US משתמש בסשן הקיים בתוך אותו דפדפן. אין להעביר cookie, token, Authorization header, מזהה חשבון או dump של הדפדפן לשורת פקודה או לריפו.
 
 ### שלב ב — הפעלת השירות
 
 הפעל:
 
 ```text
-START_MARKETSCOPE.cmd
+START_MARKET_FLOW_US.cmd
 ```
 
 כאשר תתבקש, הדבק את כתובת העמוד מה־Address Bar. אפשר להדביק כתובת מלאה, לדוגמה עם path; ה־helper מפיק ממנה רק את ה־Origin המדויק הדרוש לשירות המקומי.
@@ -65,18 +65,18 @@ START_MARKETSCOPE.cmd
 לאחר מכן ה־helper:
 
 1. מריץ `npm run build:browser`.
-2. יוצר את `dist/browser/market-scope.bookmarklet.txt`.
+2. יוצר את `dist/browser/market-flow-us.bookmarklet.txt`.
 3. מעתיק את ה־bookmarklet ל־Clipboard.
 4. פותח את הקובץ גם ב־Notepad.
-5. מרים את שירות MarketScope על loopback בלבד.
+5. מרים את שירות Market Flow US על loopback בלבד.
 
 ### שלב ג — הפעלת ה־bookmarklet
 
-צור/עדכן Bookmark בדפדפן כך ששדה ה־URL שלו מכיל את כל השורה מ־`market-scope.bookmarklet.txt`.
+צור/עדכן Bookmark בדפדפן כך ששדה ה־URL שלו מכיל את כל השורה מ־`market-flow-us.bookmarklet.txt`.
 
 בעמוד הספק המחובר לחץ על ה־Bookmark.
 
-MarketScope יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפשר Popup עבור ההפעלה הזו ונסה שוב.
+Market Flow US יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפשר Popup עבור ההפעלה הזו ונסה שוב.
 
 השאר את חלון השירות פתוח. בסיום העבודה לחץ `Ctrl+C` בחלון השירות.
 
@@ -117,13 +117,13 @@ MarketScope יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפשר
 בשימוש הרגיל ברירת המחדל היא:
 
 ```text
-data/market-scope.duckdb
+data/market-flow-us.duckdb
 ```
 
 ב־Demo:
 
 ```text
-.demo/market-scope.duckdb
+.demo/market-flow-us.duckdb
 ```
 
 בבדיקת Live הייעודית:
@@ -154,6 +154,13 @@ npm run test:workload
 
 הפעל `PREPARE_LIVE_VERIFICATION.cmd` או פעל ישירות לפי `docs/LIVE_VERIFICATION.md`.
 
+ה־build מייצר:
+
+```text
+dist/live-verification/market-flow-us-live-verification.js
+dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
+```
+
 הבדיקה משתמשת ב־bookmarklet נפרד מה־runtime הרגיל ובמסד ייעודי. היא בודקת proof תחום של:
 
 ```text
@@ -175,9 +182,9 @@ producer session
 בדוק לפי הסדר:
 
 1. האם `SETUP.cmd` הושלם בהצלחה.
-2. האם אין MarketScope ישן שתופס את port `8765` או Fake Market ישן שתופס `4173`.
+2. האם אין תהליך Market Flow US ישן שתופס את port `8765` או Fake Market ישן שתופס `4173`.
 3. בהרצה אמיתית — האם חלון השירות עדיין פתוח.
-4. האם ה־URL שהודבק ל־`START_MARKETSCOPE.cmd` הוא של עמוד הספק האמיתי וב־`http/https`.
+4. האם ה־URL שהודבק ל־`START_MARKET_FLOW_US.cmd` הוא של עמוד הספק האמיתי וב־`http/https`.
 5. האם Popup של ה־Viewer נחסם.
 
 בתוך Viewer קיים כפתור:
@@ -192,6 +199,6 @@ producer session
 
 ## 11. מה לא למחוק
 
-אל תמחק ידנית את `data/market-scope.duckdb` אם אתה רוצה לשמור את היסטוריית העבודה שלך.
+אל תמחק ידנית את `data/market-flow-us.duckdb` אם אתה רוצה לשמור את היסטוריית העבודה שלך.
 
 איפוס Demo צריך להתבצע דרך `RESET_DEMO.cmd`; הוא בנוי למחוק רק את מצב ה־Demo.

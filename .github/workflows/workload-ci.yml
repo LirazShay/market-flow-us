@@ -1,4 +1,4 @@
-name: MarketScope Workload
+name: Market Flow US Workload
 
 on:
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: market-scope-workload-${{ github.run_id }}-${{ github.run_attempt }}
+          name: market-flow-us-workload-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 30
           path: test-results/workload/representative-workload.json

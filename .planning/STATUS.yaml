@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "6.1"
+current_node: "6.2"
 blockers: []
-next_action: "Chat 6 executes TREE node 6.1 next; Chat 5 nodes 5.1-5.3 are done with full U.S. offline browser/runtime proof green."
+next_action: "Chat 6 executes TREE node 6.2 next; node 6.1 packaging/branding is done with full Fast/Browser/Planning CI green."
 last_review: "R-US-EXEC-REOPEN-001"

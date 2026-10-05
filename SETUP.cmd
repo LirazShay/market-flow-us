@@ -1,10 +1,10 @@
 @echo off
 setlocal
 pushd "%~dp0"
-title MarketScope Setup
+title Market Flow US Setup
 
 echo ========================================
-echo MarketScope - First Time Setup
+echo Market Flow US - First Time Setup
 echo ========================================
 echo.
 
@@ -17,7 +17,7 @@ if errorlevel 1 (
 
 for /f "delims=" %%V in ('node -p "process.versions.node.split('.')[0]"') do set "NODE_MAJOR=%%V"
 if not "%NODE_MAJOR%"=="24" (
-  echo [ERROR] MarketScope requires Node.js 24.x.
+  echo [ERROR] Market Flow US requires Node.js 24.x.
   echo Current version:
   node -v
   goto :fail
@@ -42,7 +42,7 @@ echo.
 echo ========================================
 echo SETUP COMPLETE
 echo ========================================
-echo You can now run START_DEMO.cmd or START_MARKETSCOPE.cmd.
+echo You can now run START_DEMO.cmd or START_MARKET_FLOW_US.cmd.
 echo.
 pause
 popd

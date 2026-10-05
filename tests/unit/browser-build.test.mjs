@@ -7,7 +7,7 @@ import { buildBrowser, packageBookmarklet } from "../../scripts/build-browser.mj
 import { startRuntime } from "../../browser/runtime/index.js";
 
 test("browser build emits runtime and one-line self-contained bookmarklet from one entry graph", async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-build-"));
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-build-"));
 
   try {
     const result = await buildBrowser({ outDir: tempDir });
@@ -15,8 +15,10 @@ test("browser build emits runtime and one-line self-contained bookmarklet from o
     const bookmarklet = await readFile(result.bookmarkletPath, "utf8");
 
     assert.match(result.entryPoint, /browser[\\/]runtime[\\/]index\.js$/);
-    assert.ok(runtime.includes("__MARKET_SCOPE_RUNTIME_V1__"));
-    assert.ok(bookmarklet.includes("__MARKET_SCOPE_RUNTIME_V1__"));
+    assert.equal(path.basename(result.runtimePath), "market-flow-us.runtime.js");
+    assert.equal(path.basename(result.bookmarkletPath), "market-flow-us.bookmarklet.txt");
+    assert.ok(runtime.includes("__MARKET_FLOW_US_RUNTIME_V1__"));
+    assert.ok(bookmarklet.includes("__MARKET_FLOW_US_RUNTIME_V1__"));
     assert.ok(bookmarklet.startsWith("javascript:"));
     assert.equal(bookmarklet.includes("\n"), false);
     assert.equal(bookmarklet.includes("\r"), false);
