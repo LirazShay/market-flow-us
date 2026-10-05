@@ -251,7 +251,8 @@ test("saved-query protocol provides durable CRUD, deterministic ordering and exp
       initial.payload.data.queries.map((query) => [query.queryId, query.name, query.source]),
       [
         ["builtin:all-current-fields", "All current fields", "builtin"],
-        ["builtin:market-ranking-example", "Market ranking example", "builtin"]
+        ["builtin:market-ranking-example", "U.S. market ranking example", "builtin"],
+        ["builtin:staged-candidate-ranking", "Staged candidate ranking", "builtin"]
       ]
     );
 
@@ -287,7 +288,13 @@ test("saved-query protocol provides durable CRUD, deterministic ordering and exp
     const list = await viewer.request("scanner.queries.list");
     assert.deepEqual(
       list.payload.data.queries.map((query) => query.name),
-      ["All current fields", "Market ranking example", "Alpha   Query", "Beta"]
+      [
+        "All current fields",
+        "U.S. market ranking example",
+        "Staged candidate ranking",
+        "Alpha   Query",
+        "Beta"
+      ]
     );
 
     const alphaId = alpha.payload.data.query.queryId;
