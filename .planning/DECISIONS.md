@@ -484,3 +484,109 @@ The previously unexecuted `7.4` evidence is not discarded; it is deferred becaus
 Completed nodes `1.1` through `7.3` remain historical valid evidence for the work they proved. A new post-feature release-closure leaf owns all deterministic gates/docs/status/open-PR/main-readiness work that must be refreshed after Demo Buy. `7.4` then depends on that refreshed candidate rather than the older `7.3` SHA.
 
 This is the smallest sequencing change that satisfies the user's preference to finish development before target-machine testing without reopening already-proven migration work.
+
+## D-US-026 — Demo Buy capture preserves original Scanner meaning under explicit protocol bounds
+
+**Status:** resolved
+
+Demo Buy capture semantics are source-row-first:
+
+```text
+choose Selected / All / first X source rows
+→ validate every chosen identity
+→ dedupe canonical security IDs by first chosen occurrence
+→ preserve each retained row's original 1-based resultRank
+```
+
+Node never silently dedupes or reorders malformed protocol input.
+
+To make capture implementation-ready and safely below the existing 16 MiB local WebSocket ceiling, the concrete limits in `docs/DEMO_BUY_PROTOCOL_LIMITS.md` are authoritative. In particular:
+
+```text
+items <= 5000
+source SQL <= 1 MiB UTF-8
+Scanner context <= first 50 rows
+Scanner context <= first 128 columns
+one textual/serialized context cell <= 256 UTF-8 bytes after deterministic clipping
+serialized context JSON <= 2 MiB UTF-8
+```
+
+The frozen context is immutable decision provenance, not a second market authority. It never changes selected item identity/rank and it is never reconstructed later by re-running SQL against newer state.
+
+If exact SQL exceeds its Demo Buy provenance bound or deterministic context shaping cannot satisfy the contract, Scanner may remain usable but that result generation is not Demo-Buy-capturable; failure is visible rather than silently truncating exact SQL or changing capture meaning.
+
+## D-US-027 — A lost Demo Buy capture ACK is unknown, not failure, and is never auto-replayed
+
+**Status:** resolved
+
+The existing Viewer client rejects pending requests when the local WebSocket closes, while the server may already have committed the capture before its response is observed.
+
+Therefore browser capture outcomes are exactly:
+
+```text
+CONFIRMED_COMMITTED
+CONFIRMED_REJECTED
+ACKNOWLEDGEMENT_UNKNOWN
+```
+
+`ACKNOWLEDGEMENT_UNKNOWN` is not a confirmed rollback and must not trigger automatic replay. The Viewer blocks additional capture submission in that instance until explicit reconnect/relaunch, then refreshes Demo Buy before the user decides whether to submit a new observation.
+
+Phase 1 does not add a durable idempotency/replay subsystem solely for this rare local disconnect race. Reopen this decision only if implementation/recovery evidence shows explicit refresh reconciliation is materially inadequate.
+
+The current service's per-connection FIFO and shared serialized writer remain intact. `capturedAtMs` is assigned only inside the actual writer operation, so browser click time and time waiting behind earlier work are not virtual-buy authority.
+
+## D-US-028 — AI Investigation is a local forensic evidence export with mandatory anti-hindsight separation
+
+**Status:** resolved
+
+AI Investigation is part of the current pre-local-acceptance Demo Buy increment.
+
+It does not call an AI provider, store an AI key, autonomously edit SQL or turn Market Flow US into an AI trading agent.
+
+For one captured target it generates a deterministic local evidence pack containing:
+
+```text
+exact immutable Scanner SQL
+bounded frozen original Scanner comparison context
+30-minute pre-buy target history
+exact linked baseline
+10-minute post-buy target history
+trusted Demo Buy horizon outcomes
+field-semantics guide
+anti-hindsight investigation prompt
+```
+
+Prediction-time evidence and outcome evidence are explicitly separated. Proposed Scanner improvements must cite evidence that existed by capture time; future evidence may explain the result and generate hypotheses but may not be leaked backward as though it were predictive input.
+
+The retained Scanner context is intentionally bounded. A target outside the retained first 50 rows remains investigable, but the pack marks `targetInScannerContext=false` and the prompt forbids fabricated peer/rank reconstruction.
+
+The exporter writes only beneath the controlled ignored local export root, accepts no browser-supplied path, uses temporary-directory + atomic-final-rename publication, never mutates DuckDB authority and never overwrites an existing successful pack. Failure leaves no misleading final bundle.
+
+The trusted Demo Buy evaluator is reused for `OUTCOME.json`; a second horizon algorithm is forbidden.
+
+## D-US-029 — New-day rollover accepts valid pre-feature v3 or post-feature v4 and always creates fresh v4
+
+**Status:** resolved
+
+After Demo Buy/schema-v4 ships, the operational new-day command must support an installed user who still has either:
+
+```text
+valid Market Flow US schema v3 active DB
+valid Market Flow US schema v4 active DB
+```
+
+The source DB is inspected without mutation. v1/v2, missing required tables, partial/corrupt v3/v4 state and running producer sessions fail closed.
+
+The rollover then:
+
+```text
+read scanner_saved_queries
+→ create temporary fresh schema-v4 DB
+→ seed saved queries transactionally
+→ archive/move the original DB as-is
+→ atomically install the fresh v4 DB
+```
+
+Only saved Scanner queries cross the new-day boundary. Market authority, Demo Buy captures/items/context and incomplete horizons never copy into the new active DB.
+
+A v4 archive remains self-contained with its referenced history and Demo Buy forensic evidence. A v3 archive remains a valid historical pre-Demo-Buy Market Flow US database.
