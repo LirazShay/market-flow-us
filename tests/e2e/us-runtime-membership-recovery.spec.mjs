@@ -65,6 +65,26 @@ async function currentIds(service) {
   return rows.map((row) => String(row.security_id));
 }
 
+async function currentUniverse(service) {
+  const rows = await service.rows(
+    `SELECT security_id, universe_revision
+     FROM universe
+     WHERE is_current = true
+     ORDER BY security_id`
+  );
+  return {
+    ids: rows.map((row) => String(row.security_id)),
+    revisions: [...new Set(rows.map((row) => Number(row.universe_revision)))]
+  };
+}
+
+async function completedCycles(service) {
+  const rows = await service.rows(
+    "SELECT completed_cycles FROM sessions WHERE status = 'running' LIMIT 1"
+  );
+  return rows.length === 1 ? Number(rows[0].completed_cycles) : 0;
+}
+
 async function stopRuntime(page) {
   await page.evaluate(async () => {
     const runtime = globalThis.__MARKET_FLOW_US_RUNTIME_V1__;
@@ -73,6 +93,62 @@ async function stopRuntime(page) {
     }
   });
 }
+
+test("normal U.S. runtime commits repeated identical complete responses without false universe revisions", async ({ page, context }) => {
+  const fake = await startFake();
+  const service = await startService(fake);
+
+  try {
+    await setScenario(fake, "US-17");
+    await page.addInitScript(() => {
+      globalThis.__MARKET_FLOW_US_CONFIG__ = {
+        recorder: {
+          snapshotIntervalMs: 100
+        }
+      };
+    });
+
+    const popupPromise = page.waitForEvent("popup");
+    await page.goto(fake.baseUrl);
+    const viewer = await popupPromise;
+
+    await waitForRunning(page);
+    const currentTable = await waitForCurrentRows(viewer, 4);
+    await expect.poll(() => completedCycles(service)).toBeGreaterThanOrEqual(1);
+
+    const firstCompleted = await completedCycles(service);
+    const firstUniverse = await currentUniverse(service);
+    expect(firstUniverse.ids).toEqual(["1001", "1002", "1003", "1004"]);
+    expect(firstUniverse.revisions).toHaveLength(1);
+    expect(firstUniverse.revisions[0]).toBeGreaterThanOrEqual(1);
+
+    await expect.poll(() => completedCycles(service)).toBeGreaterThanOrEqual(firstCompleted + 3);
+
+    const laterCompleted = await completedCycles(service);
+    const laterUniverse = await currentUniverse(service);
+    expect(laterUniverse.ids).toEqual(firstUniverse.ids);
+    expect(laterUniverse.revisions).toEqual(firstUniverse.revisions);
+
+    const staticFake = await fakeState(fake);
+    expect(staticFake.logicalCycleIndex).toBe(0);
+    expect(staticFake.requestLog.length).toBeGreaterThanOrEqual(laterCompleted);
+    expect(staticFake.requestLog.every((entry) => entry.endpoint === "ScreenerHulPaging3")).toBe(true);
+    expect(staticFake.maxActiveScreenerRequests).toBe(1);
+
+    await currentTable.locator("tbody tr").first().click();
+    const historyTable = viewer.getByRole("table", { name: "היסטוריית נייר" });
+    await expect(historyTable).toBeVisible();
+    await expect.poll(async () => historyTable.locator("tbody tr").count())
+      .toBeGreaterThanOrEqual(firstCompleted + 3);
+  } finally {
+    await stopRuntime(page).catch(() => {});
+    for (const candidate of context.pages()) {
+      if (candidate !== page) await candidate.close().catch(() => {});
+    }
+    await service.cleanup();
+    await fake.close();
+  }
+});
 
 test("normal U.S. runtime applies add/remove membership, recovers from provider failure, and executes staged Scanner", async ({ page, context }) => {
   const fake = await startFake();
