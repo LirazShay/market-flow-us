@@ -1,54 +1,69 @@
-# Market Flow US S&T State
+# Market Flow US Planning
 
-This directory contains the durable S&T planning state and the minimal post-freeze execution allocation.
+This directory is the durable planning/execution source of truth for the Market Flow US conversion.
 
-## Planner read order
+## Read order
 
-1. project `AGENTS.md`
-2. root `STATUS.yaml`
-3. `.planning/STATUS.yaml`
-4. `GOAL.md`
-5. `BACKLOG.md` when considering future scope beyond the currently frozen TREE
-6. relevant `TREE.yaml` nodes
-7. `DECISIONS.md` when needed
-8. routed durable contracts/evidence
-9. `REVIEWS.md` for prior review findings
+Planning/review:
 
-The exhaustive imported-baseline audit lives in:
+```text
+../AGENTS.md
+→ ../STATUS.yaml
+→ STATUS.yaml
+→ GOAL.md
+→ only the current TREE nodes and routed contracts/evidence
+```
 
-- `docs/US_MIGRATION_AUDIT.md`
-- `docs/US_MIGRATION_FILE_MAP.md`
+Execution after freeze:
 
-Whole-plan coverage is performed through the challenge questions in `FRAMEWORK.md` and recorded in `REVIEWS.md`; there is no separate legacy MASTER_COVERAGE/COVERAGE_MAP authority.
-
-## Executor read order
-
-1. project `AGENTS.md`
-2. root `STATUS.yaml`
-3. `.planning/STATUS.yaml`
-4. `EXECUTOR_HANDOFF.md`
-5. `EXECUTION.yaml`
-6. only assigned `TREE.yaml` nodes/dependencies
-7. only routed contract/test/code sections
+```text
+../AGENTS.md
+→ ../STATUS.yaml
+→ STATUS.yaml
+→ EXECUTOR_HANDOFF.md
+→ EXECUTION.yaml
+→ assigned TREE nodes + dependencies
+→ only routed contracts/tests/code
+```
 
 ## Ownership
 
-- GOAL — stable U.S. migration outcome/boundary.
-- BACKLOG — future requested capabilities that are durable but not yet reviewed/frozen/allocated; backlog entries never authorize implementation by themselves.
-- TREE — S&T logic, planning status, dependencies and success evidence.
-- DECISIONS — material resolved/open planning decisions.
-- REVIEWS — S&T, whole-goal and Final Planning Review evidence.
-- STATUS — small planning resume pointer and active/frozen state.
-- EXECUTION — after freeze: numbered chat allocation and execution state/result for leaf IDs.
-- EXECUTOR_HANDOFF — fresh-chat authorization/read-order/context-routing contract.
+- `GOAL.md` — stable product/migration goal.
+- `TREE.yaml` — Strategy & Tactic logic, dependencies and leaf success evidence.
+- `DECISIONS.md` — material resolved planning decisions.
+- `REVIEWS.md` — necessity/sufficiency/KISS, final planning and execution-reopen reviews.
+- `STATUS.yaml` — planning state/current planning pointer.
+- `EXECUTION.yaml` — numbered chat allocation and implementation state.
+- `EXECUTOR_HANDOFF.md` — compact executor bootstrap/routing.
+- `FRAMEWORK.md` — planning/execution governance.
+- `BACKLOG.md` — future candidate work only; backlog entries are **not** implementation authorization until promoted into TREE/EXECUTION.
 
-## Rules
+## Current performance/storage contract
 
-- Production implementation is forbidden while `plan_state: active`.
-- The whole intended plan must pass Final Planning Review before `plan_state: frozen`.
-- Freeze happens before execution allocation.
-- After freeze, assign every implementation-ready leaf exactly once in EXECUTION.
-- Do not duplicate Strategy/Tactic/task descriptions in EXECUTION.
-- Execution dependencies remain only in TREE `depends_on`.
-- BACKLOG items must be reconsidered against fresh `main` and promoted through normal contracts/TREE/review/freeze/allocation before implementation.
-- If implementation discovers a material planning defect, follow FRAMEWORK execution-reopen rules and preserve valid completed work.
+The current frozen contract is summarized by `D-US-011`, `D-US-020`, `D-US-021`, `D-US-022` and review `R-US-EXEC-REOPEN-004`:
+
+```text
+hosted CI = correctness-first + small performance sanity
+configurable synthetic generator = shared Fake Market/load source
+component performance = isolate the relevant layer
+heavy performance authority = final target-machine acceptance
+active market DB = one trading day; archive/reset between days
+```
+
+Do not infer old `4096 × 180 must pass in GitHub CI` semantics from historical review text. TREE + current decisions/tests own the active definition.
+
+## Backlog rule
+
+Future ideas discovered during execution belong in `BACKLOG.md` when they are useful but not authorized by the current frozen TREE.
+
+A future planner must review backlog items explicitly and either:
+
+```text
+promote into TREE/contracts
+or
+leave them deferred
+```
+
+Executors must not implement a backlog item merely because it exists.
+
+GitHub `main` remains the source of truth between chats; open branches/PRs are work in progress until merged.
