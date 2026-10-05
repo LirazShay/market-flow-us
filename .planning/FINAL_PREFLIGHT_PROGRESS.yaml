@@ -2,7 +2,7 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A8"
+current_stage: "A9"
 fr0_blocked_until_audit_closes: true
 
 stages:
@@ -14,7 +14,7 @@ stages:
   A5: done
   A6: done
   A7: done
-  A8: pending
+  A8: done
   A9: pending
   A10: pending
 
@@ -203,6 +203,22 @@ findings:
     regression: "tests/service/final-preflight-a7.test.mjs sends malformed rawSource.PaperId and boolean membership through the real DuckDB authority and proves both are rejected with the universe remaining empty."
     state: "fixed; A7 CI green"
 
+  - id: "A8-001"
+    severity: HIGH
+    area: "browser/live-verification + FR-13 contracts/runbooks"
+    finding: "TREE 7.4 and TEST_STRATEGY required market-open provider movement reflected in committed Current/History, but the executable live gate only proved a sustained authenticated static-compatible boundary. FR-13 therefore depended on an additional manual/ad-hoc observation that could not produce one deterministic SHA-bound PASS fact."
+    fix: "Kept base overall PASS as the static/closed compatibility fact and added a separate mechanical movement classification to the same SHA-bound live artifact. After base PASS it runs one bounded preflighted read-only Scanner witness over the exact committed cycle range, considers only persisted provider market/freshness fields, excludes collected_at_ms, and proves any witness through trusted Current/History before movement can PASS. No observed provider change remains PENDING; detected-but-unproven reflection is FAIL."
+    regression: "The new SQL received the mandatory 10-stage static preflight before first execution. tests/service/final-preflight-a8.test.mjs executes movement/static cases on real schema-v3 DuckDB/Scanner; tests/unit/final-preflight-a8.test.mjs proves PASS/PENDING/FAIL classification and bounded field/range behavior; live-verification build and Browser composition remain green."
+    state: "fixed; A8 CI green"
+
+  - id: "A8-002"
+    severity: MEDIUM
+    area: "DATA_CONTRACT / PRODUCT_REQUIREMENTS / PRODUCT_SPEC / TECHNICAL_SPEC identity wording"
+    finding: "After A7 fail-closed identity hardening, durable docs still described PaperId mostly as non-empty plus String(PaperId), which could be read as permitting generic object/boolean/non-safe-number canonicalization even though Browser and Node now reject those source types."
+    fix: "Aligned provider/data/product/technical contracts to accept only non-blank string or JavaScript safe-integer PaperId before canonicalization, with malformed types explicitly fail-closed."
+    regression: "tests/unit/final-preflight-a8-contract.test.mjs guards the identity wording and also ties the Product Spec Current column block exactly to the executable 15-column U.S. profile."
+    state: "fixed; A8 CI green"
+
 reviewed_non_findings:
   - id: "A2-REVIEW-001"
     area: "schema-v3 bootstrap/reopen/rejection"
@@ -264,11 +280,17 @@ reviewed_non_findings:
   - id: "A7-REVIEW-004"
     area: "background Viewer refresh promises"
     note: "The void commit-hint/manual UI paths initially looked like possible unhandled rejection sites, but the invoked Current/Detail operational reads absorb expected service failures into explicit surface state and requestRefresh releases state in finally. Adding a blanket catch would hide programmer defects, so no change was justified."
+  - id: "A8-REVIEW-001"
+    area: "U.S. visible columns, provider request, schema and staged anchors"
+    note: "Mechanical reconciliation found the U.S. Current Product Spec block exactly matches the executable 15-column US_CURRENT_COLUMNS profile. ScreenerHulPaging3 request/pageCount, schema-v3 promoted fields, null/zero behavior and staged 10/20/30/45/60/90/120-second semantics are already mechanically guarded and remained aligned; the apparent 16-column count belonged only to the retained legacy Israel profile."
+  - id: "A8-REVIEW-002"
+    area: "commands, artifacts and DB defaults"
+    note: "package scripts, START_HERE/README/FIRST_RUN commands, Windows launchers and docs agree on Node 24, Market Flow US artifact names, service command, active/demo/live DB separation, local acceptance profiles and new-day operation. docs/USER_GUIDE.md exists and was aligned with the mechanical movement classification."
+  - id: "A8-REVIEW-003"
+    area: "Scanner guide and local Fake acceptance"
+    note: "SCANNER_SQL_GUIDE remains schema-v3/source-defined and its executable SQL examples/built-ins are mechanically checked by the real Scanner suite. LOCAL_FAKE_ACCEPTANCE routes to existing package/Windows profiles and remained consistent; no additional application SQL was changed by documentation reconciliation."
 
-cross_stage_observations:
-  - id: "A8-CANDIDATE-001"
-    area: "docs/LIVE_VERIFICATION.md / TREE 7.4"
-    note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
+cross_stage_observations: []
 
 verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
@@ -278,6 +300,7 @@ verification:
   a5_code_candidate_sha: "57eb228605ded88190bf5d0b7ebd37f246c0b4ae"
   a6_code_candidate_sha: "d863bed337611f6b27a1f611e5dee975a9408395"
   a7_code_candidate_sha: "06ad9e074957137800f6155e6b372303a65ec0f2"
+  a8_code_candidate_sha: "1b415e56b4c2885848ce695f021fad31209aede0"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
@@ -285,4 +308,4 @@ verification:
   planning_docs_ci: green
   integrated_a9: pending
 
-next: "A8 — Contract/docs/runtime drift reconciliation"
+next: "A9 — Integrated proof after fixes"
