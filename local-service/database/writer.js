@@ -120,14 +120,20 @@ function createBulkWriterConnection(connection) {
   const planCache = new Map();
   let pendingPlan = null;
   let pendingRows = [];
+  let pendingCycleId = null;
+  let lastHistoryBatch = null;
+  let latestCopyArmed = false;
+  let latestCopy = null;
 
-  async function flush() {
+  async function flushRows() {
     if (!pendingPlan || pendingRows.length === 0) return;
 
     const plan = pendingPlan;
     const rows = pendingRows;
+    const cycleId = pendingCycleId;
     pendingPlan = null;
     pendingRows = [];
+    pendingCycleId = null;
 
     const appender = await connection.createAppender(plan.table);
     let error = null;
@@ -142,6 +148,35 @@ function createBulkWriterConnection(connection) {
       error = flushError;
     }
     closeAppenderPreservingOriginal(appender, error);
+
+    if (plan.table === "history" && cycleId !== null) {
+      lastHistoryBatch = Object.freeze({ cycleId, rowCount: rows.length });
+    }
+  }
+
+  async function flushLatestCopy() {
+    if (!latestCopy) return;
+
+    const copy = latestCopy;
+    latestCopy = null;
+    latestCopyArmed = false;
+
+    if (copy.rowCount !== copy.expectedRowCount) {
+      throw new Error(
+        `latest copy row count mismatch: expected ${copy.expectedRowCount}, got ${copy.rowCount}.`
+      );
+    }
+
+    await connection.run(
+      "INSERT INTO latest SELECT * FROM history WHERE cycle_id = $cycleId",
+      { cycleId: copy.cycleId }
+    );
+    lastHistoryBatch = null;
+  }
+
+  async function flush() {
+    await flushRows();
+    await flushLatestCopy();
   }
 
   async function bufferInsert(plan, params) {
@@ -149,10 +184,42 @@ function createBulkWriterConnection(connection) {
       throw new TypeError("Bulk market insert parameters must be an object.");
     }
 
-    if (pendingPlan && pendingPlan.signature !== plan.signature) {
-      await flush();
+    if (
+      plan.table === "latest"
+      && latestCopyArmed
+      && lastHistoryBatch
+      && params.cycleId === lastHistoryBatch.cycleId
+    ) {
+      await flushRows();
+      if (!latestCopy) {
+        latestCopy = {
+          cycleId: params.cycleId,
+          expectedRowCount: lastHistoryBatch.rowCount,
+          rowCount: 0
+        };
+      }
+      latestCopy.rowCount += 1;
+      return;
     }
-    if (!pendingPlan) pendingPlan = plan;
+
+    if (latestCopy) await flushLatestCopy();
+    latestCopyArmed = false;
+
+    if (pendingPlan && pendingPlan.signature !== plan.signature) {
+      await flushRows();
+    }
+    if (!pendingPlan) {
+      pendingPlan = plan;
+      pendingCycleId = Object.hasOwn(params, "cycleId") ? params.cycleId : null;
+    } else if (
+      pendingCycleId !== null
+      && Object.hasOwn(params, "cycleId")
+      && params.cycleId !== pendingCycleId
+    ) {
+      await flushRows();
+      pendingPlan = plan;
+      pendingCycleId = params.cycleId;
+    }
 
     pendingRows.push(plan.parameterNames.map((name) => {
       if (!Object.hasOwn(params, name)) {
@@ -177,14 +244,30 @@ function createBulkWriterConnection(connection) {
             return undefined;
           }
 
+          const isRollback = /^\s*ROLLBACK\b/i.test(sql);
+          if (isRollback && latestCopy) {
+            latestCopy = null;
+            latestCopyArmed = false;
+            lastHistoryBatch = null;
+          }
+
           await flush();
-          return await target.run(sql, params, types);
+          const result = await target.run(sql, params, types);
+
+          if (/^\s*DELETE\s+FROM\s+latest\b/i.test(sql) && lastHistoryBatch) {
+            latestCopyArmed = true;
+          } else if (!isRollback) {
+            latestCopyArmed = false;
+          }
+
+          return result;
         };
       }
 
       if (property === "runAndReadAll") {
         return async (...args) => {
           await flush();
+          latestCopyArmed = false;
           return await target.runAndReadAll(...args);
         };
       }
