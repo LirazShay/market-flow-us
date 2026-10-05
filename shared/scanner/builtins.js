@@ -206,10 +206,10 @@ export function normalizeScannerQueryNameKey(name) {
     .toLowerCase();
 }
 
-// Normal runtime remains on the imported MarketScope profile until TREE node 5.2.
-export const BUILTIN_SCANNER_QUERIES = freezeQueries(LEGACY_BUILTIN_SOURCE);
+// Normal runtime is U.S. authority after TREE node 5.2 cutover.
+export const BUILTIN_SCANNER_QUERIES = freezeQueries(MARKET_FLOW_US_BUILTIN_SOURCE);
 
-// Explicit pre-cutover target profile used by U.S. Scanner contract/tests.
+// Explicit target export retained for focused contract tests and callers.
 export const MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES = freezeQueries(
   MARKET_FLOW_US_BUILTIN_SOURCE
 );
