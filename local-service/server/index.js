@@ -41,7 +41,7 @@ try {
         ? ERROR_CODES.DB_SCHEMA_UNSUPPORTED
         : DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
       name: "ServiceStartupError",
-      message: "MarketScope service startup failed.",
+      message: "Market Flow US service startup failed.",
       retryable: false
     }
   });
@@ -68,7 +68,7 @@ if (service) {
         error: {
           code: DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
           name: "ServiceShutdownError",
-          message: "MarketScope service shutdown failed.",
+          message: "Market Flow US service shutdown failed.",
           retryable: false
         }
       });
