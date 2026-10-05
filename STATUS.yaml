@@ -4,8 +4,8 @@ overall_status: in_progress
 
 current:
   chat: 10
-  node: "7.4"
-  title: "Final target-machine acceptance deferred for Demo Buy replan"
+  node: "4.3.1"
+  title: "Demo Buy implementation prepared but blocked until planning CI/merge"
   status: blocked
 
 authority:
@@ -17,18 +17,18 @@ authority:
 
 planning_completion:
   file_audit_and_change_summary: pass
-  durable_us_contracts_and_decisions: reopening
-  new_st_tree: reopening
-  st_tree_review: pending
-  second_pass_adversarial_review: pending
-  final_planning_review: pending
-  plan_freeze: pending
-  execution_allocation: pending
-  handoff_verification: pending
-  implementation_authorization: pending
+  durable_us_contracts_and_decisions: pass
+  new_st_tree: pass
+  st_tree_review: pass
+  second_pass_adversarial_review: pass
+  final_planning_review: pass
+  plan_freeze: pass
+  execution_allocation: pass
+  handoff_verification: pass
+  implementation_authorization: blocked_ci
 
 execution:
-  chats_total: 10
-  implementation_leaves_total: 20
+  chats_total: 15
+  implementation_leaves_total: 26
   current_chat: 10
-  current_node: "7.4"
+  current_node: "4.3.1"
