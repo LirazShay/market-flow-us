@@ -208,6 +208,21 @@ Rules:
 
 A broad, high-value recurring suite that exercises many real integration boundaries may legitimately take up to roughly **30 seconds wall-clock**. That is an acceptance ceiling, not a target. Before accepting such a runtime, inspect the dominant costs for removable duplication, avoidable waiting/polling, oversized fixtures/bootstrap, unnecessary I/O or serialization, and other practical optimizations that preserve the same proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, record the measured result as the **best practical verified state** and stop micro-optimizing it. Reopen performance work when timing materially regresses or architecture/data shape changes.
 
+#### Hosted CI is correctness-first
+
+GitHub-hosted runners are not the release-performance authority for this product.
+
+Use them for:
+
+- extensive unit/service/browser correctness proof;
+- bounded performance sanity and catastrophic-regression detection;
+- approximately-full-universe width checks when they remain small;
+- diagnostic timing, not target-machine SLO claims.
+
+Do not repeatedly run large end-to-end workloads in hosted CI merely because they are available. Heavy performance PASS/FAIL belongs to the final target-machine acceptance defined by TREE/TEST_STRATEGY.
+
+When measuring one component, exercise the narrowest relevant layer: persistence tests need not pay for browser/HTTP; read/Scanner tests may seed valid day-bounded data directly; only end-to-end acceptance should pay for the complete Fake Market → browser → service → DuckDB path.
+
 For meaningful changes to automation-heavy areas, inspect whether the touched path introduced or preserves avoidable repeated work. If so, fix/refactor it in the same work unit rather than carrying known automation debt forward.
 
 ### SQL static preflight gate
