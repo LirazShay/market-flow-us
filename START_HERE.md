@@ -40,6 +40,31 @@ RESET_DEMO.cmd
 
 הפעולה מוחקת רק את מצב ה־Demo. היא אינה מוחקת את מסד הנתונים הרגיל של Market Flow US.
 
+## מתחיל יום מסחר חדש?
+
+מסד העבודה הרגיל `data/market-flow-us.duckdb` הוא active DB של **יום מסחר אחד**.
+
+לפני rollover:
+
+1. עצור את ה־producer והשירות עם `Ctrl+C`.
+2. ודא שאין חלון Market Flow US ישן שממשיך להשתמש במסד.
+3. הפעל:
+
+```text
+NEW_TRADING_DAY.cmd
+```
+
+הפעולה:
+
+```text
+prior active DB
+→ archive under data/archive/
+→ fresh schema-v3 active DB
+→ saved Scanner queries preserved
+```
+
+אם קיימת session שמסומנת `running`, הפעולה נכשלת במקום להחליף מסד תוך כדי עבודה. אין למחוק ידנית את המסד כדרך רגילה להתחיל יום חדש.
+
 ## רוצה להפעיל Market Flow US מול האתר האמיתי?
 
 1. היכנס לאתר הספק בדפדפן והשאר את העמוד המחובר פתוח.
@@ -52,7 +77,7 @@ RESET_DEMO.cmd
 5. הפעל את ה־bookmarklet כ־Bookmark בדפדפן מתוך העמוד המחובר.
 6. השאר את חלון השירות פתוח בזמן העבודה. לעצירה: `Ctrl+C`.
 
-נתוני העבודה הרגילים נשמרים כברירת מחדל ב־`data/market-flow-us.duckdb`.
+נתוני העבודה נשמרים כברירת מחדל ב־`data/market-flow-us.duckdb` של יום המסחר הפעיל.
 
 ## רוצה להריץ את הבדיקות הרגילות?
 
@@ -70,13 +95,34 @@ Fast unit + real-service tests
 → Chromium end-to-end tests
 ```
 
-בדיקת העומס הגדולה נשארת פעולה נפרדת ואינה רצה בכל לחיצה:
+בדיקת ה־CI workload המוגבלת נשארת פעולה נפרדת:
 
 ```text
 npm run test:workload
 ```
 
-## רוצה לבצע את בדיקת ה־Live הרשמית?
+## רוצה להריץ Local Fake Leumi acceptance?
+
+הפעל:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd
+```
+
+זו בדיקה דטרמיניסטית ללא authentication. היא מוכיחה static responses, moving values, membership changes, provider failure/recovery ו־restart דרך ה־runtime/service/DuckDB הרגילים.
+
+לפרופילי מחשב היעד:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd isolated
+RUN_LOCAL_ACCEPTANCE.cmd target
+```
+
+ה־`target` הוא פרופיל `4096 × 180`; הוא מיועד לקבלת ביצועים על מחשב היעד, לא ל־GitHub-hosted CI.
+
+פרטים: `docs/LOCAL_FAKE_ACCEPTANCE.md`.
+
+## רוצה לבצע authenticated provider verification?
 
 הפעל:
 
@@ -84,9 +130,13 @@ npm run test:workload
 PREPARE_LIVE_VERIFICATION.cmd
 ```
 
-הקובץ מכין את ה־gate, משתמש במסד ייעודי `data/live-verification.duckdb`, מייצר את `dist/live-verification/market-flow-us-live-verification.bookmarklet.txt`, מעתיק אותו ומרים את השירות המקומי. את ה־bookmarklet עצמו מפעילים ידנית בעמוד הספק המחובר.
+הקובץ מכין SHA-bound gate, משתמש במסד ייעודי `data/live-verification.duckdb`, מייצר את `dist/live-verification/market-flow-us-live-verification.bookmarklet.txt`, מעתיק אותו ומרים את השירות המקומי. את ה־bookmarklet עצמו מפעילים ידנית בעמוד הספק המחובר.
 
-החוזה המדויק ותנאי ה־PASS נמצאים ב־`docs/LIVE_VERIFICATION.md`. אין לסמן PASS ידנית — רק ה־gate רשאי לדווח `overall: "PASS"`.
+ה־gate מוכיח sustained acquisition/commit/read/Scanner/ownership/clean-stop. בשוק סגור/סטטי ערכים זהים ברצף הם מצב חוקי ואינם כשלעצמם כשל.
+
+**חשוב:** PASS של ה־gate אינו כשלעצמו הוכחת market-open movement. ההשלמה הסופית דורשת גם run בשוק פעיל שבו נצפה שינוי אמיתי ב־provider market/freshness והוא משתקף ב־Current/History. אם לא נצפה שינוי, תוצאת movement נשארת pending/inconclusive.
+
+החוזה המדויק נמצא ב־`docs/LIVE_VERIFICATION.md`. אין לסמן PASS ידנית.
 
 ## מה רואים בתוך Market Flow US?
 

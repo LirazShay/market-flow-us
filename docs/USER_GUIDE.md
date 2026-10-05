@@ -120,6 +120,8 @@ Market Flow US יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפ�
 data/market-flow-us.duckdb
 ```
 
+זהו **active DB של יום מסחר אחד**. הטבלאות `sessions`, `universe`, `cycles`, `history` ו־`latest` מיועדות לסמכות של יום העבודה הפעיל, לא לצבירה אוטומטית של חודשים או שנים.
+
 ב־Demo:
 
 ```text
@@ -134,7 +136,42 @@ data/live-verification.duckdb
 
 קבצי `data/`, `.demo/`, `dist/` ומסדי DuckDB מוחרגים מ־Git.
 
-## 8. בדיקות
+### מעבר ליום מסחר חדש
+
+לפני תחילת יום חדש:
+
+1. עצור את ה־producer והשירות בצורה נקייה עם `Ctrl+C`.
+2. ודא שאין תהליך Market Flow US שעדיין מחזיק את המסד.
+3. הפעל:
+
+```text
+NEW_TRADING_DAY.cmd
+```
+
+או:
+
+```text
+npm run db:new-day
+```
+
+ברירת המחדל:
+
+```text
+stop service
+→ validate old DB is not marked running
+→ preserve scanner_saved_queries
+→ move prior DB to data/archive/
+→ create fresh schema-v3 data/market-flow-us.duckdb
+→ restore saved queries into the fresh DB
+```
+
+ה־archive הוא retention אופציונלי של היום הקודם; הוא אינו מסד analytics פתוח שהמוצר ממשיך לצבור אליו.
+
+הפעולה מסרבת להתקדם כאשר קיימת session שמסומנת `running`. אם החלפת הקבצים נכשלת לאחר שהמסד הישן כבר הוזז, המנגנון מנסה להחזיר את המסד הקודם למקומו במקום להשאיר את המשתמש בלי active DB.
+
+אין למחוק ידנית את `data/market-flow-us.duckdb` כחלק מה־rollover הרגיל, משום שמחיקה ידנית גם עוקפת את שימור ספריית השאילתות.
+
+## 8. בדיקות ו־Local Fake Leumi acceptance
 
 לבדיקה הרגילה ב־Windows:
 
@@ -144,13 +181,38 @@ RUN_TESTS.cmd
 
 היא כוללת Fast + browser build + Chromium E2E.
 
-בדיקת עומס מייצגת היא נפרדת:
+בדיקת workload מוגבלת ל־CI:
 
 ```text
 npm run test:workload
 ```
 
-## 9. בדיקת Live מול הספק
+ל־Local Fake Leumi acceptance:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd
+```
+
+הבדיקה אינה דורשת authentication ומוכיחה דרך ה־runtime/service/DuckDB הרגילים:
+
+- repeated identical/static responses;
+- moving values;
+- add/remove membership;
+- provider failure/recovery;
+- service restart.
+
+לפרופילי target-machine:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd isolated
+RUN_LOCAL_ACCEPTANCE.cmd target
+```
+
+`isolated` מפעיל פרופילי persistence/read/Scanner יום־מסחר תחומים. `target` הוא פרופיל end-to-end של `4096 × 180`. מדידות target-machine אינן מוחלפות על ידי timing של GitHub-hosted CI.
+
+לפרטים ראה `docs/LOCAL_FAKE_ACCEPTANCE.md`.
+
+## 9. Authenticated provider verification
 
 הפעל `PREPARE_LIVE_VERIFICATION.cmd` או פעל ישירות לפי `docs/LIVE_VERIFICATION.md`.
 
@@ -165,8 +227,10 @@ dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
 
 ```text
 producer session
+→ repeated complete ScreenerHulPaging3 responses
 → universe
 → complete cycle + COMMIT
+→ sustained run
 → Current
 → Security
 → History
@@ -175,7 +239,21 @@ producer session
 → clean stop
 ```
 
-רק ה־gate רשאי להחזיר `overall: "PASS"`. אם תנאי חיצוני מונע הרצה, הסטטוס נשאר pending; אין להמציא PASS.
+ה־gate הקיים דורש לפחות `20` complete committed cycles ולפחות `60` שניות.
+
+### Closed/static authenticated market
+
+שוק סגור או סטטי רשאי להחזיר ערכים זהים ברצף. ערכים זהים אינם כשל אם התגובה המלאה תקינה, נרשמת ומגיעה ל־Current/History כנדרש.
+
+PASS כזה מוכיח authenticated provider shape/transport/authority compatibility.
+
+### Market-open movement
+
+השלמה סופית דורשת גם run בשוק פעיל שבו נצפה לפחות שינוי אמיתי אחד ב־provider market/freshness והוא משתקף בסמכות המחויבת (`Current`/`History`).
+
+ה־live gate הנוכחי **אינו בודק בעצמו movement** ולכן PASS שלו לבדו אינו market-open PASS. ה־movement-specific evidence נשאר חלק מ־final target-machine acceptance (`TREE 7.4`). אם בזמן run פעיל לא נצפה שינוי, תוצאת movement נשארת pending/inconclusive; אין להמציא PASS ואין להחליש את התנאי.
+
+רק ה־gate רשאי להחזיר `overall: "PASS"` לגבי הגבול שהוא באמת בודק.
 
 ## 10. אם משהו לא עובד
 
@@ -186,6 +264,7 @@ producer session
 3. בהרצה אמיתית — האם חלון השירות עדיין פתוח.
 4. האם ה־URL שהודבק ל־`START_MARKET_FLOW_US.cmd` הוא של עמוד הספק האמיתי וב־`http/https`.
 5. האם Popup של ה־Viewer נחסם.
+6. לפני `NEW_TRADING_DAY.cmd` — האם השירות וה־producer נעצרו באמת.
 
 בתוך Viewer קיים כפתור:
 
@@ -199,6 +278,7 @@ producer session
 
 ## 11. מה לא למחוק
 
-אל תמחק ידנית את `data/market-flow-us.duckdb` אם אתה רוצה לשמור את היסטוריית העבודה שלך.
-
-איפוס Demo צריך להתבצע דרך `RESET_DEMO.cmd`; הוא בנוי למחוק רק את מצב ה־Demo.
+- אל תמחק ידנית את `data/market-flow-us.duckdb` כדי להתחיל יום חדש; השתמש ב־`NEW_TRADING_DAY.cmd` כדי לשמר saved queries ולבצע rollover בטוח.
+- אל תמחק archive של יום קודם אם אתה עדיין רוצה לשמור אותו לצורכי retention ידני.
+- איפוס Demo צריך להתבצע דרך `RESET_DEMO.cmd`; הוא בנוי למחוק רק את מצב ה־Demo.
+- אל תעתיק לריפו credentials, cookies, session data, account identifiers או raw authenticated provider dumps.

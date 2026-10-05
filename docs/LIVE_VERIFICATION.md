@@ -2,6 +2,8 @@
 
 This is the explicit local authenticated-provider gate used by the release flow. It is not ordinary CI and it never stores provider credentials/session state in the repository.
 
+The current gate proves authenticated provider shape/transport/authority over a sustained bounded run. It deliberately does **not** infer market movement from a PASS. Closed/static compatibility and market-open movement are separate acceptance facts.
+
 ## Preconditions
 
 Before running:
@@ -95,9 +97,7 @@ and includes the embedded candidate commit, bounded-run counters/duration, final
 
 Do not capture or commit raw authenticated browser/network dumps.
 
-## Result classification
-
-Only this gate may report `overall: "PASS"` for the real authenticated provider boundary.
+## What a current gate PASS proves
 
 `PASS` requires, at minimum:
 
@@ -110,6 +110,56 @@ Only this gate may report `overall: "PASS"` for the real authenticated provider 
 - clean producer stop;
 - candidate SHA preserved in the report.
 
+A PASS proves that the authenticated provider boundary, browser/runtime path, local authority and trusted read/Scanner path all worked for the bounded run.
+
+## Closed/static authenticated market
+
+A closed or static market may legitimately return the same market values across consecutive complete provider responses.
+
+The current gate does **not** require a value change, so repeated equal values are acceptable when:
+
+- every provider response is complete and valid;
+- every cycle receives a durable COMMIT ACK;
+- Current/Security/History/Scanner/ownership/clean-stop proof passes.
+
+Therefore a PASS during a closed/static market is valid evidence for authenticated static-provider compatibility. It must not be rejected merely because prices or other market values did not move.
+
+TREE `7.4` requires at least five consecutive complete static responses. The current sustained gate is stricter on count/time (`20` cycles and `60` seconds), so a successful static run exceeds that minimum while still proving the same compatibility boundary.
+
+## Market-open movement acceptance
+
+Market-open acceptance proves an additional fact: real provider market/freshness data actually changed and that change reached committed product authority.
+
+The current live gate does **not** compare successive provider market values and does not record a movement-specific PASS. Consequently:
+
+- a normal `overall: "PASS"` from this gate alone is **not** sufficient to claim market-open movement acceptance;
+- final TREE `7.4` acceptance must additionally record at least one observable provider market/freshness value change and prove that it is reflected in committed `Current`/`History` authority;
+- if an active-market run completes but no real change is observed, the movement-specific result remains `pending`/`inconclusive` rather than being fabricated or weakened;
+- static authenticated PASS remains valid static evidence even when movement evidence is still pending.
+
+The movement-specific check belongs to final target-machine acceptance and may extend the acceptance reporting around this production gate; it must not change or weaken the provider/commit/read checks already performed here.
+
+## Result classification
+
+Only the gate may report `overall: "PASS"` for the authenticated boundary it actually verifies.
+
 If the gate reports `FAIL`, keep only the sanitized report and investigate `failure.checkpoint`, `failure.code` and `lastSuccessfulCheckpoint`. Never replace a real failure with a manual PASS.
 
 If the authenticated session, provider, browser policy, market condition, or another irreducible external prerequisite is unavailable, do not simulate it. Record the factual external boundary according to the current repository status contract. A pending external gate does not invalidate already-green offline/Fake/service/workload evidence, but it is not a live PASS.
+
+Do not label a static authenticated PASS as market-open movement PASS unless the separate movement-specific evidence required by TREE `7.4` is actually present.
+
+## Relation to local and daily acceptance
+
+The final target-machine order is:
+
+```text
+Local Fake Leumi bounded modes
+→ isolated day-bounded profiles
+→ 4096 × 180 target-machine profile
+→ NEW_TRADING_DAY.cmd lifecycle proof
+→ authenticated closed/static provider compatibility
+→ authenticated market-open movement proof
+```
+
+The normal production DB (`data/market-flow-us.duckdb`) is an active-day DB and is handled by `NEW_TRADING_DAY.cmd`. This live gate intentionally uses `data/live-verification.duckdb` instead, so real-provider verification cannot accidentally roll or mutate the user's normal active-day authority.

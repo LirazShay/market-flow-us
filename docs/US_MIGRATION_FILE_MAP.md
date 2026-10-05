@@ -1,10 +1,46 @@
 # US Migration File Map
 
-This is the exact classification of the 124 files present at the first exhaustive U.S. migration audit snapshot.
+This document preserves the exact classification of the **124 files that existed at the first exhaustive U.S. migration audit snapshot**. It is historical migration evidence, not a statement that every listed path still exists in the final release tree.
 
-That snapshot consisted of 121 files from the exact MarketScope baseline plus 3 U.S. replan/evidence files added before the audit: `.planning/BASELINE_PROVENANCE.md`, `docs/US_PRODUCT_DIRECTION.md`, and `docs/US_SOURCE_EVIDENCE.md`.
+That snapshot consisted of:
 
-Second-pass content review corrected false KEEP classifications, strengthens planning guards, and explicitly drops three superseded MarketScope planning-only coverage artifacts.
+```text
+121 files from the exact MarketScope baseline
++ 3 U.S. replan/evidence files added before the audit
+= 124 audited files
+```
+
+The three pre-audit additions were `.planning/BASELINE_PROVENANCE.md`, `docs/US_PRODUCT_DIRECTION.md`, and `docs/US_SOURCE_EVIDENCE.md`.
+
+Second-pass content review corrected false KEEP classifications, strengthened planning guards, and explicitly dropped three superseded MarketScope planning-only coverage artifacts.
+
+## Final release-closure disposition — TREE 7.3
+
+The lists below retain the original audit denominator and classifications. After the U.S. replacement paths were implemented and proved, TREE `7.3` performed the authoritative cleanup rather than keeping the superseded Israel acquisition implementation reachable indefinitely.
+
+Removed after replacement proof:
+
+```text
+browser/provider/universe.js          # MapHeat2 provider
+browser/provider/securities.js        # GetSecuritiesData provider
+browser/collector/cycle.js            # legacy multi-chunk collector
+tests/unit/provider-data.test.mjs     # unit proof for those superseded paths
+```
+
+Their active U.S. replacements are:
+
+```text
+browser/provider/us-screener.js
+browser/provider/us-universe.js
+browser/collector/us-cycle.js
+tests/unit/us-provider-data.test.mjs
+```
+
+The normal browser build starts from `browser/runtime/index.js`; its default acquisition graph is the U.S. candidate path through `us-cycle.js` and `us-screener.js`. The normal service command starts `local-service/server/index.js`, which injects `openMarketFlowUsDatabase` and therefore boots schema v3 authority.
+
+`START_MARKETSCOPE.cmd` appears below only because it existed in the original 124-file snapshot. It was replaced during execution by `START_MARKET_FLOW_US.cmd` and is not a current release launcher.
+
+Some historical/generic regression fixtures may still contain donor-era terminology when they are not part of the packaged or normal product path and still protect reusable behavior. Release authority is guarded mechanically by `tests/unit/release-runtime-audit.test.mjs`, which checks the built browser artifact and the normal service entrypoint rather than treating every historical test fixture as production code.
 
 ## KEEP (15)
 
@@ -145,7 +181,7 @@ Second-pass content review corrected false KEEP classifications, strengthens pla
 - .planning/LEGACY_COMPLETENESS_AUDIT.md
 - .planning/MASTER_COVERAGE.md
 
-## Coverage proof
+## Coverage proof for the original audit snapshot
 
 - audit-snapshot files: 124
 - exact imported MarketScope baseline files: 121
@@ -155,4 +191,4 @@ Second-pass content review corrected false KEEP classifications, strengthens pla
 - missing: 0
 - extra: 0
 
-Files created later by the planning process are outside this original 124-file audit denominator and are governed by current planning reviews/CI.
+Files created later by planning/execution are outside this original 124-file audit denominator and are governed by current TREE contracts, regression tests and CI. Paths subsequently removed after replacement proof remain listed above because changing the historical denominator would destroy the original migration-audit evidence.

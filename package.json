@@ -28,6 +28,7 @@
     "service": "node local-service/server/index.js",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
     "demo:reset": "node scripts/demo-reset.mjs",
+    "db:new-day": "node scripts/new-trading-day.mjs",
     "build:live-verification": "node scripts/build-live-verification.mjs"
   },
   "dependencies": {

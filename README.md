@@ -1,86 +1,125 @@
 # Market Flow US
 
-Market Flow US is the U.S.-market conversion of the proven MarketScope local market-analysis product.
+Market Flow US הוא מוצר ניתוח שוק מקומי לשוק האמריקאי, המבוסס על מנגנוני MarketScope שהוכחו ונשמרו היכן שלא נדרש שינוי עבור חוזה הנתונים האמריקאי.
 
-## Intended product flow
+## זרימת המוצר
 
 ```text
 authenticated Bank Leumi U.S. market page
-→ full U.S. screener snapshot
+→ full ScreenerHulPaging3 snapshot
 → exact snapshot validation
+→ browser Recorder / Producer Bridge
 → loopback WebSocket
 → localhost Node.js service
-→ native DuckDB
-→ Current
-→ Security Detail / History
-→ Dynamic SQL Scanner
+→ native DuckDB schema v3
+→ Current / Security Detail / History / Dynamic SQL Scanner
 ```
 
-The architecture, operational model, Scanner, saved queries, diagnostics, Fake Market, demo, CI and local-only authority are inherited from the verified MarketScope baseline wherever U.S. data does not require a change.
+אין backend ענן ואין מסד production בבעלות הדפדפן. ה־DuckDB המקומי הוא מקור הסמכות של המוצר לאחר commit תקין.
 
-## Current state
+## התחלה מהירה
 
-The repository contains an exact green MarketScope implementation baseline and a frozen U.S. conversion plan. Execution allocation is created only after freeze; once allocated, production U.S. conversion proceeds serially from `.planning/EXECUTION.yaml`.
-
-Read `STATUS.yaml` for the current phase/pointer.
-
-Do not treat the imported Israel provider path as the final U.S. product until the corresponding migration nodes are completed.
-
-## Baseline
-
-Imported donor:
+למשתמש Windows המסלול הקצר הוא:
 
 ```text
-LirazShay/market-scope
-commit: d8bc770d292d328d7e89febb8ef4f450abe9458e
-tree:   c49cc5f691e6d27ad120e0a5395e6b190f1b5952
+SETUP.cmd
+→ START_DEMO.cmd
 ```
 
-Market Flow US baseline commit:
+להפעלה מול הספק האמיתי:
 
 ```text
-cf6a21a17288832af3a69703dff39c9f843fe9a5
+START_MARKET_FLOW_US.cmd
 ```
 
-The imported tree matched byte-for-byte and passed Planning, Fast and Browser CI in this repository. See `.planning/BASELINE_PROVENANCE.md`.
+למדריך קצר ראה `START_HERE.md`. למדריך שימוש מלא ראה `docs/USER_GUIDE.md`.
 
-## Product decisions
+## מסד פעיל של יום מסחר אחד
 
-- Keep the MarketScope product style and runtime architecture.
-- Replace the Israel-specific provider/data contract with the proven U.S. Leumi screener path.
-- Keep append-only history + latest/current behavior; do not invent a new temporal-link mechanism.
-- Keep Scanner as the strategy/analysis surface.
-- The staged "best candidate" idea is an editable SQL query that computes the highest contiguous stage reached and sorts candidates accordingly.
-- Automated order execution/IBKR is outside this migration scope.
-- Optimize historical SQL only after the U.S. workload proves a real bottleneck.
+מסד העבודה הרגיל הוא:
 
-## Durable documents
+```text
+data/market-flow-us.duckdb
+```
 
-- `docs/US_PRODUCT_DIRECTION.md`
-- `docs/US_SOURCE_EVIDENCE.md`
-- `docs/US_MIGRATION_AUDIT.md`
-- `docs/US_MIGRATION_FILE_MAP.md`
-- `docs/US_CONTRACT_REVIEW.md`
+הוא מייצג **יום מסחר פעיל אחד**. הוא אינו מיועד לצבור ללא גבול היסטוריה של ימים קודמים.
+
+בסוף יום/לפני תחילת יום חדש:
+
+1. עצור את ה־producer והשירות (`Ctrl+C`).
+2. ודא שאין תהליך Market Flow US שעדיין משתמש במסד.
+3. הפעל:
+
+```text
+NEW_TRADING_DAY.cmd
+```
+
+או:
+
+```text
+npm run db:new-day
+```
+
+ברירת המחדל מעבירה את מסד היום הקודם ל־`data/archive/`, יוצרת active DB חדש ב־schema v3 ומשמרת את `scanner_saved_queries`. הפעולה מסרבת להתקדם אם קיימת session שמסומנת `running`, ובכשל בזמן החלפת הקבצים היא מנסה להחזיר את המסד הקודם למקומו.
+
+אין למחוק ידנית את `data/market-flow-us.duckdb` כחלק מ־rollover רגיל.
+
+## שכבות acceptance
+
+### 1. Local Fake Leumi — ללא authentication
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd
+```
+
+מוכיח דטרמיניסטית static responses, moving values, membership change, provider failure/recovery ו־restart דרך ה־runtime/service/DuckDB הרגילים. לפרטים: `docs/LOCAL_FAKE_ACCEPTANCE.md`.
+
+### 2. Authenticated closed/static provider compatibility
+
+```text
+PREPARE_LIVE_VERIFICATION.cmd
+```
+
+ה־gate משתמש בעמוד ספק שכבר authenticated בדפדפן ומוכיח sustained acquisition/commit/read/Scanner/ownership/clean-stop. תגובות שוק זהות ברצף הן חוקיות בשוק סגור או סטטי ואינן כשלעצמן כשל.
+
+לפרטים: `docs/LIVE_VERIFICATION.md`.
+
+### 3. Market-open movement acceptance
+
+השלמת המוצר דורשת בנוסף הוכחה בשוק פעיל שלפחות שינוי אמיתי אחד ב־provider market/freshness מגיע ל־Current/History. ה־live gate הקיים לבדו אינו טוען שהוא מוכיח movement; ה־movement-specific result נשאר חלק מה־final target-machine acceptance (`TREE 7.4`).
+
+אין להמיר static PASS ל־market-open PASS כאשר לא נצפה שינוי אמיתי.
+
+## גבול release
+
+ה־release מתקדם דרך deterministic offline proof, Local Fake Leumi acceptance, cleanup תפעולי ולבסוף target-machine acceptance. השלמה כוללת דורשת את חבילת `TREE 7.4`: daily-bounded target-machine performance, new-day lifecycle proof, authenticated static compatibility ו־market-open movement proof.
+
+`STATUS.yaml` ו־`.planning/EXECUTION.yaml` הם מקור האמת היחיד ל־execution pointer ולמצב העדכני.
+
+## החלטות מוצר מרכזיות
+
+- לשמר את ארכיטקטורת MarketScope המוכחת במקום rewrite.
+- להשתמש ב־ScreenerHulPaging3 כגבול acquisition האמריקאי.
+- לשמור append-only history בתוך יום המסחר הפעיל + `latest` סמכותי.
+- לשמור את Scanner כמשטח strategy/analysis, כולל saved queries.
+- ה־staged candidate הוא SQL רגיל וניתן לעריכה, לא Strategy Engine חדש.
+- Automated order execution / IBKR מחוץ להיקף migration זה.
+- performance authority כבד שייך למחשב היעד, לא ל־GitHub-hosted CI.
+
+## מסמכי אמת עיקריים
+
+- `AGENTS.md`
+- `STATUS.yaml`
+- `.planning/STATUS.yaml`
+- `.planning/EXECUTION.yaml`
+- `.planning/TREE.yaml`
 - `docs/PRODUCT_REQUIREMENTS.md`
 - `docs/PRODUCT_SPEC.md`
 - `docs/DATA_CONTRACT.md`
 - `docs/TECHNICAL_SPEC.md`
 - `docs/SCANNER_SQL_GUIDE.md`
 - `docs/TEST_STRATEGY.md`
-- `docs/SOURCE_EXTRACTION.md`
+- `docs/LOCAL_FAKE_ACCEPTANCE.md`
+- `docs/LIVE_VERIFICATION.md`
 
-## Development workflow
-
-```text
-fresh main
-→ assigned execution chat
-→ focused branch
-→ proof + implementation
-→ PR
-→ CI green
-→ squash merge
-→ main green
-→ advance STATUS
-```
-
-GitHub `main` is the source of truth. See `AGENTS.md`.
+GitHub `main` הוא מקור האמת בין צ׳אטים. תהליך development/release מוגדר ב־`AGENTS.md`.

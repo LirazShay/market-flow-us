@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "7.3"
+current_node: "7.4"
 blockers: []
-next_action: "Chat 8 / TREE 7.2 is complete and merged on main at e108e7ef5c3ada48025fd5a1a81f821d67dadecd. Planning/Fast/Browser/Workload main CI are green and there are no open PRs. Chat 9 / node 7.3 is the first open execution node and is ready to start from fresh main."
+next_action: "Chat 9 / TREE 7.3 success evidence is satisfied on release-closure branch. Complete PR #13 final-head CI/review, squash merge, verify main CI and audit open PRs; then Chat 10 / TREE 7.4 is the only remaining execution node and stays pending until the required user-dependent target-machine/authenticated checks are run."
 last_review: "R-US-EXEC-REOPEN-004"
