@@ -640,3 +640,198 @@ Current `6.3` implementation work remains useful, including static Scanner optim
 PASS.
 
 No TREE dependency or chat-allocation change is required. Reset `6.3` from planning `blocked` back to `in_progress`, freeze the plan, restore root phase `implementation`, and resume Chat 7 under the revised correctness-first/performance-target-machine contract.
+
+
+## R-US-EXEC-REOPEN-005 — Demo Buy strategy-validation final review
+
+**Result:** PASS AFTER CORRECTIONS; IMPLEMENTATION BLOCKED ON CI AVAILABILITY
+
+**Trigger:** Before executing the previously final target-machine leaf `7.4`, the user added a new product requirement: finish a Demo Buy strategy-validation feature first so Scanner-selected candidates can be treated as virtual buys and inspected later to determine whether `Price` actually rose or fell over short horizons. The user also explicitly changed sequencing so all remaining development must finish before target-machine/authenticated acceptance.
+
+### Scope of reopen
+
+The smallest affected area is Scanner branch `4` plus release branch `7`.
+
+Completed nodes `1.1` through `7.3` remain valid evidence for the capabilities they already proved. The previously unexecuted `7.4` is deferred rather than invalidated.
+
+New implementation leaves are:
+
+```text
+4.3.1 schema v4 / migration / Demo Buy persistence
+4.3.2 serialized capture authority / protocol
+4.3.3 trusted evaluation / read model
+4.4.1 Scanner capture controls / automatic capture
+4.4.2 dedicated Demo Buy outcome screen
+7.5   post-feature deterministic release re-closure
+```
+
+`7.4` remains the final user-dependent target-machine/authenticated acceptance leaf.
+
+### Structural S&T review
+
+PASS after dependency repair:
+
+```text
+TREE nodes                 36
+implementation leaves      26
+root capability branches    7
+missing child references    0
+invalid parent counts        0
+one-child decompositions    0
+invalid leaf dependencies   0
+dependency cycles           0
+non-approved nodes          0
+```
+
+Dependency corrections made during review:
+
+- `4.4.2` now depends on `4.4.1`, because its required browser E2E starts from real Scanner capture controls rather than an imagined stub path;
+- `7.5` depends on both `4.4.1` and `4.4.2`, so release re-closure cannot start with only half of the user workflow complete.
+
+### Necessity challenge
+
+Every new leaf is necessary:
+
+- `4.3.1`: without durable capture facts and schema lifecycle there is no restart-safe observation authority;
+- `4.3.2`: schema alone cannot define the precise virtual-buy moment, writer race semantics or exact baseline linkage;
+- `4.3.3`: stored capture facts do not answer what happened later without one trusted calculation/read layer;
+- `4.4.1`: the user cannot create observations from Scanner results without capture controls;
+- `4.4.2`: backend evidence is not a usable strategy-validation product without an inspection surface;
+- `7.5`: the old release candidate predates schema/UI/protocol changes and cannot be the accepted final SHA.
+
+Removing any of these leaves leaves a user requirement or release-safety condition unowned.
+
+### Sufficiency / outside-in user walkthrough
+
+PASS.
+
+A fresh user journey is fully owned:
+
+```text
+activate/edit Scanner SQL
+→ successful ordered result generation
+→ choose Selected / All / Top X or session-only Auto All / Auto Top X
+→ browser preserves exact active-generation provenance
+→ Node captures one authoritative moment without user-entered price
+→ each item links (buy_cycle_id, security_id) to exact history baseline
+→ later history continues to accumulate normally
+→ Node recomputes 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m outcomes
+→ Demo Buy screen shows baseline, future Price, %, direction and actual observation timing
+→ Refresh progressively changes UNAVAILABLE horizons into observed outcomes
+```
+
+The user can therefore answer the intended Phase-1 question directly: “If I had bought this Scanner candidate at that captured moment, what happened afterward?”
+
+### Corrections discovered during review
+
+1. **Wrong possible horizon anchor** — contracts were aligned so horizons start at Node-authoritative `captured_at_ms`, not the potentially older baseline `collected_at_ms`.
+2. **Backend ownership too coarse** — one vague backend leaf was decomposed into persistence, capture authority and evaluation/read model.
+3. **UI could have been forgotten** — the dedicated Demo Buy screen is an explicit implementation leaf with its own success evidence.
+4. **Hidden truncation risk** — `All`/auto-All may not silently truncate above 5000 unique IDs; they fail visibly. `Top X` is explicitly bounded.
+5. **Invalid identity ambiguity** — recognized identity cells are fail-closed; invalid chosen rows cannot be silently skipped or guessed from `Symbol`.
+6. **Browser/Node dedupe boundary** — browser reduces duplicate canonical IDs by first occurrence before submission; Node independently requires the payload to be unique and ordered rather than silently repairing malformed protocol input.
+7. **Auto-capture backlog risk** — Phase 1 uses one bounded in-flight auto-capture slot; a Scanner generation arriving while busy is visibly skipped, not queued without bound, and no replay subsystem is added.
+8. **Baseline integrity ambiguity** — a missing linked baseline after successful capture is a data-integrity failure, not an ordinary `UNAVAILABLE` future horizon.
+9. **Daily rollover ambiguity** — Demo Buy evidence is day-bounded with its referenced history; unresolved future horizons do not bridge into the fresh next-day active DB.
+10. **Navigation assumption checked against current code** — Scanner remains mounted while top-level views switch, so automatic capture can continue while Demo Buy is visible without a new scheduler subsystem.
+
+### Contract consistency
+
+PASS across PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY and DEMO_BUY_VALIDATION on the material invariants:
+
+```text
+canonical identity           = security_id / securityId from validated PaperId
+virtual-buy moment           = captured_at_ms inside serialized Node operation
+baseline                     = history(buy_cycle_id, security_id)
+manual buy price             = forbidden
+persisted future outcomes    = none
+horizon authority            = first same-security history row >= captured_at_ms + H
+horizons                     = 10s,20s,30s,45s,60s,90s,120s,3m,5m,10m
+calculation owner            = trusted Node read model
+browser calculation          = none
+screen                       = dedicated Demo Buy top-level surface
+active-day lifecycle         = prior DB may archive; fresh DB starts Demo Buy empty
+Phase 2 liquidity/sellability= explicitly deferred
+```
+
+### Failure / edge walkthrough
+
+PASS for:
+
+- empty Scanner result;
+- Scanner result without exactly one canonical ID column;
+- invalid canonical identity cell;
+- duplicate IDs;
+- more than 5000 unique selected IDs;
+- Top X bounds;
+- capture racing a market-cycle commit;
+- one unresolved latest security causing all-or-nothing rollback;
+- persistence failure and later recovery;
+- repeated same security in later independent captures;
+- null/zero baseline Price;
+- null future Price;
+- no future row yet;
+- delayed future observation;
+- missing baseline integrity failure;
+- pagination stability;
+- saved-query edits after an old capture;
+- auto capture busy/failure without stopping Scanner scheduling;
+- Viewer navigation while Scanner/auto remains active;
+- restart and new-day rollover.
+
+### KISS challenge
+
+PASS.
+
+The plan deliberately does not add:
+
+- Strategy Engine;
+- order/fill simulator;
+- portfolio state;
+- background horizon updater;
+- materialized ten-horizon columns;
+- temporal feature subsystem;
+- second DB;
+- second transport;
+- cross-day analytics warehouse;
+- auto-capture replay queue;
+- Phase-2 volume/liquidity/sellability logic.
+
+Two tiny persistence tables plus direct bounded trusted reads over existing `history` are the smallest sufficient mechanism until measurement proves otherwise.
+
+### Planned serial allocation
+
+The revised implementation order is:
+
+```text
+Chat 10: 4.3.1 → 4.3.2
+Chat 11: 4.3.3
+Chat 12: 4.4.1
+Chat 13: 4.4.2
+Chat 14: 7.5
+Chat 15: 7.4
+```
+
+This reuses the previously unexecuted Chat 10 slot rather than creating an artificial gap. Final target-machine acceptance moves to Chat 15 and remains last.
+
+### CI / Actions blocker
+
+The user reported that GitHub Actions is currently unavailable for the required CI workflow. This review does not claim a Planning Docs CI run while that condition exists.
+
+Therefore the safe state is:
+
+```text
+plan_state = frozen
+execution allocation = prepared
+root phase = planning
+implementation_authorized = false
+blocker = required GitHub Actions/CI unavailable
+```
+
+This preserves the fully reviewed plan while making it mechanically impossible for an executor to start production code under the AGENTS authorization gate.
+
+### Freeze decision
+
+PASS — Demo Buy planning is complete enough to freeze.
+
+Implementation must **not** begin until the planning work unit can pass its required GitHub Actions/CI gate, merge according to repository workflow, and root status is deliberately advanced to `phase: implementation`.
