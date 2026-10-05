@@ -463,3 +463,82 @@ The original seven capability branches, success evidence, non-goals and final re
 ### Re-freeze decision
 
 The corrected planning area is coherent. EXECUTION does not require reallocation. Node `1.1` may be reset from `blocked` to `pending`, the plan may be frozen again, and Chat 1 may resume from the preserved branch after implementation authorization is restored.
+
+
+## R-US-EXEC-REOPEN-002 — Static-market and deferred target-machine acceptance review
+
+**Result:** PASS AFTER CORRECTION
+
+**Trigger:** During Chat 7 the user clarified that development is occurring while the market may be static, and requested three separate proof families: a lightweight static-market check, user-runnable mock load/performance, and a final market-open verification. The frozen plan had one live-provider leaf that mixed these facts and would unnecessarily block subsequent development on market hours/user availability.
+
+### Planning defect
+
+The old `7.2` assumed the live gate could serve both provider compatibility and moving-market evidence. That is not logically sound when repeated equal provider values are a legitimate closed/static-market outcome.
+
+It also placed a user-dependent external check before final cleanup, despite the user explicitly wanting all target-machine/authenticated checks deferred until development and release preparation are complete.
+
+### Correction
+
+The smallest affected planning area is branch `7` only.
+
+Changes:
+
+1. Added `D-US-019` and revised `D-US-016` to distinguish static-provider compatibility from moving-market evidence.
+2. `7.2` now owns a reusable local Fake Leumi acceptance package built from the existing Fake Market/runtime/service/DuckDB/workload mechanisms.
+3. `7.3` remains release cleanup/documentation but now prepares the exact final candidate and acceptance instructions before any user-dependent gate.
+4. Added final leaf `7.4` for **all** user-dependent target-machine checks:
+   - local Fake Leumi static/moving/failure/restart acceptance;
+   - representative `4096 × 180` mock workload/performance on the target machine;
+   - authenticated closed/static-market smoke allowing repeated equal values;
+   - authenticated market-open run requiring observable provider market/freshness change.
+5. TEST_STRATEGY now gives normal workflows a 3-minute hard ceiling and the representative workload a 5-minute hard ceiling; timeout is a performance blocker, not permission to extend runtime.
+6. EXECUTION adds Chat 10 for `7.4`; Chats 8 and 9 remain `7.2` and `7.3` respectively.
+
+### S&T / dependency review
+
+After correction:
+
+```text
+TREE nodes                 28
+implementation leaves      20
+root capability branches    7
+missing child references    0
+one-child decompositions    0
+invalid leaf dependencies   0
+dependency cycles           0
+chat allocation            10
+```
+
+The release sequence is now intentionally serial:
+
+```text
+7.1 offline candidate
+→ 7.2 local acceptance tooling
+→ 7.3 cleanup/docs/final candidate
+→ 7.4 user-dependent target-machine acceptance
+```
+
+`7.4` depends on `7.3`; transitive dependencies therefore preserve `7.1` and `7.2` without redundant direct edges.
+
+### Necessity / sufficiency challenge
+
+- `7.2` is necessary because existing tests prove components but do not give the user one deterministic local acceptance flow or explicit static-market semantics.
+- `7.3` remains necessary because acceptance should run only against the cleaned/documented final candidate.
+- `7.4` is necessary because Fake Market cannot prove the user's actual browser/provider boundary or real market movement.
+- The four children of branch `7` are sufficient together: deterministic candidate proof, reusable local acceptance, release cleanup, and final external target-machine evidence.
+
+The static authenticated smoke is not allowed to substitute for the market-open gate; synthetic movement is not allowed to substitute for real-provider movement. Conversely, the market-open requirement no longer blocks deterministic development or cleanup.
+
+### KISS / preservation result
+
+PASS.
+
+No new provider simulator, database, transport, strategy subsystem or test runner is introduced. The new acceptance kit must reuse the already-proven Fake Market, normal runtime, local service, DuckDB and representative workload.
+
+All completed nodes `1.1` through `6.2` remain valid. Current `6.3` work remains valid and resumes unchanged after re-freeze. No completed implementation evidence is invalidated.
+
+### Re-freeze decision
+
+PASS.
+
+The affected planning area is coherent, allocation is repaired with one new final chat, and implementation may resume at Chat 7 / node `6.3`.

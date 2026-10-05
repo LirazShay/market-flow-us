@@ -5,7 +5,7 @@ nodes:
   "0":
     status: approved
     strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model while replacing only Israel-specific provider/data assumptions."
-    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and bounded live cutover/release closure."
+    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and staged local/target-machine release acceptance."
     parallel_assumptions:
       - "The exhaustive 124-file migration audit and reviewed U.S. contracts identify the material conversion boundaries."
       - "Preserving proven MarketScope mechanisms is lower-risk than reconstructing them."
@@ -19,7 +19,7 @@ nodes:
       - "The authoritative runtime no longer depends on MapHeat2/GetSecuritiesData or Israeli typed market fields."
       - "Current, Detail/History and Scanner operate over schema-v3 U.S. authority."
       - "Fast CI, Browser CI and the representative U.S. workload are green on the final candidate."
-      - "The bounded authenticated U.S. provider gate is PASS."
+      - "The local Fake Leumi acceptance tooling is proven and the final target-machine bundle passes static-provider and market-open authenticated checks."
       - "Final branding/docs/launchers describe Market Flow US and main is green with no blocking defect."
     depends_on: []
     children: ["1", "2", "3", "4", "5", "6", "7"]
@@ -272,7 +272,7 @@ nodes:
       - "Browser E2E and demo need a real HTTP provider boundary matching the new production adapter."
     sufficiency_assumptions: []
     success_evidence:
-      - "Fake Market tests cover complete response, reorder, add/remove, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay and advancing values."
+      - "Fake Market tests cover complete response, repeated-identical/static response, reorder, add/remove, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay and advancing values."
       - "Fixtures contain only synthetic/sanitized data."
     depends_on: ["1.1"]
     children: []
@@ -303,7 +303,7 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - "Full Browser suite is green against U.S. Fake Market."
-      - "E2E proves Current, Detail/History, Scanner, saved-query behavior, refresh preservation, Viewer/producer independence, explicit recovery and add/remove membership."
+      - "E2E proves Current, Detail/History, Scanner, saved-query behavior, refresh preservation, Viewer/producer independence, explicit recovery, repeated-identical/static commits and add/remove membership."
     depends_on: ["3.2", "3.3", "4.2", "5.2"]
     children: []
 
@@ -367,38 +367,40 @@ nodes:
       - "Small deterministic tests cannot establish whether direct history SQL is practical at intended U.S. scale."
     sufficiency_assumptions: []
     success_evidence:
-      - "Workload proves 180 completed cycles, 4096 latest rows, 737280 history rows, restart count preservation and zero failed cycles."
+      - "Workload proves 180 completed cycles, 4096 latest rows, 737280 history rows, restart count preservation and zero failed cycles within the 5-minute hard ceiling."
       - "Report contains commit/Current/History/general Scanner/staged Scanner/restart/DB-size measurements."
-      - "If staged SQL is materially impractical, this node does not close; the smallest performance planning area is reopened."
+      - "If staged SQL is materially impractical or the hard ceiling is exceeded, this node does not close; the smallest performance planning area is reopened."
     depends_on: ["2.3", "4.1"]
     children: []
 
   "7":
     status: approved
-    strategy: "The migrated product is proven offline, validated on the real authenticated U.S. provider boundary and released with no authoritative Israel-only runtime assumptions."
-    tactic: "Run final offline gates on one candidate, execute the bounded live-provider gate, then perform final migration/documentation/main-state closure."
+    strategy: "The migrated product is proven offline, packaged for deterministic local acceptance, cleaned for release, and finally accepted on the target machine against both a static authenticated provider and an active real market."
+    tactic: "Run final offline gates on one candidate, build a one-command Fake Leumi/local-performance acceptance kit, perform final migration/documentation cleanup, then execute all user-dependent target-machine acceptance checks as the last leaf."
     parallel_assumptions:
-      - "Deterministic offline proof should precede expensive/external live verification."
-      - "The live gate is needed only for provider/browser facts that cannot be proven offline."
+      - "Deterministic offline and local-fake proof should precede user-dependent authenticated verification."
+      - "A static/closed market can prove provider shape/transport/authority even when quote values legitimately repeat."
+      - "Observable real market movement can only be accepted honestly when the market is active, so that check belongs at the final boundary rather than blocking development."
     necessary_assumptions:
       - "Implementation is not complete merely because individual migration branches pass in isolation."
     sufficiency_assumptions:
-      - "Final offline proof, bounded real-provider PASS and release audit together establish end-to-end completion."
+      - "Final offline proof, reusable local Fake Leumi acceptance, release cleanup, target-machine mock/performance PASS, static-provider smoke PASS and market-open authenticated PASS together establish end-to-end completion."
     success_evidence:
       - "Final candidate Fast CI, Browser CI and U.S. workload are green."
-      - "Real-provider gate reports overall PASS."
+      - "Local Fake Leumi acceptance tooling is automatically proven before release cleanup."
+      - "Final target-machine bundle reports PASS for local mock/performance, closed/static authenticated smoke and market-open authenticated acceptance."
       - "Final repository audit finds no authoritative MapHeat2/GetSecuritiesData/Israeli-field runtime path and main is green."
     depends_on: []
-    children: ["7.1", "7.2", "7.3"]
+    children: ["7.1", "7.2", "7.3", "7.4"]
 
   "7.1":
     status: approved
-    strategy: "One release candidate passes every deterministic offline gate before live verification."
+    strategy: "One release candidate passes every deterministic offline gate before acceptance packaging and final external verification."
     tactic: "Run full Fast, full Browser and representative U.S. workload on the integrated candidate; fix any migration regressions at their owning leaf before accepting the candidate."
     parallel_assumptions:
       - "A single integrated candidate gate catches cross-branch drift that focused leaf tests may miss."
     necessary_assumptions:
-      - "Live provider testing should not be used to discover deterministic product regressions."
+      - "Authenticated provider testing should not be used to discover deterministic product regressions."
     sufficiency_assumptions: []
     success_evidence:
       - "Fast CI is green."
@@ -411,34 +413,58 @@ nodes:
 
   "7.2":
     status: approved
-    strategy: "The release candidate works through the real authenticated Bank Leumi U.S. provider boundary without weakening security or authority semantics."
-    tactic: "Run the SHA-bound bounded live gate for at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
+    strategy: "Market Flow US provides a deterministic local Fake Leumi acceptance package that proves static-market correctness, synthetic movement/failures, restart behavior and representative load/performance without requiring market hours or authentication."
+    tactic: "Reuse the canonical U.S. Fake Market, normal runtime, real local service/DuckDB and the representative workload to expose a documented one-command acceptance path; add only the smallest orchestration/reporting needed for static identical responses, moving values, membership changes, failure/recovery, restart and user-runnable 4096 x 180 performance proof."
     parallel_assumptions:
-      - "The live gate is the smallest safe way to prove provider shape, current one-request completeness and browser loopback compatibility."
+      - "The existing Fake Market/runtime/service/workload already contain the required product boundaries, so packaging them into an acceptance flow is lower-risk than creating a new simulator or product path."
+      - "Repeated identical complete responses are a legitimate closed/static-market condition and should still create durable history without false universe revisions."
     necessary_assumptions:
-      - "Provider/CSP/session behavior is external and cannot be honestly certified by Fake Market alone."
+      - "CI/E2E components alone do not give the user a simple target-machine acceptance flow or prove that static market values are intentionally supported."
     sufficiency_assumptions: []
     success_evidence:
-      - "Sanitized report is SHA-bound and overall PASS."
-      - "Report proves the bounded sustained U.S. run, revision handling, COMMIT ACK for every cycle, final Current, Security, History containing the live cycles, Scanner, ownership and clean stop."
-      - "No credential/session/private response material is committed."
+      - "A documented local acceptance command/launcher uses the normal runtime/service/DuckDB and synthetic ScreenerHulPaging3 boundary; no parallel product implementation is introduced."
+      - "Automated bounded proof covers repeated identical responses, moving values, add/remove membership, provider failure/recovery, restart and sanitized PASS/FAIL reporting."
+      - "The same acceptance package exposes the representative 4096 x 180 workload for target-machine execution with the 5-minute hard ceiling and required measurements."
+      - "No credentials/authenticated response material are required or stored."
     depends_on: ["7.1"]
     children: []
 
   "7.3":
     status: approved
-    strategy: "Repository truth, local run instructions and final runtime contain only the intended Market Flow US product direction and are ready for normal use from main."
-    tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, update durable docs/status/handoff truth, merge through green CI and verify main."
+    strategy: "Repository truth, local run/acceptance instructions and final runtime contain only the intended Market Flow US product direction and are ready for target-machine acceptance."
+    tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, document the local Fake Leumi and final authenticated acceptance commands, update durable docs/status/handoff truth, merge through green CI and verify main readiness."
     parallel_assumptions:
       - "Cleanup after replacement proof is safer than deleting donor behavior early."
+      - "Target-machine acceptance is most useful after the exact candidate and user instructions are stable."
     necessary_assumptions:
-      - "A technically passing candidate can still be operationally misleading if old provider paths/names remain authoritative."
+      - "A technically passing candidate can still be operationally misleading if old provider paths/names remain authoritative or acceptance instructions do not match reality."
     sufficiency_assumptions: []
     success_evidence:
       - "Audit proves no authoritative MapHeat2/GetSecuritiesData or Israeli typed-field runtime dependency remains."
-      - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior."
+      - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior and document local/static/market-open acceptance clearly."
       - "No unexpected pre-existing/open PR conflicts with the release work unit."
       - "The release branch is internally consistent and ready for the normal PR/CI/squash-merge workflow defined by AGENTS.md."
-      - "STATUS/handoff changes on the release branch point to the completion transition that becomes authoritative only after merge."
+      - "STATUS/handoff changes on the release branch point to final target-machine acceptance rather than claiming completion before user-dependent checks."
     depends_on: ["7.2", "6.1"]
+    children: []
+
+  "7.4":
+    status: approved
+    strategy: "The exact final Market Flow US candidate is accepted on the user's target machine through local Fake Leumi/load proof, authenticated static-market compatibility and authenticated market-open movement."
+    tactic: "Run the documented final acceptance bundle only after release cleanup: first the target-machine local Fake Leumi modes plus 4096 x 180 performance run, then a lightweight authenticated closed/static-market smoke that permits repeated equal values, and finally the SHA-bound market-open gate with at least 20 complete cycles spanning at least 60 seconds and observable provider market/freshness change."
+    parallel_assumptions:
+      - "Deferring all user-dependent checks to one final leaf lets deterministic development finish without pretending external evidence already exists."
+      - "Static-provider compatibility and moving-market evidence prove different facts and neither should be substituted for the other."
+      - "The final market-open run is bounded enough to be practical while still proving repeated real acquisition/commit/read behavior with actual changing provider data."
+    necessary_assumptions:
+      - "Automated Fake Market proof cannot establish the user's actual machine/browser/provider compatibility or real market movement."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "User-run local Fake Leumi acceptance reports PASS for static, moving, failure/recovery and restart modes on the target machine."
+      - "User-run representative 4096 x 180 mock workload reports correct counts/measurements and completes within the 5-minute hard ceiling."
+      - "Authenticated closed/static-market smoke records at least 5 consecutive complete committed responses, accepts repeated equal values, and proves Current/Security/History/bounded Scanner/ownership/clean stop with a sanitized SHA-bound report."
+      - "Authenticated market-open report is SHA-bound and PASS after at least 20 consecutive complete cycles spanning at least 60 seconds, with at least one observable provider market/freshness value change reflected in committed Current/History plus bounded Scanner/ownership/clean stop."
+      - "No credential/session/private response material is committed or copied into reports."
+      - "If an active-market run observes no change, the movement-specific result remains inconclusive/pending rather than fabricating or weakening evidence."
+    depends_on: ["7.3"]
     children: []

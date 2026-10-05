@@ -45,11 +45,12 @@ Do not ask the user to restate the plan.
 | `4.*` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
 | `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
 | `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
-| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY live gate |
-| `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC workload, Scanner staged-query contract |
+| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY authenticated gates |
+| `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC workload, Scanner staged-query contract, AGENTS SQL static preflight |
 | `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/workload final gates + all affected leaf evidence |
-| `7.2` real provider | DATA_CONTRACT external facts, PRODUCT_SPEC live verification, TEST_STRATEGY real-provider gate |
+| `7.2` local acceptance kit | TEST_STRATEGY Local Fake Leumi acceptance kit, Fake Market/runtime/service/workload reuse, target-machine launcher/report contract |
 | `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, US_MIGRATION_FILE_MAP and TREE success evidence |
+| `7.4` final target-machine acceptance | TEST_STRATEGY final target-machine bundle: local Fake Leumi + 4096x180 mock performance + authenticated static-market smoke + authenticated market-open gate |
 
 For every node, TREE `success_evidence` is the definition of done.
 
@@ -122,8 +123,16 @@ Follow `FRAMEWORK.md` execution-reopen rules:
 - preserve valid done work;
 - re-freeze and repair allocation before resuming.
 
+## Final user-dependent acceptance rule
+
+All checks that require the user's authenticated browser, target Windows machine or active market are intentionally allocated only to TREE `7.4` / Chat 10.
+
+Earlier chats must build and automatically prove the acceptance tooling without asking the user to perform those checks early.
+
+`7.4` remains pending until the user supplies/runs the required target-machine checks. Do not reinterpret a static market as failure: the closed/static smoke explicitly allows repeated equal values. Do not reinterpret a static smoke as moving-market proof: the market-open check must observe real provider market/freshness change.
+
 ## Completion discipline
 
 A chat/node result is not product completion.
 
-Overall product completion additionally requires TREE 7.1, 7.2 and 7.3 outcomes plus the normal PR/merge/main-green closure in AGENTS.
+Overall product completion additionally requires TREE 7.1, 7.2, 7.3 and 7.4 outcomes plus the normal PR/merge/main-green closure in AGENTS.

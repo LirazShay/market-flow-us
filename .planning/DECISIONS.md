@@ -245,15 +245,20 @@ Replace MapHeat2/GetSecuritiesData behavior with stateful ScreenerHulPaging3 res
 
 Keep the real loopback HTTP fake, normal runtime, deterministic scenarios and one-command demo.
 
-## D-US-016 — Real-provider gate remains bounded and local
+## D-US-016 — Authenticated-provider verification remains bounded and local
 
 **Status:** resolved
 
 No GitHub credentials/live bank CI.
 
-The final authenticated-browser gate verifies a bounded sustained run of **at least 20 consecutive complete U.S. cycles spanning at least 60 seconds** at the candidate collection cadence through commit, Current, Detail/History, Scanner, ownership and clean stop. This proves short-run continuous operation without pretending to establish a long-duration provider SLA.
+The authenticated provider boundary is verified locally in two distinct modes:
 
-Only that gate may declare the external provider boundary PASS.
+1. a lightweight static/closed-market smoke that permits repeated identical market values and proves shape, transport, validation, commit authority, Current/History and clean stop without pretending to prove market movement;
+2. a final market-open gate that verifies a bounded sustained run of **at least 20 consecutive complete U.S. cycles spanning at least 60 seconds** at the candidate collection cadence and requires observable provider-side market/freshness change across committed cycles.
+
+The full market-open gate still proves commit, Current, Detail/History, bounded Scanner, ownership and clean stop. It remains the only check that may declare the moving real-market boundary PASS.
+
+D-US-019 defines how these authenticated checks are sequenced with local Fake Leumi and target-machine acceptance.
 
 ## D-US-017 — Planning order is audit → contracts → TREE → allocation
 
@@ -289,3 +294,37 @@ TREE `5.2` is the sole normal-runtime U.S. activation boundary. By then Chats 1�
 Final removal/audit of superseded authoritative Israel-only runtime paths remains owned by `7.3`.
 
 **Reopen only if:** existing construction seams cannot stage one of the U.S. components without creating materially greater complexity than an earlier integrated cutover.
+
+## D-US-019 — Final acceptance is split into deterministic local proof and deferred target-machine checks
+
+**Status:** resolved
+
+The market may be static while development is being completed, so lack of price movement must not block deterministic product development or create a false failure.
+
+The release path is therefore split deliberately:
+
+```text
+automated/offline release candidate
+→ reusable local Fake Leumi acceptance kit
+→ release cleanup/docs
+→ final target-machine acceptance bundle
+```
+
+The local Fake Leumi acceptance kit must reuse the normal Market Flow US runtime, local service and DuckDB rather than introduce a parallel product path. It must provide deterministic modes for:
+
+- repeated identical complete responses with stable membership;
+- moving synthetic values;
+- add/remove membership;
+- provider failure and recovery;
+- restart/persistence;
+- representative 4096 × 180 load/performance reporting.
+
+All checks that require the user's authenticated browser or target computer are deferred to the final execution leaf. That final bundle contains exactly three acceptance families:
+
+1. **local Fake Leumi target-machine acceptance** — static/moving/failure/recovery plus representative mock load/performance;
+2. **authenticated closed/static-market smoke** — repeated equal provider values are valid and must still commit/history correctly; no market movement is required;
+3. **authenticated market-open acceptance** — bounded sustained collection with observable real provider market/freshness change and the full SHA-bound authority/read/Scanner/clean-stop proof.
+
+The closed/static-market smoke never substitutes for the market-open check. Synthetic movement never substitutes for real-provider evidence. Conversely, development and release cleanup do not wait for market movement once the acceptance tooling itself has deterministic automated proof.
+
+The final target-machine leaf remains pending until the user performs the required checks. Overall product completion is not declared before those required acceptance results are PASS.
