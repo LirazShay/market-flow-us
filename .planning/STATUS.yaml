@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "7.1"
+current_node: "7.2"
 blockers: []
-next_action: "Chat 7 next executes TREE node 7.1: run the integrated deterministic offline release-candidate gate now that 6.3 workload tooling is closed and ready to land on main."
+next_action: "Chat 8 next executes TREE node 7.2: package the deterministic configurable local Fake Leumi acceptance flow using the proven normal runtime/service/DuckDB/generator/workload mechanisms."
 last_review: "R-US-EXEC-REOPEN-004"
