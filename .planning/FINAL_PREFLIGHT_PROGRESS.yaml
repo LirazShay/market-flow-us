@@ -80,7 +80,7 @@ cross_stage_observations:
 
 verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
-  a2_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
+  a2_code_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
