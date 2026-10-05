@@ -34,15 +34,22 @@ test("built-in saved-query identities and names are stable and reserved", () => 
     },
     {
       queryId: "builtin:market-ranking-example",
-      name: "Market ranking example",
+      name: "U.S. market ranking example",
+      intervalMs: 5000
+    },
+    {
+      queryId: "builtin:staged-candidate-ranking",
+      name: "Staged candidate ranking",
       intervalMs: 5000
     }
   ]);
 
   assert.equal(isBuiltinQueryId("builtin:all-current-fields"), true);
+  assert.equal(isBuiltinQueryId("builtin:staged-candidate-ranking"), true);
   assert.equal(isBuiltinQueryId("user:anything"), false);
   assert.deepEqual([...builtinNameKeys()].sort(), [
     "all current fields",
-    "market ranking example"
+    "staged candidate ranking",
+    "u.s. market ranking example"
   ]);
 });
