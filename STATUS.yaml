@@ -6,7 +6,7 @@ current:
   chat: 6
   node: "6.1"
   title: "Market Flow US packaging and branding"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
