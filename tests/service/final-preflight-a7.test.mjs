@@ -151,9 +151,10 @@ test("Node U.S. universe authority rejects malformed PaperId and membership befo
       (error) => error?.code === ERROR_CODES.UNIVERSE_INVALID
     );
 
-    assert.deepEqual(
-      await rows(database.viewerReadConnection, "SELECT COUNT(*) AS count FROM universe"),
-      [{ count: 0n }]
+    const countRows = await rows(
+      database.viewerReadConnection,
+      "SELECT COUNT(*) AS count FROM universe"
     );
+    assert.equal(Number(countRows[0]?.count), 0);
   });
 });
