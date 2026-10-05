@@ -45,7 +45,7 @@ chats:
 
   "9":
     nodes:
-      "7.3": { state: in_progress, result: null }
+      "7.3": { state: done, result: "Release closure removes the superseded Israel browser acquisition path, aligns runtime/user/Scanner documentation to active U.S. schema-v3 truth, adds a safe one-trading-day rollover that preserves saved Scanner queries, and protects the release boundary with runtime/guide drift guards. Draft PR #13 candidate a80c88a4862542c2ba15ec731745d555901e0ac2 passed Fast, Browser, Planning and bounded Workload CI after root-cause fixes; user-dependent target-machine/authenticated acceptance remains exclusively TREE 7.4." }
 
   "10":
     nodes:
