@@ -1,9 +1,9 @@
 version: 2
-plan_state: active
-replan_mode: execution_reopen
-current_stage: "demo_buy_review_5_st_tree_tests_ci_alignment"
+plan_state: frozen
+current_stage: "demo_buy_planning_frozen_pending_ci_merge"
 current_node: "demo-buy-validation"
-blockers: []
-next_action: "Review 4/5 UX/operability audit is complete. Normative UX truth is docs/DEMO_BUY_UX.md: persistent cross-surface Auto indicator/off control, exact active-generation capture semantics, accessible selection without row-navigation collisions, bounded Auto status/no retroactive capture, distinct confirmed/rejected/ACKNOWLEDGEMENT_UNKNOWN UX, grouped capture presentation, sticky identity plus one compact cell per horizon, Pending vs non-temporal UNAVAILABLE, stable Load more + Refresh latest semantics, targeted demo.buy.observation.get / Refresh observation so older targets remain inspectable while Auto adds captures, scoped provenance/errors, one AI-export slot, relative export paths, clipboard fallback and explicit partial/complete investigation workflow. Review also found existing Scanner UI lacks the PRODUCT_REQUIREMENTS Activate/Stop interaction even though scheduler has only terminal destroy-style stop; 4.4.1 should add a reusable Stop recurring scan/deactivate behavior using the existing scheduler seam, preserving later Activate and keeping Auto armed but inactive until the next successful generation. Next: Review 5/5 mechanically align PRODUCT_REQUIREMENTS/PRODUCT_SPEC/DEMO_BUY_VALIDATION/AI_INVESTIGATION_PACK/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY/TREE/DECISIONS/EXECUTION/HANDOFF/Planning CI to the normative Review-3 protocol and Review-4 UX contracts; rerun structural necessity/sufficiency/KISS checks; repair any drift; do not freeze yet if any mismatch remains. Production implementation remains unauthorized."
-last_review: "R-US-EXEC-REOPEN-006"
+blockers:
+  - "PR #17 Planning Docs CI must pass, the planning PR must be reviewed/squash-merged, and main Planning Docs CI must be green before implementation authorization."
+next_action: "The five-pass Demo Buy + AI Investigation planning review is complete and R-US-DEMO-BUY-FINAL records the corrected 39-node / 28-leaf plan. Keep production implementation unauthorized. First obtain green Planning Docs CI on PR #17, review the PR diff, squash-merge it, verify main Planning Docs CI and open-PR state, then deliberately advance root STATUS to phase: implementation / Chat 10 / TREE 4.3.1 and set implementation_authorized true. Before that authorization, perform the requested final external-user-from-zero adversarial review; if it finds a material planning defect, reopen the smallest affected planning area instead of coding forward."
+last_review: "R-US-DEMO-BUY-FINAL"
 implementation_authorized: false
