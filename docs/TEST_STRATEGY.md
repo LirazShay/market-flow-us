@@ -36,11 +36,13 @@ remove duplication
 → remeasure end-to-end
 ```
 
-Do not normalize slow tests. An individually slow test or setup path must be investigated even when the overall suite still passes. Do not increase timeouts/retries as the normal response to avoidable slowness. Do not delete meaningful coverage merely to make CI appear faster.
+Do not normalize avoidable slowness. An individually slow test or setup path must be investigated when it materially dominates feedback. Do not increase timeouts/retries as the normal response to avoidable slowness. Do not delete meaningful coverage merely to make CI appear faster.
 
-The expected steady state is that the overwhelming majority of repeated development verification completes in seconds. Hard ceilings are failure bounds, not acceptable targets.
+A broad, high-value recurring suite that covers many real integration boundaries may legitimately take up to roughly **30 seconds wall-clock**. This is an acceptance ceiling, not a target. Before accepting that runtime, inspect the dominant costs for removable duplicated setup, unnecessary waiting/polling, oversized fixtures/bootstrap, avoidable I/O/serialization and other practical optimizations that preserve proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, document the measurement as the **best practical verified state** and stop micro-optimizing it.
 
-Long waits are treated as feedback/performance defects, not as permission to increase timeouts. Normal Fast/Browser jobs have a 3-minute hard ceiling while their normal target remains seconds. The representative 4096 × 180 workload has a 5-minute hard ceiling. Hitting a hard ceiling is a blocker to investigate and optimize.
+The expected steady state is that focused checks remain very fast and broad recurring verification remains comfortably bounded. Hard ceilings are failure bounds, not performance targets.
+
+Long waits are treated as feedback/performance defects, not as permission to increase timeouts. Normal Fast/Browser jobs have a 3-minute hard ceiling. The representative 4096 × 180 workload has a 5-minute hard ceiling. Hitting a hard ceiling is a blocker to investigate and optimize.
 
 ## 2. Layer 1 — Unit tests
 
@@ -210,14 +212,17 @@ Keep the imported feedback-performance discipline.
 Targets remain guidance, not permission to weaken proof:
 
 ```text
-full test:fast command: <= 10s target
-full Playwright execution: <= 12s target
+focused checks: as fast as practical
+broad full Fast/service verification: <= 30s acceptable steady-state ceiling after optimization review
+full Playwright execution: <= 12s target where practical
 ordinary workflow hard ceiling: 3 minutes
 ```
 
+The 30-second broad-suite figure is not a goal. A suite in the 10–30 second range is accepted only after the dominant costs have been reviewed and no meaningful avoidable improvement remains while preserving the same proof. Record such a reviewed state as the **best practical verified state** so future chats do not repeatedly reopen pointless micro-optimization unless timing regresses or architecture changes.
+
 For every meaningful test/CI change, compare wall-clock cost with the prior shape. If a regression is avoidable, fix it before merge. Prefer reducing recurring setup and duplicate work before micro-optimizing assertion code.
 
-If one test, fixture, bootstrap, browser setup or cleanup path dominates elapsed time, treat that path as the next optimization target even if the suite remains under the hard ceiling.
+If one test, fixture, bootstrap, browser setup or cleanup path materially dominates elapsed time, investigate that path even if the suite remains under the broad-suite ceiling. If the cost is inherent to valuable real integration proof and no material optimization remains, document that conclusion and move on.
 
 If U.S. fixture growth causes regression, remove avoidable setup/waiting before considering test deletion. Do not solve a slow test suite by simply increasing its timeout.
 
