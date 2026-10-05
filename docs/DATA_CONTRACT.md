@@ -2,15 +2,17 @@
 
 ## 1. Ownership and evidence level
 
-This document owns the provider/data truth used by Market Flow US.
+This document owns provider/data truth used by Market Flow US and the distinction between persisted facts and derived Demo Buy evaluation.
 
-The Bank Leumi U.S. endpoint is empirically observed, not an official public API contract. Every field is therefore either:
+The Bank Leumi U.S. endpoint is empirically observed, not an official public API contract. Every provider field is therefore either:
 
 - **proven shape** — observed and reproduced;
 - **source-named semantic** — useful but exact external meaning may remain empirical;
 - **unknown** — must not be silently upgraded into a stronger claim.
 
 Raw provider rows are retained so later discoveries do not destroy information.
+
+Demo Buy adds local analytical facts. Those facts must never be confused with provider-originated facts.
 
 ## 2. Provider endpoint
 
@@ -130,7 +132,7 @@ securityId = String(PaperId)
 
 The Node authority independently enforces the same fail-closed U.S. identity boundary before universe persistence; malformed values are never canonicalized with generic `String(object)` behavior.
 
-Do not key history/current by:
+Do not key market authority or Demo Buy observations by:
 
 - array index;
 - `Id`;
@@ -247,6 +249,8 @@ Persist as source column `Price`.
 
 Do not rename it to `Last` or `LastPrice` until provider/live evidence establishes that stronger semantic.
 
+Demo Buy may compare source `Price` values mechanically. Such a comparison is analytical evidence only and does not establish an executable/fillable trade price.
+
 ### DailyVolume
 
 Persist as `DailyVolume`.
@@ -270,6 +274,14 @@ Do not parse it into the authoritative collection timestamp or assume timezone/s
 Browser-generated collection time is the authoritative local acquisition timestamp for history ordering and relative-time SQL.
 
 It is independent from `TradeDateTime`.
+
+### captured_at_ms
+
+`captured_at_ms` is a Node-generated local timestamp for one accepted Demo Buy capture. It marks the virtual-buy event in local product time.
+
+It is not a provider timestamp, exchange timestamp or claim about real order execution.
+
+Demo Buy future-horizon targets are measured from `captured_at_ms`. The baseline market row may have an earlier `collected_at_ms` because it is the latest authoritative observation available when the capture is serialized.
 
 ## 10. Validated snapshot/cycle shape
 
@@ -336,7 +348,7 @@ On the first valid response, browser replaces universe then commits that same sn
 On later responses:
 
 - identical canonical membership -> reuse accepted universe revision;
-- changed membership -> replace universe from the newly validated response, receive new revision, then commit that same response.
+- changed membership -> replace universe from the newly validated response, receive a new revision, then commit that same response.
 
 A changed row order does not constitute a membership change.
 
@@ -355,6 +367,8 @@ Typed SQL projection may map wrong-type/missing values to SQL NULL, but `raw_dat
 
 UI formatting must never display numeric zero as missing.
 
+For Demo Buy evaluation, absence of a qualifying future history row is also distinct from a future row whose `Price` is SQL NULL. Both produce an unavailable percentage, but trusted reads may preserve enough detail to diagnose which condition occurred.
+
 ## 13. Dynamic count contract
 
 Observed on 2026-10-04:
@@ -368,7 +382,159 @@ This proves only the tested screener result set at that time.
 
 The product must not hard-code 4015 or claim this endpoint equals every U.S.-listed security.
 
-## 14. External facts reserved for live verification
+The current acquisition request is bounded by `pageCount=5000`; Demo Buy therefore also bounds one capture to at most 5000 unique canonical security IDs. That is a product/transport bound, not a claim that the market permanently contains at most 5000 securities.
+
+## 14. Schema-v4 Demo Buy persisted facts
+
+Schema v4 preserves all schema-v3 market authority and adds two local analytical tables.
+
+### `demo_buy_captures`
+
+Persisted local facts:
+
+```text
+capture_id BIGINT PRIMARY KEY
+captured_at_ms BIGINT NOT NULL
+source_query_id VARCHAR NULL
+source_query_name VARCHAR NULL
+source_query_sql VARCHAR NOT NULL
+selection_mode VARCHAR NOT NULL
+is_automatic BOOLEAN NOT NULL
+top_x BIGINT NULL
+result_row_count BIGINT NOT NULL
+```
+
+`selection_mode` is exactly one of:
+
+```text
+manual
+all
+top_x
+```
+
+The query fields are provenance snapshots for the Scanner generation that produced the selected rows. They are not provider data and later query edits do not mutate old captures.
+
+### `demo_buy_items`
+
+Persisted local facts:
+
+```text
+capture_id BIGINT NOT NULL
+selection_rank BIGINT NOT NULL
+security_id VARCHAR NOT NULL
+buy_cycle_id BIGINT NOT NULL
+PRIMARY KEY (capture_id, security_id)
+UNIQUE (capture_id, selection_rank)
+```
+
+The authoritative baseline relation is:
+
+```text
+(buy_cycle_id, security_id)
+→ history(cycle_id, security_id)
+```
+
+The Demo Buy item does **not** persist a copied baseline price, Symbol, name, future price, percentage or directional result.
+
+Those values are read/derived from market history.
+
+## 15. Demo Buy capture semantics
+
+At one serialized capture boundary:
+
+1. preserve Scanner result order;
+2. reduce duplicate canonical IDs to first occurrence;
+3. reject more than 5000 unique IDs;
+4. require at least one selected ID for an actual capture;
+5. resolve every selected ID against authoritative `latest`;
+6. store each resolved row's `cycle_id` as `buy_cycle_id`;
+7. persist one capture plus all items atomically.
+
+Failure to resolve any selected security fails the entire capture.
+
+A zero-row automatic Scanner result is a no-op and creates no empty capture.
+
+The same security may appear in multiple later captures because these are observations, not positions.
+
+## 16. Demo Buy derived evaluation facts
+
+Demo Buy evaluation is a trusted read model, not additional stored market authority.
+
+Fixed Phase-1 horizons:
+
+```text
+10000
+20000
+30000
+45000
+60000
+90000
+120000
+180000
+300000
+600000 milliseconds
+```
+
+For one item and horizon `H`:
+
+```text
+target_at_ms = captured_at_ms + H
+```
+
+The future observation is the first persisted market-history row satisfying:
+
+```text
+same security_id
+AND collected_at_ms >= target_at_ms
+ORDER BY collected_at_ms ASC, cycle_id ASC
+LIMIT 1
+```
+
+The baseline value comes from the linked `(buy_cycle_id, security_id)` history row.
+
+Derived values include:
+
+```text
+baselinePrice
+baselineCollectedAtMs
+futurePrice
+observedAtMs
+actualElapsedMs = observedAtMs - capturedAtMs
+changePercent = ((futurePrice / baselinePrice) - 1) * 100
+```
+
+`changePercent` is NULL when:
+
+- no qualifying future row exists;
+- baseline `Price` is NULL;
+- baseline `Price` is zero;
+- future `Price` is NULL.
+
+Derived outcome is:
+
+```text
+UP           when changePercent > 0
+DOWN         when changePercent < 0
+FLAT         when changePercent = 0
+UNAVAILABLE  when changePercent is NULL
+```
+
+These are application-derived analytical labels. They are not provider fields and are not persisted as market facts.
+
+## 17. Daily lifecycle relation
+
+Demo Buy observations belong to the same active-day evidence boundary as the `history` rows they reference.
+
+At new-day reset:
+
+- prior-day DB may be archived as one self-contained file;
+- fresh active DB is schema v4;
+- market authority tables start fresh;
+- `demo_buy_captures` and `demo_buy_items` start empty;
+- `scanner_saved_queries` are preserved/restored;
+- no Demo Buy row is copied into a DB that does not contain its referenced history.
+
+## 18. External facts reserved for live verification
 
 Still empirical:
 
