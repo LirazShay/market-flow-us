@@ -49,7 +49,8 @@ test("first-run surfaces require mechanical movement PASS instead of a manual ma
     "START_HERE.md",
     "PREPARE_LIVE_VERIFICATION.cmd",
     "docs/FIRST_RUN_ACCEPTANCE.md",
-    "docs/LIVE_VERIFICATION.md"
+    "docs/LIVE_VERIFICATION.md",
+    "docs/USER_GUIDE.md"
   ]) {
     const source = await text(relativePath);
     assert.match(source, /movement\.status[^\r\n]*PASS/i, relativePath);
