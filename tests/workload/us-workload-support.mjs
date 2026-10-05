@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import os from "node:os";
 import { performance } from "node:perf_hooks";
 import { MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES } from "../../shared/scanner/builtins.js";
 
@@ -247,12 +248,33 @@ export function assertUsGeneratedRow(row) {
   assert.equal(row.PaperType, 1);
 }
 
-export function sanitizedFailure(error, tempDir) {
-  const rawMessage = typeof error?.message === "string"
-    ? error.message
-    : "Workload proof failed.";
+export function sanitizeWorkloadDiagnostic(value, tempDir = null) {
+  if (!value) return "Workload proof failed.";
+  let sanitized = String(value);
+  for (const [source, replacement] of [
+    [tempDir, "<temp-profile>"],
+    [process.cwd(), "<repo>"],
+    [os.homedir(), "<home>"],
+    [os.tmpdir(), "<temp>"]
+  ]) {
+    if (typeof source === "string" && source.length > 0) {
+      sanitized = sanitized.replaceAll(source, replacement);
+    }
+  }
+  return sanitized
+    .replace(/https?:\/\/[^\s)\]}>]+/gi, "<url>")
+    .slice(0, 500);
+}
+
+export function sanitizedFailure(error, tempDir = null) {
+  const message = sanitizeWorkloadDiagnostic(error?.message, tempDir);
+  if (error && (typeof error === "object" || typeof error === "function")) {
+    try {
+      error.message = message;
+    } catch {}
+  }
   return {
     name: typeof error?.name === "string" ? error.name : "Error",
-    message: rawMessage.replaceAll(tempDir, "<temp>").slice(0, 500)
+    message
   };
 }

@@ -3,6 +3,7 @@ import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { runBoundedCommand } from "./acceptance-process.mjs";
 
 const MEMBERSHIP_RECOVERY_TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
 const MOVING_VALUES_TEST_FILE = "tests/e2e/us-runtime-moving-values.spec.mjs";
@@ -11,6 +12,8 @@ const DETAIL_DIR = path.join(REPORT_DIR, "details");
 const PLAYWRIGHT_CLI = path.resolve("node_modules", "@playwright", "test", "cli.js");
 const WORKLOAD_RUNNER = path.resolve("scripts", "run-workload-profile.mjs");
 const MAX_DIAGNOSTIC_CHARS = 4000;
+const PLAYWRIGHT_ACCEPTANCE_TIMEOUT_MS = 3 * 60 * 1000;
+const WORKLOAD_ACCEPTANCE_TIMEOUT_MS = 45 * 60 * 1000;
 
 export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
   static: Object.freeze({
@@ -91,36 +94,14 @@ function passedResult(result) {
   return result.code === 0 && result.signal === null && result.error === null;
 }
 
-async function run(command, args, { env = process.env } = {}) {
-  return await new Promise((resolve) => {
-    const child = spawn(command, args, {
-      shell: false,
-      env,
-      stdio: ["ignore", "pipe", "pipe"]
-    });
-
-    let output = "";
-    const onData = (chunk, stream) => {
-      const text = chunk.toString();
-      stream.write(text);
-      output = `${output}${text}`.slice(-MAX_DIAGNOSTIC_CHARS * 2);
-    };
-
-    child.stdout?.on("data", (chunk) => onData(chunk, process.stdout));
-    child.stderr?.on("data", (chunk) => onData(chunk, process.stderr));
-
-    child.on("error", (error) => {
-      resolve({
-        code: 1,
-        signal: null,
-        error: error instanceof Error ? error.message : String(error),
-        output
-      });
-    });
-
-    child.on("exit", (code, signal) => {
-      resolve({ code: code ?? 1, signal, error: null, output });
-    });
+async function run(command, args, {
+  env = process.env,
+  timeoutMs = PLAYWRIGHT_ACCEPTANCE_TIMEOUT_MS
+} = {}) {
+  return await runBoundedCommand(command, args, {
+    env,
+    timeoutMs,
+    maxOutputChars: MAX_DIAGNOSTIC_CHARS * 2
   });
 }
 
@@ -216,7 +197,9 @@ async function runProfile(profile) {
     if (profile.grep) args.push("--grep", profile.grep);
 
     return {
-      result: await run(process.execPath, args),
+      result: await run(process.execPath, args, {
+        timeoutMs: PLAYWRIGHT_ACCEPTANCE_TIMEOUT_MS
+      }),
       summary: {
         runner: "playwright",
         testFile: profile.testFile,
@@ -236,7 +219,10 @@ async function runProfile(profile) {
   const result = await run(
     process.execPath,
     [WORKLOAD_RUNNER, profile.workloadProfile],
-    { env }
+    {
+      env,
+      timeoutMs: WORKLOAD_ACCEPTANCE_TIMEOUT_MS
+    }
   );
   const detailReports = await existingDetailReportPaths(detailPath);
 

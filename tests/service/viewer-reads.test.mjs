@@ -261,8 +261,8 @@ test("viewer status applies UNKNOWN/RUNNING/STALE/STOPPED/ERROR precedence and k
     assert.equal(status.payload.data.failedCycles, 1);
     assert.equal(status.payload.data.historyCount, 0);
     assert.deepEqual(status.payload.data.lastError, {
-      name: "ProviderError",
-      message: "sanitized provider failure"
+      name: "CollectionError",
+      message: "A sanitized collection error was recorded."
     });
 
     clock.value = 20000;

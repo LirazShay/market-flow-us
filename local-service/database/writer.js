@@ -125,6 +125,15 @@ function createBulkWriterConnection(connection) {
   let latestCopyArmed = false;
   let latestCopy = null;
 
+  function discardPending() {
+    pendingPlan = null;
+    pendingRows = [];
+    pendingCycleId = null;
+    lastHistoryBatch = null;
+    latestCopyArmed = false;
+    latestCopy = null;
+  }
+
   async function flushRows() {
     if (!pendingPlan || pendingRows.length === 0) return;
 
@@ -245,10 +254,9 @@ function createBulkWriterConnection(connection) {
           }
 
           const isRollback = /^\s*ROLLBACK\b/i.test(sql);
-          if (isRollback && latestCopy) {
-            latestCopy = null;
-            latestCopyArmed = false;
-            lastHistoryBatch = null;
+          if (isRollback) {
+            discardPending();
+            return await target.run(sql, params, types);
           }
 
           await flush();
@@ -256,7 +264,7 @@ function createBulkWriterConnection(connection) {
 
           if (/^\s*DELETE\s+FROM\s+latest\b/i.test(sql) && lastHistoryBatch) {
             latestCopyArmed = true;
-          } else if (!isRollback) {
+          } else {
             latestCopyArmed = false;
           }
 

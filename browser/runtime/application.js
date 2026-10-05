@@ -658,10 +658,28 @@ export function createMarketScopeRuntime({
         publishState();
         return snapshot();
       } catch (error) {
-        recorder?.stop("launch_failed");
+        const launchError = normalizeError(error, "Market Flow US launch failed.");
+        const activeRecorder = recorder;
+        const activeBridge = bridge;
+
+        activeRecorder?.stop("launch_failed");
+        await waitForRecorderIdle(activeRecorder);
+
+        if (activeBridge?.getState?.().sessionId) {
+          try {
+            await activeBridge.stopSession("launch_failed");
+          } catch {
+            // stopSession fails closed and tears down its transport before rethrowing.
+          }
+        }
+
         state = "error";
-        lastError = normalizeError(error, "Market Flow US launch failed.");
-        openViewer({ rebuild: true });
+        lastError = launchError;
+        try {
+          openViewer({ rebuild: true });
+        } catch {
+          // Preserve the original launch failure when the Viewer itself cannot be rebuilt.
+        }
         publishState();
         throw lastError;
       }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { createDiagnosticTracker } from "../../shared/diagnostics/index.js";
 import {
   ViewerClientError,
   ViewerUnavailableError,
@@ -82,13 +83,14 @@ function nextTurn() {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-async function connectedClient() {
+async function connectedClient({ diagnosticTracker } = {}) {
   const socket = new FakeSocket();
   const client = createViewerClient({
     url: "ws://127.0.0.1:8765",
     productVersion: "test-browser",
     clientInstanceId: "viewer-client-test",
-    createSocket: () => socket
+    createSocket: () => socket,
+    ...(diagnosticTracker ? { diagnosticTracker } : {})
   });
 
   const connecting = client.connect();
@@ -226,6 +228,31 @@ test("viewer client correlates concurrent responses and routes every trusted rea
   });
 });
 
+test("viewer diagnostics retain the exact requestId when concurrent responses complete out of order", async () => {
+  let now = 1000;
+  const diagnosticTracker = createDiagnosticTracker({
+    productVersion: "test-browser",
+    now: () => now++
+  });
+  const { client, socket } = await connectedClient({ diagnosticTracker });
+
+  const currentPromise = client.getCurrent();
+  const statusPromise = client.getStatus();
+  await nextTurn();
+
+  const currentRequest = socket.sent[1];
+  const statusRequest = socket.sent[2];
+  socket.respondOk(statusRequest, { recorderHealth: "RUNNING" });
+  socket.respondOk(currentRequest, { rows: [] });
+  await Promise.all([currentPromise, statusPromise]);
+
+  const records = diagnosticTracker.snapshot().recent;
+  const currentRecord = records.find((record) => record.operation === "viewer.current.get");
+  const statusRecord = records.find((record) => record.operation === "viewer.status.get");
+  assert.equal(currentRecord?.operationId, currentRequest.requestId);
+  assert.equal(statusRecord?.operationId, statusRequest.requestId);
+});
+
 test("viewer client exposes only sanitized service errors and keeps the connection usable", async () => {
   const { client, socket } = await connectedClient();
 
@@ -271,7 +298,7 @@ test("viewer client fails explicitly when the service is unavailable and never a
 
   await assert.rejects(unavailable.getCurrent(), (error) => {
     assert.ok(error instanceof ViewerUnavailableError);
-    assert.equal(error.message, "Could not connect to MarketScope service.");
+    assert.equal(error.message, "Could not connect to Market Flow US service.");
     assert.equal(error.message.includes("raw transport detail"), false);
     return true;
   });
@@ -284,7 +311,7 @@ test("viewer client fails explicitly when the service is unavailable and never a
 
   await assert.rejects(pending, (error) => {
     assert.ok(error instanceof ViewerUnavailableError);
-    assert.equal(error.message, "MarketScope service connection was lost.");
+    assert.equal(error.message, "Market Flow US service connection was lost.");
     return true;
   });
 

@@ -6,7 +6,7 @@ import { ERROR_CODES, PROTOCOL_VERSION } from "../../shared/protocol/index.js";
 import { createRecorderConfig } from "../recorder/config.js";
 
 const SOCKET_OPEN = 1;
-const COMMIT_CHANNEL = "market-scope:v1";
+const COMMIT_CHANNEL = "market-flow-us:v1";
 
 export class ProducerBridgeError extends Error {
   constructor(message, { code = null, retryable = false } = {}) {
@@ -74,7 +74,7 @@ function normalizeTransportError(error, fallback) {
 export function createProducerBridge({
   url = "ws://127.0.0.1:8765",
   productVersion = "0.1.0",
-  clientInstanceId = "market-scope-browser-producer",
+  clientInstanceId = "market-flow-us-browser-producer",
   createSocket = defaultCreateSocket,
   createBroadcastChannel = defaultCreateBroadcastChannel,
   heartbeatMs = 5000,
@@ -190,12 +190,12 @@ export function createProducerBridge({
         operationId: "producer-service-connection",
         checkpoint: "browser.service.connection",
         lastSuccessfulCheckpoint: diagnosticTracker.snapshot().lastSuccessfulCheckpoint,
-        error: new ProducerTransportError("MarketScope service connection was lost.", {
+        error: new ProducerTransportError("Market Flow US service connection was lost.", {
           code: DIAGNOSTIC_CODES.SERVICE_DISCONNECTED
         }),
         fallbackCode: DIAGNOSTIC_CODES.SERVICE_DISCONNECTED,
         name: "ServiceDisconnectedError",
-        message: "Local MarketScope service connection was lost."
+        message: "Local Market Flow US service connection was lost."
       });
     }
 
@@ -288,14 +288,14 @@ export function createProducerBridge({
     socket.addEventListener("error", () => {
       if (!openSettled) {
         openSettled = true;
-        openReject(new ProducerTransportError("Could not connect to MarketScope service."));
+        openReject(new ProducerTransportError("Could not connect to Market Flow US service."));
       }
     });
 
     socket.addEventListener("close", (event) => {
       if (!openSettled) {
         openSettled = true;
-        openReject(new ProducerTransportError("MarketScope service connection closed during startup."));
+        openReject(new ProducerTransportError("Market Flow US service connection closed during startup."));
       }
 
       if (explicitClose) {
@@ -309,14 +309,14 @@ export function createProducerBridge({
       }
 
       closeFailClosed(new ProducerTransportError(
-        `MarketScope service connection closed (code ${event?.code ?? "unknown"}).`
+        `Market Flow US service connection closed (code ${event?.code ?? "unknown"}).`
       ));
     });
   }
 
   function sendRequest(type, payload) {
     if (!socket || socket.readyState !== SOCKET_OPEN) {
-      return Promise.reject(new ProducerTransportError("MarketScope service is not connected."));
+      return Promise.reject(new ProducerTransportError("Market Flow US service is not connected."));
     }
 
     requestSequence += 1;
@@ -367,7 +367,7 @@ export function createProducerBridge({
       });
 
       if (hello.protocolVersion !== PROTOCOL_VERSION || hello.role !== "producer" || hello.ready !== true) {
-        throw closeFailClosed(new ProducerTransportError("MarketScope service hello was not ready."));
+        throw closeFailClosed(new ProducerTransportError("Market Flow US service hello was not ready."));
       }
 
       state = "ready";
@@ -389,10 +389,10 @@ export function createProducerBridge({
         operationId: "producer-service-hello",
         checkpoint: "browser.service.hello",
         lastSuccessfulCheckpoint: "browser.runtime.loaded",
-        error: new ProducerTransportError("Could not connect to MarketScope service."),
+        error: new ProducerTransportError("Could not connect to Market Flow US service."),
         fallbackCode: DIAGNOSTIC_CODES.SERVICE_UNAVAILABLE,
         name: "ServiceUnavailableError",
-        message: "Local MarketScope service is unavailable."
+        message: "Local Market Flow US service is unavailable."
       });
       throw closeFailClosed(error);
     } finally {
@@ -572,10 +572,7 @@ export function createProducerBridge({
         reason: String(reason)
       });
     } catch (error) {
-      if (state === "ready" && sessionId !== null) {
-        armHeartbeat();
-      }
-      throw error;
+      throw closeFailClosed(error);
     }
 
     sessionId = null;

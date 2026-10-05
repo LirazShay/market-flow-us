@@ -37,6 +37,20 @@ function nullableString(value) {
   return typeof value === "string" ? value : null;
 }
 
+function canonicalUsPaperId(value) {
+  if (typeof value === "number") {
+    if (!Number.isSafeInteger(value)) fail(ERROR_CODES.UNIVERSE_INVALID);
+  } else if (typeof value !== "string") {
+    fail(ERROR_CODES.UNIVERSE_INVALID);
+  }
+
+  const securityId = String(value);
+  if (securityId.trim().length === 0 || securityId.length > 128) {
+    fail(ERROR_CODES.UNIVERSE_INVALID);
+  }
+  return securityId;
+}
+
 export function sanitizeCollectorConfig(config) {
   if (!isPlainObject(config)) {
     fail(ERROR_CODES.INVALID_MESSAGE);
@@ -154,14 +168,14 @@ function validateLegacyUniverse(payload) {
 function canonicalMembership(values) {
   if (!Array.isArray(values)) fail(ERROR_CODES.UNIVERSE_INVALID);
   const normalized = values.map((value) => {
-    if (value === null || value === undefined || value === "") {
+    if (
+      typeof value !== "string"
+      || value.trim().length === 0
+      || value.length > 128
+    ) {
       fail(ERROR_CODES.UNIVERSE_INVALID);
     }
-    const securityId = String(value);
-    if (securityId.length === 0 || securityId.length > 128) {
-      fail(ERROR_CODES.UNIVERSE_INVALID);
-    }
-    return securityId;
+    return value;
   });
   if (new Set(normalized).size !== normalized.length) {
     fail(ERROR_CODES.UNIVERSE_INVALID);
@@ -191,18 +205,20 @@ function validateUsUniverse(payload) {
     if (!isPlainObject(security)) fail(ERROR_CODES.UNIVERSE_INVALID);
 
     const securityId = security.securityId;
-    if (typeof securityId !== "string" || securityId.length === 0 || securityId.length > 128) {
+    if (
+      typeof securityId !== "string"
+      || securityId.trim().length === 0
+      || securityId.length > 128
+    ) {
       fail(ERROR_CODES.UNIVERSE_INVALID);
     }
     if (seen.has(securityId)) fail(ERROR_CODES.UNIVERSE_INVALID);
     seen.add(securityId);
 
     if (!isPlainObject(security.rawSource)) fail(ERROR_CODES.UNIVERSE_INVALID);
-    const paperId = security.rawSource.PaperId;
-    if (paperId === null || paperId === undefined || paperId === "") {
+    if (canonicalUsPaperId(security.rawSource.PaperId) !== securityId) {
       fail(ERROR_CODES.UNIVERSE_INVALID);
     }
-    if (String(paperId) !== securityId) fail(ERROR_CODES.UNIVERSE_INVALID);
 
     const rawSourceJson = JSON.stringify(security.rawSource);
     if (rawSourceJson === undefined) fail(ERROR_CODES.UNIVERSE_INVALID);
@@ -378,6 +394,25 @@ async function assertRunningSession(connection, sessionId) {
   }
 }
 
+async function assertNoRunningSession(connection) {
+  const rows = await queryRows(
+    connection,
+    "SELECT COUNT(*) AS running_count FROM sessions WHERE status = 'running'"
+  );
+
+  if (rows.length !== 1) {
+    throw new Error("Running producer session authority query did not return exactly one row.");
+  }
+
+  const runningCount = Number(rows[0].running_count);
+  if (!Number.isSafeInteger(runningCount) || runningCount < 0) {
+    throw new Error("Running producer session count is invalid.");
+  }
+  if (runningCount > 0) {
+    fail(ERROR_CODES.PRODUCER_ALREADY_ACTIVE);
+  }
+}
+
 async function rollbackPreservingOriginal(connection) {
   try {
     await connection.run("ROLLBACK");
@@ -417,6 +452,7 @@ export function createProducerPersistence({
     assertSafeInteger(acceptedAtMs);
 
     await writer.enqueue(async (connection) => {
+      await assertNoRunningSession(connection);
       await connection.run(
         `INSERT INTO sessions (
           session_id,

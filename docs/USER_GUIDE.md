@@ -239,21 +239,43 @@ producer session
 → clean stop
 ```
 
-ה־gate הקיים דורש לפחות `20` complete committed cycles ולפחות `60` שניות.
+ה־gate דורש לפחות `20` complete committed cycles ולפחות `60` שניות.
 
 ### Closed/static authenticated market
 
 שוק סגור או סטטי רשאי להחזיר ערכים זהים ברצף. ערכים זהים אינם כשל אם התגובה המלאה תקינה, נרשמת ומגיעה ל־Current/History כנדרש.
 
-PASS כזה מוכיח authenticated provider shape/transport/authority compatibility.
+Base compatibility PASS מזוהה על ידי:
+
+```text
+overall = "PASS"
+```
+
+כאשר לא נצפה שינוי provider אמיתי, אותו report יכול להציג:
+
+```text
+movement.status = "PENDING"
+```
+
+וזה עדיין base/static PASS תקין.
 
 ### Market-open movement
 
-השלמה סופית דורשת גם run בשוק פעיל שבו נצפה לפחות שינוי אמיתי אחד ב־provider market/freshness והוא משתקף בסמכות המחויבת (`Current`/`History`).
+אותו live gate מפיק בעצמו evidence נפרד לשינוי provider אמיתי מתוך טווח ה־cycles שהריצה עצמה commit-תה. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא movement; הוא מחפש שינוי בשדות `Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume` או `TradeDateTime` ומוכיח את ה־witness דרך Current ו־History המחויבים.
 
-ה־live gate הנוכחי **אינו בודק בעצמו movement** ולכן PASS שלו לבדו אינו market-open PASS. ה־movement-specific evidence נשאר חלק מ־final target-machine acceptance (`TREE 7.4`). אם בזמן run פעיל לא נצפה שינוי, תוצאת movement נשארת pending/inconclusive; אין להמציא PASS ואין להחליש את התנאי.
+ל־market-open FR-13 נדרש:
 
-רק ה־gate רשאי להחזיר `overall: "PASS"` לגבי הגבול שהוא באמת בודק.
+```text
+overall = "PASS"
+movement.status = "PASS"
+movement.observed = true
+movement.currentReflected = true
+movement.historyReflected = true
+```
+
+אם אין שינוי אמיתי, movement נשאר `PENDING`; אם שינוי נצפה אך reflection לא הוכח, movement הוא `FAIL`. אין להמציא PASS ואין להחליש את התנאי.
+
+רק ה־gate רשאי להחזיר את classifications לגבי הגבולות שהוא באמת בודק.
 
 ## 10. אם משהו לא עובד
 

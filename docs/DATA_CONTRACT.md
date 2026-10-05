@@ -105,8 +105,8 @@ A response may become an authoritative cycle only when all are true:
 5. `records` is an array.
 6. `records.length === recordCount`.
 7. every row is an object;
-8. every row has non-null/non-empty `PaperId`;
-9. `String(PaperId)` is unique across the response.
+8. every row has `PaperId` whose source type is either a string or a JavaScript safe integer; blank strings, objects, arrays, booleans and non-safe numeric identities are rejected;
+9. after that type validation, `String(PaperId)` is non-empty and unique across the response;
 10. if `resultCode` is present, it is `0`.
 
 The collector records warnings/diagnostics, but does not necessarily fail the snapshot, when:
@@ -122,11 +122,13 @@ Warnings must not fabricate field values.
 
 ## 6. Canonical identity
 
-Canonical product identity:
+Canonical product identity, **after the accepted `PaperId` source-type validation above**, is:
 
 ```text
 securityId = String(PaperId)
 ```
+
+The Node authority independently enforces the same fail-closed U.S. identity boundary before universe persistence; malformed values are never canonicalized with generic `String(object)` behavior.
 
 Do not key history/current by:
 

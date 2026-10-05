@@ -25,8 +25,8 @@ function unavailableNodeEvidence(browserDiagnostics) {
       checkpoint,
       code,
       message: code === DIAGNOSTIC_CODES.SERVICE_UNAVAILABLE
-        ? "Local MarketScope service is unavailable."
-        : "Local MarketScope service connection is unavailable."
+        ? "Local Market Flow US service is unavailable."
+        : "Local Market Flow US service connection is unavailable."
     })
   });
 }

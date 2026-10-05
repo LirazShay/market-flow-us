@@ -1,4 +1,8 @@
 import { runBoundedLiveVerification } from "./harness.js";
+import {
+  attachMovementEvidence,
+  evaluateMovementEvidence
+} from "./movement-evidence.js";
 
 export const LIVE_VERIFICATION_RESULT_KEY = "__MARKET_FLOW_US_LIVE_VERIFICATION_RESULT_V1__";
 export const LIVE_VERIFICATION_PROMISE_KEY = "__MARKET_FLOW_US_LIVE_VERIFICATION_PROMISE_V1__";
@@ -49,6 +53,12 @@ function publishReport(target, report) {
   return report;
 }
 
+async function addMovementEvidence(report) {
+  if (report?.overall !== "PASS") return report;
+  const movement = await evaluateMovementEvidence({ baseReport: report });
+  return attachMovementEvidence(report, movement);
+}
+
 export function startLiveVerificationGate(target = globalThis) {
   const existing = target?.[LIVE_VERIFICATION_PROMISE_KEY];
   if (existing) return existing;
@@ -59,6 +69,7 @@ export function startLiveVerificationGate(target = globalThis) {
       providerOrigin: target?.location?.origin ?? "",
       userAgent: target?.navigator?.userAgent ?? ""
     }))
+    .then(addMovementEvidence)
     .catch(() => safeUnexpectedFailure())
     .then((report) => publishReport(target, report));
 

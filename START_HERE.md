@@ -136,9 +136,24 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 ה־gate מוכיח sustained acquisition/commit/read/Scanner/ownership/clean-stop. בשוק סגור/סטטי ערכים זהים ברצף הם מצב חוקי ואינם כשלעצמם כשל.
 
-**חשוב:** PASS של ה־gate אינו כשלעצמו הוכחת market-open movement. ההשלמה הסופית דורשת גם run בשוק פעיל שבו נצפה שינוי אמיתי ב־provider market/freshness והוא משתקף ב־Current/History. אם לא נצפה שינוי, תוצאת movement נשארת pending/inconclusive.
+Base authenticated compatibility נקבע לפי:
 
-החוזה המדויק נמצא ב־`docs/LIVE_VERIFICATION.md`. אין לסמן PASS ידנית.
+```text
+overall = "PASS"
+```
+
+אותו report מפיק גם evidence נפרד ל־market-open movement מתוך ה־cycles המחויבים עצמם. הוא אינו משתמש בזמן האיסוף המקומי כתחליף לתנועת provider.
+
+ל־FR-13 נדרש:
+
+```text
+overall = "PASS"
+movement.status = "PASS"
+```
+
+אם לא נצפה שינוי provider אמיתי, `movement.status` נשאר `PENDING`; אם נצפה שינוי אך Current/History reflection לא הוכח, הוא `FAIL`. אין לסמן market-open PASS ידנית.
+
+החוזה המדויק נמצא ב־`docs/LIVE_VERIFICATION.md`.
 
 ## מה רואים בתוך Market Flow US?
 

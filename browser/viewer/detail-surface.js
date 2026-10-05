@@ -291,6 +291,7 @@ export function createDetailSurface({
     const targetDepth = model.rows.length;
     const previousModel = model;
     const previousSecurity = security;
+    loadingMore = false;
     continuationError = null;
 
     try {

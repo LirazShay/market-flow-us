@@ -1,0 +1,248 @@
+version: 2
+baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
+branch: "audit/final-preflight"
+draft_pr: 16
+current_stage: "A10"
+fr0_blocked_until_audit_closes: true
+
+stages:
+  A0: done
+  A1: done
+  A2: done
+  A3: done
+  A4: done
+  A5: done
+  A6: done
+  A7: done
+  A8: done
+  A9: done
+  A10: pending
+
+findings:
+  - id: "A1-001"
+    severity: HIGH
+    area: "browser/provider/us-screener.js"
+    finding: "Provider fetch/JSON could stall indefinitely."
+    fix: "Added a 10-second AbortController/Promise.race hard bound."
+    regression: "tests/unit/final-preflight-a1.test.mjs"
+    state: fixed
+  - id: "A1-002"
+    severity: HIGH
+    area: "browser/runtime/producer-bridge.js + browser/runtime/application.js"
+    finding: "Stop rejection/partial launch could leave live producer authority."
+    fix: "Stop fails closed and launch failure drains/stops Recorder plus partial producer session."
+    regression: "tests/unit/final-preflight-a1.test.mjs"
+    state: fixed
+  - id: "A1-003"
+    severity: MEDIUM
+    area: "browser runtime/support diagnostics"
+    finding: "Reviewed diagnostics still exposed MarketScope branding."
+    fix: "Rebranded public diagnostics/producer identity to Market Flow US."
+    regression: "branding/diagnostic suites"
+    state: fixed
+  - id: "A2-001"
+    severity: HIGH
+    area: "browser/recorder/recorder.js -> failed-cycle authority"
+    finding: "Raw provider/network error text crossed Browser-to-Node and could be persisted."
+    fix: "Only fixed phase-specific sanitized descriptors cross authority; raw error remains browser-local."
+    regression: "tests/unit/final-preflight-a2.test.mjs + recorder-scheduling.test.mjs"
+    state: fixed
+  - id: "A2-002"
+    severity: HIGH
+    area: "local-service/database/writer.js"
+    finding: "ROLLBACK flushed pending Appender work first, so flush failure could prevent rollback."
+    fix: "ROLLBACK discards pending non-authoritative buffers and executes directly."
+    regression: "tests/unit/database-writer.test.mjs + U.S. F1-F5 rollback suite"
+    state: fixed
+  - id: "A3-001"
+    severity: HIGH
+    area: "local-service/reads/viewer-reads.js"
+    finding: "viewer.status could re-emit arbitrary legacy persisted error text."
+    fix: "Status exposes only allowlisted safe descriptors or one generic sanitized descriptor."
+    regression: "tests/service/final-preflight-a3.test.mjs + viewer-reads.test.mjs"
+    state: fixed
+  - id: "A3-002"
+    severity: MEDIUM
+    area: "browser/viewer/client.js"
+    finding: "Concurrent Viewer requests could record another request's diagnostic ID."
+    fix: "Each request captures and propagates its exact requestId."
+    regression: "tests/unit/viewer-client.test.mjs"
+    state: fixed
+  - id: "A3-003"
+    severity: MEDIUM
+    area: "browser/viewer/client.js"
+    finding: "Viewer defaults/errors still used MarketScope branding."
+    fix: "Rebranded Viewer identity and service messages."
+    regression: "viewer-client/branding suites"
+    state: fixed
+  - id: "A3-004"
+    severity: MEDIUM
+    area: "browser/viewer/detail-surface.js"
+    finding: "Refresh could supersede loadMore while leaving loadingMore locked true."
+    fix: "Authoritative refresh releases stale pagination ownership; stale pages remain ignored."
+    regression: "tests/unit/detail-surface.test.mjs"
+    state: fixed
+  - id: "A4-001"
+    severity: HIGH
+    area: "Windows launchers"
+    finding: "Node 24 was enforced only at setup time."
+    fix: "All post-setup launchers run a shared Node-24 preflight before product work."
+    regression: "tests/unit/final-preflight-a4.test.mjs"
+    state: fixed
+  - id: "A4-002"
+    severity: MEDIUM
+    area: "START_DEMO.cmd"
+    finding: "Browser opener could attach to an older process already serving port 4173."
+    fix: "Preflight ports 4173 and 8765 before launching the opener."
+    regression: "tests/unit/final-preflight-a4.test.mjs"
+    state: fixed
+  - id: "A5-001"
+    severity: HIGH
+    area: "local acceptance subprocesses"
+    finding: "Hung children could leave FR-7/8/9 unbounded."
+    fix: "Added hard timeouts and process-tree cleanup."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
+  - id: "A5-002"
+    severity: MEDIUM
+    area: "tests/workload/us-workload-support.mjs"
+    finding: "Failure artifacts could retain local paths/URLs."
+    fix: "Sanitize repo/home/temp/profile paths and URLs before reports/rethrow."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
+  - id: "A5-003"
+    severity: HIGH
+    area: "scripts/run-workload-profile.mjs"
+    finding: "Authoritative target profiles could inherit custom shape overrides and false-PASS at reduced scale."
+    fix: "Non-custom profiles scrub all shape/pattern/failure overrides."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
+  - id: "A5-004"
+    severity: MEDIUM
+    area: "scripts/new-trading-day.mjs"
+    finding: "No-archive post-install failure could leave ambiguous fresh/prior DB state."
+    fix: "Restore exact prior active DB and remove failed fresh candidate."
+    regression: "tests/service/final-preflight-a5.test.mjs"
+    state: fixed
+  - id: "A5-005"
+    severity: MEDIUM
+    area: "scripts/new-trading-day.mjs CLI"
+    finding: "Missing path-option values could be consumed as flags/empty paths."
+    fix: "Require explicit non-flag values; reject empty archiveDir."
+    regression: "tests/unit/final-preflight-a5.test.mjs + tests/service/final-preflight-a5.test.mjs"
+    state: fixed
+  - id: "A6-001"
+    severity: HIGH
+    area: ".github/workflows/fast-ci.yml"
+    finding: "Fast CI path filters omitted files directly enforced by Fast tests."
+    fix: "Added root *.cmd, START_HERE, FIRST_RUN_ACCEPTANCE and SCANNER_SQL_GUIDE to push/PR filters."
+    regression: "tests/unit/final-preflight-a6-ci.test.mjs"
+    state: fixed
+  - id: "A6-002"
+    severity: MEDIUM
+    area: ".github/workflows/browser-ci.yml"
+    finding: "Browser CI could skip changes to shared E2E service helpers."
+    fix: "Added tests/service/helpers/** to push/PR filters."
+    regression: "tests/unit/final-preflight-a6-ci.test.mjs"
+    state: fixed
+  - id: "A6-003"
+    severity: HIGH
+    area: "critical U.S. data/calculation proof"
+    finding: "No single systematic proof covered every promoted field and every 10/20/30/45/60/90/120-second anchor independently."
+    fix: "Added full provider->service->DuckDB field sentinels and distinct nearest-prior anchor sentinels with after-target decoys."
+    regression: "tests/service/final-preflight-a6-data-integrity.test.mjs"
+    state: "proof gap closed"
+  - id: "A7-001"
+    severity: HIGH
+    area: "browser/provider/us-screener.js"
+    finding: "Arbitrary PaperId JSON values could be String(...) canonicalized into plausible IDs."
+    fix: "Accept only nonblank string or non-negative safe integer before canonicalization."
+    regression: "tests/unit/final-preflight-a7.test.mjs"
+    state: fixed
+  - id: "A7-002"
+    severity: HIGH
+    area: "local-service/persistence/producer-authority.js"
+    finding: "Producer exclusivity could diverge from durable DB state after cleanup persistence failure."
+    fix: "Serialized session start checks for any durable running session before insert."
+    regression: "tests/service/final-preflight-a7.test.mjs"
+    sql_preflight: ".planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md"
+    state: fixed
+  - id: "A7-003"
+    severity: MEDIUM
+    area: "browser producer/viewer commit hints"
+    finding: "Release BroadcastChannel still used donor market-scope:v1 namespace."
+    fix: "Renamed both endpoints to market-flow-us:v1."
+    regression: "tests/unit/final-preflight-a7.test.mjs"
+    state: fixed
+  - id: "A7-004"
+    severity: HIGH
+    area: "Node U.S. universe authority"
+    finding: "Direct WebSocket payloads could still String(...) malformed PaperId/membership values."
+    fix: "Node enforces the same strict U.S. identity boundary before persistence."
+    regression: "tests/service/final-preflight-a7.test.mjs"
+    state: fixed
+  - id: "A8-001"
+    severity: HIGH
+    area: "browser/live-verification + FR-13 contracts"
+    finding: "Market-open movement required by TREE 7.4 had no deterministic SHA-bound executable PASS fact."
+    fix: "Live report now keeps base overall PASS separate and adds movement.status PASS/PENDING/FAIL from a bounded preflighted Scanner witness plus trusted Current/History reflection."
+    regression: "tests/service/final-preflight-a8.test.mjs + tests/unit/final-preflight-a8.test.mjs"
+    sql_preflight: ".planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md"
+    state: fixed
+  - id: "A8-002"
+    severity: MEDIUM
+    area: "identity contract documentation"
+    finding: "Durable docs lagged the A7 PaperId fail-closed source-type contract."
+    fix: "Aligned DATA_CONTRACT/PRODUCT_REQUIREMENTS/PRODUCT_SPEC/TECHNICAL_SPEC to nonblank string or JS safe integer only."
+    regression: "tests/unit/final-preflight-a8-contract.test.mjs"
+    state: fixed
+
+reviewed_non_findings:
+  - id: "A2-REVIEW"
+    note: "Schema-v3 fresh/reopen/rejection, cadence-only U.S. config and loss/stale/restart recovery remained green."
+  - id: "A3-REVIEW"
+    note: "Trusted reads/cursor/null semantics, Scanner admission/saved-query state and exact-result semantics remained aligned."
+  - id: "A4-REVIEW"
+    note: "Pinned build/toolchain, Origin normalization, DB separation, quoting and exit propagation remained aligned."
+  - id: "A5-REVIEW"
+    note: "Fake Market uses normal U.S. composition; workload integrity and default new-day lifecycle remain mechanically covered."
+  - id: "A6-REVIEW"
+    note: "All promoted U.S. fields, staged anchors, suite isolation and authority-result assertions are mechanically covered; no data swap/drop/anchor defect was exposed."
+  - id: "A7-REVIEW"
+    note: "Legacy Israel Fake Market is test-only provenance; shutdown/resources and destructive filesystem boundaries are bounded; Viewer background refresh handling did not justify a catch-all."
+  - id: "A8-REVIEW"
+    note: "U.S. 15-column Current profile, Screener request, schema-v3 fields, staged anchors, commands/artifacts/DB defaults and Scanner guide were reconciled to executable reality."
+  - id: "A9-REVIEW"
+    note: "Final PR diff contains only audit fixes/tests/docs/workflow changes; no DB/data/dist artifacts, raw authenticated dumps, credentials/cookies/tokens/account identifiers or private machine paths were introduced. SENTINEL_* strings are synthetic regression fixtures."
+
+verification:
+  a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
+  a2_code_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
+  a3_code_candidate_sha: "ffe644e3acf8780776350b1ee35b427444325665"
+  a4_code_candidate_sha: "85290a17b58896b21bf12d73965a71f31dae8d13"
+  a5_code_candidate_sha: "57eb228605ded88190bf5d0b7ebd37f246c0b4ae"
+  a6_code_candidate_sha: "d863bed337611f6b27a1f611e5dee975a9408395"
+  a7_code_candidate_sha: "06ad9e074957137800f6155e6b372303a65ec0f2"
+  a8_code_candidate_sha: "1b415e56b4c2885848ce695f021fad31209aede0"
+  a9_integrated_head_sha: "fc5dda80c9b45a6430d8f61cfe0c2e4e2641d4c6"
+  focused_tests_added: true
+  fast_ci: green
+  fast_unit: "128/128, 0 skipped, 0 todo"
+  fast_service: "95/95, 0 skipped, 0 todo"
+  fast_longest_layer_ms: 26503
+  browser_ci: green
+  browser_e2e: "22/22, one worker, no retries/skips, ~25.0s"
+  browser_static_acceptance: green
+  workload_ci: green
+  workload_isolated: "pass; 4096-wide single-cycle sanity plus bounded persistence/read/Scanner"
+  workload_end_to_end: "pass; 64 securities x 45 cycles = 2880 history rows with exact counts"
+  planning_docs_ci: green
+  diff_scope_review: green
+  private_material_review: green
+  integrated_a9: green
+
+external_acceptance:
+  status: pending_external
+  reason: "Target Windows machine and authenticated provider/market-open conditions are intentionally unavailable in this audit chat; no external PASS is fabricated."
+
+next: "A10 — Closure, PR/merge/main-green verification, then record target-machine/provider acceptance as pending_external"

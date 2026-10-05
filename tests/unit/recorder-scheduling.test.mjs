@@ -300,8 +300,9 @@ test("provider failure ends only the affected cycle, records failure, and never 
   assert.equal(successCount, 0);
   assert.equal(failures.length, 1);
   assert.equal(failures[0].phase, "chunk-fetch");
-  assert.equal(failures[0].error.name, "Error");
-  assert.equal(failures[0].error.message, "provider down");
+  assert.equal(failures[0].error.name, "CycleCollectionError");
+  assert.equal(failures[0].error.message, "Provider cycle acquisition failed.");
+  assert.equal(recorder.getState().latestError.message, "provider down");
   assert.equal(recorder.getState().completedCycles, 0);
   assert.equal(recorder.getState().failedCycles, 1);
   assert.equal(scheduler.pending().length, 1);

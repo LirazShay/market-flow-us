@@ -7,6 +7,7 @@ import {
   formatDetailSummaryValue,
   formatHistoryCell
 } from "../../browser/viewer/detail-model.js";
+import { createDetailSurface } from "../../browser/viewer/detail-surface.js";
 
 const EXPECTED_HISTORY_COLUMNS = [
   ["collectedAtMs", "זמן איסוף"],
@@ -25,6 +26,56 @@ const EXPECTED_HISTORY_COLUMNS = [
   ["LastDealTimeOnly", "עסקה אחרונה"],
   ["serverAsOfDate", "זמן שרת"]
 ];
+
+class FakeElement {
+  constructor(ownerDocument) {
+    this.ownerDocument = ownerDocument;
+    this.children = [];
+    this.dataset = {};
+  }
+
+  append(...children) {
+    this.children.push(...children);
+  }
+
+  replaceChildren(...children) {
+    this.children = children;
+  }
+
+  setAttribute() {}
+  addEventListener() {}
+}
+
+function createFakeRoot() {
+  const document = {
+    createElement() {
+      return new FakeElement(document);
+    }
+  };
+  return new FakeElement(document);
+}
+
+function historicalSecurity() {
+  return {
+    found: true,
+    securityId: "1001",
+    paperName: "Alpha",
+    isCurrent: false,
+    currentRow: null
+  };
+}
+
+function historyPage(cycleId, { hasMore = true, nextCursor = "next" } = {}) {
+  return {
+    rows: [{
+      collectedAtMs: 1000 + cycleId,
+      cycleId,
+      chunkIndex: 0
+    }],
+    hasMore,
+    nextCursor: hasMore ? nextCursor : null
+  };
+}
 
 test("Detail preserves the exact 15-column History contract and shared formatting family", () => {
   assert.deepEqual(
@@ -103,4 +154,43 @@ test("current Detail summary uses only authoritative currentRow and keeps zero d
   assert.equal(formatDetailSummaryValue(model, "BuyLimit1"), "—");
   assert.equal(formatDetailSummaryValue(model, "SellLimit1"), "10");
   assert.equal(formatDetailSummaryValue(model, "LastDealTimeOnly"), "—");
+});
+
+test("authoritative Detail refresh releases a superseded load-more request", async () => {
+  let historyCalls = 0;
+  let releaseStalePage;
+  const stalePage = new Promise((resolve) => {
+    releaseStalePage = resolve;
+  });
+
+  const client = {
+    async getSecurity() {
+      return historicalSecurity();
+    },
+    async getHistoryPage(_securityId, cursor) {
+      historyCalls += 1;
+      if (historyCalls === 1) return historyPage(1, { nextCursor: "cursor-1" });
+      if (cursor === "cursor-1") return await stalePage;
+      return historyPage(2, { nextCursor: "cursor-2" });
+    }
+  };
+
+  const surface = createDetailSurface({
+    root: createFakeRoot(),
+    client
+  });
+
+  await surface.open("1001");
+  const loading = surface.loadMore();
+  assert.equal(surface.getState().loadingMore, true);
+
+  const refreshed = await surface.refresh();
+  assert.equal(refreshed.state, "DETAIL");
+  assert.equal(refreshed.loadingMore, false);
+
+  releaseStalePage(historyPage(3, { hasMore: false }));
+  const stale = await loading;
+  assert.deepEqual(stale, { stale: true });
+  assert.equal(surface.getState().loadingMore, false);
+  assert.equal(surface.getState().rowCount, 1);
 });

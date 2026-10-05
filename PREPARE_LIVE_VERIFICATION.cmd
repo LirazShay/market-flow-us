@@ -3,6 +3,9 @@ setlocal
 pushd "%~dp0"
 title Market Flow US Live Verification
 
+call "%~dp0scripts\windows-require-node24.cmd"
+if errorlevel 1 goto :runtime_fail
+
 if not exist "node_modules" (
   echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
@@ -53,6 +56,8 @@ echo The live-verification bookmarklet was copied to the clipboard and opened in
 echo Keep this window open.
 echo Run that bookmarklet on the already-authenticated provider page.
 echo Only the gate itself may report overall: PASS.
+echo FR-13 additionally requires movement.status: PASS in the same report.
+echo PENDING movement is valid static compatibility evidence, not market-open PASS.
 echo Press Ctrl+C here after the gate completes.
 echo.
 echo Starting the dedicated loopback service with data\live-verification.duckdb...
@@ -71,6 +76,14 @@ echo.
 pause
 popd
 exit /b %RESULT%
+
+:runtime_fail
+echo.
+echo Install/use Node.js 24.x before running Market Flow US.
+echo.
+pause
+popd
+exit /b 1
 
 :invalid_url
 echo.

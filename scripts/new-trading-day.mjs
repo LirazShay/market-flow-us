@@ -183,6 +183,9 @@ export async function rolloverTradingDay({
   if (typeof dbPath !== "string" || dbPath.length === 0) {
     throw new TypeError("dbPath must be a non-empty string");
   }
+  if (archiveDir !== null && (typeof archiveDir !== "string" || archiveDir.length === 0)) {
+    throw new TypeError("archiveDir must be null or a non-empty string");
+  }
   if (typeof productVersion !== "string" || productVersion.length === 0) {
     throw new TypeError("productVersion must be a non-empty string");
   }
@@ -252,9 +255,11 @@ export async function rolloverTradingDay({
 
     await rename(tempNewPath, resolvedDbPath);
     freshInstalled = true;
+    fault?.hit?.("after-fresh-install");
 
     if (!archive) {
       await rm(priorPath, { force: true });
+      priorMoved = false;
     }
 
     return Object.freeze({
@@ -265,7 +270,19 @@ export async function rolloverTradingDay({
       savedQueriesPreserved: savedQueries.length
     });
   } catch (error) {
-    if (priorMoved && !freshInstalled) {
+    if (priorMoved && freshInstalled && !archive) {
+      try {
+        await rename(resolvedDbPath, tempNewPath);
+        freshInstalled = false;
+        await rename(priorPath, resolvedDbPath);
+        priorMoved = false;
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          `New-day rollover failed after fresh install; prior authority remains at ${priorPath}`
+        );
+      }
+    } else if (priorMoved && !freshInstalled) {
       try {
         await rename(priorPath, resolvedDbPath);
         priorMoved = false;
@@ -282,7 +299,15 @@ export async function rolloverTradingDay({
   }
 }
 
-function parseCliArgs(args) {
+function readCliValue(args, index, option) {
+  const value = args[index + 1];
+  if (value === undefined || value.length === 0 || value.startsWith("--")) {
+    throw new Error(`Missing value for ${option}`);
+  }
+  return value;
+}
+
+export function parseNewTradingDayCliArgs(args) {
   let dbPath = DEFAULT_DB_PATH;
   let archive = true;
   let archiveDir = null;
@@ -294,12 +319,12 @@ function parseCliArgs(args) {
       continue;
     }
     if (value === "--db") {
-      dbPath = args[index + 1] ?? "";
+      dbPath = readCliValue(args, index, value);
       index += 1;
       continue;
     }
     if (value === "--archive-dir") {
-      archiveDir = args[index + 1] ?? "";
+      archiveDir = readCliValue(args, index, value);
       index += 1;
       continue;
     }
@@ -320,7 +345,7 @@ async function readPackageVersion() {
 }
 
 async function main() {
-  const options = parseCliArgs(process.argv.slice(2));
+  const options = parseNewTradingDayCliArgs(process.argv.slice(2));
   const result = await rolloverTradingDay({
     ...options,
     productVersion: await readPackageVersion()

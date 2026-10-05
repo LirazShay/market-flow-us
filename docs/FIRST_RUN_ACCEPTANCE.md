@@ -191,15 +191,39 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 הפעל את ה־bookmarklet שנוצר בעמוד הספק המחובר.
 
-PASS של ה־gate הנוכחי הוא מחמיר יותר מהמינימום של TREE: הוא דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
+PASS של ה־base gate מחמיר יותר מהמינימום של TREE: הוא דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
 
-אין דרישת movement בשלב הזה.
+ל־FR-12 נדרש:
+
+```text
+overall = "PASS"
+```
+
+אין דרישת movement בשלב הזה. בשוק סטטי צפוי שהדוח יכול להציג במקביל:
+
+```text
+movement.status = "PENDING"
+```
+
+וזה אינו מוריד את ה־base/static PASS.
 
 ## FR-13 — Authenticated market-open acceptance
 
-על אותו accepted candidate, בזמן שוק פעיל, הפעל שוב את ה־SHA-bound gate.
+על אותו accepted candidate, בזמן שוק פעיל, הפעל שוב את אותו SHA-bound gate.
 
-PASS דורש:
+ה־gate עצמו מפיק כעת evidence מכני נפרד לתנועה מתוך טווח ה־cycles שהריצה עצמה commit-תה. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
+
+PASS של FR-13 דורש יחד:
+
+```text
+overall = "PASS"
+movement.status = "PASS"
+movement.observed = true
+movement.currentReflected = true
+movement.historyReflected = true
+```
+
+ובכך מתקיימים גם:
 
 ```text
 at least 20 consecutive complete ScreenerHulPaging3 cycles
@@ -211,7 +235,21 @@ spanning at least 60 seconds
 + clean stop
 ```
 
-ה־live gate הרגיל מוכיח את provider/commit/read boundary אך אינו מסמן movement-specific PASS בעצמו; לכן יש לאמת בנוסף שינוי provider market/freshness אמיתי והשתקפותו ב־Current/History. אם לא נצפה שינוי אמיתי, תוצאת movement נשארת `pending/inconclusive`; אסור להחליש את ה־gate או לסמן PASS ידנית.
+אם ה־base gate עובר אבל לא נצפה שינוי provider אמיתי:
+
+```text
+movement.status = "PENDING"
+```
+
+FR-13 נשאר `pending/inconclusive` ויש להריץ שוב מאוחר יותר. אסור להחליש את ה־gate או לסמן PASS ידנית.
+
+אם נצפה שינוי אבל Current/History reflection לא הוכח:
+
+```text
+movement.status = "FAIL"
+```
+
+עוצרים ומתקנים לפני FR-14.
 
 ## FR-14 — Final evidence and operational handoff
 

@@ -2,7 +2,12 @@
 
 This is the explicit local authenticated-provider gate used by the release flow. It is not ordinary CI and it never stores provider credentials/session state in the repository.
 
-The current gate proves authenticated provider shape/transport/authority over a sustained bounded run. It deliberately does **not** infer market movement from a PASS. Closed/static compatibility and market-open movement are separate acceptance facts.
+The gate proves two deliberately separate facts in one SHA-bound report:
+
+1. authenticated provider shape/transport/authority over a sustained bounded run;
+2. when real provider values actually change, a mechanically verified market-open movement witness reflected in committed Current/History authority.
+
+A closed/static market is therefore allowed to produce a valid base PASS while movement remains `PENDING`.
 
 ## Preconditions
 
@@ -79,6 +84,17 @@ producer hello/session
 → clean producer stop
 ```
 
+After that base boundary is PASS, the same artifact automatically evaluates market-open movement evidence from the already-committed live cycle range:
+
+```text
+bounded read-only Scanner witness over firstCycleId..lastCycleId
+→ only persisted provider fields: Price / ChangePercent / BidRate / AskRate / DailyVolume / TradeDateTime
+→ local collected_at_ms is excluded
+→ deterministic single security/field witness when a change exists
+→ trusted Current + History reflection proof
+→ movement.status = PASS | PENDING | FAIL
+```
+
 The cadence comes from the U.S. Recorder configuration. The gate does not use the superseded Israeli multi-request acquisition semantics.
 
 A sanitized JSON report is shown for copying and is also available at:
@@ -93,13 +109,13 @@ The report is identified as:
 market-flow-us-real-provider
 ```
 
-and includes the embedded candidate commit, bounded-run counters/duration, final authority proof, last successful checkpoint and a sanitized failure checkpoint when applicable.
+and includes the embedded candidate commit, bounded-run counters/duration, final authority proof, last successful checkpoint, and on a base PASS a bounded `movement` classification. The movement section contains status/witness metadata only; it does not copy raw provider responses or provider market-value dumps.
 
 Do not capture or commit raw authenticated browser/network dumps.
 
-## What a current gate PASS proves
+## What `overall: "PASS"` proves
 
-`PASS` requires, at minimum:
+Base PASS requires, at minimum:
 
 - at least 20 consecutive complete U.S. cycles;
 - at least 60 seconds of sustained run time;
@@ -110,44 +126,79 @@ Do not capture or commit raw authenticated browser/network dumps.
 - clean producer stop;
 - candidate SHA preserved in the report.
 
-A PASS proves that the authenticated provider boundary, browser/runtime path, local authority and trusted read/Scanner path all worked for the bounded run.
+A base PASS proves that the authenticated provider boundary, browser/runtime path, local authority and trusted read/Scanner path all worked for the bounded run.
+
+It deliberately remains a separate fact from movement. A static market can validly satisfy this base boundary.
 
 ## Closed/static authenticated market
 
 A closed or static market may legitimately return the same market values across consecutive complete provider responses.
 
-The current gate does **not** require a value change, so repeated equal values are acceptable when:
+Repeated equal values are acceptable when:
 
 - every provider response is complete and valid;
 - every cycle receives a durable COMMIT ACK;
 - Current/Security/History/Scanner/ownership/clean-stop proof passes.
 
-Therefore a PASS during a closed/static market is valid evidence for authenticated static-provider compatibility. It must not be rejected merely because prices or other market values did not move.
+In that case the expected report shape is:
+
+```text
+overall = "PASS"
+movement.status = "PENDING"
+movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
+```
+
+This is valid authenticated static-provider compatibility evidence. It is not market-open movement PASS.
 
 TREE `7.4` requires at least five consecutive complete static responses. The current sustained gate is stricter on count/time (`20` cycles and `60` seconds), so a successful static run exceeds that minimum while still proving the same compatibility boundary.
 
 ## Market-open movement acceptance
 
-Market-open acceptance proves an additional fact: real provider market/freshness data actually changed and that change reached committed product authority.
+Market-open acceptance proves an additional fact: at least one persisted provider market/freshness field changed during the exact SHA-bound committed cycle range and that change reached committed product authority.
 
-The current live gate does **not** compare successive provider market values and does not record a movement-specific PASS. Consequently:
+The movement witness intentionally excludes `collected_at_ms`, because local polling time always advances and cannot prove provider movement.
 
-- a normal `overall: "PASS"` from this gate alone is **not** sufficient to claim market-open movement acceptance;
-- final TREE `7.4` acceptance must additionally record at least one observable provider market/freshness value change and prove that it is reflected in committed `Current`/`History` authority;
-- if an active-market run completes but no real change is observed, the movement-specific result remains `pending`/`inconclusive` rather than being fabricated or weakened;
-- static authenticated PASS remains valid static evidence even when movement evidence is still pending.
+A successful movement classification requires:
 
-The movement-specific check belongs to final target-machine acceptance and may extend the acceptance reporting around this production gate; it must not change or weaken the provider/commit/read checks already performed here.
+```text
+overall = "PASS"
+movement.status = "PASS"
+movement.observed = true
+movement.currentReflected = true
+movement.historyReflected = true
+```
+
+The witness is selected deterministically from the exact live cycle-id range and must still belong to the final `latest` cycle. Trusted Current and History reads then prove the final changed field value and multiple committed values across the run.
+
+If the base run passes but no real provider-field change is observed:
+
+```text
+movement.status = "PENDING"
+```
+
+The result is inconclusive for FR-13 and must be rerun later; do not weaken the contract or convert it manually to PASS.
+
+If a provider-field change is detected but committed Current/History reflection cannot be proven:
+
+```text
+movement.status = "FAIL"
+```
+
+That failure must be investigated. The already-proven base/static boundary remains a separate fact, but FR-13 is not green.
 
 ## Result classification
 
-Only the gate may report `overall: "PASS"` for the authenticated boundary it actually verifies.
+Only the gate may report the external facts it actually verifies.
 
-If the gate reports `FAIL`, keep only the sanitized report and investigate `failure.checkpoint`, `failure.code` and `lastSuccessfulCheckpoint`. Never replace a real failure with a manual PASS.
+If `overall` is `FAIL`, keep only the sanitized report and investigate `failure.checkpoint`, `failure.code` and `lastSuccessfulCheckpoint`.
 
-If the authenticated session, provider, browser policy, market condition, or another irreducible external prerequisite is unavailable, do not simulate it. Record the factual external boundary according to the current repository status contract. A pending external gate does not invalidate already-green offline/Fake/service/workload evidence, but it is not a live PASS.
+If `overall` is `PASS` and movement is `PENDING`, the authenticated static boundary is green but market-open acceptance is still pending.
 
-Do not label a static authenticated PASS as market-open movement PASS unless the separate movement-specific evidence required by TREE `7.4` is actually present.
+If `overall` is `PASS` and movement is `FAIL`, do not claim FR-13; investigate the movement reflection failure.
+
+Only `overall: "PASS"` together with `movement.status: "PASS"` satisfies the market-open movement requirement.
+
+If the authenticated session, provider, browser policy, market condition, or another irreducible external prerequisite is unavailable, do not simulate it. Record the factual external boundary according to the current repository status contract. A pending external gate does not invalidate already-green offline/Fake/service/workload evidence, but it is not a live movement PASS.
 
 ## Relation to local and daily acceptance
 
