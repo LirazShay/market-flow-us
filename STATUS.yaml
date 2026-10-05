@@ -6,7 +6,7 @@ current:
   chat: 9
   node: "7.3"
   title: "Release closure and target-machine readiness"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
