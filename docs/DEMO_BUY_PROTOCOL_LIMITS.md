@@ -21,7 +21,7 @@ selected unique items            <= 5000
 securityId UTF-16 code units     <= 128
 source SQL UTF-8 bytes           <= 1 MiB
 Scanner context source rows      <= 50
-Scanner context source columns   <= 128
+Scanner context retained columns <= 128 total, including the canonical identity column
 one textual/serialized cell      <= 256 UTF-8 bytes after deterministic clipping
 serialized context JSON          <= 2 MiB UTF-8
 ```
@@ -34,20 +34,42 @@ The complete encoded request must still fit the existing 16 MiB WebSocket bounda
 
 Context is taken from the exact successful Scanner generation, never by re-running SQL.
 
+The Scanner generation is Demo-Buy-capable only when it exposes exactly one recognized canonical identity column named `securityId` or `security_id`. That identity column is mandatory provenance and may never be omitted by context column bounding.
+
 Deterministic shaping order:
 
 1. take source rows 1..50 in exact Scanner order;
-2. take source columns 1..128 in exact Scanner column order;
-3. preserve JSON-safe `null`, boolean and finite numeric values exactly;
-4. preserve strings exactly while their UTF-8 representation is <= 256 bytes;
-5. deterministically UTF-8 clip longer strings at a valid code-point boundary and mark that cell truncated;
-6. for JSON-safe non-scalar values, serialize deterministically, clip the serialized representation to the same 256-byte limit and mark its encoded/truncated form explicitly;
-7. record omitted-row/omitted-column counts and all cell-truncation metadata;
-8. serialize the complete context object and require its UTF-8 size <= 2 MiB.
+2. retain the recognized canonical identity column unconditionally;
+3. fill the remaining retained-column budget with the earliest source columns in exact Scanner order, skipping the identity column if already encountered, for at most 128 retained columns total;
+4. preserve original source-column indexes/names and record every omitted source column so the AI can distinguish retained evidence from missing evidence;
+5. preserve JSON-safe `null`, boolean and finite numeric values exactly;
+6. preserve strings exactly while their UTF-8 representation is <= 256 bytes;
+7. deterministically UTF-8 clip longer strings at a valid code-point boundary and mark that cell truncated;
+8. for JSON-safe non-scalar values, serialize deterministically, clip the serialized representation to the same 256-byte limit and mark its encoded/truncated form explicitly;
+9. preserve each context row's original 1-based `resultRank`;
+10. record omitted-row/omitted-column counts and all cell-truncation metadata;
+11. serialize the complete context object and require its UTF-8 size <= 2 MiB.
 
 If deterministic shaping cannot produce a valid context within these limits, the capture fails visibly before commit. It must not silently drop additional rows/columns beyond the specified shaping rules.
 
 Context truncation never changes which rows are selected for Demo Buy and never changes an item's original `resultRank`.
+
+### Context-to-capture integrity
+
+Node independently validates the frozen context against the capture items before commit.
+
+For every retained capture item whose `resultRank <= 50`:
+
+```text
+context row with that exact resultRank must exist
+AND context canonical identity value must equal item.securityId
+```
+
+If that row is absent, its identity cell is unusable/truncated, or its canonical identity differs from the submitted item, the complete capture fails before commit as an integrity/provenance error.
+
+Items whose `resultRank > 50` are valid even though their source row is intentionally outside the retained comparison context. The persisted item rank remains authoritative and later AI export reports `targetInScannerContext=false`.
+
+The identity cell itself is never clipped into ambiguity: a Demo-Buy-capable source row must contain the same bounded canonical identity already required by the capture item contract.
 
 ## 4. SQL provenance
 
@@ -87,6 +109,19 @@ Consequences:
 - automatic capture never queues behind another in-flight capture; it is visibly skipped according to the Demo Buy contract.
 
 AI-pack generation may delay later requests on that Viewer socket while its bounded request is being serviced, but it must not mutate or stop Scanner scheduling state. No second transport or global server-concurrency rewrite is introduced solely for export.
+
+### Timing invariants
+
+Capture provenance must satisfy:
+
+```text
+sourceResultStartedAtMs <= sourceResultCompletedAtMs <= capturedAtMs
+baselineCollectedAtMs <= capturedAtMs
+```
+
+The first inequality is validated from the submitted Scanner-generation provenance; capture time is server-owned. The baseline timestamp invariant is validated after resolving the exact `buy_cycle_id` row. Violations are integrity/provenance errors, not negative latency values to be clamped away.
+
+`captureLatencyMs` and `baselineAgeMs` therefore remain non-negative derived diagnostics. The product never treats browser click time as authoritative timing.
 
 ## 7. Capture-time authority watermark
 
@@ -233,4 +268,4 @@ Demo Buy/context rows are never copied into the new active day. A v4 archive rem
 
 ## 12. Verification ownership
 
-Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, UTF-8 multi-byte clipping, request-size preflight, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-128 retention, context↔item rank/identity mismatch rejection, UTF-8 multi-byte clipping, request-size preflight, source-result timing inversions, baseline timestamp inversions, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
