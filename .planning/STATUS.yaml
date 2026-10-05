@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "demo_buy_ai_investigation_pack_contract"
+current_stage: "demo_buy_review_3_revalidation_after_ai_scope"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "The user added a required pre-local-acceptance AI Investigation Pack capability. A dedicated contract now defines a local evidence bundle with exact Scanner SQL, bounded original result context, 30-minute pre-buy history, exact baseline, 10-minute post-buy history, trusted horizon outcomes, field guide and an anti-hindsight AI prompt. Next: align PRODUCT_REQUIREMENTS/PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY and the S&T TREE/allocation with this capability, including schema-v4 bounded Scanner-context provenance and demo.buy.ai-pack.create, then resume the multi-pass review sequence. Production implementation remains unauthorized."
+next_action: "AI Investigation is now structurally part of the current Demo Buy plan: TREE has 39 nodes / 28 implementation leaves with new 4.5.1 exporter and 4.5.2 Viewer workflow; allocation extends through Chat 17 and 7.5 depends transitively on the complete AI workflow. PRODUCT_REQUIREMENTS, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, AI_INVESTIGATION_PACK, TREE, EXECUTION and handoff are aligned to bounded first-50 Scanner context, local evidence export, anti-hindsight prompting, lost-ACK semantics and v3/v4 new-day behavior. Mechanical TREE dependency validation is clean. Next: resume Review 3/5 across protocol/service/concurrency/lifecycle/failure semantics including AI export, align remaining PRODUCT_SPEC and durable DECISIONS, repair any defects found, then proceed to Review 4/5 UX/operations. Production implementation remains unauthorized."
 last_review: "R-US-EXEC-REOPEN-006"
 implementation_authorized: false
