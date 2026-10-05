@@ -2,7 +2,7 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A4"
+current_stage: "A5"
 fr0_blocked_until_audit_closes: true
 
 stages:
@@ -10,7 +10,7 @@ stages:
   A1: done
   A2: done
   A3: done
-  A4: pending
+  A4: done
   A5: pending
   A6: pending
   A7: pending
@@ -91,6 +91,22 @@ findings:
     regression: "tests/unit/detail-surface.test.mjs proves refresh clears loadingMore while the superseded continuation is unresolved and that the stale page is ignored when it later completes."
     state: "fixed; A3 CI green"
 
+  - id: "A4-001"
+    severity: HIGH
+    area: "Windows launchers"
+    finding: "SETUP.cmd enforced Node 24 only at install time. Post-setup launchers merely checked node_modules, so changing the active Node installation later could run Market Flow US on an unsupported runtime."
+    fix: "Added one small shared Windows Node-24 preflight and invoke it before dependency/product work from every post-setup launcher. SETUP.cmd retains its direct Node-24 check."
+    regression: "tests/unit/final-preflight-a4.test.mjs proves all post-setup launchers revalidate Node 24 before node_modules/product work."
+    state: "fixed; A4 CI green"
+
+  - id: "A4-002"
+    severity: MEDIUM
+    area: "START_DEMO.cmd"
+    finding: "The asynchronous browser opener trusted any HTTP 200 on port 4173. If an older demo already owned 4173, the launcher could open that stale process while the newly requested demo failed to bind."
+    fix: "Added a bounded loopback port-ownership preflight for 4173 and 8765 before starting the browser opener; occupied ports now fail before any stale page can be opened."
+    regression: "tests/unit/final-preflight-a4.test.mjs binds a real loopback port to prove rejection, then proves success after release and verifies launcher ordering."
+    state: "fixed; A4 CI green"
+
 reviewed_non_findings:
   - id: "A2-REVIEW-001"
     area: "schema-v3 bootstrap/reopen/rejection"
@@ -110,6 +126,15 @@ reviewed_non_findings:
   - id: "A3-REVIEW-003"
     area: "Scanner query/result bounds"
     note: "No arbitrary result-row cap was added: PRODUCT_SPEC requires exact Scanner result rows, while inbound requests are already bounded by the 16 MiB WebSocket max payload. Scanner runs on a separate hardened connection and executions are serialized/non-overlapping. Adding an implicit LIMIT would silently change user-authored SELECT semantics and is not justified by the frozen contract."
+  - id: "A4-REVIEW-001"
+    area: "package/build reproducibility"
+    note: "package.json and package-lock.json both pin Node 24.x plus exact DuckDB/ws/Playwright/esbuild versions. Browser and live-verification builders emit the contracted Market Flow US artifact names without source maps or arbitrary size ceilings."
+  - id: "A4-REVIEW-002"
+    area: "provider Origin and DB separation"
+    note: "Real-provider launchers derive only scheme+authority through System.Uri and pass MARKET_FLOW_US_ORIGIN to the loopback service, never cookies/tokens/full page URL. Production, demo and live-verification DBs remain separated as data/market-flow-us.duckdb, .demo/market-flow-us.duckdb and data/live-verification.duckdb."
+  - id: "A4-REVIEW-003"
+    area: "Windows quoting and exit propagation"
+    note: "Reviewed launchers anchor cwd with quoted %~dp0, quote generated artifact paths and Origin arguments, preserve command exit codes, and keep heavy acceptance/workload actions explicit rather than silently folding them into regular verification."
 
 cross_stage_observations:
   - id: "A8-CANDIDATE-001"
@@ -120,6 +145,7 @@ verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
   a2_code_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
   a3_code_candidate_sha: "ffe644e3acf8780776350b1ee35b427444325665"
+  a4_code_candidate_sha: "85290a17b58896b21bf12d73965a71f31dae8d13"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
@@ -127,4 +153,4 @@ verification:
   planning_docs_ci: green
   integrated_a9: pending
 
-next: "A4 — Build, setup, launchers and Windows process orchestration"
+next: "A5 — Fake Market, acceptance, workload and trading-day lifecycle"
