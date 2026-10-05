@@ -132,3 +132,138 @@ current one-join + seven ordered filtered aggregates
 The next SQL candidate must reduce recurring work structurally before any probe. The representative `4096 × 180` workload remains forbidden for this staged query until a replacement candidate passes the static gate and a small deterministic probe.
 
 The existing guide/code drift is intentionally not resolved by documenting this rejected SQL as canonical. `docs/SCANNER_SQL_GUIDE.md` should be synchronized only after the replacement query shape has passed static preflight.
+
+---
+
+# Existing-schema bounded-candidate review
+
+This section records the next static design step. No candidate below was executed.
+
+## Verified structural facts
+
+For the U.S. path, one validated `ScreenerHulPaging3` response becomes one complete cycle. Every security row in that response receives the same `collectedAtMs`, equal to that cycle's `completedAtMs`. A successful commit persists that same `completedAtMs` in `cycles.completed_at_ms`, appends one `history` row per current security, and fully replaces `latest` with that complete current membership.
+
+Therefore cycle-level time is usable as an optimization fact for normal complete U.S. cycles. However membership may change between complete cycles, and the current staged-query contract is per-security nearest historical row at or before each anchor, with no maximum allowed age.
+
+That distinction is decisive.
+
+## Candidate A — seven target rows per current security + one temporal/ASOF-style history match
+
+Shape:
+
+```text
+latest (4,096)
+× 7 anchor offsets
+= 28,672 target rows
+→ nearest prior match by security_id + target timestamp
+→ pivot seven matched prices per security
+→ contiguous stage calculation
+→ top 100
+```
+
+Static advantages:
+
+- removes seven independent nearest-row subqueries;
+- removes the `latest × all qualifying old history` many-row intermediate;
+- logical match output is at most seven rows per current security before pivot;
+- expresses the problem directly as nearest-prior matching.
+
+Static blockers:
+
+- with the current schema there is no proven access path aligned to `(security_id, collected_at_ms, cycle_id)`;
+- an ASOF/temporal implementation may still need to scan/order retained `history`, so recurring cost can still grow with DB lifetime;
+- deterministic equal-timestamp tie-breaking by highest `cycle_id` needs explicit handling and must not be assumed from an ASOF implementation;
+- therefore this shape improves intermediate cardinality but does not prove lifetime-independent work.
+
+Decision: **NOT YET APPROVED FOR FIRST EXECUTION**. It is a better logical shape, but it does not satisfy the requested bounded-cost contract on the existing schema by static proof alone.
+
+## Candidate B — resolve seven anchor cycle IDs, then exact `(cycle_id, security_id)` history joins
+
+Because all rows in one successful U.S. cycle share one collection timestamp, a tempting optimization is:
+
+```text
+cycles
+→ find nearest complete cycle at/before each target time
+→ seven anchor cycle_ids
+→ exact history joins by (cycle_id, security_id)
+```
+
+This would align very well with the existing `history` primary key `(cycle_id, security_id)` and would avoid historical range matching for securities that were members of every selected anchor cycle.
+
+However it does **not** preserve the current per-security contract when membership has gaps.
+
+Counterexample:
+
+```text
+security X exists in an older cycle
+→ X is removed for several cycles
+→ X is later re-added and is current now
+→ global nearest anchor cycle does not contain X
+→ an older X history row still exists before the anchor
+```
+
+The current contract returns that older X row because it is the nearest historical row for X at/before the anchor. Exact anchor-cycle joining returns `NULL` instead.
+
+Decision: **REJECT WITHOUT CONTRACT CHANGE**. This is fast and KISS, but it changes observable semantics for remove/re-add or other membership-gap cases.
+
+## Candidate C — explicit recent time window around the seven anchors
+
+Shape:
+
+```text
+history restricted to a finite recent window
+→ compute nearest rows only inside that window
+```
+
+This is the cleanest way to make work depend on the requested 120-second strategy horizon rather than total retained DB history.
+
+But any finite lower bound introduces a maximum acceptable staleness. If no row exists inside the window, the query returns `NULL` even if a much older row exists. The present contract has no such maximum-age rule.
+
+Decision: **REJECT WITHOUT CONTRACT CHANGE**. A bounded recent-window query is only correct after the product/query contract explicitly defines acceptable anchor staleness/tolerance.
+
+## Static impossibility result for the current contract + current schema
+
+The current requirements combine all of the following:
+
+```text
+1. exact nearest historical row per security
+2. row may be arbitrarily old when collection/membership has a long gap
+3. deterministic timestamp + cycle_id tie-break
+4. append-only retained history
+5. recurring execution every 5 seconds
+6. recurring work should not grow with total DB lifetime
+7. no temporal access structure/precompute/index aligned to the lookup
+```
+
+On the current schema, items 1–3 require the query to remain capable of finding an arbitrarily old per-security predecessor. Without an aligned bounded access structure or a maximum-staleness contract, static reasoning cannot guarantee item 6.
+
+This is not just a SQL syntax problem. It is a contract/access-path conflict.
+
+## Result of this design stage
+
+No existing-schema SQL candidate is approved for execution yet.
+
+The smallest next planning question is now explicit:
+
+```text
+Option 1 — change staged-anchor semantics to include a bounded maximum staleness/tolerance
+           → keep schema simple
+           → query only a recent finite window
+
+Option 2 — preserve unlimited nearest-prior semantics
+           → reopen the smallest schema/access-path area
+           → evaluate the minimum index/ordering/precompute/rolling structure that makes it practical
+```
+
+A third option — merely using ASOF over all retained history — may still be useful as an implementation technique, but it does not resolve the lifetime-growth requirement by static proof and therefore is not enough by itself.
+
+### Gate status after candidate review
+
+```text
+current aggregate rewrite          → rejected
+ASOF/temporal shape on same schema → structurally better, not proven bounded
+cycle-id exact joins               → fast, semantic mismatch on membership gaps
+finite recent history window       → bounded, requires explicit max-staleness contract
+```
+
+**Conclusion: existing-schema design search is exhausted for the current exact contract. Do not execute another staged-query candidate until the smallest affected planning area is reopened and resolves max-staleness semantics versus a temporal access-path/schema change.**
