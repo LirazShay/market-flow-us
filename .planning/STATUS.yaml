@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 has closed the 7.2 acceptance-audit implementation gaps. Run the required focused/bounded verification for local acceptance, Browser/Fast/workload correctness and generator-driven isolated seeding; fix any blocking defect in this chat; then re-audit 7.2 success_evidence before marking done/opening PR."
+next_action: "Chat 8 implementation gaps are closed, but focused/bounded runtime verification is still pending: the current execution container cannot reach GitHub to obtain the branch and does not have the pinned project dependencies installed, while the branch has no PR-triggered workflow run yet. Do not mark 7.2 done. Obtain executable Fast/Browser/workload evidence for the exact candidate SHA, fix any blocking defect in Chat 8, then re-audit success_evidence before marking done/opening the merge PR."
 last_review: "R-US-EXEC-REOPEN-004"
