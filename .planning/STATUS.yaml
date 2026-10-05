@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 9 / TREE 7.3 is complete and squash-merged to main at ec90e9273e2a3e61ef27e755c2cf9e0ca40a4683. Planning/Fast/Browser/Workload main CI are green and there are no open PRs. Chat 10 / TREE 7.4 is the only remaining execution node and is ready to start; it remains pending until the required user-dependent target-machine/authenticated checks are run."
+next_action: "Chat 10 / TREE 7.4 is in progress on branch chat-10-final-target-machine-acceptance. FR-0 candidate truth is main at 3881c1085b2b52b039c803bbf4d9c1fba71b7940 with no open PRs; continue the first-run acceptance runbook one checkpoint at a time and stop on the first FAIL."
 last_review: "R-US-EXEC-REOPEN-004"
