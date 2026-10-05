@@ -2,14 +2,14 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A3"
+current_stage: "A4"
 fr0_blocked_until_audit_closes: true
 
 stages:
   A0: done
   A1: done
   A2: done
-  A3: pending
+  A3: done
   A4: pending
   A5: pending
   A6: pending
@@ -59,6 +59,38 @@ findings:
     regression: "tests/unit/database-writer.test.mjs proves buffered rows are discarded and proves ROLLBACK still reaches the underlying connection even when createAppender would throw; existing U.S. F1-F5 transaction regressions remain green."
     state: "fixed; A2 CI green"
 
+  - id: "A3-001"
+    severity: HIGH
+    area: "local-service/reads/viewer-reads.js"
+    finding: "viewer.status re-emitted the stored last_error_json name/message. Databases produced before A2 hardening could therefore expose arbitrary legacy provider/network error text even though new failed-cycle writes are sanitized."
+    fix: "Trusted status reads now treat persisted failure JSON only as an error-presence signal and return a fixed public-safe collection error descriptor."
+    regression: "tests/service/final-preflight-a3.test.mjs injects legacy persisted cookie/account/authorization sentinels and proves none are returned; viewer-reads.test.mjs now asserts the generic descriptor."
+    state: "fixed; A3 CI green"
+
+  - id: "A3-002"
+    severity: MEDIUM
+    area: "browser/viewer/client.js"
+    finding: "Viewer request diagnostics derived operationId from the global requestSequence after await. Concurrent requests completing out of order could therefore record another request's ID and mis-correlate the diagnostic trail."
+    fix: "sendRequest now returns the exact requestId together with the response; each request records diagnostics using its own captured requestId."
+    regression: "tests/unit/viewer-client.test.mjs completes concurrent Viewer requests out of order and proves exact diagnostic operationId correlation."
+    state: "fixed; A3 CI green"
+
+  - id: "A3-003"
+    severity: MEDIUM
+    area: "browser/viewer/client.js"
+    finding: "Reviewed Viewer client defaults and user-visible connection/error strings still used MarketScope after the Market Flow US branding cutover."
+    fix: "Rebranded the default Viewer client identity plus local-service connection/correlation/readiness messages to Market Flow US."
+    regression: "viewer-client.test.mjs plus full Fast/Browser branding verification."
+    state: "fixed; A3 CI green"
+
+  - id: "A3-004"
+    severity: MEDIUM
+    area: "browser/viewer/detail-surface.js"
+    finding: "If History loadMore was in flight when an authoritative Detail refresh started, refresh superseded the old generation but left loadingMore true. The stale request could not clear it, leaving pagination disabled until Detail was reopened."
+    fix: "Authoritative Detail refresh explicitly releases stale pagination ownership before starting the new generation; stale continuation responses remain unable to mutate refreshed rows."
+    regression: "tests/unit/detail-surface.test.mjs proves refresh clears loadingMore while the superseded continuation is unresolved and that the stale page is ignored when it later completes."
+    state: "fixed; A3 CI green"
+
 reviewed_non_findings:
   - id: "A2-REVIEW-001"
     area: "schema-v3 bootstrap/reopen/rejection"
@@ -69,11 +101,17 @@ reviewed_non_findings:
   - id: "A2-REVIEW-003"
     area: "producer loss/stale heartbeat/service restart"
     note: "Existing real-service recovery proofs cover producer socket loss, stale heartbeat ownership release, clean service shutdown and restart recovery; all remained green after A2 changes."
+  - id: "A3-REVIEW-001"
+    area: "Current/Security/History authority"
+    note: "Schema-v3 projection, display-name fallback, historical-only lookup, zero/null preservation, 500-row keyset ordering and cursor-to-security binding are covered by real-service tests and remained green."
+  - id: "A3-REVIEW-002"
+    area: "Scanner admission and saved-query authority"
+    note: "Scanner still enforces one prepared SELECT, zero parameters and dynamic/side-effect-function rejection on the hardened Scanner connection. Saved-query CRUD is serialized/durable and its selected/draft/active-generation separation remained green. No SQL was materially changed in A3, so the AGENTS static-SQL re-entry rule was not triggered."
+  - id: "A3-REVIEW-003"
+    area: "Scanner query/result bounds"
+    note: "No arbitrary result-row cap was added: PRODUCT_SPEC requires exact Scanner result rows, while inbound requests are already bounded by the 16 MiB WebSocket max payload. Scanner runs on a separate hardened connection and executions are serialized/non-overlapping. Adding an implicit LIMIT would silently change user-authored SELECT semantics and is not justified by the frozen contract."
 
 cross_stage_observations:
-  - id: "A3-CANDIDATE-001"
-    area: "browser/viewer/client.js"
-    note: "Viewer client still contains user-visible MarketScope service strings/default client identity; review/fix under A3 rather than expanding A1 scope."
   - id: "A8-CANDIDATE-001"
     area: "docs/LIVE_VERIFICATION.md / TREE 7.4"
     note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
@@ -81,7 +119,7 @@ cross_stage_observations:
 verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
   a2_code_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
-  a3_code_candidate_sha: "c2e113dc7c654e1db6ca0cd4497e748295223792"
+  a3_code_candidate_sha: "ffe644e3acf8780776350b1ee35b427444325665"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
@@ -89,4 +127,4 @@ verification:
   planning_docs_ci: green
   integrated_a9: pending
 
-next: "A3 — Trusted reads, Viewer and Scanner"
+next: "A4 — Build, setup, launchers and Windows process orchestration"
