@@ -328,3 +328,36 @@ All checks that require the user's authenticated browser or target computer are 
 The closed/static-market smoke never substitutes for the market-open check. Synthetic movement never substitutes for real-provider evidence. Conversely, development and release cleanup do not wait for market movement once the acceptance tooling itself has deterministic automated proof.
 
 The final target-machine leaf remains pending until the user performs the required checks. Overall product completion is not declared before those required acceptance results are PASS.
+
+## D-US-020 — Recurring automation speed is a first-class engineering requirement
+
+**Status:** resolved
+
+CI, tests and every repeatedly executed automated support path are development infrastructure. Excessive recurring runtime directly reduces iteration quality and therefore must be treated as an engineering defect rather than accepted background cost.
+
+This includes end-to-end wall-clock cost for:
+
+- workflow/job topology;
+- checkout/setup/cache/dependency installation;
+- builds;
+- unit/service/browser tests;
+- fixtures and Fake Market/Fake Leumi harnesses;
+- temporary service/DuckDB lifecycle;
+- cleanup/report generation;
+- benchmark/workload preparation and probes.
+
+The optimization priority is:
+
+```text
+remove repeated/duplicated work first
+→ refactor slow test/fixture/automation code
+→ improve synchronization/setup/cache/job topology
+→ preserve the same observable proof
+→ remeasure end-to-end
+```
+
+A green result does not excuse a materially slow path. Executors must investigate slow individual tests and setup stages even when the total suite still passes. Increasing timeouts/retries, hiding cost in another job/command, or repeatedly paying duplicated setup is not an acceptable substitute for fixing avoidable slowness.
+
+Hard timeouts remain safety ceilings only. The normal target for recurring development feedback is seconds, and the overwhelming majority of CI/test execution should stay in that range.
+
+Coverage may not be weakened merely for speed. Performance refactoring should remove waste while preserving the same contractual evidence and diagnosability.
