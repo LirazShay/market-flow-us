@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "feature_planning"
+current_stage: "st_tree_design"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "Replan the smallest affected area for the new Demo Buy strategy-validation feature. Preserve all completed U.S. migration evidence, block unexecuted final target-machine acceptance 7.4, define durable product/data/technical/test contracts, extend the S&T tree, review/freeze the revised baseline, repair execution allocation, then implement and verify the feature before returning to final target-machine acceptance on the new candidate SHA."
+next_action: "Feature goal and technical contract are defined in docs/PRODUCT_REQUIREMENTS.md and docs/DEMO_BUY_VALIDATION.md. Next: extend the existing S&T TREE with the smallest Demo Buy branch, define implementation-ready leaves/dependencies/success_evidence, update canonical PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY from the reviewed feature contract, then run necessity/sufficiency/KISS and adversarial whole-goal review before freeze. Preserve all completed execution leaves; final target-machine acceptance 7.4 remains blocked until the new feature is implemented and merged."
 last_review: "R-US-EXEC-REOPEN-004"
 implementation_authorized: false
