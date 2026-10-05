@@ -56,6 +56,8 @@ echo The live-verification bookmarklet was copied to the clipboard and opened in
 echo Keep this window open.
 echo Run that bookmarklet on the already-authenticated provider page.
 echo Only the gate itself may report overall: PASS.
+echo FR-13 additionally requires movement.status: PASS in the same report.
+echo PENDING movement is valid static compatibility evidence, not market-open PASS.
 echo Press Ctrl+C here after the gate completes.
 echo.
 echo Starting the dedicated loopback service with data\live-verification.duckdb...
