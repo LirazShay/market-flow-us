@@ -8,10 +8,18 @@ const CANDIDATE_COMMIT = __MARKET_FLOW_US_CANDIDATE_COMMIT__;
 function safeUnexpectedFailure(now = () => Date.now()) {
   const completedAtMs = now();
   return Object.freeze({
-    verification: "market-scope-real-provider",
+    verification: "market-flow-us-real-provider",
     candidateCommit: CANDIDATE_COMMIT,
     providerOriginHost: null,
     transportCspLna: "FAIL",
+    lastSuccessfulCheckpoint: null,
+    progress: Object.freeze({
+      completedCycles: 0,
+      commitAckCount: 0,
+      universeAckCount: 0,
+      lastCycleId: null,
+      elapsedMs: 0
+    }),
     overall: "FAIL",
     failure: Object.freeze({
       checkpoint: "gate.runtime",
