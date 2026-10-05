@@ -173,7 +173,7 @@ nodes:
       - Existing Scanner behavior remains green.
       - Schema v4 preserves minimum Demo Buy facts and bounded original Scanner context.
       - Demo Buy Viewer exposes trustworthy progressive outcomes.
-      - AI pack reproduces exact query/context/pre-buy/baseline/post-buy/outcome evidence with anti-hindsight rules and no cloud dependency.
+      - AI pack reproduces exact query provenance and sharing-safe context/market evidence with anti-hindsight rules, neutral returned-position semantics and no cloud dependency.
     depends_on: []
     children: ["4.1", "4.2", "4.3", "4.4", "4.5"]
 
@@ -230,6 +230,7 @@ nodes:
       - Fresh DB boots schema v4 with exact Demo Buy columns/constraints.
       - Valid v3→v4 preserves market authority and scanner_saved_queries; partial-v3-with-Demo-structures fails closed; injected migration failure leaves v3 usable.
       - Context preserves first 50 source rows, canonical identity column always, at most 64 retained columns, 128-byte textual/serialized-cell bound, deterministic truncation/omission metadata and at most 256 KiB serialized JSON.
+      - Persisted context is local forensic provenance and is not treated as automatically shareable; AI export owns a separate sharing-safe projection.
       - Restart preserves active-day captures/context.
       - New-day accepts valid v3 or v4, preserves saved queries, archives source unchanged if requested, and creates fresh v4 with empty Demo Buy tables.
       - No speculative history index is added without representative workload evidence.
@@ -246,8 +247,8 @@ nodes:
       - Schema alone does not define race behavior, baseline linkage, provenance integrity, capture bounds or acknowledgement semantics.
     sufficiency_assumptions: []
     success_evidence:
-      - Protocol/unit tests reject malformed/duplicate/out-of-range items, invalid mode/bounds, oversized SQL/context and context-to-item rank/identity mismatch.
-      - Real-service tests prove all-or-nothing capture, original resultRank, immutable query/timing/context provenance, monotonic capture IDs and exact buy_cycle_id linkage.
+      - Protocol/unit tests reject malformed/duplicate/out-of-range items, invalid mode/bounds, oversized SQL/context and context-to-item position/identity mismatch.
+      - Real-service tests prove all-or-nothing capture, original returned result position, immutable query/timing/context provenance, monotonic capture IDs and exact buy_cycle_id linkage.
       - captured_at_ms is assigned inside serialized writer work after prior socket/writer work; buy_cycle_id is the item authority watermark.
       - Wall-clock anomalies preserve raw timestamps and produce nullable derived timing + bounded anomaly diagnostics rather than changing authority or rejecting an otherwise valid capture.
       - Lost transport acknowledgement after dispatch is ACKNOWLEDGEMENT_UNKNOWN, never confirmed rejection, with no blind automatic retry.
@@ -302,7 +303,7 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - Exactly one recognized identity column is required; invalid rows are never silently included and checkbox interaction never opens Detail.
-      - Selected/All/Top-X choose source rows before dedupe, preserve original ranks, enforce 5000 unique-item bound, show source-row versus unique-item counts and reset selection on a new rendered generation.
+      - Selected/All/Top-X choose source rows before dedupe, preserve original returned positions, enforce 5000 unique-item bound, show source-row versus unique-item counts and reset selection on a new rendered generation.
       - Capture freezes the displayed generation synchronously before async submission; later Scanner refresh cannot alter an in-flight capture.
       - Auto changes affect only future successful generations; zero-row is no-op; busy generations increment bounded skip status rather than queue.
       - Persistent Viewer-level Auto indicator is visible across top-level surfaces and Turn off affects future generations only, never pretending to cancel an in-flight capture.
@@ -323,6 +324,7 @@ nodes:
       - Unit/browser tests cover loading/empty/populated/first-page error/continuation error/provenance error/targeted-refresh error while preserving prior trustworthy data where possible.
       - Capture groups show query/timing/mode context once; a page split inside one capture repeats/marks the header so rows never lose provenance context.
       - Sticky leading identity/baseline columns remain visible while ten horizons render as one compact cell each containing outcome + percentage + Price where applicable.
+      - `resultRank` is presented neutrally as returned Scanner Position unless SQL ordering is explicitly being explained; position 1 alone is never labeled best/top-ranked.
       - NO_FUTURE_OBSERVATION is presented as Pending while non-temporal unavailable reasons remain explicit warnings; direction never relies on color alone.
       - Refresh latest resets to first page; Load more appends stable continuation; Refresh observation updates one target in place even while newer Auto captures arrive.
       - Provenance/SQL loads on demand and timing anomalies are inspectable without overriding authority semantics.
@@ -332,37 +334,43 @@ nodes:
 
   "4.5":
     status: approved
-    strategy: A Demo Buy observation can become a reproducible local AI Investigation Pack that supports strategy improvement without hindsight leakage or automatic AI control.
-    tactic: Build a deterministic Node evidence exporter, then expose generation/copy/regeneration controls from Demo Buy.
+    strategy: A Demo Buy observation can become a reproducible local AI Investigation Pack that supports strategy improvement without hindsight leakage, false ranking claims, accidental system/session disclosure or automatic AI control.
+    tactic: Build a deterministic Node evidence exporter with explicit sharing-safe projections, then expose generation/copy/regeneration controls from Demo Buy.
     parallel_assumptions:
       - The useful AI boundary is evidence packaging and disciplined prompting, not automatic cloud integration.
     necessary_assumptions:
-      - Outcome inspection alone does not systematically explain why the query ranked a candidate or what pre-buy evidence might improve SQL.
+      - Outcome inspection alone does not systematically explain why the query returned a candidate or what pre-buy evidence might improve SQL.
     sufficiency_assumptions:
-      - Exporter plus UI workflow make forensic evidence usable while preserving human control and local privacy.
+      - Exporter plus UI workflow make forensic evidence usable while preserving human control, local privacy and explicit evidence limitations.
     success_evidence:
-      - Pack contains exact SQL, bounded original Scanner context, authority-watermarked pre-buy history, exact baseline, post-watermark 10-minute history, trusted outcomes, manifest, field guide and anti-hindsight prompt.
+      - Pack contains exact user-authored SQL plus sharing-safe bounded Scanner context, authority-watermarked pre-buy history, exact baseline projection, post-watermark 10-minute history, trusted outcomes, manifest, field guide and anti-hindsight prompt.
+      - Prompt/UI treats resultRank as returned position unless deterministic SQL ordering establishes ranking semantics.
+      - System-owned operational/session data and redacted arbitrary Scanner text never enter shareable files, prompt, response metadata or diagnostics.
       - No AI API/key/cloud dependency or automatic SQL mutation is introduced.
     depends_on: []
     children: ["4.5.1", "4.5.2"]
 
   "4.5.1":
     status: approved
-    strategy: Node can deterministically generate a safe local AI Investigation Pack for one captured security.
-    tactic: Add demo.buy.ai-pack.create that validates membership/provenance, reuses the trusted evaluator and atomically publishes a controlled export directory.
+    strategy: Node can deterministically generate a sharing-safe local AI Investigation Pack for one captured security.
+    tactic: Add demo.buy.ai-pack.create that validates membership/provenance, reuses the trusted evaluator, derives explicit sharing-safe history/context projections and atomically publishes a controlled export directory.
     parallel_assumptions:
       - OUTCOME.json reuses the existing evaluator rather than duplicating horizon logic.
     necessary_assumptions:
-      - A prompt alone is insufficient without reproducible evidence files and strict authority/time boundaries.
+      - A prompt alone is insufficient without reproducible evidence files and strict authority/time/sharing boundaries.
     sufficiency_assumptions: []
     success_evidence:
       - Prediction-time history is limited by cycle_id <= buy_cycle_id and the 30-minute time window; outcome history requires cycle_id > buy_cycle_id and ends at captured_at_ms + 10m.
       - COMPLETE_OUTCOME is based on committed post-watermark evidence reaching the 10-minute boundary; otherwise the pack remains honestly PARTIAL_OUTCOME.
-      - SCANNER_CONTEXT preserves first-50 row order/ranks and bounded retained-column/truncation metadata; rank>50 targets remain investigable with targetInScannerContext=false.
-      - PROMPT enforces prediction-time/outcome separation, fact/derived/hypothesis labeling, minimal SQL proposals, peer limitations and multi-observation validation.
+      - Persisted SCANNER_CONTEXT preserves first-50 returned order/positions and bounded retained-column/truncation metadata; position>50 targets remain investigable with targetInScannerContext=false.
+      - Shareable history/baseline files allowlist authority keys + documented provider market fields/raw_data and omit session_id, producer/session/config/error/request/source_metadata/path fields.
+      - Shareable SCANNER_CONTEXT preserves structural metadata, identity, numeric/null/boolean and documented market-text values; other string/array/object contents are emitted only as bounded redaction metadata with redactedForSharing=true.
+      - Canary operational/session/arbitrary-text values are absent byte-for-byte from every generated file, prompt, response metadata and diagnostics; manifest exposes counts only, never redacted content.
+      - PROMPT enforces prediction-time/outcome separation, returned-position-vs-ranking discipline, fact/derived/hypothesis labeling, minimal SQL proposals, peer limitations and multi-observation validation.
       - Bundle contains README/PROMPT/MANIFEST/QUERY/SCANNER_CONTEXT/TARGET_BEFORE/BASELINE/TARGET_AFTER/OUTCOME/FIELD_GUIDE.
+      - Exact user-authored QUERY.sql remains verbatim while README/UX warns the user to review it before external sharing.
       - Export root/path is product-owned, repository-relative/public-safe, browser supplies no path, temporary directory + atomic rename prevents partial final packs and successful packs are never overwritten.
-      - Export response contains bounded relative path/metadata/prompt only; prompt is bounded and no evidence payload enters diagnostics.
+      - Export response contains bounded relative path/metadata/prompt only; prompt is bounded and no evidence/redacted payload enters diagnostics.
       - Export lost ACK is safe to regenerate after reconnect because export mutates no DB authority; regeneration creates a new collision-safe pack.
       - One pack generation mutates no DB authority and representative export timing is measured without adding a second transport/worker.
     depends_on: ["4.3.2", "4.3.3"]
@@ -370,18 +378,20 @@ nodes:
 
   "4.5.2":
     status: approved
-    strategy: Demo Buy UI lets the user investigate one observation, generate/copy/regenerate an AI pack and understand evidence limitations without leaving the local workflow.
-    tactic: Add an expandable Investigate with AI panel, targeted refresh, one Viewer-wide export slot, partial/complete/context-coverage state, relative path and clipboard fallbacks.
+    strategy: Demo Buy UI lets the user investigate one observation, generate/copy/regenerate an AI pack and understand evidence/sharing limitations without leaving the local workflow.
+    tactic: Add an expandable Investigate with AI panel, targeted refresh, one Viewer-wide export slot, partial/complete/context-coverage state, neutral returned-position wording, pre-share warning, relative path and clipboard fallbacks.
     parallel_assumptions: []
     necessary_assumptions:
       - A backend exporter is not useful if the user cannot invoke and understand it from the observation being investigated.
     sufficiency_assumptions: []
     success_evidence:
-      - Panel shows target identity/rank, horizon progress, targetInScannerContext and PARTIAL_OUTCOME/COMPLETE_OUTCOME before/after generation.
+      - Panel shows target identity/returned position, horizon progress, targetInScannerContext and PARTIAL_OUTCOME/COMPLETE_OUTCOME before/after generation.
+      - Position 1 is never presented as best/top-ranked unless the exact SQL ordering justifies that statement.
+      - Before Generate/Regenerate the UI warns that exact Scanner SQL and market evidence will be shareable and should be reviewed; no automatic upload occurs.
       - At most one Generate/Regenerate request is in flight per Viewer; additional actions are visibly disabled/refused rather than queued.
       - Generate returns relative local folder + file count; Copy AI Prompt and Copy folder path use clipboard with selectable fallback text.
       - PARTIAL pack can be safely regenerated after later evidence; export lost-ACK guidance permits safe regeneration, unlike capture lost-ACK behavior.
-      - Chromium E2E proves a failed rank-1 candidate investigation, file/content boundaries, prompt copy, targeted refresh and regeneration plus a rank>50 reduced-context case.
+      - Chromium E2E proves ordered and unordered returned-position-1 investigations, sharing-safe file/content boundaries, prompt copy, targeted refresh and regeneration plus a position>50 reduced-context case.
       - No automatic AI call, upload or SQL activation exists.
     depends_on: ["4.5.1", "4.4.2", "5.2"]
     children: []
@@ -497,7 +507,7 @@ nodes:
     sufficiency_assumptions:
       - Completed migration proof + new feature leaves + 7.5 + 7.4 establish end-to-end completion.
     success_evidence:
-      - Final candidate has green deterministic gates, accurate docs, local acceptance including AI pack, and final target-machine/provider PASS.
+      - Final candidate has green deterministic gates, accurate docs, local acceptance including sharing-safe AI pack, and final target-machine/provider PASS.
     depends_on: []
     children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
 
@@ -549,7 +559,7 @@ nodes:
     success_evidence:
       - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, DEMO_BUY_VALIDATION, DEMO_BUY_PROTOCOL_LIMITS, DEMO_BUY_UX and AI_INVESTIGATION_PACK plus USER_GUIDE/SCANNER_SQL_GUIDE match implementation.
       - Full Fast, Browser, Planning Docs and bounded Workload verification are green.
-      - Local Fake Leumi proves Demo Buy progressive/targeted refresh and AI pack generation/regeneration without huge redundant matrices.
+      - Local Fake Leumi proves Demo Buy progressive/targeted refresh plus AI pack generation/regeneration, ordered-vs-unordered result-position semantics and no operational/session canary leakage without huge redundant matrices.
       - No blocking defect/unexpected open PR; feature/reclosure PR is reviewed, squash-merged and main CI is green.
       - STATUS/EXECUTION/handoff point 7.4 at the exact accepted-candidate SHA.
     depends_on: ["4.4.1", "4.4.2", "4.5.2", "7.3"]
@@ -565,10 +575,10 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - Local Fake Leumi static/moving/failure/restart PASS.
-      - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful AI Investigation generation/copy/regeneration on the final SHA.
+      - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful sharing-safe AI Investigation generation/copy/regeneration on the final SHA.
       - 4096x180 and isolated one-day probes pass target-machine criteria.
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
       - Authenticated static smoke and market-open movement gates pass with sanitized SHA-bound reports.
-      - No private credential/session material enters repo/reports.
+      - No private credential/session material enters repo/reports or generated shareable AI pack artifacts.
     depends_on: ["7.5"]
     children: []
