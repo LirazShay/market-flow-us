@@ -166,6 +166,48 @@ current verified requirement
 
 Tests protect observable/public contracts. Reuse imported tests wherever behavior is unchanged; adapt tests only where the U.S. contract intentionally changes.
 
+### Automation performance is a first-class correctness contract
+
+Recurring automated execution cost is product-development infrastructure and must be optimized aggressively. A test or workflow being green does **not** make excessive runtime acceptable.
+
+This rule applies to every repeatedly executed automated path, including:
+
+- GitHub Actions workflows and job topology;
+- checkout/setup/dependency installation/cache restore;
+- build and packaging steps;
+- unit/service/browser tests;
+- fixtures, Fake Market/Fake Leumi and local acceptance harnesses;
+- temporary DuckDB/bootstrap/cleanup work;
+- report generation and verification scripts;
+- benchmark/workload preparation and small probes.
+
+Measure **wall-clock feedback end-to-end**, not only the test body. A three-second test inside a seventy-second workflow is a seventy-second feedback problem.
+
+Default priority when automation becomes materially slow or regresses:
+
+```text
+identify recurring cost
+→ remove duplicated/unnecessary work
+→ improve test/fixture/code architecture
+→ improve job topology/cache/setup
+→ parallelize only where it reduces real wall time safely
+→ remeasure end-to-end
+→ keep the proof
+```
+
+Rules:
+
+- prefer refactoring automation/test code over accepting repeated waiting;
+- treat an unexplained material slowdown as an engineering defect owned by the chat that discovers it;
+- do not hide slow tests by increasing timeouts, adding retries, splitting the same expensive setup across more jobs, or moving the cost outside the measured command;
+- do not ignore an individually slow test merely because the total suite still passes;
+- when several valid implementations are possible, prefer the one that keeps recurring verification cheapest while preserving correctness and diagnosability;
+- optimize the highest recurring cost first because CI/test latency compounds across every future change;
+- remove valuable coverage only when it is genuinely redundant and the remaining proof protects the same observable contract;
+- hard ceilings are emergency failure bounds, never performance targets; normal repeated feedback should remain in seconds.
+
+For meaningful changes to automation-heavy areas, inspect whether the touched path introduced or preserves avoidable repeated work. If so, fix/refactor it in the same work unit rather than carrying known automation debt forward.
+
 ### SQL static preflight gate
 
 Do not manually execute, benchmark, dispatch or introduce into a first execution any **new or materially changed SQL** until it has passed at least ten explicit static validation/optimization stages.
