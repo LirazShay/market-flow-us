@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 10 / TREE 7.4 is in progress. The first-run release runbook drift is fixed and merged. FR-0 is next: on the target Windows machine update to current main, require a clean working tree and record the exact HEAD SHA; verify main CI is green and no release PR is open, then continue FR-1..FR-14 one checkpoint at a time and stop on the first FAIL."
+next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit is active on draft PR #16 before FR-0; A1 browser/provider/Recorder/runtime/diagnostics review is complete with discovered defects fixed and focused regressions added. Continue at A2 using .planning/FINAL_PREFLIGHT_PROGRESS.yaml. FR-0 remains blocked until A1-A10 close green and the audit PR is merged/main verified."
 last_review: "R-US-EXEC-REOPEN-004"
