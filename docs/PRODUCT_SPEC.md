@@ -19,11 +19,13 @@ Provider authentication remains browser-owned.
 
 Product name: `Market Flow US`
 
-Canonical security identity:
+Canonical security identity, after fail-closed source-type validation, is:
 
 ```text
 securityId = String(PaperId)
 ```
+
+Accepted `PaperId` source types are non-blank string or JavaScript safe integer. Objects, arrays, booleans and non-safe numeric identities are rejected rather than generically stringified.
 
 `Symbol` is display/query metadata, not the primary key.
 
@@ -55,8 +57,9 @@ A response is complete only when:
 - `recordCount` is a positive safe integer;
 - `records` is an array;
 - `records.length === recordCount`;
-- every record has non-empty `PaperId`;
-- canonical `String(PaperId)` values are unique.
+- every record has `PaperId` whose source type is a non-blank string or safe integer;
+- objects/arrays/booleans/non-safe numeric identities are rejected fail-closed;
+- canonical `String(PaperId)` values are unique after that validation.
 
 `Symbol` absence is diagnostic-worthy but does not override `PaperId` identity.
 
@@ -93,7 +96,7 @@ Node validates:
 - exact membership equality;
 - complete cycle counters;
 - unique security IDs;
-- raw row identity matches `securityId`.
+- raw row identity matches `securityId` under the same U.S. `PaperId` type contract.
 
 Within one serialized DuckDB transaction:
 
@@ -369,7 +372,9 @@ Old MarketScope names are donor history, not final product surface.
 
 ## 18. Live verification
 
-The bounded real-provider gate proves only irreducible external facts plus short repeatability:
+The bounded real-provider gate proves the authenticated provider/authority boundary and separately reports market-open movement evidence.
+
+Base authenticated proof:
 
 ```text
 producer hello/session
@@ -384,4 +389,14 @@ producer hello/session
 → clean stop
 ```
 
-This is a bounded sustained-collection proof, not a long-duration throttling/SLA guarantee. Only the live gate may report final external PASS.
+A base `overall: "PASS"` is valid closed/static compatibility even when provider market values repeat.
+
+For final market-open acceptance the same SHA-bound report also contains a separate `movement` classification. It scans only the committed live cycle range for a change in persisted provider market/freshness fields (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) and then proves that witness through trusted Current/History reads.
+
+```text
+movement.status = PASS
+```
+
+is required for FR-13. If the base authenticated boundary passes but no real provider-field change is observed, movement remains `PENDING`; it is never inferred from local collection timestamps and never upgraded manually. If a change is observed but its Current/History reflection is not proven, movement is `FAIL` while the already-proven static/base boundary remains a separate fact.
+
+This is a bounded sustained proof, not a long-duration throttling/SLA guarantee. Only the live gate may report the external facts it actually verifies.
