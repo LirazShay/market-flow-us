@@ -226,7 +226,7 @@ textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping
 serialized context JSON <= 256 KiB UTF-8
 ```
 
-Node cross-checks every selected rank <=50 against the retained context rank+identity. Scanner may remain usable when a generation is not Demo-Buy-capturable; capture fails visibly rather than silently changing evidence.
+Node cross-checks every selected position <=50 against the retained context position+identity. Scanner may remain usable when a generation is not Demo-Buy-capturable; capture fails visibly rather than silently changing evidence.
 
 ## D-US-027 — Lost capture ACK is unknown, not failure
 
@@ -250,7 +250,7 @@ Per-connection FIFO/shared writer remain intact; `capturedAtMs` is assigned only
 
 No AI provider/API key/cloud upload/automatic SQL mutation.
 
-For one Demo Buy target the pack contains exact query, bounded original Scanner context, prediction-time target history, exact baseline, post-capture history, trusted horizon outcomes, field guide and disciplined prompt.
+For one Demo Buy target the pack contains exact query, bounded original Scanner context-derived evidence, prediction-time target history, exact baseline, post-capture history, trusted horizon outcomes, field guide and disciplined prompt.
 
 Prediction-time authority requires `cycle_id <= buy_cycle_id`; outcome evidence requires `cycle_id > buy_cycle_id`. Future facts may explain outcome and generate hypotheses but may never be presented as original predictive inputs.
 
@@ -309,3 +309,17 @@ Market authority at capture is determined by `buy_cycle_id` and serialized write
 Neither the Viewer nor AI Investigation may infer “best”, “top-ranked”, score quality or strategy preference from that position alone. The AI prompt must inspect the exact SQL first and may use ranking language only when deterministic `ORDER BY`/tie-break logic establishes that interpretation.
 
 For unordered or ambiguously ordered SQL, the pack must explicitly call the value **returned position** and treat peer/ranking conclusions as unproven. This correction requires no SQL parser or new subsystem; it is an interpretation/presentation invariant backed by ordered-vs-unordered regression tests.
+
+## D-US-033 — AI Investigation exports sharing-safe evidence, not raw local rows
+
+**Status:** resolved
+
+Demo Buy persistence keeps the full local provenance needed for correctness, but AI Investigation packs are designed for optional external sharing and therefore must derive a separate deterministic sharing-safe projection before writing files.
+
+History/baseline files include only authority keys plus documented U.S. provider/source market fields and provider `raw_data`; system-owned operational/session fields such as `session_id`, producer/session/config/error/request metadata, `source_metadata_json` and absolute host paths are excluded.
+
+Scanner context keeps structural metadata, canonical identity, numeric/null/boolean values and documented market-text columns. Other string/array/object contents are not exported and are represented only by bounded metadata with `redactedForSharing=true`. Redacted content may not leak through prompt, README, manifest, response metadata or diagnostics.
+
+Exact Scanner SQL remains user-authored content and is exported verbatim; the UI/README must visibly remind the user not to put secrets in SQL and to review generated files before sharing.
+
+This is an export-projection rule, not a second database or sanitization subsystem. Regression tests use canary operational/session/string values and require their byte sequences to be absent from every generated shareable artifact and response surface.
