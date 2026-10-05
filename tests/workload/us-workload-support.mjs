@@ -267,8 +267,14 @@ export function sanitizeWorkloadDiagnostic(value, tempDir = null) {
 }
 
 export function sanitizedFailure(error, tempDir = null) {
+  const message = sanitizeWorkloadDiagnostic(error?.message, tempDir);
+  if (error && (typeof error === "object" || typeof error === "function")) {
+    try {
+      error.message = message;
+    } catch {}
+  }
   return {
     name: typeof error?.name === "string" ? error.name : "Error",
-    message: sanitizeWorkloadDiagnostic(error?.message, tempDir)
+    message
   };
 }
