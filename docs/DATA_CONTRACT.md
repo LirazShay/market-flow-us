@@ -2,7 +2,7 @@
 
 ## 1. Ownership and evidence level
 
-This document owns provider/data truth used by Market Flow US and the distinction between persisted facts and derived Demo Buy evaluation.
+This document owns provider/data truth used by Market Flow US and the distinction between persisted facts, derived Demo Buy evaluation and derivative AI-investigation export evidence.
 
 The Bank Leumi U.S. endpoint is empirically observed, not an official public API contract. Every provider field is therefore either:
 
@@ -12,7 +12,7 @@ The Bank Leumi U.S. endpoint is empirically observed, not an official public API
 
 Raw provider rows are retained so later discoveries do not destroy information.
 
-Demo Buy adds local analytical facts. Those facts must never be confused with provider-originated facts.
+Demo Buy adds local analytical facts. The AI Investigation Pack adds local derivative export artifacts. Neither may be confused with provider-originated market authority.
 
 ## 2. Provider endpoint
 
@@ -419,6 +419,7 @@ source_interval_ms BIGINT NOT NULL
 source_result_started_at_ms BIGINT NOT NULL
 source_result_completed_at_ms BIGINT NOT NULL
 source_result_row_count BIGINT NOT NULL
+source_result_context_json JSON NOT NULL
 selection_mode VARCHAR NOT NULL
 is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
@@ -441,6 +442,8 @@ Rules:
 - `is_automatic = true` is valid only for `all` or `top_x`;
 - query/result timing fields are immutable Scanner-generation provenance, not market authority;
 - source SQL is stored once per capture rather than per item;
+- `source_result_context_json` freezes only the first 50 source-result rows in exact SQL order plus result columns/ranks/truncation metadata;
+- source-result context is immutable provenance, not a recomputable market snapshot and not a second authority;
 - later query edits never mutate old capture provenance.
 
 The schema should enforce simple shape/mode invariants with CHECK constraints where DuckDB supports them cleanly, while protocol/service validation remains the primary semantic boundary.
@@ -471,6 +474,29 @@ The Demo Buy item does **not** persist a copied baseline price, Symbol, name, fu
 
 A physical foreign key is not required for Phase 1. The capture transaction resolves the baseline before insertion and trusted reads treat a missing semantic baseline as corruption. Do not add foreign-key/index complexity unless implementation evidence shows a concrete safety/performance benefit.
 
+### Frozen Scanner comparison context
+
+`source_result_context_json` contains only deterministic bounded Scanner-generation provenance:
+
+```text
+columns
+rows: first up to 50 source rows
+resultRank: original 1-based rank for every retained row
+truncation metadata
+```
+
+It preserves Scanner output values, not provider authority. Arbitrary Scanner expressions/aliases may therefore appear in the retained rows.
+
+The context is allowed to mark clipped cell values explicitly, but may not silently alter result order, ranks or normal values that fit the documented bounds. If context shaping cannot produce a valid bounded representation, the capture request fails before commit rather than persisting a falsely complete context.
+
+For later investigation:
+
+```text
+targetInScannerContext = true
+```
+
+only when the selected item's exact original row is present in the retained context. Targets outside the original Top-50 remain valid Demo Buy observations but cannot claim direct peer/rank reconstruction from retained Scanner rows.
+
 ## 15. Schema-v3 → v4 migration integrity
 
 A valid v3 database contains the proven U.S. authority tables plus `scanner_saved_queries` and **no Demo Buy tables**.
@@ -491,11 +517,11 @@ If a DB claims schema v3 while either Demo Buy table already exists, startup fai
 
 Migration failure at any injected phase must leave the original v3 database semantically usable as v3 with its market authority and saved queries intact.
 
-Fresh databases bootstrap directly as v4. Existing valid v4 databases require both Demo Buy tables in addition to the established U.S. tables.
+Fresh databases bootstrap directly as v4. Existing valid v4 databases require both Demo Buy tables in addition to the established U.S. tables and require the documented `source_result_context_json` capture column.
 
 MarketScope v1/v2 remain incompatible and are rejected without mutation.
 
-No new `history` index is required by the schema contract up front. The existing history authority remains unchanged; add an evaluation-oriented index only if representative Demo Buy workload evidence proves the direct bounded read model materially insufficient and a focused replan approves that schema change.
+No new `history` index is required by the schema contract up front. The existing history authority remains unchanged; add an evaluation/export-oriented index only if representative Demo Buy/AI-pack workload evidence proves the direct bounded read model materially insufficient and a focused replan approves that schema change.
 
 ## 16. Demo Buy selection and capture semantics
 
@@ -510,7 +536,7 @@ Selection is defined against one immutable Scanner generation **before** duplica
 
 Therefore Top X never backfills from a later row after a duplicate. For example, if duplicate identities occur inside the first ten source rows, Top-10 may persist fewer than ten unique Demo Buy items.
 
-The browser sends already-deduped ordered `{securityId, resultRank}` items. Node independently validates but does **not** silently dedupe malformed protocol input:
+The browser sends already-deduped ordered `{securityId, resultRank}` items plus the bounded first-50 source-result context. Node independently validates but does **not** silently dedupe malformed protocol input:
 
 - 1..5000 items are required for an actual capture;
 - every `securityId` is canonical/non-blank/bounded;
@@ -518,11 +544,12 @@ The browser sends already-deduped ordered `{securityId, resultRank}` items. Node
 - item ranks are strictly increasing in Scanner result order;
 - every `securityId` is unique in the request;
 - for `top_x`, every rank is `<= top_x`;
+- retained context ranks/order must match the declared source result and begin at rank 1 with at most 50 rows;
 - invalid/duplicate/out-of-order input is rejected atomically.
 
 At one serialized capture boundary:
 
-1. validate request/provenance/mode bounds;
+1. validate request/provenance/mode/context bounds;
 2. enqueue behind prior serialized writer work;
 3. begin one transaction;
 4. assign Node `captured_at_ms`;
@@ -600,7 +627,7 @@ UNAVAILABLE  when changePercent is NULL
 When outcome is `UNAVAILABLE`, one reason is exposed with this precedence:
 
 ```text
-NO_FUTURE_OBSERVATION     no qualifying future row
+NO_FUTURE_OBSERVATION      no qualifying future row
 BASELINE_PRICE_UNAVAILABLE baseline Price is NULL
 BASELINE_PRICE_ZERO        baseline Price is zero
 FUTURE_PRICE_UNAVAILABLE   matched future row exists but Price is NULL
@@ -612,21 +639,63 @@ These prices/percentages/outcomes/reasons are application-derived analytical fac
 
 A bounded evaluated page must observe one transactionally consistent DuckDB read snapshot so baseline and all ten horizons for that page cannot be assembled from different writer commit points.
 
-## 18. Daily lifecycle relation
+## 18. AI Investigation Pack derived/export facts
 
-Demo Buy observations belong to the same active-day evidence boundary as the `history` rows they reference.
+An AI Investigation Pack is generated from one persisted Demo Buy target identified by:
+
+```text
+capture_id + security_id
+```
+
+The pack is derivative evidence, not a database authority table.
+
+Prediction-time source set:
+
+```text
+exact stored Scanner SQL/provenance
+retained first-50 Scanner result context
+selected item's original result_rank
+history rows for same security where
+  captured_at_ms - 30 minutes <= collected_at_ms <= captured_at_ms
+exact linked baseline row
+```
+
+Outcome source set:
+
+```text
+history rows for same security where
+  captured_at_ms <= collected_at_ms <= captured_at_ms + 10 minutes
+trusted Demo Buy horizon evaluator output
+```
+
+The exporter never interpolates missing history observations and never moves an outcome fact into prediction-time evidence.
+
+`targetInScannerContext` is derived from the immutable retained context. If a target should be inside the retained Top-50 but its row is missing, that is an integrity/export error. If its original rank is outside the retained context, a pack remains valid with `targetInScannerContext=false` and must not claim exact candidate-vs-peer reconstruction.
+
+`PARTIAL_OUTCOME` and `COMPLETE_OUTCOME` are export-status classifications only; neither is persisted as market authority.
+
+Generated files under the ignored local export root may contain the user's local SQL/history evidence, but repository fixtures/diagnostics must remain synthetic/sanitized and must not copy those local packs into version control.
+
+## 19. Daily lifecycle relation
+
+Demo Buy observations and retained Scanner comparison context belong to the same active-day evidence boundary as the `history` rows they reference.
 
 At new-day reset:
 
 - prior-day DB may be archived as one self-contained file;
-- fresh active DB is schema v4;
+- the new-day path accepts a structurally valid existing Market Flow US v3 or v4 source DB for saved-query preservation/archive, while still rejecting v1/v2 or suspicious partial-v3 Demo Buy states;
+- fresh active DB is always the current schema v4;
 - market authority tables start fresh;
 - `demo_buy_captures` and `demo_buy_items` start empty;
 - `scanner_saved_queries` are preserved/restored;
-- no Demo Buy row is copied into a DB that does not contain its referenced history;
+- no Demo Buy row/context is copied into a DB that does not contain its referenced history;
 - horizon evaluation never joins into the new active-day DB; any prior-day horizon without a qualifying row before rollover remains unavailable in that prior day's self-contained evidence.
 
-## 19. External facts reserved for live verification
+This v3-or-v4 source acceptance matters when the user installs a schema-v4 release and runs New Trading Day before the normal service has had a chance to migrate the prior v3 active DB. Archiving that valid v3 DB and creating a fresh v4 DB is valid and must not require an unnecessary pre-rollover service start.
+
+Already generated AI packs remain independent local files. New packs are generated only from the DB explicitly opened by the local service; no cross-day strategy warehouse is introduced.
+
+## 20. External facts reserved for live verification
 
 Still empirical:
 
