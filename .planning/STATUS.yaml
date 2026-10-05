@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "demo_buy_review_3_protocol_concurrency"
+current_stage: "demo_buy_ai_investigation_pack_contract"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "Review 2/5 (data/schema/persistence) is complete after repairing source-row-first Top-X semantics, immutable original resultRank provenance, Scanner signal-vs-capture timing, full generation provenance, fail-closed partial-v3 migration states, shared capture-slot assumptions, explicit unavailable reasons, 50-item Demo Buy paging, consistent read-snapshot semantics, on-demand capture provenance reads and evidence-first indexing. Next: Review 3/5 protocol/service/concurrency/lifecycle/failure semantics, repair every defect found, then stop at the next checkpoint. Production implementation remains unauthorized."
-last_review: "R-US-EXEC-REOPEN-005"
+next_action: "The user added a required pre-local-acceptance AI Investigation Pack capability. A dedicated contract now defines a local evidence bundle with exact Scanner SQL, bounded original result context, 30-minute pre-buy history, exact baseline, 10-minute post-buy history, trusted horizon outcomes, field guide and an anti-hindsight AI prompt. Next: align PRODUCT_REQUIREMENTS/PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY and the S&T TREE/allocation with this capability, including schema-v4 bounded Scanner-context provenance and demo.buy.ai-pack.create, then resume the multi-pass review sequence. Production implementation remains unauthorized."
+last_review: "R-US-EXEC-REOPEN-006"
 implementation_authorized: false
