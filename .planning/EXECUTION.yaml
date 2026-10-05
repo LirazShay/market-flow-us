@@ -31,7 +31,7 @@ chats:
 
   "6":
     nodes:
-      "6.1": { state: in_progress, result: null }
+      "6.1": { state: done, result: "Market Flow US packaging is canonical across npm identity, browser/live artifacts, default and demo DuckDB paths, browser globals, Windows launchers, user docs and CI labels; stale Fake Market/E2E branding proofs and a lost-ACK test race were corrected, and full Fast/Browser/Planning CI are green on the closure candidate." }
       "6.2": { state: pending, result: null }
 
   "7":
