@@ -378,6 +378,25 @@ async function assertRunningSession(connection, sessionId) {
   }
 }
 
+async function assertNoRunningSession(connection) {
+  const rows = await queryRows(
+    connection,
+    "SELECT COUNT(*) AS running_count FROM sessions WHERE status = 'running'"
+  );
+
+  if (rows.length !== 1) {
+    throw new Error("Running producer session authority query did not return exactly one row.");
+  }
+
+  const runningCount = Number(rows[0].running_count);
+  if (!Number.isSafeInteger(runningCount) || runningCount < 0) {
+    throw new Error("Running producer session count is invalid.");
+  }
+  if (runningCount > 0) {
+    fail(ERROR_CODES.PRODUCER_ALREADY_ACTIVE);
+  }
+}
+
 async function rollbackPreservingOriginal(connection) {
   try {
     await connection.run("ROLLBACK");
@@ -417,6 +436,7 @@ export function createProducerPersistence({
     assertSafeInteger(acceptedAtMs);
 
     await writer.enqueue(async (connection) => {
+      await assertNoRunningSession(connection);
       await connection.run(
         `INSERT INTO sessions (
           session_id,
