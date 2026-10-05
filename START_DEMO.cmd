@@ -1,10 +1,10 @@
 @echo off
 setlocal
 pushd "%~dp0"
-title MarketScope Demo
+title Market Flow US Demo
 
 if not exist "node_modules" (
-  echo [ERROR] MarketScope is not set up yet.
+  echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
   echo.
   pause
@@ -13,9 +13,9 @@ if not exist "node_modules" (
 )
 
 echo ========================================
-echo MarketScope - Local Demo
+echo Market Flow US - Local Demo
 echo ========================================
-echo Starting the normal MarketScope stack with Fake Market.
+echo Starting the normal Market Flow US stack with Fake Market.
 echo The browser will open automatically when the demo is ready.
 echo Keep this window open. Press Ctrl+C here to stop the demo.
 echo.
@@ -27,10 +27,10 @@ set "RESULT=%ERRORLEVEL%"
 
 echo.
 if "%RESULT%"=="0" (
-  echo MarketScope demo stopped.
+  echo Market Flow US demo stopped.
 ) else (
-  echo [ERROR] MarketScope demo exited with code %RESULT%.
-  echo If port 4173 or 8765 is already in use, close the older MarketScope process and try again.
+  echo [ERROR] Market Flow US demo exited with code %RESULT%.
+  echo If port 4173 or 8765 is already in use, close the older Market Flow US process and try again.
 )
 echo.
 pause
