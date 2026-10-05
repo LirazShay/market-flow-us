@@ -1,4 +1,13 @@
+import {
+  BIGINT,
+  DOUBLE,
+  DuckDBDataChunk,
+  INTEGER,
+  VARCHAR
+} from "@duckdb/node-api";
+
 const BULK_TABLES = new Set(["history", "latest"]);
+const DATA_CHUNK_ROWS = 2048;
 const BIGINT_PARAMETERS = new Set([
   "cycleId",
   "universeRevision",
@@ -7,6 +16,59 @@ const BIGINT_PARAMETERS = new Set([
   "collectedAtMs"
 ]);
 const INTEGER_PARAMETERS = new Set(["chunkIndex"]);
+const STRING_PARAMETERS = new Set([
+  "sessionId",
+  "securityId",
+  "serverAsOfDateJson",
+  "sourceMetadataJson",
+  "Symbol",
+  "PaperNameEng",
+  "PaperNameHeb",
+  "ExchangeName",
+  "TradeDateTime",
+  "CountryName",
+  "CountryNameEng",
+  "LastDealTimeOnly",
+  "rawDataJson"
+]);
+
+function parameterType(name) {
+  if (BIGINT_PARAMETERS.has(name)) return BIGINT;
+  if (INTEGER_PARAMETERS.has(name)) return INTEGER;
+  if (STRING_PARAMETERS.has(name)) return VARCHAR;
+  return DOUBLE;
+}
+
+function normalizeParameter(name, value) {
+  if (value === null || value === undefined) return null;
+
+  if (BIGINT_PARAMETERS.has(name)) {
+    if (typeof value === "bigint") return value;
+    if (!Number.isSafeInteger(value)) {
+      throw new TypeError(`${name} must be a safe integer for DuckDB BIGINT append.`);
+    }
+    return BigInt(value);
+  }
+
+  if (INTEGER_PARAMETERS.has(name)) {
+    if (!Number.isSafeInteger(value)) {
+      throw new TypeError(`${name} must be a safe integer for DuckDB INTEGER append.`);
+    }
+    return value;
+  }
+
+  if (STRING_PARAMETERS.has(name)) {
+    if (typeof value !== "string") {
+      throw new TypeError(`${name} must be a string for DuckDB VARCHAR append.`);
+    }
+    return value;
+  }
+
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new TypeError(`${name} must be finite for DuckDB DOUBLE append.`);
+  }
+  return value;
+}
 
 function createInsertPlan(sql) {
   if (typeof sql !== "string") return null;
@@ -25,56 +87,10 @@ function createInsertPlan(sql) {
 
   return Object.freeze({
     table,
-    parameterNames: Object.freeze(parameterNames)
+    parameterNames: Object.freeze(parameterNames),
+    columnTypes: Object.freeze(parameterNames.map(parameterType)),
+    signature: `${table}:${parameterNames.join(",")}`
   });
-}
-
-function appendParameter(appender, name, value) {
-  if (value === null || value === undefined) {
-    appender.appendNull();
-    return;
-  }
-
-  if (BIGINT_PARAMETERS.has(name)) {
-    if (!Number.isSafeInteger(value) && typeof value !== "bigint") {
-      throw new TypeError(`${name} must be a safe integer for DuckDB BIGINT append.`);
-    }
-    appender.appendBigInt(typeof value === "bigint" ? value : BigInt(value));
-    return;
-  }
-
-  if (INTEGER_PARAMETERS.has(name)) {
-    if (!Number.isSafeInteger(value)) {
-      throw new TypeError(`${name} must be a safe integer for DuckDB INTEGER append.`);
-    }
-    appender.appendInteger(value);
-    return;
-  }
-
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      throw new TypeError(`${name} must be finite for DuckDB DOUBLE append.`);
-    }
-    appender.appendDouble(value);
-    return;
-  }
-
-  if (typeof value === "string") {
-    appender.appendVarchar(value);
-    return;
-  }
-
-  if (typeof value === "bigint") {
-    appender.appendBigInt(value);
-    return;
-  }
-
-  if (typeof value === "boolean") {
-    appender.appendBoolean(value);
-    return;
-  }
-
-  throw new TypeError(`Unsupported DuckDB appender value for ${name}.`);
 }
 
 function closeAppenderPreservingOriginal(appender, originalError = null) {
@@ -102,18 +118,25 @@ function createBulkWriterConnection(connection) {
   }
 
   const planCache = new Map();
-  let activeAppender = null;
-  let activeTable = null;
+  let pendingPlan = null;
+  let pendingRows = [];
 
   async function flush() {
-    if (!activeAppender) return;
+    if (!pendingPlan || pendingRows.length === 0) return;
 
-    const appender = activeAppender;
-    activeAppender = null;
-    activeTable = null;
+    const plan = pendingPlan;
+    const rows = pendingRows;
+    pendingPlan = null;
+    pendingRows = [];
 
+    const appender = await connection.createAppender(plan.table);
     let error = null;
     try {
+      for (let offset = 0; offset < rows.length; offset += DATA_CHUNK_ROWS) {
+        const chunk = DuckDBDataChunk.create(plan.columnTypes);
+        chunk.setRows(rows.slice(offset, offset + DATA_CHUNK_ROWS));
+        appender.appendDataChunk(chunk);
+      }
       appender.flushSync();
     } catch (flushError) {
       error = flushError;
@@ -121,33 +144,22 @@ function createBulkWriterConnection(connection) {
     closeAppenderPreservingOriginal(appender, error);
   }
 
-  async function appendInsert(plan, params) {
+  async function bufferInsert(plan, params) {
     if (!params || typeof params !== "object" || Array.isArray(params)) {
       throw new TypeError("Bulk market insert parameters must be an object.");
     }
 
-    if (activeAppender && activeTable !== plan.table) {
+    if (pendingPlan && pendingPlan.signature !== plan.signature) {
       await flush();
     }
-    if (!activeAppender) {
-      activeAppender = await connection.createAppender(plan.table);
-      activeTable = plan.table;
-    }
+    if (!pendingPlan) pendingPlan = plan;
 
-    try {
-      for (const name of plan.parameterNames) {
-        if (!Object.hasOwn(params, name)) {
-          throw new TypeError(`Bulk market insert is missing parameter ${name}.`);
-        }
-        appendParameter(activeAppender, name, params[name]);
+    pendingRows.push(plan.parameterNames.map((name) => {
+      if (!Object.hasOwn(params, name)) {
+        throw new TypeError(`Bulk market insert is missing parameter ${name}.`);
       }
-      activeAppender.endRow();
-    } catch (error) {
-      const appender = activeAppender;
-      activeAppender = null;
-      activeTable = null;
-      closeAppenderPreservingOriginal(appender, error);
-    }
+      return normalizeParameter(name, params[name]);
+    }));
   }
 
   const wrapped = new Proxy(connection, {
@@ -161,7 +173,7 @@ function createBulkWriterConnection(connection) {
           }
 
           if (plan) {
-            await appendInsert(plan, params);
+            await bufferInsert(plan, params);
             return undefined;
           }
 
