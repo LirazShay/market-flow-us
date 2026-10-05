@@ -254,6 +254,8 @@ Saved-query behavior remains unchanged:
 - create/update/delete are explicit;
 - active generation remains separate from selected draft.
 
+A successful Scanner execution exposes result `startedAtMs` and `completedAtMs`. Demo Buy freezes those timings together with the active query/interval/result snapshot; later draft/library edits do not rewrite an existing generation.
+
 A result is Demo-Buy-capable only when it exposes exactly one recognized canonical identity column named `securityId` or `security_id`. Identity is never guessed from `Symbol`.
 
 ## 12. Built-in staged candidate query
@@ -304,25 +306,49 @@ Supported capture modes from one successful Scanner result generation are:
 ```text
 manual selected rows
 all rows
-first X rows (Top X)
+first X source rows (Top X)
 automatic all
 automatic Top X
 ```
 
-`Top X` uses the exact order returned by the Scanner SQL. Demo Buy adds no hidden sorting or ranking.
+Selection semantics are source-row first:
 
-Within one result generation duplicate canonical IDs are reduced to the first occurrence. A single capture is bounded to at most 5000 unique canonical IDs. Manual empty selection does not create a capture; automatic zero-result selection is a no-op.
+1. manual uses the checked source rows;
+2. All uses all source rows;
+3. Top X uses exactly the first X source rows in Scanner SQL result order;
+4. every chosen row must have a valid canonical identity;
+5. duplicate identities inside the chosen set reduce to their first chosen occurrence;
+6. each retained item keeps its original 1-based Scanner `resultRank`.
 
-The browser sends selected canonical IDs plus the immutable active-generation query provenance. It never sends a buy price.
+Therefore a duplicate inside Top X does not pull a later row from outside X into the capture. Manual ranks may contain gaps.
+
+A single capture is bounded to at most 5000 unique canonical IDs. `Top X` is bounded to 1..5000 source rows. All/auto-All never silently truncate; invalid chosen rows or oversized deduped All selections are refused visibly. Manual empty selection does not create a capture; automatic zero-row selection is a no-op.
+
+The browser sends ordered `{securityId, resultRank}` items plus immutable active-generation provenance:
+
+```text
+queryId / name / exact SQL
+active intervalMs
+Scanner startedAtMs / completedAtMs
+source rowCount
+selection mode / automatic / topX
+```
+
+It never sends a buy price.
+
+One Viewer-level capture slot covers manual and automatic capture. A manual action is disabled while a capture is in flight; an automatic generation arriving while busy is visibly skipped rather than queued. A failure releases the slot and does not stop Scanner scheduling.
+
+Node validates that submitted IDs/ranks are already unique and consistent with the source-row provenance; it rejects duplicate protocol items rather than silently repairing them.
 
 Node performs the capture through the existing serialized writer boundary. At that serialized point it:
 
 ```text
-records captured_at_ms
+validates the bounded request
+→ records captured_at_ms
 → resolves every selected security in authoritative latest
 → obtains each exact latest.cycle_id
 → requires every item to resolve
-→ persists one capture and its ordered items
+→ persists one capture and its ordered original-rank items
 → COMMIT
 ```
 
@@ -336,6 +362,17 @@ Each item therefore has an immutable baseline reference:
 ```
 
 The linked history row owns the baseline `Price`, names, Symbol and baseline collection time. Demo Buy does not copy those market facts into the item.
+
+The Scanner result-ready moment and virtual-buy moment are distinct:
+
+```text
+signal/result-ready = source_result_completed_at_ms
+virtual buy         = captured_at_ms
+capture latency     = captured_at_ms - source_result_completed_at_ms
+baseline age        = captured_at_ms - baseline_collected_at_ms
+```
+
+These are local diagnostics, not broker timing claims.
 
 Repeated later captures of the same security are valid independent observations; they are not portfolio positions.
 
@@ -365,17 +402,15 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-This is the first authoritative market observation available at or after the requested horizon. The horizon clock starts at the Node-authoritative virtual-buy moment, not at an older baseline collection timestamp.
+This is the first authoritative market observation available at or after the requested horizon. The horizon clock starts at the Node-authoritative virtual-buy moment, not at Scanner completion time and not at an older baseline collection timestamp.
 
-If no qualifying future history row exists, that horizon is unavailable and returns `null` values rather than inferring from wall-clock time.
+The first qualifying history row remains authoritative for that horizon even when its `Price` is NULL; evaluation never skips an unusable row to cherry-pick a later value.
 
 For a matched future row:
 
 ```text
 changePercent = ((futurePrice / baselinePrice) - 1) * 100
 ```
-
-The percentage is `null` when the baseline price is null/zero, the future price is null, or no future row exists.
 
 Direction is derived by the read model:
 
@@ -386,9 +421,22 @@ FLAT        changePercent = 0
 UNAVAILABLE changePercent is null
 ```
 
-Each horizon also exposes the matched observation time and actual elapsed time from capture, so a collection delay is visible.
+`UNAVAILABLE` also carries one reason:
+
+```text
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+```
+
+A missing immutable baseline row is instead a Demo Buy integrity error.
+
+Each matched horizon exposes the observation time and actual elapsed time from capture, so a collection delay is visible.
 
 No background updater or materialized horizon columns are required. Refreshing the Demo Buy screen recomputes the read model from persisted `history`.
+
+Each bounded page is evaluated from one transactionally consistent DuckDB read snapshot so market writes cannot create internally mixed horizon results within one response.
 
 ## 15. Flow 10 — Demo Buy Viewer
 
@@ -398,16 +446,21 @@ The Viewer has a third top-level destination beside Current and Scanner:
 Demo Buy
 ```
 
-The Demo Buy table is newest capture first and preserves Scanner selection rank inside each capture. It uses bounded keyset pagination and normal refresh.
+The Demo Buy table is newest capture first and then original Scanner `resultRank` ascending inside each capture.
+
+Phase 1 uses 50-item opaque-keyset pages because Demo Buy rows are materially wider than History rows. A continuation cursor is anchored to `(capture_id, result_rank)`, so newer automatic captures do not create gaps/duplicates in an already-started continuation walk; they become visible on refresh from the first page.
 
 For each item the user can see at least:
 
 ```text
 source query label
+signal/result-completed time or capture latency
 capture time
+manual/automatic marker
+original Scanner result rank
 Symbol / display name
 securityId
-baseline collection time
+baseline collection time / baseline age
 baseline Price
 10s Price / % / outcome
 20s Price / % / outcome
@@ -421,15 +474,23 @@ baseline Price
 10m Price / % / outcome
 ```
 
-Unavailable horizons use the existing missing-value convention and an explicit `UNAVAILABLE` state. Direction must not rely on color alone.
+Unavailable horizons use the existing missing-value convention plus explicit `UNAVAILABLE`; the detailed unavailable reason remains inspectable. Direction must not rely on color alone.
 
-A wide horizontally scrollable table is acceptable for Phase 1. Source SQL may be shown in a details/expand affordance rather than repeated in each visible row.
+A wide horizontally scrollable table is acceptable for Phase 1.
+
+Full source SQL and immutable capture provenance are loaded on demand per capture through a dedicated capture-details read, rather than repeated in every visible item row.
 
 Automatic capture remains Viewer-session state and may continue while the user views Demo Buy. Capture failure is visible but does not stop Scanner scheduling.
 
-## 16. Flow 11 — Failure/recovery
+## 16. Flow 11 — Schema-v4 lifecycle and recovery
 
-Preserve imported behavior:
+Fresh databases bootstrap directly as schema v4.
+
+A valid schema-v3 Market Flow US active DB migrates additively and transactionally to v4 while preserving market authority and saved Scanner queries.
+
+A database marked v3 but already containing only part of the Demo Buy v4 structures is treated as an inconsistent partial state and fails closed rather than being silently resumed/upgraded.
+
+Preserve imported failure/recovery behavior:
 
 - provider HTTP/shape/validation failure -> failed cycle diagnostic, prior authority unchanged;
 - WebSocket disconnect -> producer stops fail-closed;
@@ -440,6 +501,8 @@ Preserve imported behavior:
 - Demo Buy capture failure is all-or-nothing and does not mutate market authority;
 - Demo Buy read failure does not mutate stored observations;
 - active-day Demo Buy observations survive service restart.
+
+No additional `history` index is part of the v4 contract. Add one later only if representative Demo Buy workload demonstrates a real bottleneck.
 
 ## 17. Fake Market behavior
 
@@ -458,7 +521,7 @@ It owns deterministic scenarios for:
 - HTTP failure;
 - delayed response;
 - restart/persistence;
-- deterministic future price paths that produce positive, negative, flat and unavailable Demo Buy horizons.
+- deterministic future price paths that produce positive, negative, flat and all unavailable-reason cases needed by Demo Buy tests.
 
 ## 18. Polling cadence
 
@@ -489,7 +552,8 @@ Workload coverage includes:
 - History first/continuation page;
 - general Scanner JOIN/GROUP/window/time queries;
 - staged candidate query;
-- bounded Demo Buy capture/read evaluation over representative active-day observations;
+- bounded 50-item Demo Buy evaluation/read over representative active-day observations;
+- Scanner + Demo Buy refresh coexistence on the existing Viewer transport;
 - restart-to-ready;
 - DB file size;
 - count integrity.
@@ -580,6 +644,8 @@ volume-after-buy sellability analysis
 strategy aggregate dashboards/scorecards
 multi-day active analytics
 Strategy Engine
+background horizon materialization
+speculative history indexing without measured need
 ```
 
 The requested volume/liquidity/fillability analysis belongs to a later Phase 2 after this increment is completely implemented and verified.
