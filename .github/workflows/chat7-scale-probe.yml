@@ -18,9 +18,9 @@ concurrency:
 
 jobs:
   scale-probe:
-    name: 4096 x 10 commit diagnostic probe
+    name: 4096 x 45 commit scaling probe
     runs-on: ubuntu-latest
-    timeout-minutes: 1
+    timeout-minutes: 2
 
     steps:
       - uses: actions/checkout@v4
@@ -33,13 +33,13 @@ jobs:
       - name: Install pinned dependencies
         run: npm ci
 
-      - name: Run commit diagnostic probe
+      - name: Run commit scaling probe
         env:
-          MARKET_FLOW_US_WORKLOAD_REPORT: test-results/workload/scale-probe-4096x10.json
+          MARKET_FLOW_US_WORKLOAD_REPORT: test-results/workload/scale-probe-4096x45-no-staged.json
         shell: bash
         run: |
-          sed -i 's/const CYCLE_COUNT = 180;/const CYCLE_COUNT = 10;/' tests/workload/representative-workload.test.mjs
-          sed -i 's/const READ_INTERVAL_CYCLES = 60;/const READ_INTERVAL_CYCLES = 10;/' tests/workload/representative-workload.test.mjs
+          sed -i 's/const CYCLE_COUNT = 180;/const CYCLE_COUNT = 45;/' tests/workload/representative-workload.test.mjs
+          sed -i 's/const READ_INTERVAL_CYCLES = 60;/const READ_INTERVAL_CYCLES = 45;/' tests/workload/representative-workload.test.mjs
           sed -i 's/includeStaged: cycleNumber === CYCLE_COUNT/includeStaged: false/' tests/workload/representative-workload.test.mjs
           sed -i 's/includeStaged: true/includeStaged: false/' tests/workload/representative-workload.test.mjs
           npm run test:workload
@@ -48,8 +48,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [[ -f test-results/workload/scale-probe-4096x10.json ]]; then
-            cat test-results/workload/scale-probe-4096x10.json
+          if [[ -f test-results/workload/scale-probe-4096x45-no-staged.json ]]; then
+            cat test-results/workload/scale-probe-4096x45-no-staged.json
           else
             echo "Scale probe report was not produced."
           fi
@@ -61,4 +61,4 @@ jobs:
           name: market-flow-us-scale-probe-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 30
-          path: test-results/workload/scale-probe-4096x10.json
+          path: test-results/workload/scale-probe-4096x45-no-staged.json
