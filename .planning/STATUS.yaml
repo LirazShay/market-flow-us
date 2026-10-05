@@ -1,10 +1,9 @@
 version: 2
-plan_state: frozen
-current_stage: "demo_buy_final_external_user_review"
+plan_state: active
+replan_mode: execution_reopen
+current_stage: "demo_buy_external_review_rank_semantics_repair"
 current_node: "demo-buy-validation"
-blockers:
-  - "The requested final external-user-from-zero adversarial review must complete without a material planning defect."
-  - "After that review, PR #17 must remain Planning-Docs-CI green, be reviewed/squash-merged, and main Planning Docs CI/open-PR state must be verified before implementation authorization."
-next_action: "Perform one fresh external-user-from-zero adversarial review of the entire frozen Demo Buy + AI Investigation plan without assuming the five earlier reviews were correct. Walk the real user journey, negative-space/failure cases, authority/provenance boundaries, S&T necessity/sufficiency, execution dependencies and acceptance path. If any material defect is found, reopen only the smallest affected planning area, repair and re-freeze. If no material defect remains, keep production implementation unauthorized until PR #17 is reviewed/squash-merged and main Planning Docs CI/open-PR state is green; then deliberately advance to phase: implementation / Chat 10 / TREE 4.3.1."
+blockers: []
+next_action: "External-user-from-zero review found one material AI-interpretation defect: resultRank is only the original returned Scanner row position and must not be described as semantic strategy rank unless the exact SQL ordering establishes that meaning. Repair the AI Investigation prompt/field-guide contract, verification and durable decision; keep UI wording semantically neutral; rerun Planning Docs CI and re-freeze only after the repair is green. Production implementation remains unauthorized."
 last_review: "R-US-DEMO-BUY-FINAL"
 implementation_authorized: false
