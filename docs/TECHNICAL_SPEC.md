@@ -154,9 +154,10 @@ resultRowCount: non-negative safe integer
 Validation rules:
 
 - the browser must dedupe selected IDs by first occurrence before sending;
-- `securityIds` must contain 1..5000 entries;
+- raw `securityIds` input must contain 1..5000 entries;
 - every identity is a non-empty bounded string;
-- Node independently rejects malformed IDs and independently enforces uniqueness/order invariants rather than trusting the browser;
+- Node independently validates identities and defensively reduces duplicate IDs to first occurrence while preserving request order;
+- after Node dedupe, 1..5000 unique IDs are required;
 - `topX` is present only for `top_x`, with `1 <= topX <= 5000`;
 - `isAutomatic=true` is valid only for `all` or `top_x`;
 - source SQL is required and bounded by the existing inbound-message limit;
@@ -481,8 +482,9 @@ Create a dedicated small Node persistence component using the existing serialize
 Capture execution:
 
 ```text
-validate request
-→ verify IDs are already unique ordered canonical strings within 1..5000
+validate bounded raw request
+→ dedupe IDs preserving first occurrence/rank
+→ require 1..5000 valid unique canonical IDs
 → enqueue on serialized writer
 → BEGIN
 → allocate monotonic capture_id
