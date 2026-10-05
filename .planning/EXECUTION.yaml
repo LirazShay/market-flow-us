@@ -27,7 +27,7 @@ chats:
     nodes:
       "5.1": { state: done, result: "A pre-cutover U.S. Fake Market seam now serves exact ScreenerHulPaging3 full responses with synthetic U.S. rows and deterministic reorder, add/remove membership, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay, advancing-values and recovery scenarios; the legacy normal-runtime Fake Market remains unchanged until 5.2, and Fast/Browser/Planning CI are green." }
       "5.2": { state: done, result: "Normal runtime/demo now compose the ScreenerHulPaging3 candidate path, U.S. Current/Detail and Scanner profiles, schema-v3 service authority and U.S. Fake Market; real WebSocket/DuckDB demo proof preserves four-row U.S. authority across restart while reset remains .demo-bounded, and full Fast/Browser/Planning CI are green." }
-      "5.3": { state: in_progress, result: null }
+      "5.3": { state: done, result: "Full Chromium proof is green over the normal U.S. runtime: inherited Current/Detail/Scanner/saved-query/refresh/Viewer-independence/service-recovery behavior remains intact, and one composed Fake Market journey proves 4→5→3 membership changes, a recoverable provider failure, non-overlap and staged Scanner execution with Detail navigation." }
 
   "6":
     nodes:
