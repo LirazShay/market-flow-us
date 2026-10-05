@@ -49,7 +49,7 @@ chats:
 
   "10":
     nodes:
-      "4.3.1": { state: pending, result: null }
+      "4.3.1": { state: blocked, result: "Comprehensive Demo Buy planning re-audit reopened before implementation; contracts/TREE/allocation must be repaired and re-frozen before this leaf may start." }
       "4.3.2": { state: pending, result: null }
 
   "11":
