@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  BUILTIN_SCANNER_QUERIES,
+  MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES,
   builtinNameKeys,
   isBuiltinQueryId
 } from "../../shared/scanner/builtins.js";
@@ -22,7 +22,7 @@ test("saved-query name normalization is deterministic and collision-oriented", (
 });
 
 test("built-in saved-query identities and names are stable and reserved", () => {
-  assert.deepEqual(BUILTIN_SCANNER_QUERIES.map(({ queryId, name, intervalMs }) => ({
+  assert.deepEqual(MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.map(({ queryId, name, intervalMs }) => ({
     queryId,
     name,
     intervalMs
@@ -34,15 +34,22 @@ test("built-in saved-query identities and names are stable and reserved", () => 
     },
     {
       queryId: "builtin:market-ranking-example",
-      name: "Market ranking example",
+      name: "U.S. market ranking example",
+      intervalMs: 5000
+    },
+    {
+      queryId: "builtin:staged-candidate-ranking",
+      name: "Staged candidate ranking",
       intervalMs: 5000
     }
   ]);
 
   assert.equal(isBuiltinQueryId("builtin:all-current-fields"), true);
+  assert.equal(isBuiltinQueryId("builtin:staged-candidate-ranking"), true);
   assert.equal(isBuiltinQueryId("user:anything"), false);
   assert.deepEqual([...builtinNameKeys()].sort(), [
     "all current fields",
-    "market ranking example"
+    "staged candidate ranking",
+    "u.s. market ranking example"
   ]);
 });

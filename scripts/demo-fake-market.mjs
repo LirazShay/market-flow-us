@@ -6,9 +6,10 @@ import {
   DIAGNOSTIC_CODES,
   formatCliDiagnostic
 } from "../shared/diagnostics/index.js";
+import { openMarketFlowUsDatabase } from "../local-service/database/database.js";
 import { DEFAULT_SERVICE_CONFIG } from "../local-service/server/config.js";
 import { startMarketScopeService } from "../local-service/server/service.js";
-import { startFakeMarket } from "../tests/fake-market/server.mjs";
+import { startUsFakeMarket } from "../tests/fake-market/us-server.mjs";
 import { buildBrowser } from "./build-browser.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -77,8 +78,9 @@ export async function startDemo({
   servicePort = 8765,
   output = (line) => process.stdout.write(`${line}\n`),
   buildBrowserImpl = buildBrowser,
-  startFakeMarketImpl = startFakeMarket,
+  startFakeMarketImpl = startUsFakeMarket,
   startServiceImpl = startMarketScopeService,
+  openDatabase = openMarketFlowUsDatabase,
   diagnosticTracker = createDiagnosticTracker({ productVersion: DEMO_VERSION })
 } = {}) {
   if (typeof output !== "function") {
@@ -147,7 +149,8 @@ export async function startDemo({
         allowedOrigins: [fakeOrigin]
       },
       serviceVersion: DEMO_VERSION,
-      diagnosticTracker
+      diagnosticTracker,
+      openDatabase
     });
 
     diagnosticTracker.recordSuccess({

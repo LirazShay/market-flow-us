@@ -4,6 +4,7 @@ import {
   formatCliDiagnostic
 } from "../../shared/diagnostics/index.js";
 import { ERROR_CODES } from "../../shared/protocol/index.js";
+import { openMarketFlowUsDatabase } from "../database/database.js";
 import { parseServiceConfig } from "./config.js";
 import { startMarketScopeService } from "./service.js";
 
@@ -17,7 +18,8 @@ try {
   service = await startMarketScopeService({
     config,
     serviceVersion: SERVICE_VERSION,
-    diagnosticTracker
+    diagnosticTracker,
+    openDatabase: openMarketFlowUsDatabase
   });
 
   process.stdout.write(

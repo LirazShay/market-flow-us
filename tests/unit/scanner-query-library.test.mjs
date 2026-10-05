@@ -41,6 +41,7 @@ test("built-ins merge first in frozen order and user queries sort by normalized 
     [
       ["builtin:all-current-fields", "builtin", false, false],
       ["builtin:market-ranking-example", "builtin", false, false],
+      ["builtin:staged-candidate-ranking", "builtin", false, false],
       ["user:1", "user", true, true],
       ["user:3", "user", true, true],
       ["user:2", "user", true, true]
@@ -96,7 +97,7 @@ test("query-library controller keeps selected, draft and persisted state explici
   await controller.load();
 
   assert.equal(controller.getState().selectedQueryId, null);
-  assert.equal(controller.getState().queries.length, 3);
+  assert.equal(controller.getState().queries.length, 4);
 
   controller.select("builtin:all-current-fields");
   let state = controller.getState();

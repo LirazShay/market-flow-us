@@ -3,9 +3,9 @@ phase: implementation
 overall_status: ready
 
 current:
-  chat: 5
-  node: "5.1"
-  title: "U.S. Fake Market screener provider"
+  chat: 6
+  node: "6.1"
+  title: "Market Flow US packaging and branding"
   status: ready
 
 authority:
@@ -29,5 +29,5 @@ planning_completion:
 execution:
   chats_total: 9
   implementation_leaves_total: 19
-  current_chat: 5
-  current_node: "5.1"
+  current_chat: 6
+  current_node: "6.1"
