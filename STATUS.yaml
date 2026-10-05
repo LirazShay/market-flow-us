@@ -5,7 +5,7 @@ overall_status: blocked
 current:
   chat: 10
   node: "4.3.1"
-  title: "Demo Buy + AI Investigation planning frozen; awaiting final planning gates"
+  title: "Demo Buy + AI Investigation planning frozen; final external review pending"
   status: blocked
 
 authority:
@@ -24,8 +24,8 @@ planning_completion:
   final_planning_review: pass
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: pending_ci
-  implementation_authorization: blocked_planning_ci_merge
+  handoff_verification: pass
+  implementation_authorization: blocked_final_external_review_and_merge
 
 execution:
   chats_total: 17
@@ -34,7 +34,6 @@ execution:
   current_node: "4.3.1"
 
 blockers:
-  - "PR #17 Planning Docs CI must be green."
-  - "Planning PR #17 must be reviewed and squash-merged."
+  - "Requested final external-user-from-zero adversarial review must pass without a material planning defect."
+  - "After that review, PR #17 must be reviewed and squash-merged."
   - "Main Planning Docs CI and open-PR state must be verified green/clean before phase advances to implementation."
-  - "Requested final external-user-from-zero adversarial review must complete without a material planning defect; any defect reopens the smallest affected planning area."
