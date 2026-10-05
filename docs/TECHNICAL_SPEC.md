@@ -153,14 +153,21 @@ resultRowCount: non-negative safe integer
 
 Validation rules:
 
-- `securityIds` must contain 1..5000 entries before Node dedupe validation completes;
+- the browser must dedupe selected IDs by first occurrence before sending;
+- `securityIds` must contain 1..5000 entries;
 - every identity is a non-empty bounded string;
-- duplicate IDs are reduced to first occurrence while preserving result order;
-- after dedupe, 1..5000 unique IDs are required;
+- Node independently rejects malformed IDs and independently enforces uniqueness/order invariants rather than trusting the browser;
 - `topX` is present only for `top_x`, with `1 <= topX <= 5000`;
 - `isAutomatic=true` is valid only for `all` or `top_x`;
 - source SQL is required and bounded by the existing inbound-message limit;
 - query ID/name are provenance only and may be null.
+
+Browser selection semantics are fail-closed:
+
+- a manually selected row with an invalid canonical identity cannot be submitted;
+- `All`, `Top X` or automatic capture is refused if its chosen range contains an invalid recognized identity cell;
+- `All`/auto-All are never silently truncated when more than 5000 unique IDs would be captured;
+- zero selected IDs never create an empty capture.
 
 Response returns at least:
 
@@ -182,7 +189,7 @@ cursor: string | null
 
 Response returns a bounded page of evaluated Demo Buy item read models plus continuation metadata. The cursor is opaque to the browser and binds deterministic ordering.
 
-Stable protocol errors must distinguish invalid Demo Buy input from generic DB failure. Absence of a future horizon is normal data, not an error.
+Stable protocol errors distinguish at least invalid Demo Buy input, Demo Buy integrity violation and generic DB/read failure. Absence of a future horizon is normal data, not an error.
 
 ## 7. DuckDB authority
 
@@ -463,6 +470,8 @@ The semantic baseline reference is:
 
 A physical foreign key is not required unless implementation evidence shows it improves safety without harming the proven bulk-write path; semantic resolution and tests are mandatory.
 
+A missing semantic baseline link after successful capture is a data-integrity failure and must surface as such; it is not an ordinary unavailable future horizon.
+
 No copied baseline market columns and no future-horizon columns are stored.
 
 ## 18. Demo Buy capture authority
@@ -473,7 +482,7 @@ Capture execution:
 
 ```text
 validate request
-→ dedupe IDs preserving first rank
+→ verify IDs are already unique ordered canonical strings within 1..5000
 → enqueue on serialized writer
 → BEGIN
 → allocate monotonic capture_id
@@ -511,7 +520,7 @@ Use bounded keyset pagination; default page size reuses the established 500-item
 
 For each item:
 
-1. join the exact baseline `history` row by `(buy_cycle_id, security_id)`;
+1. join the exact baseline `history` row by `(buy_cycle_id, security_id)` and fail with stable Demo Buy integrity error if it is missing;
 2. for each fixed horizon find the first same-security history row at or after `captured_at_ms + horizon`;
 3. return the baseline and derived horizon model.
 
@@ -599,9 +608,26 @@ auto all
 auto Top X
 ```
 
-Automatic capture executes once per successful Scanner result generation. Zero selected rows are a no-op.
+Identity/capacity rules are applied before the client sends a capture request:
 
-Auto requests must be serialized/bounded client-side so interval ticks cannot create uncontrolled overlapping capture requests. Failure is shown and later generations may still capture.
+- invalid recognized identity rows are visibly non-selectable;
+- Selected/All/Top-X preserve exact visible Scanner order after first-occurrence dedupe;
+- All/auto-All with more than 5000 unique IDs is refused visibly, never truncated;
+- Top X is limited to 1..5000;
+- an All/Top-X/auto chosen range containing an invalid identity is refused rather than silently altered;
+- zero selected IDs are a no-op/disabled action.
+
+Automatic capture uses one bounded in-flight slot:
+
+```text
+successful Scanner generation
+→ if auto off: no capture
+→ if auto on and slot free: issue exactly one capture attempt for that generation
+→ if auto on and slot busy: visibly mark that generation skipped; do not enqueue it
+→ on success/failure: release slot for later generations
+```
+
+This keeps Scanner scheduling independent, prevents unbounded Promise/request queues and makes any missed auto generation explicit. Phase 1 does not add replay of skipped generations.
 
 Selection state belongs to the exact visible generation and is cleared/rebuilt when a new result generation replaces it.
 
@@ -627,7 +653,7 @@ Unavailable horizons use the existing missing-value convention plus `UNAVAILABLE
 
 The table may scroll horizontally. It supports refresh and bounded Load more/keyset paging. Source SQL can be displayed on demand rather than duplicated in every visible row.
 
-Navigating away from Scanner does not implicitly stop its scheduler or automatic Demo Buy mode.
+The current Viewer architecture keeps the Scanner surface mounted while switching top-level views, so navigating away from Scanner does not implicitly stop its scheduler or automatic Demo Buy mode. Viewer disposal still stops the Scanner scheduler as today.
 
 ## 21. Diagnostics
 
@@ -646,11 +672,12 @@ viewer reads
 scanner execution
 demo_buy.capture
 demo_buy.read
+demo_buy.viewer
 demo
 live verification
 ```
 
-Support Snapshot remains sanitized and bounded. It may expose Demo Buy operational counts/checkpoint status but must not dump stored query SQL or raw authenticated provider material.
+Support Snapshot remains sanitized and bounded. It may expose Demo Buy operational counts/checkpoint/busy-skip status but must not dump stored query SQL or raw authenticated provider material.
 
 ## 22. Fake Market and synthetic generator
 
@@ -797,6 +824,7 @@ Requirements:
 - saved queries survive reset;
 - archive/reset never occurs while active writer owns the DB;
 - failure leaves either prior DB or a valid fresh DB recoverable;
+- Demo Buy horizons do not bridge across the new active-day DB boundary; a horizon not observed before rollover remains unavailable in that prior day's self-contained evidence;
 - no cross-day Demo Buy warehouse is introduced in Phase 1.
 
 ## 28. Phase-1 non-goals
@@ -817,6 +845,7 @@ aggregate strategy scorecards
 multi-day active analytics
 Strategy Engine
 background horizon materialization
+replay queue for busy-skipped automatic captures
 ```
 
 Phase 2 may revisit liquidity/volume/fillability only after Phase 1 is complete and verified.
