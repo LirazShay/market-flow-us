@@ -96,6 +96,8 @@ data/market-flow-us.duckdb
 
 Opening incompatible v1/v2 through Market Flow US fails without mutating that DB.
 
+D-US-022 defines the daily active-DB lifecycle; this decision does not require multi-day market history to accumulate inside the active file.
+
 ## D-US-007 — Typed U.S. projection remains source-shaped
 
 **Status:** resolved
@@ -183,11 +185,13 @@ Do not add:
 
 Use direct `history` SQL first.
 
-If representative workload proves staged SQL materially impractical, reopen the smallest performance area with measurement.
+If measured intended-use evidence proves staged SQL materially impractical, reopen the smallest performance area with measurement.
 
-## D-US-011 — Representative U.S. workload is 4096 × 180
+## D-US-011 — 4096 × 180 remains the heavy end-to-end profile, but not hosted-CI authority
 
 **Status:** resolved
+
+The representative end-to-end target-machine profile remains:
 
 ```text
 4096 synthetic securities
@@ -195,11 +199,13 @@ If representative workload proves staged SQL materially impractical, reopen the 
 737280 history rows
 ```
 
-This proves approximately-4k scale without hard-coding the observed provider count and avoids an unnecessarily long 4k × 600 first workload.
+This preserves approximately-4k breadth without hard-coding the observed provider count and avoids the older 4k × 600 shape.
 
-The workload includes the staged-ranking query.
+However, GitHub-hosted CI is not representative release-performance hardware. CI therefore runs smaller deterministic correctness/performance-smoke profiles, including approximately-4k width sanity, while the full `4096 × 180` timing PASS/FAIL belongs to final target-machine acceptance.
 
-No invented latency SLO is a correctness gate.
+The heavy profile includes staged-ranking measurement. The same configurable generator may also build isolated day-bounded persistence/read/Scanner profiles without replaying irrelevant layers.
+
+No hosted-runner latency number is promoted into a product SLO.
 
 ## D-US-012 — Keep 3000 ms as initial offline/demo cadence only
 
@@ -244,6 +250,8 @@ Add the staged candidate built-in without changing these mechanisms.
 Replace MapHeat2/GetSecuritiesData behavior with stateful ScreenerHulPaging3 responses.
 
 Keep the real loopback HTTP fake, normal runtime, deterministic scenarios and one-command demo.
+
+D-US-021 requires Fake Market/load tooling to share one configurable deterministic synthetic generator rather than duplicate large hard-coded fixtures.
 
 ## D-US-016 — Authenticated-provider verification remains bounded and local
 
@@ -304,8 +312,8 @@ The market may be static while development is being completed, so lack of price 
 The release path is therefore split deliberately:
 
 ```text
-automated/offline release candidate
-→ reusable local Fake Leumi acceptance kit
+automated/offline correctness candidate
+→ reusable configurable local Fake Leumi acceptance kit
 → release cleanup/docs
 → final target-machine acceptance bundle
 ```
@@ -317,15 +325,18 @@ The local Fake Leumi acceptance kit must reuse the normal Market Flow US runtime
 - add/remove membership;
 - provider failure and recovery;
 - restart/persistence;
-- representative 4096 × 180 load/performance reporting.
+- isolated persistence/read/Scanner load probes;
+- representative `4096 × 180` target-machine end-to-end reporting.
 
 All checks that require the user's authenticated browser or target computer are deferred to the final execution leaf. That final bundle contains exactly three acceptance families:
 
-1. **local Fake Leumi target-machine acceptance** — static/moving/failure/recovery plus representative mock load/performance;
+1. **local Fake Leumi target-machine acceptance** — static/moving/failure/recovery, daily lifecycle and isolated/end-to-end mock load/performance;
 2. **authenticated closed/static-market smoke** — repeated equal provider values are valid and must still commit/history correctly; no market movement is required;
 3. **authenticated market-open acceptance** — bounded sustained collection with observable real provider market/freshness change and the full SHA-bound authority/read/Scanner/clean-stop proof.
 
-The closed/static-market smoke never substitutes for the market-open check. Synthetic movement never substitutes for real-provider evidence. Conversely, development and release cleanup do not wait for market movement once the acceptance tooling itself has deterministic automated proof.
+The closed/static-market smoke never substitutes for the market-open gate; synthetic movement never substitutes for real-provider evidence; hosted-CI timing never substitutes for target-machine performance acceptance.
+
+Development and release cleanup do not wait for market movement or the final heavy benchmark once the acceptance tooling itself has deterministic automated proof.
 
 The final target-machine leaf remains pending until the user performs the required checks. Overall product completion is not declared before those required acceptance results are PASS.
 
@@ -356,8 +367,58 @@ remove repeated/duplicated work first
 → remeasure end-to-end
 ```
 
-A green result does not excuse a materially slow path. Executors must investigate slow individual tests and setup stages even when the total suite still passes. Increasing timeouts/retries, hiding cost in another job/command, or repeatedly paying duplicated setup is not an acceptable substitute for fixing avoidable slowness.
+A green result does not excuse a materially slow recurring path. Executors must investigate slow individual tests and setup stages when they dominate feedback. Increasing timeouts/retries, hiding cost in another job/command, or repeatedly paying duplicated setup is not an acceptable substitute for fixing avoidable slowness.
 
-Hard timeouts remain safety ceilings only. The normal target for recurring development feedback is seconds, and the overwhelming majority of CI/test execution should stay in that range.
+A broad high-value suite around 10–30 seconds can be accepted after its dominant costs are reviewed and no meaningful improvement remains without weakening proof or adding disproportionate complexity; record that state as **best practical verified state** and stop micro-optimizing it.
+
+Hosted CI should prefer correctness density over benchmark realism. Heavy benchmark work that is machine-dependent belongs in the dedicated target-machine acceptance path rather than being repeated on weaker runners.
 
 Coverage may not be weakened merely for speed. Performance refactoring should remove waste while preserving the same contractual evidence and diagnosability.
+
+## D-US-021 — One configurable synthetic generator drives Fake Market and load probes
+
+**Status:** resolved
+
+Do not maintain separate giant fixture families for Fake Market, persistence benchmarks and Scanner/read benchmarks.
+
+Create one deterministic synthetic U.S. generator/profile boundary that can be configured for at least:
+
+- universe size;
+- cycle/history count or logical day shape;
+- cadence/timestamps;
+- static vs moving values;
+- membership changes;
+- deterministic failures/recovery;
+- reproducible seed.
+
+Reuse it at the narrowest useful layer:
+
+```text
+provider/browser behavior → Fake Market HTTP
+persistence behavior → validated generated cycles directly
+read/Scanner behavior → direct day-bounded DB seeding
+full integration → normal Fake Market → browser → service → DuckDB
+```
+
+This is test/support refactoring, not a second product implementation.
+
+## D-US-022 — Active market-data authority is one trading day, not multi-year storage
+
+**Status:** resolved
+
+The production active DuckDB is intended to contain the current trading day's market authority, not indefinitely accumulated months/years of intraday history.
+
+Operational model:
+
+```text
+one trading day active DB
+→ stop producer/service safely
+→ optionally archive prior-day DB/data
+→ start a clean new-day market-data authority
+```
+
+Performance acceptance therefore uses one-day-bounded synthetic history shapes. It must not optimize or reject the design based on artificial multi-month/year active-history growth.
+
+Saved-query state is user configuration rather than disposable daily market data and must remain available across the new-day reset/rotation path.
+
+The release should document and prove the smallest safe new-day lifecycle; it does not need an analytics warehouse or long-term multi-day query subsystem.
