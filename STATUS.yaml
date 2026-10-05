@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 8
-  node: "7.2"
-  title: "Deterministic local Fake Leumi acceptance package"
-  status: done
+  chat: 9
+  node: "7.3"
+  title: "Release closure and target-machine readiness"
+  status: pending
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -30,5 +30,5 @@ planning_completion:
 execution:
   chats_total: 10
   implementation_leaves_total: 20
-  current_chat: 8
-  current_node: "7.2"
+  current_chat: 9
+  current_node: "7.3"
