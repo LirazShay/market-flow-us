@@ -1,8 +1,9 @@
 version: 2
 plan_state: active
+replan_mode: execution_reopen
 current_stage: "planning"
 current_node: "6.3"
 blockers:
-  - "R-US-EXEC-REOPEN-004: frozen plan currently treats GitHub CI as representative 4096 x 180 performance authority; user clarified CI should be correctness-first with only small performance sanity, while authoritative heavy performance proof runs on the stronger target machine in final acceptance."
-next_action: "Complete R-US-EXEC-REOPEN-004: revise TREE 6.3/7.1/7.2/7.4 plus TEST_STRATEGY/DECISIONS/HANDOFF so CI owns extensive correctness and only bounded performance smoke, while full 4096 x 180 performance authority moves to final target-machine acceptance; review, re-freeze, repair execution state, then resume Chat 7."
+  - "R-US-EXEC-REOPEN-004: hosted CI must be correctness-first with only bounded performance sanity; heavy performance authority belongs on the user's stronger target machine, using configurable isolated probes and a one-trading-day active DB model."
+next_action: "Review R-US-EXEC-REOPEN-004 changes to TREE/DECISIONS/TEST_STRATEGY/TECHNICAL_SPEC/HANDOFF, then re-freeze without reallocating leaves and resume Chat 7 / 6.3."
 last_review: "R-US-EXEC-REOPEN-002"
