@@ -4,22 +4,23 @@ root: "0"
 nodes:
   "0":
     status: approved
-    strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model while replacing only Israel-specific provider/data assumptions."
-    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and staged local/target-machine release acceptance."
+    strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model, replaces only Israel-specific provider/data assumptions, and lets the user validate Scanner-selected candidates over short future horizons before any real order execution exists."
+    tactic: "Complete seven necessary capability branches: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy plus Demo Buy validation, deterministic offline proof, operational packaging/verification infrastructure, and staged release/target-machine acceptance."
     parallel_assumptions:
-      - "The exhaustive 124-file migration audit and reviewed U.S. contracts identify the material conversion boundaries."
+      - "The exhaustive 124-file migration audit and reviewed U.S. contracts identify the material conversion boundaries already completed."
       - "Preserving proven MarketScope mechanisms is lower-risk than reconstructing them."
-      - "Strategy-specific candidate selection can remain editable Scanner SQL unless workload evidence proves a narrower optimization necessary."
+      - "Strategy-specific candidate selection remains editable Scanner SQL, while Demo Buy adds only the minimum durable observation/read workflow needed to test whether selected candidates subsequently rise or fall."
     necessary_assumptions: []
     sufficiency_assumptions:
       - "Provider acquisition alone is insufficient without U.S. persistence, reads, UI, Scanner, deterministic proof and release evidence."
-      - "The seven branches jointly cover every required migration area from the audited contracts while excluding order execution and other non-goals."
+      - "Scanner SQL alone cannot answer whether a historical selection later moved as predicted; exact Demo Buy capture and forward-history evaluation are additionally required."
+      - "The seven branches jointly cover the requested product while continuing to exclude real order execution, portfolio logic and Phase-2 liquidity/sellability analysis."
     success_evidence:
       - "Every implementation-ready leaf is completed with its stated evidence."
       - "The authoritative runtime no longer depends on MapHeat2/GetSecuritiesData or Israeli typed market fields."
-      - "Current, Detail/History and Scanner operate over schema-v3 U.S. authority."
-      - "Fast CI, Browser CI and bounded correctness/performance-smoke verification are green on the final candidate; GitHub-hosted CI is not the authority for heavy target-machine performance."
-      - "The local Fake Leumi acceptance tooling is proven and the final target-machine bundle passes daily-bounded mock/performance, static-provider and market-open authenticated checks."
+      - "Current, Detail/History, Scanner and Demo Buy operate over the final schema-v4 authority, with Demo Buy preserving exact links to authoritative history rows."
+      - "Fast CI, Browser CI and bounded correctness/performance-smoke verification are green on the final post-Demo-Buy candidate; GitHub-hosted CI is not the authority for heavy target-machine performance."
+      - "The local Fake Leumi acceptance tooling is proven and the final target-machine bundle passes daily-bounded mock/performance, Demo Buy local validation, static-provider and market-open authenticated checks."
       - "Final branding/docs/launchers describe Market Flow US and main is green with no blocking defect."
     depends_on: []
     children: ["1", "2", "3", "4", "5", "6", "7"]
@@ -78,12 +79,12 @@ nodes:
     strategy: "Node/DuckDB stores U.S. market authority atomically under schema v3 while preserving proven MarketScope transaction, history/latest and recovery behavior."
     tactic: "Introduce a fresh U.S. schema-v3 market projection, adapt universe/cycle persistence to the new fields and one-segment payload, and prove exact commit/rollback/session behavior with real DuckDB."
     parallel_assumptions:
-      - "The existing six market-authority tables plus scanner_saved_queries remain sufficient; only their U.S. projection and compatibility policy need change."
+      - "The existing six market-authority tables plus scanner_saved_queries remain sufficient for the U.S. market authority baseline; later Demo Buy persistence is an additive analytical extension rather than a rewrite of this authority."
       - "Rejecting old MarketScope v1/v2 DB schemas is safer than semantically converting Israeli history into U.S. facts."
     necessary_assumptions:
       - "Validated browser data is not trusted product authority until Node persists it atomically."
     sufficiency_assumptions:
-      - "Schema-v3 lifecycle, U.S. projection persistence and end-to-end producer authority together provide durable U.S. authority without redesigning DuckDB."
+      - "Schema-v3 lifecycle, U.S. projection persistence and end-to-end producer authority together provide durable U.S. market authority without redesigning DuckDB."
     success_evidence:
       - "Fresh DB boots as schema v3 with documented tables/columns and hardened connections."
       - "Old MarketScope v1/v2 DBs are rejected without mutation."
@@ -198,21 +199,24 @@ nodes:
 
   "4":
     status: approved
-    strategy: "Scanner remains the general strategy surface over U.S. authority and ships an editable staged-candidate query without introducing a strategy subsystem."
-    tactic: "Keep Scanner admission/execution and saved-query ownership, adapt built-ins/schema documentation/tests to U.S. fields, and add the reviewed staged-ranking SQL as a normal built-in."
+    strategy: "Scanner remains the general editable strategy surface over U.S. authority and can validate whether its ordered candidate selections subsequently rise or fall through a minimal Demo Buy observation workflow, without introducing a Strategy Engine or order simulator."
+    tactic: "Preserve Scanner admission/execution/saved-query ownership and existing U.S. built-ins, then add additive schema-v4 Demo Buy persistence/read authority plus Scanner capture controls, stable query provenance, optional bounded automatic capture and a dedicated forward-horizon Viewer surface."
     parallel_assumptions:
-      - "The imported read-only Scanner and saved-query mechanisms are already sufficient for arbitrary U.S. analytical SQL."
-      - "The staged candidate idea is expressible in DuckDB SQL over latest/history."
+      - "The imported read-only Scanner and saved-query mechanisms are already sufficient for arbitrary U.S. analytical SQL and should not be rewritten."
+      - "A virtual-buy observation needs only exact selection provenance, an immutable link to the authoritative baseline history row and direct future-history evaluation."
+      - "Fixed short-horizon evaluation can be read from existing history without a background updater or temporal-feature engine."
     necessary_assumptions:
-      - "The product goal includes flexible analytical/ranking SQL and the requested candidate-selection workflow."
+      - "The product goal now includes both flexible Scanner candidate selection and evidence about whether those candidates moved as predicted afterward."
     sufficiency_assumptions:
-      - "U.S. built-ins/documentation plus preserved Scanner/saved-query regression proof is enough; no dedicated strategy engine is necessary."
+      - "U.S. Scanner SQL behavior, durable exact Demo Buy capture/evaluation and one direct browser workflow are sufficient to validate short-horizon strategy predictions; real execution and Phase-2 liquidity analysis remain unnecessary."
     success_evidence:
-      - "The staged built-in executes against schema v3 and returns deterministic stage_reached ordering."
-      - "Saved-query CRUD/Draft/Persisted/Active semantics remain green."
-      - "Scanner security/admission regression remains green."
+      - "Existing Scanner built-ins, scheduling, saved-query security and Detail navigation remain green."
+      - "Schema v4 preserves U.S. market authority and saved queries while storing exact Demo Buy capture/item links without copied baseline market facts."
+      - "Selected/All/Top-X and automatic All/Top-X captures preserve SQL result ordering and immutable active-generation query provenance."
+      - "Demo Buy reads expose baseline Price plus 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m future Price/change with deterministic nearest-at-or-after semantics and NULL for unavailable evidence."
+      - "Normal browser + Fake Market E2E proves capture, auto capture, provenance stability, positive/negative horizons and recoverable capture failure."
     depends_on: []
-    children: ["4.1", "4.2"]
+    children: ["4.1", "4.2", "4.3", "4.4"]
 
   "4.1":
     status: approved
@@ -246,6 +250,49 @@ nodes:
     depends_on: ["4.1"]
     children: []
 
+  "4.3":
+    status: approved
+    strategy: "Node/DuckDB durably records each Demo Buy capture against the exact authoritative market row visible at its serialized virtual-buy moment and returns deterministic short-horizon evaluation from persisted history."
+    tactic: "Advance schema v3 to additive v4 with demo_buy_captures/demo_buy_items, preserve v3 market authority and saved queries transactionally, add Viewer-role capture/page protocol operations, serialize capture writes through the existing writer, and compute bounded paged horizon reads directly from history using first-at-or-after target timestamps."
+    parallel_assumptions:
+      - "The existing serialized writer already provides the ordering boundary needed to define which latest cycle is authoritative at capture time."
+      - "The history primary key (cycle_id, security_id) is sufficient to identify an immutable baseline without duplicating Price/Symbol/name fields into Demo Buy rows."
+      - "One Viewer page times ten fixed horizons is a bounded read problem and does not justify materialized horizon columns before measurement."
+    necessary_assumptions:
+      - "Browser selection controls cannot create trustworthy historical evidence unless Node owns capture atomicity, exact baseline linkage, persistence, migration and future-observation semantics."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "Real DuckDB tests prove fresh v4 bootstrap and transactional v3→v4 migration preserving cycles/history/latest/universe/sessions/scanner_saved_queries; injected migration failure leaves the original v3 DB unchanged."
+      - "Real service tests prove Demo Buy input validation, all-or-nothing capture, duplicate-ID first-occurrence reduction, monotonic capture IDs, immutable provenance, and exact (buy_cycle_id, security_id) linkage determined by serialized writer order."
+      - "The same security can be captured again in a later event without position semantics."
+      - "Paged reads are deterministic by capture_id DESC then selection_rank ASC and use a bounded keyset cursor."
+      - "For each fixed horizon, the first same-security history row at or after captured_at_ms+horizon is returned with observed/elapsed time; no row, NULL price or zero baseline denominator yields NULL percentage as contracted."
+      - "Restart preserves active-day Demo Buy observations, while new-day reset clears Demo Buy state and preserves saved queries."
+      - "New/materially changed Demo Buy SQL passes mandatory static SQL preflight before execution and bounded workload timing is recorded without adding precompute."
+    depends_on: ["2.3"]
+    children: []
+
+  "4.4":
+    status: approved
+    strategy: "The user can turn the exact current Scanner result generation into manual or automatic Demo Buy observations and inspect their short-horizon outcomes through a simple dedicated Viewer surface."
+    tactic: "Extend Scanner UI/model/client with exact canonical-ID gating, generation-stable query provenance, selected/all/Top-X capture and bounded auto All/Top-X queuing; add a top-level Demo Buy surface with refresh, keyset pagination and the fixed horizon columns while preserving Scanner scheduling and existing Current/Detail behavior."
+    parallel_assumptions:
+      - "The existing Scanner scheduler already provides the successful result-generation boundary needed for optional automatic capture."
+      - "Keeping automatic mode as Viewer-session state avoids inventing durable strategy configuration."
+      - "A horizontally scrollable table with explicit Price/% pairs is sufficient for Phase 1 and avoids premature dashboards/scorecards."
+    necessary_assumptions:
+      - "Backend observations alone do not let the user conveniently select Scanner candidates or judge whether the strategy prediction succeeded."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "Unit/browser tests prove capture controls appear only with exactly one recognized securityId/security_id column, manual selection does not leak across result generations, and Top X preserves exact SQL row order."
+      - "Active-generation query ID/name/SQL provenance remains stable when another draft or saved query is edited while the generation is running."
+      - "Automatic Off/All/Top-X creates one bounded capture request per successful generation, recovers after a capture failure and does not stop Scanner scheduling."
+      - "Demo Buy screen exposes source label/capture time/Symbol/display name/baseline Price and all fixed horizon Price/% values with existing missing-value semantics, refresh and Load-more/keyset behavior."
+      - "Normal runtime + Fake Market + real service/DuckDB Chromium E2E proves selected capture, Top-X order, automatic Top-X across later generations, future NULL→observed transitions, deterministic positive/negative percentages, provenance immutability, identity-column refusal and visible recoverable capture failure."
+      - "Current, Detail/History, Scanner and Viewer lifecycle regression suites remain green and no Strategy Engine/order-execution behavior is introduced."
+    depends_on: ["4.3", "4.2", "5.2"]
+    children: []
+
   "5":
     status: approved
     strategy: "The entire U.S. product can be exercised deterministically offline through the normal browser runtime, real local service and synthetic U.S. provider."
@@ -255,7 +302,7 @@ nodes:
     necessary_assumptions:
       - "Unit/service tests cannot prove actual browser fetch/runtime/UI composition or provide a safe offline demo."
     sufficiency_assumptions:
-      - "Canonical U.S. fake, normal runtime integration and browser E2E together cover deterministic end-to-end product proof."
+      - "Canonical U.S. fake, normal runtime integration and browser E2E together cover deterministic browser-level proof."
     success_evidence:
       - "One-command demo runs the normal U.S. runtime against real local authority."
       - "Chromium E2E covers normal movement, membership change, failures, Current, Detail/History, Scanner and recovery."
@@ -380,24 +427,26 @@ nodes:
 
   "7":
     status: approved
-    strategy: "The migrated product is proven offline, packaged for deterministic local acceptance, cleaned for release, and finally accepted on the target machine against daily-bounded load plus both a static authenticated provider and an active real market."
-    tactic: "Run final correctness-first offline gates on one candidate, build a configurable one-command Fake Leumi/local-performance acceptance kit, perform final migration/documentation cleanup including daily-data lifecycle instructions, then execute all user-dependent target-machine acceptance checks as the last leaf."
+    strategy: "The product is deterministically re-closed after all requested development, then the exact post-feature candidate is accepted on the target machine against daily-bounded load plus both a static authenticated provider and an active real market."
+    tactic: "Preserve the previously completed U.S. migration/release evidence, add Demo Buy implementation under branch 4, rerun canonical contracts/docs/full deterministic gates on the new candidate, then execute all user-dependent target-machine acceptance checks as the last leaf."
     parallel_assumptions:
       - "Deterministic offline correctness and local-fake proof should precede user-dependent authenticated verification."
       - "Heavy performance results are machine-dependent and should be authoritative only on the user's intended local machine."
+      - "Completed pre-Demo-Buy migration evidence remains valid for the capabilities it proved, but final candidate-level CI/docs evidence must be refreshed after product code/schema changes."
       - "A static/closed market can prove provider shape/transport/authority even when quote values legitimately repeat."
-      - "Observable real market movement can only be accepted honestly when the market is active, so that check belongs at the final boundary rather than blocking development."
+      - "Observable real market movement can only be accepted honestly when the market is active, so that check remains the final boundary."
     necessary_assumptions:
-      - "Implementation is not complete merely because individual migration branches pass in isolation."
+      - "Implementation is not complete merely because individual migration branches or an older release candidate passed in isolation."
     sufficiency_assumptions:
-      - "Final CI correctness/sanity proof, reusable configurable local Fake Leumi acceptance, release cleanup, target-machine daily-bounded mock/performance PASS, static-provider smoke PASS and market-open authenticated PASS together establish end-to-end completion."
+      - "Previously completed migration proof, Demo Buy implementation, post-feature deterministic re-closure, and final target-machine/static-provider/market-open acceptance together establish end-to-end completion."
     success_evidence:
-      - "Final candidate Fast CI, Browser CI and bounded workload correctness/performance-smoke verification are green."
-      - "Local Fake Leumi acceptance tooling and isolated load probes are automatically proven before release cleanup."
-      - "Final target-machine bundle reports PASS for local daily-bounded mock/performance, closed/static authenticated smoke and market-open authenticated acceptance."
+      - "The post-Demo-Buy candidate has green Fast, Browser, Planning and bounded Workload verification."
+      - "Canonical product/technical/data/test/user documentation describes schema v4 and Demo Buy exactly, with Phase 2 explicitly deferred."
+      - "Local Fake Leumi acceptance tooling remains valid and includes a target-machine Demo Buy user-path proof before authenticated checks."
+      - "Final target-machine bundle reports PASS for local daily-bounded mock/performance, static-provider smoke and market-open authenticated acceptance."
       - "Final repository audit finds no authoritative MapHeat2/GetSecuritiesData/Israeli-field runtime path and main is green."
     depends_on: []
-    children: ["7.1", "7.2", "7.3", "7.4"]
+    children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
 
   "7.1":
     status: approved
@@ -459,27 +508,48 @@ nodes:
     depends_on: ["7.2", "6.1"]
     children: []
 
+  "7.5":
+    status: approved
+    strategy: "After Demo Buy is implemented, one new exact release candidate has coherent schema-v4 contracts/docs and passes all deterministic repository gates before any target-machine or authenticated acceptance begins."
+    tactic: "Align canonical PRODUCT_REQUIREMENTS/PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY/Scanner and user docs to the implemented Demo Buy/schema-v4 behavior, extend bounded workload/local-acceptance coverage where required, run the full deterministic gates, review the integrated diff, merge through normal CI, verify main green/open-PR truth, and point final acceptance to that exact candidate SHA."
+    parallel_assumptions:
+      - "The previously green 7.1–7.3 candidate predates Demo Buy and therefore cannot be the final accepted SHA even though its completed migration evidence remains valid."
+      - "One post-feature re-closure leaf is smaller and safer than reopening every already-completed release leaf."
+      - "Deterministic CI/docs/open-PR truth should be resolved before asking the user to spend time on target-machine/authenticated checks."
+    necessary_assumptions:
+      - "Without re-closure, final acceptance could run against code whose new schema/UI/protocol changes have not passed the integrated release gates or whose durable documentation still describes the old candidate."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "Canonical durable contracts and user/Scanner docs describe schema v4, Demo Buy capture/provenance/horizons/daily lifecycle and explicit Phase-2 non-goals consistently with implemented behavior."
+      - "Full Fast, Browser, Planning Docs and bounded Workload verification are green on the integrated Demo Buy candidate; any recurring-runtime regression is reviewed under D-US-020."
+      - "Bounded workload/local Fake Leumi automation exercises Demo Buy read/capture correctness without adding an unnecessarily huge full-day matrix."
+      - "No blocking defect or unexpected open PR remains; the feature/reclosure PR is reviewed and squash-merged and main CI is green."
+      - "STATUS.yaml, .planning/STATUS.yaml, EXECUTION and handoff truth point to final target-machine leaf 7.4 and identify the exact accepted-candidate SHA rather than the older pre-Demo-Buy release SHA."
+    depends_on: ["4.4", "7.3"]
+    children: []
+
   "7.4":
     status: approved
-    strategy: "The exact final Market Flow US candidate is accepted on the user's target machine through daily-bounded local Fake Leumi/load proof, authenticated static-market compatibility and authenticated market-open movement."
-    tactic: "Run the documented final acceptance bundle only after release cleanup: first target-machine local Fake Leumi modes, isolated day-bounded read/Scanner/persistence probes and the 4096 x 180 end-to-end profile, then a lightweight authenticated closed/static-market smoke that permits repeated equal values, and finally the SHA-bound market-open gate with at least 20 complete cycles spanning at least 60 seconds and observable provider market/freshness change."
+    strategy: "The exact final post-Demo-Buy Market Flow US candidate is accepted on the user's target machine through daily-bounded local Fake Leumi/load proof, local Demo Buy user-flow proof, authenticated static-market compatibility and authenticated market-open movement."
+    tactic: "Run the documented final acceptance bundle only after post-feature release re-closure: first target-machine local Fake Leumi modes including at least one Demo Buy capture/horizon journey, isolated day-bounded read/Scanner/persistence probes and the 4096 x 180 end-to-end profile, then a lightweight authenticated closed/static-market smoke that permits repeated equal values, and finally the SHA-bound market-open gate with at least 20 complete cycles spanning at least 60 seconds and observable provider market/freshness change."
     parallel_assumptions:
-      - "Deferring all user-dependent checks to one final leaf lets deterministic development finish without pretending external evidence already exists."
+      - "Deferring all user-dependent checks until after Demo Buy and deterministic re-closure lets development finish without pretending external evidence already exists."
       - "Performance is authoritative on the intended stronger target machine rather than the weaker hosted CI runner."
       - "The production active DB is bounded to one trading day, so target performance must be evaluated against realistic daily data shapes rather than artificial multi-month/year growth."
+      - "A deterministic local Demo Buy path is sufficient to prove the new UI/schema/read workflow on the user's machine; authenticated provider checks continue to prove provider compatibility and real movement rather than order simulation."
       - "Static-provider compatibility and moving-market evidence prove different facts and neither should be substituted for the other."
-      - "The final market-open run is bounded enough to be practical while still proving repeated real acquisition/commit/read behavior with actual changing provider data."
     necessary_assumptions:
       - "Automated Fake Market proof cannot establish the user's actual machine/browser/provider compatibility, target-machine performance or real market movement."
     sufficiency_assumptions: []
     success_evidence:
       - "User-run local Fake Leumi acceptance reports PASS for static, moving, failure/recovery and restart modes on the target machine."
+      - "A target-machine local Demo Buy journey proves Scanner capture and at least one horizon transition/read on the exact final SHA without manual price entry."
       - "User-run 4096 x 180 end-to-end mock workload reports correct counts/measurements and completes within the target-machine acceptance ceiling."
       - "User-run isolated persistence/read/Scanner profiles exercise configurable one-trading-day-sized synthetic data without irrelevant full-system layers and emit sanitized measurements."
-      - "New-day lifecycle proof shows prior-day data can be archived/reset safely, the fresh active market tables start clean, and saved queries remain available."
+      - "New-day lifecycle proof shows prior-day data can be archived/reset safely, the fresh active market/Demo Buy tables start clean, and saved queries remain available."
       - "Authenticated closed/static-market smoke records at least 5 consecutive complete committed responses, accepts repeated equal values, and proves Current/Security/History/bounded Scanner/ownership/clean stop with a sanitized SHA-bound report."
       - "Authenticated market-open report is SHA-bound and PASS after at least 20 consecutive complete cycles spanning at least 60 seconds, with at least one observable provider market/freshness value change reflected in committed Current/History plus bounded Scanner/ownership/clean stop."
       - "No credential/session/private response material is committed or copied into reports."
       - "If an active-market run observes no change, the movement-specific result remains inconclusive/pending rather than fabricating or weakening evidence."
-    depends_on: ["7.3"]
+    depends_on: ["7.5"]
     children: []
