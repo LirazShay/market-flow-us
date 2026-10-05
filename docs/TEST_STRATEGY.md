@@ -36,6 +36,7 @@ Prove:
 - invalid identity rows are non-selectable;
 - All/Top-X/Auto refuse chosen ranges containing invalid identity instead of silently skipping;
 - manual selection preserves original 1-based `resultRank`, including gaps;
+- `resultRank` is the original returned row position and is not itself evidence that the SQL semantically ranked that row;
 - All selects all source rows before dedupe;
 - Top X selects exactly first X source rows before dedupe;
 - duplicate IDs reduce to first chosen occurrence and never backfill beyond X;
@@ -103,6 +104,11 @@ Prove capture grouping, page-mid-capture header repetition, sticky identity/base
 ## 9. Unit — AI Investigation model
 
 Prove prediction/outcome separation; prediction-time history requires `cycle_id <= buy_cycle_id` plus the 30-minute window; outcome history requires `cycle_id > buy_cycle_id` plus capture→10-minute window; no post-watermark row leaks backward even with anomalous timestamps; Top-50/rank>50 context behavior; missing expected Top-50 target is integrity error; `COMPLETE_OUTCOME` depends on committed post-watermark evidence reaching the 10-minute boundary rather than wall clock; prompt requests minimal SQL hypothesis, concrete pre-buy evidence, benefit, false-negative cost, overfitting risk and multi-observation validation; no automatic query activation; pack format/manifest/field-guide output is deterministic.
+
+Also prove ranking-language discipline with at least two fixtures:
+
+1. an unordered/select-only query where `resultRank=1` must be described only as **returned position 1** and the prompt explicitly refuses to call it best/top-ranked;
+2. a deterministic query with explicit `ORDER BY`/tie-breaks where the prompt may explain why the target occupied that ordered position using only retained prediction-time evidence.
 
 ## 10. Real DuckDB — schema v4
 
@@ -188,7 +194,8 @@ Using a temporary export root prove:
 13. successful pack is never overwritten;
 14. export mutates no DB authority;
 15. restart can regenerate semantically equivalent evidence;
-16. diagnostics never dump SQL/history/prompt/evidence.
+16. diagnostics never dump SQL/history/prompt/evidence;
+17. `FIELD_GUIDE.md` and `PROMPT.md` define `resultRank` as returned row position and do not infer semantic rank without deterministic SQL ordering.
 
 Lost export ACK may be safely regenerated after reconnect because no DB authority changes; it creates a new collision-safe pack rather than reusing capture lost-ACK rules.
 
@@ -202,7 +209,7 @@ Prove empty guidance, capture-grouped rendering, header continuity across page s
 
 ## 17. Chromium — AI Investigation UX
 
-Prove rank-1 failed candidate workflow; context coverage and partial/complete state; one export slot; relative folder path/file count; Copy AI Prompt and Copy folder path clipboard fallbacks; targeted observation refresh before generation; partial regeneration; rank>50 reduced-context pack; export error isolation; safe lost-export-ACK guidance; and absence of automatic AI upload/call/SQL activation.
+Prove a failed returned-position-1 candidate workflow with both an explicitly ordered Scanner query and an unordered query; for the unordered query UI/prompt must not imply “best/top-ranked” merely from position 1. Also prove context coverage and partial/complete state; one export slot; relative folder path/file count; Copy AI Prompt and Copy folder path clipboard fallbacks; targeted observation refresh before generation; partial regeneration; rank>50 reduced-context pack; export error isolation; safe lost-export-ACK guidance; and absence of automatic AI upload/call/SQL activation.
 
 ## 18. Fake Market scenarios
 
@@ -216,7 +223,8 @@ NO_FUTURE_OBSERVATION
 BASELINE_PRICE_UNAVAILABLE
 BASELINE_PRICE_ZERO
 FUTURE_PRICE_UNAVAILABLE
-rank-1 candidate later declines
+ordered position-1 candidate later declines
+unordered result position 1
 Top-50 peer differences
 rank>50 target
 post-capture cycle with anomalously early collected_at_ms
