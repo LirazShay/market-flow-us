@@ -70,7 +70,9 @@ localize the dominant recurring cost
 → only then continue
 ```
 
-Do not respond to avoidable slowness by increasing timeouts/retries or by accepting a green-but-slow test. Follow the AGENTS automation-performance contract and TEST_STRATEGY time budgets. Hard ceilings are blockers; normal feedback should be seconds.
+Do not respond to avoidable slowness by increasing timeouts/retries or by accepting a green-but-slow test. Follow the AGENTS automation-performance contract and TEST_STRATEGY time budgets.
+
+A broad, high-value recurring suite that exercises many real integration boundaries may legitimately take up to roughly 30 seconds wall-clock. That is an acceptance ceiling, not a target. Before accepting such a runtime, inspect the dominant costs and verify there is no material removable duplication, avoidable waiting/polling, oversized fixture/bootstrap cost, unnecessary I/O or serialization, or other practical optimization that preserves the same proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, record that result as the **best practical verified state** and stop micro-optimizing it. Hard workflow ceilings remain blockers; ordinary focused feedback should still be much faster.
 
 ## Diagnosability rule
 
