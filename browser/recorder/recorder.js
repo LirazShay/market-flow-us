@@ -7,6 +7,25 @@ const VALID_PROVIDER_FAILURE_PHASES = new Set([
   "cycle-validation"
 ]);
 
+const SAFE_PROVIDER_FAILURE_ERRORS = Object.freeze({
+  universe: Object.freeze({
+    name: "UniverseCollectionError",
+    message: "Provider universe acquisition or validation failed."
+  }),
+  "chunk-fetch": Object.freeze({
+    name: "CycleCollectionError",
+    message: "Provider cycle acquisition failed."
+  }),
+  "provider-fetch": Object.freeze({
+    name: "ProviderSnapshotError",
+    message: "Provider snapshot acquisition or validation failed."
+  }),
+  "cycle-validation": Object.freeze({
+    name: "CycleValidationError",
+    message: "Provider cycle validation failed."
+  })
+});
+
 function assertNonNegativeFinite(value, name) {
   if (!Number.isFinite(value) || value < 0) {
     throw new TypeError(`${name} must be a non-negative finite number.`);
@@ -177,7 +196,7 @@ export function createRecorder({
     }, delayMs);
   }
 
-  function makeProviderFailure(phase, cycleStartedAtMs, error) {
+  function makeProviderFailure(phase, cycleStartedAtMs) {
     const failedAtMs = getNow();
     const requested =
       (phase === "chunk-fetch" || phase === "provider-fetch") && currentUniverse
@@ -194,7 +213,7 @@ export function createRecorder({
       missing: null,
       duplicates: null,
       unexpected: null,
-      error: normalizeError(error)
+      error: SAFE_PROVIDER_FAILURE_ERRORS[phase]
     });
   }
 
@@ -228,7 +247,7 @@ export function createRecorder({
         providerPhase = VALID_PROVIDER_FAILURE_PHASES.has(taggedPhase) ? taggedPhase : "chunk-fetch";
       }
       if (providerPhase) {
-        await onFailure(makeProviderFailure(providerPhase, cycleStartedAtMs, error));
+        await onFailure(makeProviderFailure(providerPhase, cycleStartedAtMs));
       }
       throw error;
     }
@@ -256,7 +275,7 @@ export function createRecorder({
         const providerPhase = VALID_PROVIDER_FAILURE_PHASES.has(taggedPhase)
           ? taggedPhase
           : "provider-fetch";
-        await onFailure(makeProviderFailure(providerPhase, cycleStartedAtMs, error));
+        await onFailure(makeProviderFailure(providerPhase, cycleStartedAtMs));
       }
       throw error;
     }
