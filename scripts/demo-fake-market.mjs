@@ -35,7 +35,7 @@ function attachDiagnosticRecord(error, record) {
     }
   }
 
-  const wrapped = new Error("MarketScope demo startup failed.");
+  const wrapped = new Error("Market Flow US demo startup failed.");
   wrapped.name = "DemoStartupError";
   Object.defineProperty(wrapped, "diagnosticRecord", {
     value: record,
@@ -89,7 +89,7 @@ export async function startDemo({
 
   const resolvedRoot = path.resolve(rootDir);
   const demoDir = path.join(resolvedRoot, ".demo");
-  const dbPath = path.join(demoDir, "market-scope.duckdb");
+  const dbPath = path.join(demoDir, "market-flow-us.duckdb");
 
   await mkdir(demoDir, { recursive: true });
 
@@ -186,7 +186,7 @@ export async function startDemo({
         }
 
         if (failures.length > 0) {
-          throw new AggregateError(failures, "Failed to close MarketScope demo cleanly.");
+          throw new AggregateError(failures, "Failed to close Market Flow US demo cleanly.");
         }
       }
     });
@@ -219,7 +219,7 @@ async function runCli() {
       error: {
         code: DIAGNOSTIC_CODES.DEMO_START_ERROR,
         name: "DemoStartupError",
-        message: "MarketScope demo startup failed.",
+        message: "Market Flow US demo startup failed.",
         retryable: false
       }
     });
@@ -243,7 +243,7 @@ async function runCli() {
         error: {
           code: DIAGNOSTIC_CODES.DEMO_START_ERROR,
           name: "DemoShutdownError",
-          message: "MarketScope demo shutdown failed.",
+          message: "Market Flow US demo shutdown failed.",
           retryable: false
         }
       });
