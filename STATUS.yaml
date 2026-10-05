@@ -6,7 +6,7 @@ current:
   chat: 10
   node: "7.4"
   title: "Final target-machine acceptance"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
