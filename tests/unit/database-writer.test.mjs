@@ -20,6 +20,7 @@ const HISTORY_INSERT = `
 `;
 
 const LATEST_INSERT = HISTORY_INSERT.replace("history", "latest");
+const LATEST_COPY_SQL = "INSERT INTO latest SELECT * FROM history WHERE cycle_id = $cycleId";
 
 function params(cycleId, securityId, price) {
   return {
@@ -55,8 +56,8 @@ function createFakeConnection() {
         events.push(["createAppender", table]);
         return appender(table);
       },
-      async run(sql) {
-        events.push(["run", sql.trim()]);
+      async run(sql, values) {
+        events.push(["run", sql.trim(), values ?? null]);
       },
       async runAndReadAll(sql) {
         events.push(["read", sql.trim()]);
@@ -66,7 +67,7 @@ function createFakeConnection() {
   };
 }
 
-test("serialized writer batches consecutive history/latest rows into data chunks and flushes at authority boundaries", async () => {
+test("serialized writer bulk-loads history once and rebuilds identical latest set-wise inside the transaction", async () => {
   const fake = createFakeConnection();
   const writer = createSerializedWriter(fake.connection);
 
@@ -87,7 +88,7 @@ test("serialized writer batches consecutive history/latest rows into data chunks
   );
   assert.equal(
     fake.events.filter(([name, table]) => name === "createAppender" && table === "latest").length,
-    1
+    0
   );
 
   const historyChunks = fake.events.filter(
@@ -97,7 +98,7 @@ test("serialized writer batches consecutive history/latest rows into data chunks
     ([name, table]) => name === "appendDataChunk" && table === "latest"
   );
   assert.equal(historyChunks.length, 1);
-  assert.equal(latestChunks.length, 1);
+  assert.equal(latestChunks.length, 0);
   assert.deepEqual(historyChunks[0][2], [
     [1n, "101", 0, 10, JSON.stringify({ securityId: "101", price: 10 })],
     [1n, "202", 0, 20, JSON.stringify({ securityId: "202", price: 20 })]
@@ -109,6 +110,7 @@ test("serialized writer batches consecutive history/latest rows into data chunks
   assert.deepEqual(rawSql, [
     "BEGIN TRANSACTION",
     "DELETE FROM latest",
+    LATEST_COPY_SQL,
     "UPDATE sessions SET completed_cycles = completed_cycles + 1",
     "COMMIT"
   ]);
@@ -119,18 +121,20 @@ test("serialized writer batches consecutive history/latest rows into data chunks
   const deleteLatest = fake.events.findIndex(
     ([name, sql]) => name === "run" && sql === "DELETE FROM latest"
   );
-  const latestFlush = fake.events.findIndex(
-    ([name, table]) => name === "flush" && table === "latest"
+  const latestCopy = fake.events.findIndex(
+    ([name, sql, values]) => name === "run"
+      && sql === LATEST_COPY_SQL
+      && values?.cycleId === 1
   );
   const updateSession = fake.events.findIndex(
     ([name, sql]) => name === "run" && sql.startsWith("UPDATE sessions")
   );
 
   assert.ok(historyFlush >= 0 && historyFlush < deleteLatest);
-  assert.ok(latestFlush >= 0 && latestFlush < updateSession);
+  assert.ok(deleteLatest < latestCopy && latestCopy < updateSession);
 });
 
-test("serialized writer flushes buffered chunk rows inside the transaction before rollback and preserves the original error", async () => {
+test("serialized writer flushes buffered history inside the transaction before rollback and preserves the original error", async () => {
   const fake = createFakeConnection();
   const writer = createSerializedWriter(fake.connection);
   const expected = new Error("synthetic F2");
@@ -160,6 +164,39 @@ test("serialized writer flushes buffered chunk rows inside the transaction befor
   );
   assert.ok(appendIndex >= 0 && appendIndex < flushIndex);
   assert.ok(flushIndex >= 0 && flushIndex < rollbackIndex);
+});
+
+test("rollback during latest phase discards an incomplete set-wise copy and preserves prior authority", async () => {
+  const fake = createFakeConnection();
+  const writer = createSerializedWriter(fake.connection);
+  const expected = new Error("synthetic F4");
+
+  await assert.rejects(
+    writer.enqueue(async (connection) => {
+      await connection.run("BEGIN TRANSACTION");
+      await connection.run(HISTORY_INSERT, params(1, "101", 10));
+      await connection.run(HISTORY_INSERT, params(1, "202", 20));
+      await connection.run("DELETE FROM latest");
+      try {
+        await connection.run(LATEST_INSERT, params(1, "101", 10));
+        throw expected;
+      } catch (error) {
+        await connection.run("ROLLBACK");
+        throw error;
+      }
+    }),
+    (error) => error === expected
+  );
+
+  assert.equal(
+    fake.events.filter(([name, sql]) => name === "run" && sql === LATEST_COPY_SQL).length,
+    0
+  );
+  assert.equal(
+    fake.events.filter(([name, table]) => name === "createAppender" && table === "latest").length,
+    0
+  );
+  assert.ok(fake.events.some(([name, sql]) => name === "run" && sql === "ROLLBACK"));
 });
 
 test("serialized writer keeps the original direct connection behavior when Appender is unavailable", async () => {
