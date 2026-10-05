@@ -13,6 +13,7 @@ authority:
   planning_state: ".planning/STATUS.yaml"
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
+  first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
