@@ -299,3 +299,13 @@ Scanner start/completion, market collection and capture timestamps are useful fo
 Preserve raw timestamps. Derive duration/latency/age only when non-negative; otherwise return null plus a bounded timing-anomaly indicator. Do not reject a valid capture or reorder authority because of wall-clock anomalies.
 
 Market authority at capture is determined by `buy_cycle_id` and serialized writer order.
+
+## D-US-032 — Scanner resultRank is returned position, not semantic rank by itself
+
+**Status:** resolved
+
+`resultRank` / `result_rank` preserves the original 1-based row position returned by the exact Scanner generation. It remains useful provenance even when the query has no meaningful ranking.
+
+Neither the Viewer nor AI Investigation may infer “best”, “top-ranked”, score quality or strategy preference from that position alone. The AI prompt must inspect the exact SQL first and may use ranking language only when deterministic `ORDER BY`/tie-break logic establishes that interpretation.
+
+For unordered or ambiguously ordered SQL, the pack must explicitly call the value **returned position** and treat peer/ranking conclusions as unproven. This correction requires no SQL parser or new subsystem; it is an interpretation/presentation invariant backed by ordered-vs-unordered regression tests.
