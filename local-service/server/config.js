@@ -1,6 +1,5 @@
 import path from "node:path";
 
-export const MARKET_SCOPE_DB_FILENAME = "market-scope.duckdb";
 export const MARKET_FLOW_US_DB_FILENAME = "market-flow-us.duckdb";
 
 function baseConfig(dbFilename) {
@@ -15,8 +14,8 @@ function baseConfig(dbFilename) {
   });
 }
 
-export const DEFAULT_SERVICE_CONFIG = baseConfig(MARKET_SCOPE_DB_FILENAME);
-export const DEFAULT_MARKET_FLOW_US_SERVICE_CONFIG = baseConfig(MARKET_FLOW_US_DB_FILENAME);
+export const DEFAULT_SERVICE_CONFIG = baseConfig(MARKET_FLOW_US_DB_FILENAME);
+export const DEFAULT_MARKET_FLOW_US_SERVICE_CONFIG = DEFAULT_SERVICE_CONFIG;
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
@@ -110,14 +109,10 @@ export function parseServiceConfig(argv, { cwd = process.cwd() } = {}) {
   return parseConfig(argv, {
     cwd,
     defaults: DEFAULT_SERVICE_CONFIG,
-    dbFilename: MARKET_SCOPE_DB_FILENAME
+    dbFilename: MARKET_FLOW_US_DB_FILENAME
   });
 }
 
-export function parseMarketFlowUsServiceConfig(argv, { cwd = process.cwd() } = {}) {
-  return parseConfig(argv, {
-    cwd,
-    defaults: DEFAULT_MARKET_FLOW_US_SERVICE_CONFIG,
-    dbFilename: MARKET_FLOW_US_DB_FILENAME
-  });
+export function parseMarketFlowUsServiceConfig(argv, options = {}) {
+  return parseServiceConfig(argv, options);
 }
