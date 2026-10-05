@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "demo_buy_review_3_revalidation_after_ai_scope"
+current_stage: "demo_buy_review_4_ux_operability"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "AI Investigation is now structurally part of the current Demo Buy plan: TREE has 39 nodes / 28 implementation leaves with new 4.5.1 exporter and 4.5.2 Viewer workflow; allocation extends through Chat 17 and 7.5 depends transitively on the complete AI workflow. PRODUCT_REQUIREMENTS, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, AI_INVESTIGATION_PACK, TREE, EXECUTION and handoff are aligned to bounded first-50 Scanner context, local evidence export, anti-hindsight prompting, lost-ACK semantics and v3/v4 new-day behavior. Mechanical TREE dependency validation is clean. Next: resume Review 3/5 across protocol/service/concurrency/lifecycle/failure semantics including AI export, align remaining PRODUCT_SPEC and durable DECISIONS, repair any defects found, then proceed to Review 4/5 UX/operations. Production implementation remains unauthorized."
+next_action: "Review 3/5 protocol/service/concurrency/lifecycle/failure audit is complete. Normative protocol truth is now docs/DEMO_BUY_PROTOCOL_LIMITS.md: bounded auto-safe Scanner context (50 rows, <=64 retained columns with canonical identity mandatory, <=128-byte textual cells, <=256 KiB serialized), context-to-item rank/identity integrity, one capture slot plus one AI-export slot, ACKNOWLEDGEMENT_UNKNOWN without blind capture replay, wall-clock anomalies as diagnostics rather than authority, buy_cycle_id as the anti-hindsight authority watermark, cycle_id>buy_cycle_id future evidence, bounded atomic AI export with safe lost-ACK regeneration, and valid-v3/valid-v4 -> fresh-v4 new-day rotation. Review 4/5 now challenges the complete user experience and operability from Scanner selection through Demo Buy inspection and AI-pack generation. Review 5 will mechanically align TREE/DECISIONS/TEST_STRATEGY and all remaining canonical wording to the normative Review-3 corrections before any freeze. Production implementation remains unauthorized."
 last_review: "R-US-EXEC-REOPEN-006"
 implementation_authorized: false
