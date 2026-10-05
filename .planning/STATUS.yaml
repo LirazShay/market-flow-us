@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "st_tree_design"
+current_stage: "canonical_contract_alignment"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "Feature goal and technical contract are defined in docs/PRODUCT_REQUIREMENTS.md and docs/DEMO_BUY_VALIDATION.md. Next: extend the existing S&T TREE with the smallest Demo Buy branch, define implementation-ready leaves/dependencies/success_evidence, update canonical PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY from the reviewed feature contract, then run necessity/sufficiency/KISS and adversarial whole-goal review before freeze. Preserve all completed execution leaves; final target-machine acceptance 7.4 remains blocked until the new feature is implemented and merged."
+next_action: "Demo Buy S&T is decomposed to implementation-ready responsibilities: 4.3.1 schema/migration/persistence, 4.3.2 serialized capture authority/protocol, 4.3.3 Node evaluation/read model, 4.4.1 Scanner capture UX, 4.4.2 dedicated Demo Buy outcome screen, followed by 7.5 post-feature deterministic release re-closure and deferred 7.4 target-machine acceptance. Structural dependency review found 36 nodes, 26 leaves, no missing dependencies/cycles/invalid parents/one-child decompositions. Next: align canonical PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY and user/Scanner contracts with docs/DEMO_BUY_VALIDATION.md, challenge boundary details such as capture-size/provenance semantics, then run formal necessity/sufficiency/KISS + outside-in/adversarial review before freeze. Implementation remains unauthorized."
 last_review: "R-US-EXEC-REOPEN-004"
 implementation_authorized: false
