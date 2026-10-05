@@ -11,11 +11,14 @@ Production implementation is allowed only when all are true:
 
 ```text
 .planning/STATUS.yaml -> plan_state: frozen
+.planning/STATUS.yaml -> implementation_authorized: true
 STATUS.yaml -> phase: implementation
 .planning/EXECUTION.yaml -> allocated (not chats: {})
 ```
 
 Otherwise do not code.
+
+A frozen plan may intentionally remain in root `phase: planning` while a required planning/CI/merge gate is unavailable. That state is reviewed/prepared planning, not implementation authorization.
 
 ## Fresh executor read order
 
@@ -42,7 +45,12 @@ Do not ask the user to restate the plan.
 | `1.*` U.S. acquisition | DATA_CONTRACT, PRODUCT_SPEC flows 2–5, TECHNICAL_SPEC provider/Recorder, TEST_STRATEGY unit/provider sections |
 | `2.*` schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence/protocol, TEST_STRATEGY service/schema sections |
 | `3.*` trusted reads/Viewer | PRODUCT_REQUIREMENTS Current/History, PRODUCT_SPEC Current/Detail, TECHNICAL_SPEC trusted reads, TEST_STRATEGY Viewer/E2E |
-| `4.*` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
+| `4.1`–`4.2` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
+| `4.3.1` Demo Buy schema/persistence | DEMO_BUY_VALIDATION, DATA_CONTRACT schema-v4 facts, TECHNICAL_SPEC schema version + Demo Buy tables, TEST_STRATEGY schema-v4 lifecycle |
+| `4.3.2` Demo Buy capture authority | DEMO_BUY_VALIDATION capture/provenance/concurrency, TECHNICAL_SPEC protocol + capture authority, TEST_STRATEGY Demo Buy capture integration |
+| `4.3.3` Demo Buy evaluation/read model | DEMO_BUY_VALIDATION horizons/read model, DATA_CONTRACT derived facts, TECHNICAL_SPEC evaluation/read model, TEST_STRATEGY trusted-read/evaluation + AGENTS SQL static preflight |
+| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_VALIDATION Scanner capture controls/auto backpressure, PRODUCT_SPEC Demo Buy capture, TECHNICAL_SPEC browser workflow, TEST_STRATEGY Scanner selection model |
+| `4.4.2` Demo Buy outcome screen | DEMO_BUY_VALIDATION Viewer UX, PRODUCT_REQUIREMENTS Demo Buy validation, PRODUCT_SPEC Demo Buy Viewer, TECHNICAL_SPEC Demo Buy surface, TEST_STRATEGY Browser E2E |
 | `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E + configurable synthetic generator, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
 | `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
 | `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY authenticated gates |
@@ -50,9 +58,25 @@ Do not ask the user to restate the plan.
 | `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/bounded-workload correctness/sanity gates + all affected leaf evidence |
 | `7.2` local acceptance kit | TEST_STRATEGY Local Fake Leumi acceptance kit, configurable generator, Fake Market/runtime/service/workload reuse, target-machine launcher/report contract |
 | `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, TECHNICAL_SPEC daily DB lifecycle, US_MIGRATION_FILE_MAP and TREE success evidence |
-| `7.4` final target-machine acceptance | TEST_STRATEGY final target-machine bundle: local Fake Leumi + isolated day-bounded probes + 4096x180 end-to-end performance + new-day reset/archive + authenticated static-market smoke + authenticated market-open gate |
+| `7.5` post-Demo-Buy re-closure | all Demo Buy canonical contracts + USER_GUIDE/SCANNER_SQL_GUIDE, full Fast/Browser/Planning/Workload gates, local Fake Leumi Demo Buy proof, PR/main/open-PR truth |
+| `7.4` final target-machine acceptance | TEST_STRATEGY final target-machine bundle: local Fake Leumi + Demo Buy user journey + isolated day-bounded probes + 4096x180 end-to-end performance + new-day reset/archive + authenticated static-market smoke + authenticated market-open gate |
 
 For every node, TREE `success_evidence` is the definition of done.
+
+## Demo Buy execution sequence
+
+The post-replan serial allocation is intentionally:
+
+```text
+Chat 10: 4.3.1 → 4.3.2
+Chat 11: 4.3.3
+Chat 12: 4.4.1
+Chat 13: 4.4.2
+Chat 14: 7.5
+Chat 15: 7.4
+```
+
+Do not jump directly to final target-machine acceptance. `7.4` is last and depends on the post-feature release candidate produced by `7.5`.
 
 ## Automation-performance responsibility
 
@@ -100,6 +124,14 @@ Executors must not optimize around artificial months/years of active history unl
 
 Release/acceptance work must preserve saved queries while allowing prior-day market authority to be archived/reset safely before the next trading day.
 
+Demo Buy observations are active-day evidence linked to active-day history. They persist across service restart but do not migrate into a fresh next-day DB; unresolved future horizons do not bridge across that DB boundary.
+
+## Demo Buy KISS invariants
+
+Do not introduce a Strategy Engine, order/fill simulator, portfolio model, background horizon worker, materialized horizon-result columns, second database/transport, cross-day strategy warehouse or auto-capture replay queue.
+
+Persist capture facts only. Calculate outcomes in the trusted Node read model. The browser presents returned results and does not independently reconstruct horizon semantics.
+
 ## Diagnosability rule
 
 Whenever an assigned node changes an operational boundary/failure path, preserve/add the smallest stable checkpoint/error/support evidence required by AGENTS.
@@ -127,7 +159,7 @@ Within one chat:
 - same-chat dependencies unlock as earlier nodes become done;
 - do not skip a blocked earlier assigned node.
 
-Across chats, root STATUS points to the current numbered chat.
+Across chats, root STATUS points to the current numbered chat once implementation is authorized.
 
 ## Work-unit lifecycle
 
@@ -156,6 +188,8 @@ PR
 
 Do not open a second evidence-only closure PR.
 
+If required GitHub Actions/CI is unavailable, do not substitute an unverified merge or start the next implementation unit. Keep the work blocked until the required gate can run and pass.
+
 ## Planning defect discovered during execution
 
 Follow `FRAMEWORK.md` execution-reopen rules:
@@ -171,7 +205,7 @@ Follow `FRAMEWORK.md` execution-reopen rules:
 
 ## Final user-dependent acceptance rule
 
-All checks that require the user's authenticated browser, target Windows machine, heavy target-machine performance or active market are intentionally allocated only to TREE `7.4` / Chat 10.
+All checks that require the user's authenticated browser, target Windows machine, heavy target-machine performance or active market are intentionally allocated only to TREE `7.4` / Chat 15.
 
 Earlier chats must build and automatically prove the acceptance tooling with bounded deterministic fixtures without asking the user to perform those checks early.
 
@@ -181,4 +215,4 @@ Earlier chats must build and automatically prove the acceptance tooling with bou
 
 A chat/node result is not product completion.
 
-Overall product completion additionally requires TREE 7.1, 7.2, 7.3 and 7.4 outcomes plus the normal PR/merge/main-green closure in AGENTS.
+Overall product completion additionally requires the Demo Buy leaves, `7.5`, final `7.4`, and the normal PR/merge/main-green closure in AGENTS.
