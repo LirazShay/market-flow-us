@@ -6,7 +6,7 @@ current:
   chat: 8
   node: "7.2"
   title: "Deterministic local Fake Leumi acceptance package"
-  status: in_progress
+  status: done
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
