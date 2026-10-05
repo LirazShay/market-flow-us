@@ -74,3 +74,21 @@ test("START_DEMO checks port ownership before launching the browser opener", asy
   assert.ok(browserOpener > portCheck);
   assert.ok(demoStart > browserOpener);
 });
+
+test("real-provider launchers pass only normalized Origin and keep verification DB isolated", async () => {
+  const [normalLauncher, liveLauncher] = await Promise.all([
+    readRoot("START_MARKET_FLOW_US.cmd"),
+    readRoot("PREPARE_LIVE_VERIFICATION.cmd")
+  ]);
+
+  for (const launcher of [normalLauncher, liveLauncher]) {
+    assert.match(launcher, /MARKET_FLOW_US_PROVIDER_URL/);
+    assert.match(launcher, /GetLeftPart\(\[System\.UriPartial\]::Authority\)/);
+    assert.match(launcher, /--allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
+    assert.doesNotMatch(launcher, /--allowed-origin "%MARKET_FLOW_US_PROVIDER_URL%"/);
+  }
+
+  assert.doesNotMatch(normalLauncher, /live-verification\.duckdb/);
+  assert.match(liveLauncher, /--db data\/live-verification\.duckdb/);
+  assert.doesNotMatch(liveLauncher, /--db data\/market-flow-us\.duckdb/);
+});
