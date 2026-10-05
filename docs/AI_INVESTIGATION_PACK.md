@@ -2,190 +2,177 @@
 
 ## 1. Purpose
 
-After a Demo Buy observation has enough outcome evidence, the user must be able to ask an external AI a substantially better question than:
+For one Demo Buy observation, generate a local reproducible evidence pack that helps an external AI answer:
 
-> Why did this stock go down?
+- why the exact Scanner SQL selected/ranked this security;
+- which warning signals were already available before the virtual buy;
+- what actually happened afterward;
+- what minimal SQL changes might have filtered/de-ranked the failed candidate;
+- what evidence would be needed to validate those changes across many observations.
 
-The product must generate a local, reproducible evidence pack that lets an AI investigate:
-
-- why the exact Scanner SQL ranked/selected the security;
-- what facts were actually available before the virtual buy;
-- what warning signals may have been present in other persisted fields or calculable pre-buy features;
-- how the selected security compared with nearby high-ranked candidates from the same Scanner generation when that comparison context was retained;
-- what happened after the virtual buy;
-- what minimal SQL changes might have filtered, de-ranked or better distinguished the failed candidate;
-- which proposed changes are hypotheses that require validation across many Demo Buy observations rather than overfitting one failure.
-
-This is a **forensic strategy-improvement export**, not an AI trading agent and not an autonomous query editor.
+This is forensic strategy-improvement evidence, not an AI trading agent and not an autonomous query editor.
 
 ## 2. Product boundary
 
-Phase 1 adds no cloud/API integration and stores no AI credentials.
+Phase 1 adds no AI/cloud provider integration, API key or automatic upload.
 
-The workflow is:
+Workflow:
 
 ```text
 Demo Buy observation
-→ Generate AI Investigation Pack
-→ Node builds deterministic local evidence files
-→ Viewer exposes local export location + Copy AI Prompt
-→ user uploads/pastes the pack into the AI of their choice
-→ AI proposes hypotheses / SQL improvements
-→ user decides what to test
+→ Investigate with AI
+→ Generate local pack
+→ Copy AI Prompt / Copy folder path
+→ user uploads/pastes evidence to an AI of choice
+→ AI proposes hypotheses
+→ user decides what to test in Scanner
 ```
 
-The product never automatically applies AI-proposed SQL to the active Scanner query.
+The product never automatically edits or activates Scanner SQL.
 
-## 3. Non-negotiable anti-hindsight rule
+## 3. Anti-hindsight invariant
 
-The pack separates evidence into two classes:
+The pack separates:
 
 ```text
 PREDICTION-TIME EVIDENCE
 OUTCOME EVIDENCE
 ```
 
-Prediction-time evidence may be used to propose a future Scanner rule.
+Writer/cycle ordering is authority. For the target item:
 
-Outcome evidence may be used only to evaluate what happened after the decision and to generate hypotheses. It must **not** be presented as though it was available to the original query.
+```text
+prediction-time market evidence: cycle_id <= buy_cycle_id
+outcome market evidence:         cycle_id > buy_cycle_id
+```
 
-Every generated prompt explicitly instructs the AI:
+Timestamps additionally bound the intended forensic windows but never move a later-committed cycle into prediction-time evidence.
 
-1. do not use any timestamp after the virtual-buy acceptance as an input to a proposed predictive rule;
-2. when citing a warning signal, identify the exact pre-buy field/history evidence supporting it;
-3. label suggestions that cannot be derived from available pre-buy data as invalid for Scanner use;
-4. distinguish observed fact, derived calculation and hypothesis;
-5. do not infer provider field semantics beyond the included data dictionary;
-6. do not claim that source `Price` proves a real executable fill;
-7. treat a single failed observation as insufficient evidence for adopting a rule;
-8. recommend validation across the wider Demo Buy corpus before accepting a change.
+Every generated prompt instructs the AI to:
+
+1. use only prediction-time evidence for proposed Scanner rules;
+2. cite exact supporting fields/rows/timestamps for claimed warning signals;
+3. label fact, derived calculation and hypothesis separately;
+4. mark suggestions requiring unavailable pre-buy evidence as invalid/unproven;
+5. avoid inventing provider-field semantics beyond the field guide;
+6. never claim source `Price` proves a real fill/executable trade;
+7. treat one observation as insufficient to adopt a rule;
+8. recommend validation across multiple Demo Buy observations;
+9. state explicitly when context was truncated/omitted or the target was outside retained peer context.
 
 ## 4. Evidence sources
 
-The pack is built only from local persisted/immutable product evidence:
+The pack uses only local persisted/immutable evidence:
 
-- exact capture-level Scanner SQL provenance;
-- Scanner generation timing and result rank;
-- bounded Scanner result comparison context frozen at capture time;
-- the selected security's persisted `history` before the decision;
-- the exact linked Demo Buy baseline row;
-- the selected security's persisted `history` after the decision;
-- Node-derived Demo Buy horizon outcomes;
-- the documented Market Flow US field semantics/uncertainties.
+- exact capture-level Scanner SQL/provenance;
+- original selected `resultRank`;
+- bounded Scanner comparison context frozen at capture;
+- target `history` rows that were authoritative before capture;
+- exact linked baseline row;
+- target `history` rows committed after capture;
+- trusted Demo Buy evaluator output;
+- documented field semantics/uncertainties.
 
-No authenticated browser state, cookies, headers, account identifiers or raw private session data may enter the pack.
+No credentials, cookies, auth headers, account identifiers, browser-session data or raw authenticated HTTP dumps may enter the pack.
 
-## 5. Why bounded Scanner result context must be durable
+## 5. Frozen Scanner comparison context
 
-Re-running the SQL later is not equivalent to preserving the original Scanner result because `latest` and `history` continue changing.
+Re-running Scanner SQL later is not equivalent to the original generation because market tables continue changing. Therefore capture freezes bounded original comparison provenance.
 
-Therefore each Demo Buy capture also freezes a **bounded comparison context** from the exact successful Scanner generation.
-
-The context contains the first **50 source result rows in exact SQL order**, together with the result column names and original 1-based ranks.
-
-This is provenance, not a second market authority.
-
-Its purpose is to let the AI answer questions such as:
-
-- Why was the eventual loser rank 1?
-- What values distinguished it from ranks 2–10?
-- Was a suspicious field already weaker than peers?
-- Could a different tie-break/filter have preferred another candidate?
-
-The context is bounded so automatic Demo Buy capture does not persist an unbounded copy of arbitrary Scanner results.
-
-### Context encoding
-
-The implementation must use deterministic JSON-safe encoding and a bounded representation.
-
-Requirements:
-
-- preserve column names, row order and original ranks;
-- preserve normal numeric/null/boolean/string values exactly when within bounds;
-- very large cell values may be clipped only by an explicit deterministic cell-size limit;
-- every clipped value is marked as truncated in metadata;
-- one bounded context cannot make the ordinary Demo Buy capture silently change row selection semantics;
-- if context shaping fails, capture must fail visibly before commit rather than persist a misleading “complete” context.
-
-The exact byte/cell limits are implementation constants documented and covered by tests; they must stay comfortably below the existing 16 MiB WebSocket inbound boundary.
-
-## 6. Persisted context
-
-Schema v4 is expanded before release to retain the bounded Scanner comparison context as immutable capture provenance.
-
-The smallest acceptable representation is one capture-level JSON provenance field, conceptually:
+Exact shaping/bounds are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`:
 
 ```text
-source_result_context_json JSON NOT NULL
+source rows: first up to 50 in exact SQL order
+retained columns: <=64 total
+canonical identity column: mandatory even if originally after column 64
+textual/serialized cell: <=128 UTF-8 bytes after deterministic clipping
+serialized context: <=256 KiB UTF-8
+exact SQL: <=1 MiB UTF-8
 ```
 
-containing:
+Context preserves:
 
 ```text
-columns
-rows[0..49]
-resultRank per row
-truncation metadata
+source column names/indexes
+original resultRank per retained row
+canonical identity value
+omitted row/column counts
+cell encoding/truncation metadata
 ```
 
-Do not create another market-data authority or persist future outcomes into this field.
+Numeric/null/boolean values are preserved exactly. Strings and encoded non-scalars may be clipped only by the deterministic documented rule and are explicitly marked.
 
-The existing capture/item/history relations remain authoritative for virtual-buy identity and outcomes.
+Context is provenance, not market authority and never changes row selection/rank semantics.
 
-## 7. Investigation target and context coverage
+## 6. Context integrity / target coverage
 
-The user starts an investigation from one Demo Buy item:
+The investigation target is:
 
 ```text
 captureId + securityId
 ```
 
-The target must belong to that capture.
+It must belong to that capture.
 
-The persisted comparison context is intentionally only the original Top-50 rows. Therefore the pack records:
+At capture time, every selected item with `resultRank <= 50` is cross-checked against the retained context row at the same rank and canonical identity. A mismatch/missing/unusable identity causes capture failure before commit.
+
+The pack derives:
 
 ```text
 targetInScannerContext: boolean
 ```
 
-Rules:
+- rank <=50 with matching retained row → `true`;
+- rank >50 → `false`, but pack generation still succeeds;
+- a target that should be retained but is missing/mismatched → integrity/export error, not `false`.
 
-- when `resultRank <= 50` and the exact original row exists in the frozen context, `targetInScannerContext=true` and the AI may perform direct candidate-vs-peer/rank reconstruction;
-- when the target rank is outside the retained context, `targetInScannerContext=false`; pack generation still succeeds using exact SQL, original result rank, pre-buy history, baseline and outcome evidence;
-- when `targetInScannerContext=false`, the prompt explicitly forbids pretending that the target's exact Scanner output row or neighboring peer values were retained;
-- a missing target row that should be inside the retained Top-50 is an integrity/export error, not silently downgraded to `false`.
+When false, the prompt forbids pretending that the exact target row or peer neighborhood was retained.
 
-The pack builder never accepts arbitrary SQL/file paths from the browser and never reads data outside the active database opened by the running product. A service intentionally started against an archived schema-v4 database may generate packs from that database without introducing a second archive subsystem.
+## 7. Forensic windows
 
-## 8. Time windows
-
-Default forensic windows are fixed and documented so two exports of the same complete evidence are comparable:
+### Prediction-time target history
 
 ```text
-pre-buy target history:
-  30 minutes ending at capturedAtMs
-
-post-buy target history:
-  from capturedAtMs through capturedAtMs + 10 minutes
+same security_id
+AND cycle_id <= buy_cycle_id
+AND collected_at_ms >= captured_at_ms - 30 minutes
+AND collected_at_ms <= captured_at_ms
+ORDER BY collected_at_ms ASC, cycle_id ASC
 ```
 
-The pre-buy window includes the signal-to-capture interval and therefore lets the AI see whether the market changed while the capture was waiting.
-
-Rows remain exact persisted observations; the exporter does not interpolate missing samples.
-
-If the database does not yet contain the full post-buy window, the pack is still valid but the manifest marks it `PARTIAL_OUTCOME` and records the latest included observation. The UI must make that status visible before export.
-
-A `COMPLETE_OUTCOME` pack requires the evidence boundary to have reached at least the 10-minute target or otherwise have a terminal active-day boundary that makes later same-day evidence impossible.
-
-## 9. Generated local bundle
-
-One investigation produces a deterministic folder under an ignored local export root, conceptually:
+### Post-capture target history
 
 ```text
-exports/ai-investigations/<captureId>-<securityId>-<generatedAt>/
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms
+AND collected_at_ms <= captured_at_ms + 10 minutes
+ORDER BY collected_at_ms ASC, cycle_id ASC
 ```
 
-Required files:
+The baseline is exported separately and may also appear in the prediction-time window.
+
+No interpolation occurs.
+
+## 8. Partial / complete outcome evidence
+
+Define:
+
+```text
+postWindowEndMs = captured_at_ms + 10 minutes
+```
+
+`COMPLETE_OUTCOME` requires persisted committed post-capture market authority to have progressed to at least `postWindowEndMs` in the opened DB.
+
+`PARTIAL_OUTCOME` applies otherwise.
+
+There is no special “the trading day ended, therefore complete” shortcut. An archived DB whose persisted evidence never reached the ten-minute boundary remains honestly partial.
+
+Completeness does not guarantee that the target security itself has a qualifying row at every horizon; horizon-level unavailable reasons remain separate.
+
+## 9. Required bundle
+
+One pack contains:
 
 ```text
 README.md
@@ -200,19 +187,11 @@ OUTCOME.json
 FIELD_GUIDE.md
 ```
 
-No generated investigation artifact is committed to the repository.
-
-### `README.md`
-
-Explains what to upload, evidence boundaries, whether outcome evidence is partial/complete, and whether the target itself is present in the retained Scanner comparison context.
-
-### `PROMPT.md`
-
-The high-quality reusable investigation instruction. It references the accompanying files rather than duplicating all evidence inline.
+Generated packs are local ignored artifacts, never repository fixtures.
 
 ### `MANIFEST.json`
 
-Contains only bounded structural metadata, including:
+Includes bounded structural metadata such as:
 
 ```text
 packFormatVersion
@@ -225,250 +204,187 @@ generatedAtMs
 sourceResultStartedAtMs
 sourceResultCompletedAtMs
 capturedAtMs
+buyCycleId
 baselineCollectedAtMs
 preWindowStartMs
 postWindowEndMs
 latestIncludedPostObservationMs
 outcomeEvidenceStatus
-file list / record counts
-truncation flags
+file names / record counts
+context omission/truncation summary
 ```
 
 ### `QUERY.sql`
 
-Exact immutable SQL from the capture provenance.
+Exact immutable activated SQL. Never truncated.
 
 ### `SCANNER_CONTEXT.json`
 
-The frozen first-50 result comparison context from the original Scanner generation, including original ranks and truncation metadata. It explicitly identifies whether the investigation target is contained in those rows.
+Exact persisted bounded context and metadata. No later SQL re-run.
 
 ### `TARGET_BEFORE.jsonl`
 
-Every persisted target-security history row in the 30-minute pre-buy window, ordered oldest → newest, including typed fields and preserved `raw_data`.
+Every matching authoritative target row in the prediction-time window, oldest→newest, including typed fields and preserved `raw_data`.
 
 ### `BASELINE.json`
 
-The exact linked `(buy_cycle_id, security_id)` history row used as the virtual-buy baseline.
+The exact linked `(buy_cycle_id, security_id)` history row.
 
 ### `TARGET_AFTER.jsonl`
 
-Every persisted target-security history row after capture through the 10-minute evidence boundary, ordered oldest → newest.
+Every matching post-capture target row in the fixed ten-minute window, oldest→newest.
 
 ### `OUTCOME.json`
 
-The same trusted Node horizon model used by Demo Buy: target time, observed time, elapsed time, future Price, percentage, outcome and unavailable reason for all fixed horizons.
+The exact trusted Demo Buy evaluator output for all ten horizons. A second horizon algorithm is forbidden.
 
 ### `FIELD_GUIDE.md`
 
-A compact extraction from the durable data contract explaining:
+Explains canonical identity; source-shaped/empirical field semantics; wall-clock diagnostics vs writer/cycle authority; null/zero/missing distinctions; and the Phase-1 non-fillability boundary.
 
-- canonical identity;
-- source-shaped `Price` semantics;
-- local `collected_at_ms` / Scanner timing / `captured_at_ms` distinctions;
-- null/zero/missing distinction;
-- known typed fields;
-- fields whose exact provider semantics remain empirical;
-- the fact that Phase 1 is not fill/liquidity evidence.
+## 10. Prompt investigation sequence
 
-## 10. Prompt contract
-
-`PROMPT.md` asks the AI to perform the following analysis in order.
+`PROMPT.md` instructs the AI to work in this order.
 
 ### A. Reconstruct the original decision
 
-- Explain the query in plain language.
-- Identify the `ORDER BY` / ranking logic and filters.
-- If `targetInScannerContext=true`, use `SCANNER_CONTEXT.json` to explain why the target occupied its original rank relative to nearby candidates.
-- If `targetInScannerContext=false`, state that the exact target output row/peer neighborhood was not retained and do not fabricate that comparison; analyze only the query, rank number and other available pre-buy evidence.
-- Identify any data needed by the SQL that is missing/truncated and say so rather than inventing it.
+- explain the SQL in plain language;
+- identify filters, computed values and ranking/tie-break logic;
+- when `targetInScannerContext=true`, explain the target's original rank relative to retained nearby candidates;
+- when false, state the missing peer context and do not fabricate it;
+- report any omitted/truncated inputs that limit analysis.
 
-### B. Inspect prediction-time warning signals
+### B. Search prediction-time warning signals
 
-Use only `TARGET_BEFORE.jsonl`, `BASELINE.json` fields that existed by capture time, `SCANNER_CONTEXT.json`, and the query.
+Use only query/context/baseline and `TARGET_BEFORE` evidence that was authoritative at capture time.
 
-Search for:
+Possible areas include price trajectory, acceleration/reversal, bid/ask relations, volume/change/high/low/yesterday/market-cap/source fields, stale values, capture delay/baseline age diagnostics and additional calculations derivable solely from pre-buy history.
 
-- weakening/acceleration/reversal patterns;
-- stale baseline or signal-to-capture latency;
-- bid/ask/Price relationships when available;
-- volume/change/high/low/yesterday/market-cap/source fields when available;
-- repeated null/stale values;
-- candidate-vs-peer differences only when the relevant candidate/peer rows are actually retained;
-- additional calculations derivable only from pre-buy persisted history.
+Every claimed signal must cite concrete evidence.
 
-The AI must cite the concrete field/timestamp evidence for each claimed signal.
+### C. Explain the outcome
 
-### C. Explain the outcome without leaking it backward
+Use `TARGET_AFTER` and `OUTCOME` to describe what happened after capture without presenting those facts as predictive inputs.
 
-Use `TARGET_AFTER.jsonl` and `OUTCOME.json` to describe what happened after capture.
+### D. Propose minimal SQL hypotheses
 
-Explicitly separate this explanation from predictive inputs.
-
-### D. Generate query-improvement hypotheses
-
-For each proposal provide:
+For every proposal provide:
 
 ```text
 hypothesis
 pre-buy evidence used
-minimal SQL change or SQL fragment
-whether it would have filtered or de-ranked this target
+minimal SQL change/fragment
+whether it would have filtered/de-ranked this target
 expected benefit
-possible false-negative cost
+false-negative cost
 overfitting risk
-additional Demo Buy evidence needed
+additional Demo Buy evidence required
 ```
 
-Start with the smallest KISS modification before proposing broader rewrites.
+Prefer the smallest useful change before larger rewrites.
 
-### E. Counterfactual and peer check
+### E. Counterfactual/peer check
 
-For every proposed improvement, answer:
-
-- Would this rule have rejected/de-ranked the failed target using only pre-buy information?
-- When retained comparison rows permit it, what would the rule likely do to neighboring high-ranked candidates?
-- When comparison context does not contain the target/needed peer row, explicitly mark that counterfactual as unproven rather than guessing.
-- Is the rule merely fitted to this one failure?
+State whether the change would have altered this target using only pre-buy evidence. When retained context permits, assess neighboring candidates; otherwise mark the counterfactual unproven.
 
 ### F. Validation plan
 
-Finish with a concrete plan for testing the proposed SQL change over many existing/future Demo Buy observations before replacing the current query.
+End with measurable multi-observation validation criteria before replacing the current Scanner query.
 
-The AI should recommend measurable comparison criteria rather than declaring a new rule “better” from one anecdote.
+## 11. Local export publication
 
-## 11. UI workflow
-
-On the Demo Buy screen each observation exposes an investigation action:
+Exporter operation:
 
 ```text
-Generate AI Investigation Pack
+demo.buy.ai-pack.create(captureId, securityId)
 ```
 
-The UI shows:
+The browser supplies no path.
 
-- target identity/rank;
-- whether the target is inside the retained Top-50 Scanner comparison context;
-- whether the 10-minute outcome evidence is partial or complete;
-- generated local folder/path after success;
-- `Copy AI Prompt` after generation;
-- `Regenerate` to rebuild from later history if the prior pack was partial;
-- clear generation error without mutating the Demo Buy observation.
-
-Generating a pack is a read/export operation. It never changes Scanner SQL, Demo Buy capture facts, market authority or automatic capture state.
-
-## 12. Service boundary
-
-Use the existing Viewer WebSocket/local Node service; no second API is introduced.
-
-Conceptual operation:
+Node:
 
 ```text
-demo.buy.ai-pack.create
+validate target/evidence
+→ create internal temp directory under exports/ai-investigations/
+→ write every required file
+→ close/fsync using normal Node file APIs
+→ atomically rename to a collision-safe final directory
 ```
 
-Payload:
+Failure:
+
+- reports no complete final pack;
+- best-effort cleans temp output;
+- never overwrites an existing successful pack;
+- mutates no DuckDB authority.
+
+The response contains bounded metadata and `promptText`; evidence rows remain in local files.
+
+The returned/displayed path is **relative to the product/export root**, never an absolute machine path containing user/machine details.
+
+`promptText` is capped at 256 KiB UTF-8; exceeding the cap is an export error, not silent truncation.
+
+## 12. Export concurrency / lost ACK
+
+At most one Generate/Regenerate AI-pack request is in flight per Viewer instance. Additional export actions are disabled/refused visibly rather than queued.
+
+Transport loss after successful local publication may leave an unacknowledged valid pack. Unlike Demo Buy capture, retry after reconnect is safe because export performs no DB mutation and generates a collision-safe new directory. The product does not need an export idempotency/recovery subsystem in Phase 1.
+
+## 13. Viewer workflow
+
+Detailed UI behavior is owned by `DEMO_BUY_UX.md`.
+
+The investigation panel shows:
 
 ```text
-captureId
-securityId
+capture/target/original rank
+targetInScannerContext
+current horizon progress
+PARTIAL_OUTCOME | COMPLETE_OUTCOME
+Generate / Regenerate
+Copy AI Prompt
+Copy folder path
+relative generated path
 ```
 
-The server:
+For Partial evidence, explain that later committed evidence may change outcome-dependent files. Immutable query/context/baseline evidence never changes.
 
-1. validates target membership in the capture;
-2. loads immutable capture/query/context provenance;
-3. determines and validates `targetInScannerContext`;
-4. loads the exact baseline;
-5. loads bounded target before/after history;
-6. reuses the trusted Demo Buy evaluator for `OUTCOME.json` rather than implementing a second horizon algorithm;
-7. generates deterministic sanitized files under the controlled export root;
-8. returns pack metadata/path and prompt text suitable for clipboard copying.
+`Copy AI Prompt` and `Copy folder path` use clipboard fallback: if automatic copy is unavailable, reveal/focus selectable text. Clipboard failure is not pack-generation failure.
 
-Do not accept a browser-supplied output path.
+## 14. Determinism / regeneration
 
-## 13. Determinism and regeneration
+For identical persisted evidence and `packFormatVersion`, semantic content is deterministic except generation metadata/directory name.
 
-For the same DB evidence and pack-format version, semantic file content is deterministic except `generatedAtMs` and the generated directory name.
-
-Regeneration after more market history arrives may change only evidence that was previously unavailable/partial and the derived outcome file/manifest fields that depend on it. Immutable query/context/baseline evidence never changes.
-
-The manifest records `packFormatVersion` so future prompt/evidence changes are diagnosable.
-
-## 14. Security and public-safe repository rules
-
-Generated packs are local user artifacts, not repository fixtures.
-
-Implementation requirements:
-
-- export root is git-ignored;
-- safe internally generated directory/file names only;
-- no credentials/cookies/auth headers/browser session data/account identifiers;
-- no raw authenticated HTTP dumps;
-- no arbitrary path traversal;
-- diagnostics mention pack/capture IDs and file counts, not entire SQL/history payloads;
-- tests use synthetic/sanitized data only.
+Regeneration may change only evidence legitimately added since the prior pack and derived fields depending on it. Query/context/baseline remain immutable.
 
 ## 15. Verification
 
-### Unit
+`TEST_STRATEGY.md` must prove at least:
 
-Prove:
-
-- pack prompt sections and anti-hindsight instructions;
-- deterministic target/window boundaries;
-- context rank/order preservation;
-- `targetInScannerContext` true/false behavior and no fabricated peer comparison;
-- context bounding/truncation markers;
-- partial vs complete outcome classification;
-- safe export naming/path construction;
-- no browser-controlled output path;
-- field-guide semantics remain aligned with `DATA_CONTRACT`.
-
-### Real DuckDB/service
-
-Prove:
-
-- target must belong to capture;
-- exact immutable query/context/baseline are exported;
-- a target expected inside Top-50 but missing from context is an integrity/export error;
-- a valid target outside Top-50 still produces a pack with `targetInScannerContext=false`;
-- before rows never exceed `capturedAtMs`;
-- after rows never precede capture or exceed the fixed 10-minute boundary;
-- baseline is the exact linked row;
-- outcome file equals the trusted Demo Buy evaluator result;
-- partial pack regenerates to complete when later history appears;
-- pack generation mutates no DB authority;
-- restart can regenerate the same investigation from persisted evidence.
-
-### Browser E2E
-
-Prove:
-
-1. capture a rank-1 candidate with visible comparison rows;
-2. create future history in which that candidate falls;
-3. generate the pack from the Demo Buy observation;
-4. UI clearly reports partial/complete evidence and target-context coverage;
-5. generated manifest/query/context/before/baseline/after/outcome/prompt files are present;
-6. Copy AI Prompt exposes the exact generated prompt;
-7. regeneration after additional history updates only outcome-dependent evidence;
-8. pack failure is visible and does not break Scanner/Demo Buy;
-9. one target outside Top-50 produces a valid reduced-context pack without invented peer claims;
-10. existing Current/Detail/Scanner/Demo Buy regressions remain green.
+- exact context bounds, identity-column retention and deterministic clipping;
+- context↔item rank/identity integrity;
+- authority-watermark pre/post partition including misleading wall-clock cases;
+- targetInScannerContext true/false/integrity paths;
+- exact baseline and trusted evaluator reuse;
+- partial→complete progression with no terminal-day shortcut;
+- deterministic bundle/prompt semantics;
+- safe relative paths and no browser path input/traversal;
+- temp-dir/atomic-rename cleanup/collision behavior;
+- one export slot and lost-ACK safe regeneration;
+- prompt/copy path clipboard fallback;
+- no DB mutation/cloud call/AI key/automatic SQL activation.
 
 ## 16. Explicit non-goals
 
-Not included in this release:
+Not included:
 
 ```text
-calling an AI provider automatically
-storing an AI API key
-letting AI edit/activate Scanner SQL automatically
-claiming causal explanations from one observation
-automatically accepting suggested rules
-internet/web enrichment
+automatic AI provider call
+AI API-key storage
+automatic SQL edit/activation
+web enrichment during export
+claiming causality from one observation
 broker/order/fill analysis
 Phase-2 liquidity/sellability analysis
-long-term AI conversation storage
+long-term embedded AI chat/history
 ```
-
-The product supplies high-quality evidence and a disciplined prompt; the human remains responsible for deciding which hypotheses become experimental SQL.
