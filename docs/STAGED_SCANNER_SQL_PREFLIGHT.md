@@ -267,3 +267,54 @@ finite recent history window       → bounded, requires explicit max-staleness 
 ```
 
 **Conclusion: existing-schema design search is exhausted for the current exact contract. Do not execute another staged-query candidate until the smallest affected planning area is reopened and resolves max-staleness semantics versus a temporal access-path/schema change.**
+
+---
+
+# R-US-EXEC-REOPEN-003 — staged Scanner performance direction
+
+## Contract review
+
+The owning product contract already resolves the semantic side of the choice. `docs/PRODUCT_SPEC.md` requires, for each target age, the latest historical row **for the same security** with `collected_at_ms <= current.collected_at_ms - target_age_ms`, ordered by `collected_at_ms DESC, cycle_id DESC`, and states that missing historical data ends progression.
+
+That contract contains no maximum-staleness rule. Introducing one merely to obtain a cheaper query would therefore change observable staged-ranking semantics rather than optimize the existing contract.
+
+`D-US-010` also deliberately says to use direct history SQL first and reopen the smallest performance area if representative evidence proves it materially impractical. Node `6.3` independently contains the same reopen condition. The current static analysis triggers that contingency without invalidating the rest of the TREE.
+
+## Replan decision
+
+Preserve the exact staged-query semantics.
+
+```text
+Option 1 — add max-staleness/tolerance
+→ REJECT for this work unit: changes product/query semantics without a product requirement
+
+Option 2 — preserve unlimited nearest-prior semantics
+→ SELECTED
+```
+
+The next design target is the **minimum access-path change** capable of supporting exact nearest-prior lookup efficiently. Evaluate the smallest index/ordering mechanism first. Do not introduce temporal precomputed columns, a temporal feature engine, rolling derived tables, or a Strategy Engine merely to solve this query.
+
+This is an access-path performance investigation, not authorization for an arbitrary schema redesign. Any materially changed SQL or schema/index candidate must pass the full static gate before its first execution, and its write-amplification/storage/commit-latency cost must be included in that static review.
+
+## S&T / allocation review
+
+No TREE node, dependency or chat allocation change is required:
+
+- `4.1` remains valid because it proved staged-query correctness semantics, not representative-scale performance;
+- `6.3` already owns representative staged-query performance and explicitly remains open when that SQL is impractical;
+- `7.1` remains correctly blocked on `6.3`;
+- no completed node is invalidated;
+- no new product capability is introduced.
+
+The plan therefore remains frozen and Chat 7 remains on `6.3`.
+
+## Gate after replan
+
+```text
+exact same-security nearest-prior semantics → preserved
+max-staleness semantic shortcut            → rejected
+large-history aggregate rewrite            → rejected
+next candidate                              → minimum index/access-path + nearest-match SQL
+SQL execution                               → still forbidden until 10+ static preflight passes
+representative workload                     → still forbidden until a tiny deterministic probe is green
+```
