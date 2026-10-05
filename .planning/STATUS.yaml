@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.3"
 blockers: []
-next_action: "TREE 7.2 is done. Repository truth now points to Chat 9 / node 7.3 as the first open execution node, but do not begin Chat 9 implementation until PR #11 completes the remaining Chat 8 merge gate: closure-head CI green, diff review, squash merge, and main CI green."
+next_action: "TREE 7.2 remains done and repository truth points to Chat 9 / node 7.3, but Chat 9 must not begin yet. Chat 8 diff-review defects are fixed on PR #11: composite local acceptance now stops at the first failing checkpoint, workload acceptance publishes only detail-report paths that actually exist, focused regression tests cover both behaviors, and user-facing local acceptance docs reflect fail-fast/report truth. Next: obtain green Planning/Fast/Browser/Workload CI on the new closure head, re-check the focused diff, then squash merge PR #11 and verify main CI green."
 last_review: "R-US-EXEC-REOPEN-004"
