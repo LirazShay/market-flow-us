@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.3"
 blockers: []
-next_action: "Chat 8 / TREE 7.2 is complete and merged on main at e108e7ef5c3ada48025fd5a1a81f821d67dadecd. Planning/Fast/Browser/Workload main CI are green and there are no open PRs. Chat 9 / node 7.3 is the first open execution node and is ready to start from fresh main."
+next_action: "Chat 9 / TREE 7.3 is in progress on the focused release-closure branch. Complete final migration/branding audit, daily active-DB lifecycle tooling/docs, release instructions and repository truth; then satisfy 7.3 evidence and hand off only to Chat 10 / 7.4 target-machine acceptance."
 last_review: "R-US-EXEC-REOPEN-004"
