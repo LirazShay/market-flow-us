@@ -98,22 +98,25 @@ Prove independently of the network/DB:
 - capture controls are enabled only with exactly one recognized `securityId`/`security_id` column;
 - `Symbol` is never accepted as identity;
 - rows whose recognized identity cell is null/non-string/blank are not manually selectable;
-- `All`, `Top X` and auto selections refuse a chosen range containing an invalid identity rather than silently skipping it;
-- manual checked selection preserves visible result order;
-- `All` preserves full result order;
-- `Top X` uses the first X rows exactly as returned by SQL;
-- duplicate IDs reduce to first occurrence;
-- `Top X` accepts only 1..5000;
-- `All`/auto-All with more than 5000 unique IDs is visibly refused rather than truncated;
+- `All`, `Top X` and auto selections refuse a chosen source range containing an invalid identity rather than silently skipping it;
+- manual checked selection preserves original 1-based source-row `resultRank`, including gaps;
+- `All` chooses all source rows before dedupe;
+- `Top X` chooses exactly the first X source rows before dedupe;
+- duplicates inside a chosen source range reduce to first chosen occurrence without pulling a later row from outside the range;
+- browser-submitted capture items are unique by both `securityId` and `resultRank`;
+- `Top X` accepts only 1..5000 source rows;
+- `All`/auto-All with more than 5000 unique IDs after first-occurrence dedupe is visibly refused rather than truncated;
 - empty manual selection cannot submit;
 - auto zero-result generation is a no-op;
 - selection state does not leak to a later result generation;
-- active-generation query provenance remains immutable while another draft/query is edited;
+- active-generation provenance freezes query ID/name/exact SQL, active interval, Scanner `startedAtMs`/`completedAtMs` and source row count while another draft/query is edited;
+- Scanner completion time remains distinct from later Demo Buy capture time;
+- one Viewer-level capture slot covers both manual and automatic capture;
+- manual double-click/second capture cannot submit while the slot is busy;
 - automatic Off/All/Top-X attempts at most one capture per successful result generation;
-- at most one automatic capture request is in flight;
-- a generation arriving while the auto slot is busy is visibly skipped and not queued;
-- one auto-capture failure releases the slot and does not poison later generations;
-- Scanner scheduling continues through auto capture failure/backpressure.
+- a generation arriving while the shared capture slot is busy is visibly skipped and not queued;
+- one capture failure releases the slot and does not poison later manual/automatic captures;
+- Scanner scheduling continues through capture failure/backpressure.
 
 ### Demo Buy evaluation model
 
@@ -121,13 +124,16 @@ Prove pure/model behavior:
 
 - fixed horizons are exactly 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m;
 - target clock is `capturedAtMs + horizonMs`;
+- Scanner completion time is not used as the horizon anchor;
 - percentage formula is exact;
-- baseline NULL -> percentage NULL;
-- baseline zero -> percentage NULL;
-- future NULL -> percentage NULL;
-- missing future row -> unavailable;
-- missing immutable baseline link -> integrity error, not unavailable;
-- `>0 => UP`, `<0 => DOWN`, `=0 => FLAT`, null => `UNAVAILABLE`;
+- first qualifying future row remains authoritative even when its Price is NULL;
+- no future row -> `UNAVAILABLE / NO_FUTURE_OBSERVATION`;
+- baseline NULL -> `UNAVAILABLE / BASELINE_PRICE_UNAVAILABLE`;
+- baseline zero -> `UNAVAILABLE / BASELINE_PRICE_ZERO`;
+- matched future Price NULL -> `UNAVAILABLE / FUTURE_PRICE_UNAVAILABLE`;
+- missing immutable baseline row -> integrity error, not unavailable;
+- `>0 => UP`, `<0 => DOWN`, `=0 => FLAT`;
+- capture latency and baseline age calculations are non-negative only when source timestamps support them;
 - UI formatting never confuses numeric zero with missing;
 - direction remains understandable without color.
 
@@ -167,9 +173,12 @@ Required:
 
 - fresh empty DB bootstraps as v4;
 - all U.S. market tables/columns remain unchanged from the proven v3 market contract;
-- `demo_buy_captures` and `demo_buy_items` exist with exact required types/keys;
+- `demo_buy_captures` and `demo_buy_items` exist with exact required types/keys/constraints;
+- capture schema contains immutable query/interval/result timing provenance;
+- item schema stores original `result_rank` rather than a dense selection rank;
 - `scanner_saved_queries` remains available;
-- hardened connection behavior remains unchanged.
+- hardened connection behavior remains unchanged;
+- no new `history` index is required merely for v4 bootstrap.
 
 ### v3 → v4 additive migration
 
@@ -185,16 +194,18 @@ Then prove:
 - open/migration succeeds transactionally;
 - all pre-existing market rows/counts remain byte/semantic-equivalent at the public projection level;
 - saved-query rows remain intact;
-- schema version becomes 4 only after Demo Buy tables exist;
+- schema version becomes 4 only after both complete Demo Buy tables/constraints exist;
 - restart reopens as v4 without re-running destructive work.
 
-### Migration failure
+### Migration failure / partial-state rejection
 
 Inject failure during migration and prove:
 
 - no partial Demo Buy table/version state is accepted;
 - original v3 authority remains recoverable/usable as v3;
 - no market or saved-query rows are lost.
+
+Also create inconsistent databases marked v3 but containing only one Demo Buy table or otherwise partial v4 structure and prove open fails closed instead of silently treating the state as a resumable migration.
 
 ### Legacy rejection
 
@@ -206,20 +217,23 @@ Using real DuckDB and the real service/protocol, prove:
 
 1. valid capture returns `captureId`, `capturedAtMs`, item count;
 2. browser cannot provide a baseline price in the contract;
-3. capture links each item to the exact `latest.cycle_id` visible at its serialized writer-order point;
-4. a market cycle queued before capture may become the baseline;
-5. a market cycle queued after capture cannot retroactively change the baseline;
-6. one unresolved selected security rolls back the complete capture;
-7. duplicate IDs within bounded raw input preserve first occurrence/rank only;
-8. raw request length >5000 or >5000 unique IDs is rejected safely;
-9. malformed/blank/non-string identity input is rejected;
-10. invalid mode/topX/automatic combinations are rejected;
-11. capture IDs are monotonic under serialized execution;
-12. the same security may be captured again in a later capture;
-13. stored provenance remains unchanged after saved query edits;
-14. persistence fault rolls back capture + items together;
-15. capture failure does not block a later valid capture;
-16. market `history`/`latest` are unchanged by Demo Buy writes.
+3. capture request contains ordered `{securityId,resultRank}` items plus immutable query/interval/result timing provenance;
+4. Node rejects duplicate `securityId`, duplicate `resultRank`, out-of-range rank or inconsistent Top-X rank instead of silently deduping/repairing protocol input;
+5. capture links each item to the exact `latest.cycle_id` visible at its serialized writer-order point;
+6. a market cycle queued before capture may become the baseline;
+7. a market cycle queued after capture cannot retroactively change the baseline;
+8. one unresolved selected security rolls back the complete capture;
+9. raw request/item count >5000 is rejected safely;
+10. malformed/blank/non-string identity input is rejected;
+11. invalid mode/topX/automatic combinations are rejected;
+12. stored `result_rank` exactly preserves source positions, including non-contiguous manual ranks;
+13. capture IDs are monotonic under serialized execution;
+14. the same security may be captured again in a later capture;
+15. stored query SQL/name/ID/interval/result timestamps/row count remain unchanged after saved query edits;
+16. `captured_at_ms` is generated inside the serialized capture operation and remains distinct from Scanner completion time;
+17. persistence fault rolls back capture + items together;
+18. capture failure does not block a later valid capture;
+19. market `history`/`latest` are unchanged by Demo Buy writes.
 
 ## 6. Demo Buy trusted-read/evaluation integration
 
@@ -231,13 +245,19 @@ Seed exact history timelines and prove the Node read model, not browser arithmet
 - first row `>= target` wins;
 - deterministic tie-break is `collected_at_ms ASC, cycle_id ASC`;
 - a row before the target is never used as the future horizon;
-- no qualifying row returns unavailable/null;
+- a qualifying row with Price NULL is not skipped in favor of a later priced row;
+- explicit unavailable reason precedence is correct;
 - delayed row returns its real `observedAtMs` and `actualElapsedMs`;
 - positive/negative/zero prices produce `UP`/`DOWN`/`FLAT` when percentage is valid;
-- null/zero denominator edge cases produce `UNAVAILABLE` without divide-by-zero;
-- page ordering is `capture_id DESC, selection_rank ASC`;
-- keyset continuation has no gaps/duplicates across page boundaries;
-- source label/provenance and baseline display fields are read correctly;
+- capture latency/baseline age are shaped correctly from persisted provenance and baseline timestamps;
+- page ordering is `capture_id DESC, result_rank ASC`;
+- page size is exactly 50 items in Phase 1;
+- every page is evaluated from one transactionally consistent read snapshot while market writes continue;
+- keyset continuation anchored to `(capture_id,result_rank)` has no gaps/duplicates;
+- inserting newer automatic captures between continuation requests does not disturb the existing continuation walk; refresh from the first page exposes them;
+- item pages do not repeat full source SQL;
+- `demo.buy.capture.get` returns immutable capture-level SQL/provenance once and validates capture identity/not-found behavior;
+- source label and baseline display fields are read correctly;
 - restart preserves active-day observations;
 - new-day reset clears Demo Buy tables while preserving saved queries;
 - future evaluation never reaches into the next active-day DB after rollover.
@@ -278,7 +298,10 @@ For Demo Buy the synthetic generator must also support deterministic future traj
 UP
 DOWN
 FLAT
-UNAVAILABLE
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
 ```
 
 and at least one delayed collection gap so actual elapsed time differs materially from the nominal horizon.
@@ -308,22 +331,25 @@ Preserve current behavior:
 At least one composed scenario proves:
 
 1. activate a Scanner query returning ordered canonical IDs;
-2. select specific rows and create a manual capture;
-3. open Demo Buy and see exact selected identities/order and baseline values;
-4. create `Top X` and prove Scanner SQL order is preserved;
+2. select non-contiguous rows and create a manual capture;
+3. open Demo Buy and see exact identities plus original Scanner result ranks and baseline values;
+4. create `Top X` where a duplicate exists inside the first X and prove no row after X is pulled in;
 5. prove invalid recognized-ID rows cannot be silently captured;
 6. prove oversized All/auto-All is refused without truncation;
-7. enable automatic Top-X and prove later successful Scanner generations create independent captures when the auto slot is free;
-8. hold one auto capture in flight, prove an intervening generation is visibly skipped rather than queued, then prove a later generation captures after the slot releases;
-9. advance Fake Market time/history and prove horizon cells transition from unavailable to evaluated;
-10. prove one `UP`, one `DOWN`, one `FLAT`, and one still `UNAVAILABLE` result;
-11. prove displayed percentage comes from the Node read model and matches deterministic history;
-12. prove baseline/capture times and delayed actual observation time are visible enough to distinguish stale/delayed sampling;
-13. edit/select another query and prove old capture provenance is unchanged;
-14. prove Scanner without exactly one canonical ID column disables Demo Buy capture;
-15. inject capture failure, show it visibly, and prove Scanner scheduling plus later capture still work;
-16. navigate Current ↔ Scanner ↔ Demo Buy ↔ Detail while Scanner remains mounted/scheduled and without breaking existing lifecycle behavior;
-17. direction is not conveyed by color alone.
+7. prove manual double-submit is impossible while the shared capture slot is busy;
+8. enable automatic Top-X and prove later successful Scanner generations create independent captures when the capture slot is free;
+9. hold one capture in flight, prove an intervening auto generation is visibly skipped rather than queued, then prove a later generation captures after the slot releases;
+10. advance Fake Market time/history and prove horizon cells transition from unavailable to evaluated;
+11. prove `UP`, `DOWN`, `FLAT` and each unavailable reason presentation needed by the UX contract;
+12. prove displayed percentage comes from the Node read model and matches deterministic history;
+13. prove Scanner result-completed time, capture time, baseline age and delayed actual observation time are distinguishable;
+14. edit/select another query and prove old capture provenance is unchanged;
+15. expand capture details and prove exact old SQL/interval/timing provenance is loaded on demand without being duplicated in each row;
+16. prove Scanner without exactly one canonical ID column disables Demo Buy capture;
+17. inject capture failure, show it visibly, and prove Scanner scheduling plus later capture still work;
+18. insert newer auto captures while loading continuation pages and prove no duplicate/gap in the existing 50-item walk; Refresh exposes the newer rows;
+19. navigate Current ↔ Scanner ↔ Demo Buy ↔ Detail while Scanner remains mounted/scheduled and without breaking existing lifecycle behavior;
+20. direction is not conveyed by color alone.
 
 ## 9. Fast CI contract
 
@@ -371,12 +397,13 @@ Required coverage includes:
 
 - generated U.S. row/schema correctness;
 - exact completed/failed/latest/history counts;
-- schema-v4 Demo Buy table/count integrity;
+- schema-v4 Demo Buy table/count/constraint integrity;
 - restart preservation;
 - Current/History reads;
 - general Scanner SQL;
 - staged Scanner SQL;
-- bounded Demo Buy capture/evaluation read;
+- bounded 50-item Demo Buy evaluation/read;
+- Scanner + Demo Buy refresh coexistence on the existing Viewer transport;
 - sanitized report structure;
 - at least one approximately-4096-security width sanity cycle/few cycles;
 - small multi-cycle history sufficient for staged and short Demo Buy horizon semantics.
@@ -405,6 +432,8 @@ end-to-end probe
 
 Do not replay thousands of full browser commits just to measure a Demo Buy read.
 
+Do not add a new `history` index unless the representative direct-read probe demonstrates a material bottleneck and the focused change measurably improves it without harming write behavior.
+
 ### C. Heavy target-machine profile
 
 Expose:
@@ -431,7 +460,8 @@ Measure:
 - History page;
 - Scanner JOIN/GROUP/window/time;
 - staged candidate query;
-- bounded Demo Buy capture/read evaluation;
+- bounded Demo Buy capture/50-item read evaluation;
+- Scanner + Demo Buy read coexistence;
 - restart-to-ready;
 - DB file size.
 
@@ -477,10 +507,12 @@ It must cover:
 
 - run a known Scanner query;
 - capture at least one result without manual price input;
-- initially show unavailable future horizons;
+- preserve original result rank and signal/capture timing provenance;
+- initially show unavailable future horizons with correct reason;
 - advance deterministic history;
 - refresh Demo Buy;
-- prove at least one horizon becomes an exact price/%/outcome derived from persisted history.
+- prove at least one horizon becomes an exact price/%/outcome derived from persisted history;
+- load full capture SQL provenance on demand.
 
 ### Failure/recovery mode
 
