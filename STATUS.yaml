@@ -6,7 +6,7 @@ current:
   chat: 5
   node: "5.3"
   title: "Full U.S. Chromium E2E and recovery"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
