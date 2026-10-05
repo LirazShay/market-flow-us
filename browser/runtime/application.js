@@ -1,4 +1,4 @@
-import { collectCompleteCycle } from "../collector/cycle.js";
+import { collectUsCollectionCandidate } from "../collector/us-cycle.js";
 import {
   createDiagnosticTracker
 } from "../../shared/diagnostics/index.js";
@@ -7,9 +7,12 @@ import {
   buildBrowserSupportSnapshot,
   supportSnapshotJson
 } from "../diagnostics/support-snapshot.js";
-import { loadValidatedUniverse } from "../provider/universe.js";
+import { fetchValidatedSnapshot } from "../provider/us-screener.js";
 import { createRecorder } from "../recorder/recorder.js";
+import { createUsRecorderConfig } from "../recorder/config.js";
+import { US_CURRENT_PROFILE } from "../viewer/current-model.js";
 import { createCurrentSurface } from "../viewer/current-surface.js";
+import { US_DETAIL_PROFILE } from "../viewer/detail-model.js";
 import { createDetailSurface } from "../viewer/detail-surface.js";
 import { createViewerClient } from "../viewer/client.js";
 import { createViewerRefreshController } from "../viewer/refresh-controller.js";
@@ -148,6 +151,8 @@ function createViewerShell({
   productVersion,
   diagnosticTracker,
   now,
+  currentProfile,
+  detailProfile,
   onDisposed = () => {}
 }) {
   const existing = viewerWindow[VIEWER_SHELL_KEY];
@@ -167,6 +172,7 @@ function createViewerShell({
   const currentSurface = createCurrentSurface({
     root: elements.currentRoot,
     client,
+    profile: currentProfile,
     onOpenSecurity(securityId) {
       elements.scannerRoot.hidden = true;
       void refreshController.openDetail(securityId);
@@ -176,6 +182,7 @@ function createViewerShell({
   const detailSurface = createDetailSurface({
     root: elements.detailRoot,
     client,
+    profile: detailProfile,
     captureReturnState: () => currentSurface.captureViewState(),
     onBack(returnState) {
       elements.scannerRoot.hidden = true;
@@ -370,16 +377,11 @@ export function createMarketScopeRuntime({
   openWindow = (...args) => target.open(...args),
   producerBridgeFactory = createProducerBridge,
   recorderFactory = createRecorder,
-  loadUniverse = () => loadValidatedUniverse({
-    fetchImpl: target.fetch.bind(target),
-    now
-  }),
-  collectCycle = ({ universe, config }) => collectCompleteCycle({
-    universe,
-    chunkSize: config.chunkSize,
-    chunkDelayMs: config.chunkDelayMs,
-    now
-  })
+  currentProfile = US_CURRENT_PROFILE,
+  detailProfile = US_DETAIL_PROFILE,
+  loadUniverse = null,
+  collectCycle = null,
+  collectCandidate = null
 } = {}) {
   if (!target || typeof target !== "object") {
     throw new TypeError("target must be a global-like object.");
@@ -391,6 +393,27 @@ export function createMarketScopeRuntime({
   if (typeof productVersion !== "string" || productVersion.length === 0) {
     throw new TypeError("productVersion must be a non-empty string.");
   }
+
+  const usesLegacyCollection = loadUniverse !== null || collectCycle !== null;
+  if (usesLegacyCollection) {
+    if (typeof loadUniverse !== "function" || typeof collectCycle !== "function") {
+      throw new TypeError("Legacy collection requires both loadUniverse and collectCycle functions.");
+    }
+    if (collectCandidate !== null) {
+      throw new TypeError("collectCandidate cannot be combined with legacy loadUniverse/collectCycle dependencies.");
+    }
+  } else if (collectCandidate !== null && typeof collectCandidate !== "function") {
+    throw new TypeError("collectCandidate must be a function when provided.");
+  }
+
+  const resolvedCollectCandidate = usesLegacyCollection
+    ? null
+    : collectCandidate ?? (() => collectUsCollectionCandidate({
+      fetchSnapshot: () => fetchValidatedSnapshot({
+        fetchImpl: target.fetch.bind(target),
+        now
+      })
+    }));
 
   const startedAtMs = now();
   const diagnosticTracker = createDiagnosticTracker({ productVersion, now });
@@ -468,6 +491,8 @@ export function createMarketScopeRuntime({
       productVersion,
       diagnosticTracker,
       now,
+      currentProfile,
+      detailProfile,
       onDisposed() {
         if (viewerWindow?.closed === true) {
           viewerWindow = null;
@@ -488,6 +513,39 @@ export function createMarketScopeRuntime({
     publishState();
   }
 
+  function recordCollectedCycle(cycle) {
+    diagnosticTracker.recordSuccess({
+      component: "provider",
+      operation: "provider.cycle.collect",
+      operationId: "provider-cycle",
+      checkpoint: "provider.cycle.collected",
+      context: {
+        requested: cycle.requested,
+        received: cycle.received,
+        unique: cycle.unique,
+        missing: cycle.missing,
+        duplicates: cycle.duplicates,
+        unexpected: cycle.unexpected
+      }
+    });
+  }
+
+  function recordCollectionFailure(error) {
+    diagnosticTracker.recordError({
+      component: "provider",
+      operation: "provider.cycle.collect",
+      operationId: "provider-cycle",
+      checkpoint: "provider.cycle.collected",
+      error: {
+        code: ERROR_CODES.CYCLE_INVALID,
+        name: "CycleCollectionError",
+        message: "Provider cycle acquisition or validation failed.",
+        retryable: false
+      }
+    });
+    throw error;
+  }
+
   function createProducerGeneration() {
     generation += 1;
     const owningGeneration = generation;
@@ -504,76 +562,71 @@ export function createMarketScopeRuntime({
     });
 
     const callbacks = bridge.getRecorderCallbacks();
-    recorder = recorderFactory({
-      loadUniverse: async () => {
-        try {
-          const universe = await loadUniverse();
-          diagnosticTracker.recordSuccess({
-            component: "provider",
-            operation: "provider.universe.collect",
-            operationId: "provider-universe",
-            checkpoint: "provider.universe.collected",
-            context: {
-              requested: universe.recordCount,
-              received: universe.securities.length,
-              unique: universe.securities.length
-            }
-          });
-          return universe;
-        } catch (error) {
-          diagnosticTracker.recordError({
-            component: "provider",
-            operation: "provider.universe.collect",
-            operationId: "provider-universe",
-            checkpoint: "provider.universe.collected",
-            error: {
-              code: ERROR_CODES.UNIVERSE_INVALID,
-              name: "UniverseCollectionError",
-              message: "Provider universe acquisition or validation failed.",
-              retryable: false
-            }
-          });
-          throw error;
-        }
-      },
+    const baseRecorderOptions = {
       acceptUniverse: callbacks.acceptUniverse,
-      collectCycle: async ({ universe, config }) => {
-        try {
-          const cycle = await collectCycle({ universe, config });
-          diagnosticTracker.recordSuccess({
-            component: "provider",
-            operation: "provider.cycle.collect",
-            operationId: "provider-cycle",
-            checkpoint: "provider.cycle.collected",
-            context: {
-              requested: cycle.requested,
-              received: cycle.received,
-              unique: cycle.unique,
-              missing: cycle.missing,
-              duplicates: cycle.duplicates,
-              unexpected: cycle.unexpected
-            }
-          });
-          return cycle;
-        } catch (error) {
-          diagnosticTracker.recordError({
-            component: "provider",
-            operation: "provider.cycle.collect",
-            operationId: "provider-cycle",
-            checkpoint: "provider.cycle.collected",
-            error: {
-              code: ERROR_CODES.CYCLE_INVALID,
-              name: "CycleCollectionError",
-              message: "Provider cycle acquisition or validation failed.",
-              retryable: false
-            }
-          });
-          throw error;
-        }
-      },
       onCycle: callbacks.onCycle,
       onFailure: callbacks.onFailure,
       now
+    };
+
+    if (usesLegacyCollection) {
+      recorder = recorderFactory({
+        ...baseRecorderOptions,
+        loadUniverse: async () => {
+          try {
+            const universe = await loadUniverse();
+            diagnosticTracker.recordSuccess({
+              component: "provider",
+              operation: "provider.universe.collect",
+              operationId: "provider-universe",
+              checkpoint: "provider.universe.collected",
+              context: {
+                requested: universe.recordCount,
+                received: universe.securities.length,
+                unique: universe.securities.length
+              }
+            });
+            return universe;
+          } catch (error) {
+            diagnosticTracker.recordError({
+              component: "provider",
+              operation: "provider.universe.collect",
+              operationId: "provider-universe",
+              checkpoint: "provider.universe.collected",
+              error: {
+                code: ERROR_CODES.UNIVERSE_INVALID,
+                name: "UniverseCollectionError",
+                message: "Provider universe acquisition or validation failed.",
+                retryable: false
+              }
+            });
+            throw error;
+          }
+        },
+        collectCycle: async ({ universe, config }) => {
+          try {
+            const cycle = await collectCycle({ universe, config });
+            recordCollectedCycle(cycle);
+            return cycle;
+          } catch (error) {
+            return recordCollectionFailure(error);
+          }
+        }
+      });
+      return;
+    }
+
+    recorder = recorderFactory({
+      ...baseRecorderOptions,
+      collectCandidate: async ({ config }) => {
+        try {
+          const candidate = await resolvedCollectCandidate({ config });
+          recordCollectedCycle(candidate.cycle);
+          return candidate;
+        } catch (error) {
+          return recordCollectionFailure(error);
+        }
+      }
     });
   }
 
@@ -594,8 +647,11 @@ export function createMarketScopeRuntime({
       createProducerGeneration();
 
       try {
-        await bridge.startSession(recorderConfig);
-        recorder.start(recorderConfig);
+        const activeRecorderConfig = usesLegacyCollection
+          ? recorderConfig
+          : createUsRecorderConfig(recorderConfig);
+        await bridge.startSession(activeRecorderConfig);
+        recorder.start(activeRecorderConfig);
         state = "running";
         lastError = null;
         openViewer({ rebuild: rebuildViewer });
