@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 10 / TREE 7.4 is in progress on branch chat-10-final-target-machine-acceptance. FR-0 candidate truth is main at 3881c1085b2b52b039c803bbf4d9c1fba71b7940 with no open PRs; continue the first-run acceptance runbook one checkpoint at a time and stop on the first FAIL."
+next_action: "Chat 10 / TREE 7.4 is in progress. FR-0 preparation found and fixed a release-runbook drift: docs/FIRST_RUN_ACCEPTANCE.md was missing even though the frozen first-run plan requires it and START_HERE routing. Merge the focused fix through green CI first; then freeze the resulting main SHA and execute FR-0..FR-14 one checkpoint at a time, stopping on the first FAIL."
 last_review: "R-US-EXEC-REOPEN-004"
