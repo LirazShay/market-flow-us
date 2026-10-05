@@ -37,7 +37,7 @@ The user must be able to:
 9. rank/filter candidates entirely in SQL without changing application code;
 10. create Demo Buy observations manually from selected Scanner result rows;
 11. create Demo Buy observations from all Scanner results or the first X ordered results;
-12. optionally enable automatic Demo Buy capture so each successful Scanner result generation captures all results or its first X results without another click;
+12. optionally enable automatic Demo Buy capture so successful Scanner generations attempt an All or Top-X capture without another click while remaining bounded and visibly reporting any skipped/busy generation;
 13. inspect each captured security on a separate Demo Buy surface using the exact authoritative market row linked as the virtual-buy baseline;
 14. see observed future `Price`, percentage change and an explicit `UP` / `DOWN` / `FLAT` outcome at 10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m and 10m;
 15. see `UNAVAILABLE`/`NULL` for a horizon whose future observation is not yet available rather than a fabricated result;
@@ -176,6 +176,7 @@ Therefore:
 - Demo Buy never creates market authority and never mutates `history`/`latest`;
 - a Demo Buy capture succeeds only for canonical security IDs that can be linked to an authoritative current/history row at capture time;
 - the exact linked `(buy_cycle_id, security_id)` remains immutable for that observation even as `latest` advances;
+- a missing immutable Demo Buy baseline link is an integrity error, not a normal unavailable horizon;
 - repeated Scanner captures are observations, not positions; the same security may appear in later captures again.
 
 ## 6. Current U.S. visible-data requirement
@@ -244,6 +245,7 @@ A successful Demo Buy capture has these semantics:
 ```text
 Scanner result security IDs
 → choose manual selected rows OR all rows OR first X rows
+→ validate selected identity cells
 → reduce duplicate IDs to first occurrence
 → resolve each chosen security against current authoritative latest at serialized capture time
 → persist one capture plus observations linked to exact history keys
@@ -251,11 +253,15 @@ Scanner result security IDs
 
 The capture does not accept a user-supplied buy price.
 
-For manual capture, the accepted Node capture operation defines the virtual-buy moment. For automatic capture, the accepted Node capture operation triggered by each successful Scanner result generation defines the virtual-buy moment.
+For manual capture, the accepted Node capture operation defines the virtual-buy moment. For automatic capture, the accepted Node capture operation defines the virtual-buy moment for generations that actually obtain the bounded automatic-capture slot.
 
 Within one capture event, duplicate result rows for the same canonical security are reduced to the first occurrence so the result ranking remains meaningful without inserting duplicate observations for the same security in the same event.
 
-A capture contains at most `5000` unique canonical security IDs. `Top X` must therefore be between `1` and `5000`. A manual action with no selected rows is disabled/rejected; a successful automatic Scanner generation with zero selected rows is a no-op and does not create an empty capture.
+A recognized identity cell must be a non-blank canonical string. Manual invalid rows are non-selectable. `All`, `Top X` and automatic selections that would include an invalid identity are refused visibly rather than silently skipping the row.
+
+A capture contains at most `5000` unique canonical security IDs. `Top X` must therefore be between `1` and `5000`. `All` and auto-All never silently truncate a larger result after dedupe; they are refused visibly so the user can choose `Top X` or narrow the SQL. A manual action with no selected rows is disabled/rejected; a successful automatic Scanner generation with zero selected rows is a no-op and does not create an empty capture.
+
+Automatic mode keeps at most one Demo Buy capture request in flight. If another successful Scanner generation arrives while that slot is busy, that generation is visibly skipped rather than queued without bound or allowed to stall Scanner scheduling. A failed request releases the slot so later generations may capture normally.
 
 If the Scanner result does not expose exactly one recognized canonical security column, Demo Buy capture is unavailable for that result rather than guessing identity from `Symbol` or another field.
 
@@ -315,7 +321,7 @@ Preserve MarketScope fail-closed behavior:
 - failed Demo Buy capture does not partially create a capture event;
 - restart preserves active-day Demo Buy observations together with the active-day market DB;
 - Demo Buy read failure never mutates stored observations;
-- Demo Buy capture failure never stops or corrupts Scanner scheduling.
+- Demo Buy capture failure/busy backpressure never stops or corrupts Scanner scheduling.
 
 Automatic reconnect/replay is not required.
 
@@ -341,7 +347,7 @@ Keep the proven diagnostics model:
 - copyable sanitized Support Snapshot;
 - CLI fallback when the UI cannot start.
 
-Demo Buy errors must remain ordinary local product errors and must not expose SQL secrets beyond the locally authored query text already visible to the user.
+Demo Buy errors/busy skips must remain ordinary local product diagnostics and must not expose SQL secrets beyond the locally authored query text already visible to the user.
 
 ## 15. Performance requirement
 
@@ -358,6 +364,8 @@ If staged SQL, Demo Buy reads or persistence are materially too slow for practic
 Demo Buy observations are part of the active trading day's analytical evidence.
 
 The normal new-day operation may archive the prior DuckDB with its market history and Demo Buy observations, then create a fresh schema-v4 active-day market/Demo-Buy authority while preserving saved Scanner queries according to the existing new-day contract.
+
+Demo Buy horizon evaluation does not bridge into the next active-day database. If a late-day horizon was never observed before rollover, it remains unavailable in that day's self-contained evidence.
 
 Phase 1 does not create a multi-day strategy warehouse or cross-day aggregate database.
 
@@ -399,7 +407,7 @@ The current product increment is complete only when:
 - Current/Detail/History use the U.S. contract;
 - Scanner and saved-query behavior remain intact;
 - staged-ranking SQL remains executable and measured;
-- Demo Buy manual/all/Top-X/automatic capture is executable against exact authoritative buy-history rows;
+- Demo Buy manual/all/Top-X/automatic capture behavior is executable against exact authoritative buy-history rows with bounded/visible invalid, oversized and busy handling;
 - Demo Buy displays the fixed Phase-1 future `Price`/percentage/outcome horizons with correct `NULL`/`UNAVAILABLE` behavior;
 - Fake Market, Fast, Browser and representative workload gates are green for the post-feature candidate;
 - target-machine local acceptance and one-day lifecycle evidence are green on that candidate;
