@@ -12,7 +12,10 @@ import {
 test("local acceptance profiles route to the intended first-run checkpoints and existing runners", () => {
   assert.deepEqual(Object.keys(LOCAL_ACCEPTANCE_PROFILES), [
     "static",
-    "recovery",
+    "moving",
+    "membership",
+    "provider-recovery",
+    "restart",
     "all",
     "isolated",
     "target"
@@ -21,17 +24,43 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
   assert.deepEqual(resolveLocalAcceptanceProfile("static"), {
     checkpoint: "FR-7",
     kind: "playwright",
+    testFile: "tests/e2e/us-runtime-membership-recovery.spec.mjs",
     grep: "repeated identical complete responses"
   });
-  assert.deepEqual(resolveLocalAcceptanceProfile("recovery"), {
-    checkpoint: "FR-8",
+  assert.deepEqual(resolveLocalAcceptanceProfile("moving"), {
+    checkpoint: "FR-8A",
     kind: "playwright",
-    grep: "preserves committed authority|applies add/remove membership"
+    testFile: "tests/e2e/us-runtime-moving-values.spec.mjs",
+    grep: "moves Current values while preserving prior values in History"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("membership"), {
+    checkpoint: "FR-8B",
+    kind: "playwright",
+    testFile: "tests/e2e/us-runtime-membership-recovery.spec.mjs",
+    grep: "applies add/remove membership under acknowledged universe revisions"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("provider-recovery"), {
+    checkpoint: "FR-8C",
+    kind: "playwright",
+    testFile: "tests/e2e/us-runtime-membership-recovery.spec.mjs",
+    grep: "records provider failure, recovers, and executes staged Scanner"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("restart"), {
+    checkpoint: "FR-8D",
+    kind: "playwright",
+    testFile: "tests/e2e/us-runtime-membership-recovery.spec.mjs",
+    grep: "preserves committed authority across service restart"
   });
   assert.deepEqual(resolveLocalAcceptanceProfile("all"), {
     checkpoint: "FR-7+FR-8",
-    kind: "playwright",
-    grep: null
+    kind: "composite",
+    profiles: [
+      "static",
+      "moving",
+      "membership",
+      "provider-recovery",
+      "restart"
+    ]
   });
   assert.deepEqual(resolveLocalAcceptanceProfile("isolated"), {
     checkpoint: "FR-9",
