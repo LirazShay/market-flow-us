@@ -110,7 +110,7 @@ jobs:
           grep -Fq 'cycle_id > buy_cycle_id' docs/TECHNICAL_SPEC.md
           grep -Fq 'cycle_id > buy_cycle_id' docs/DATA_CONTRACT.md
           grep -Fq '256 KiB' docs/DEMO_BUY_PROTOCOL_LIMITS.md
-          grep -Fq '64 retained columns' docs/DEMO_BUY_PROTOCOL_LIMITS.md
+          grep -Fq 'retained columns <= 64' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           grep -Fq 'Refresh observation' docs/DEMO_BUY_UX.md
           grep -Fq 'Auto Demo Buy:' docs/DEMO_BUY_UX.md
           grep -Fq 'ACKNOWLEDGEMENT_UNKNOWN' docs/DEMO_BUY_PROTOCOL_LIMITS.md
