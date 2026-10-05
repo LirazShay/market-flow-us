@@ -103,7 +103,7 @@ Therefore:
 
 - universe size is provider-derived, never hard-coded;
 - `4015` is evidence from one observation, not a product constant;
-- canonical product identity is `String(PaperId)`;
+- canonical product identity is `String(PaperId)` only after `PaperId` is validated as a non-blank string or JavaScript safe integer; malformed object/array/boolean/non-safe numeric identities fail closed at both Browser and Node authority boundaries;
 - a complete-response acquisition must validate exact row count and unique canonical IDs;
 - incomplete, duplicate, malformed or failed snapshots never replace Current and never append authoritative history;
 - Node commit acknowledgement is required before the browser treats a cycle as committed;
@@ -246,6 +246,8 @@ The U.S. conversion is complete only when:
 - Scanner and saved-query behavior remain intact;
 - staged-ranking SQL is executable and measured;
 - Fake Market, Fast, Browser and representative workload gates are green;
-- bounded real-provider verification passes locally on the authenticated provider page;
+- target-machine local acceptance and one-day lifecycle evidence are green;
+- the SHA-bound authenticated boundary passes for closed/static compatibility;
+- on the same accepted candidate, market-open acceptance mechanically observes at least one persisted provider market/freshness field change and proves its reflection in committed Current/History; a run with no observed change remains pending/inconclusive rather than becoming a fabricated PASS;
 - docs/launchers/branding match Market Flow US;
 - no Israel-only runtime path remains authoritative.
