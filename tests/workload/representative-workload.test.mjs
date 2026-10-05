@@ -12,142 +12,28 @@ import {
 } from "../../browser/collector/us-cycle.js";
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
 import { startMarketScopeService } from "../../local-service/server/service.js";
-import { MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES } from "../../shared/scanner/builtins.js";
+import { createUsSyntheticGenerator } from "../fake-market/us-synthetic.mjs";
+import {
+  GENERAL_SCANNER_QUERIES,
+  SYNTHETIC_EPOCH_MS,
+  assertUsGeneratedRow,
+  distribution,
+  measure,
+  resolveEndToEndProfiles,
+  roundMs,
+  sanitizedFailure,
+  stagedScannerSql,
+  workloadMode
+} from "./us-workload-support.mjs";
 
 const ORIGIN = "http://127.0.0.1:19014";
-const UNIVERSE_SIZE = 4096;
-const CYCLE_COUNT = 180;
-const CYCLE_SPACING_MS = 3_000;
-const EXPECTED_HISTORY_ROWS = UNIVERSE_SIZE * CYCLE_COUNT;
-const READ_INTERVAL_CYCLES = 60;
 const REPORT_PATH = process.env.MARKET_FLOW_US_WORKLOAD_REPORT
-  ?? path.resolve("test-results/workload/representative-workload.json");
-const SYNTHETIC_EPOCH_MS = Date.UTC(2026, 9, 5, 0, 0, 0);
-const SECURITY_IDS = Object.freeze(
-  Array.from({ length: UNIVERSE_SIZE }, (_, index) => String(1_000_000 + index))
-);
-const MEMBERSHIP = Object.freeze([...SECURITY_IDS]);
-
-function roundMs(value) {
-  return Math.round(value * 1000) / 1000;
-}
-
-function percentile(sorted, fraction) {
-  if (sorted.length === 0) return null;
-  const index = Math.min(
-    sorted.length - 1,
-    Math.max(0, Math.ceil(sorted.length * fraction) - 1)
-  );
-  return sorted[index];
-}
-
-function distribution(samples) {
-  if (samples.length === 0) {
-    return {
-      samples: 0,
-      minMs: null,
-      medianMs: null,
-      p95Ms: null,
-      maxMs: null
-    };
-  }
-
-  const sorted = [...samples].sort((left, right) => left - right);
-  return {
-    samples: sorted.length,
-    minMs: roundMs(sorted[0]),
-    medianMs: roundMs(percentile(sorted, 0.5)),
-    p95Ms: roundMs(percentile(sorted, 0.95)),
-    maxMs: roundMs(sorted.at(-1))
-  };
-}
-
-async function measure(samples, operation) {
-  const started = performance.now();
-  const result = await operation();
-  samples.push(performance.now() - started);
-  return result;
-}
-
-function securityId(index) {
-  return SECURITY_IDS[index];
-}
-
-function priceFor(index, cycleNumber) {
-  return 100 + index + cycleNumber;
-}
-
-function rawSecurity(index, cycleNumber, tradeDateTime) {
-  const paperId = 1_000_000 + index;
-  const price = priceFor(index, cycleNumber);
-  const symbol = `US${String(index).padStart(4, "0")}`;
-
-  return {
-    PaperId: paperId,
-    Symbol: symbol,
-    PaperNameEng: `Synthetic US Security ${String(index).padStart(4, "0")}`,
-    PaperNameHeb: null,
-    ExchangeName: index % 2 === 0 ? "NASDAQ" : "NYSE",
-    TradeDateTime: tradeDateTime,
-    CountryName: "United States",
-    CountryNameEng: "United States",
-    Price: price,
-    ChangePercent: (index % 25) + (cycleNumber / 1000),
-    DailyHigh: price + 2,
-    DailyLow: price - 2,
-    YearHigh: price + 25,
-    YearLow: price - 25,
-    DailyVolume: (cycleNumber * 100_000) + index,
-    BeginYearChangePercent: (index % 17) / 10,
-    Month12ChangePercent: (index % 23) / 10,
-    Month36ChangePercent: (index % 31) / 10,
-    AskRate: price + 0.05,
-    BidRate: price - 0.05,
-    YesterdayRate: price - 1,
-    PaperMarketCap: 1_000_000 + (index * 10_000),
-    PaperIdYatab: paperId + 500_000,
-    CountryId: 2,
-    PaperType: 1,
-    ESGRatingId: index % 7 === 0 ? null : index % 5,
-    ESGScope: index % 3
-  };
-}
-
-function createSnapshot(cycleNumber) {
-  const completedAtMs = 10_000 + (cycleNumber * CYCLE_SPACING_MS);
-  const startedAtMs = completedAtMs - 100;
-  const tradeDateTime = new Date(
-    SYNTHETIC_EPOCH_MS + (cycleNumber * CYCLE_SPACING_MS)
-  ).toISOString();
-  const records = Array.from(
-    { length: UNIVERSE_SIZE },
-    (_, index) => rawSecurity(index, cycleNumber, tradeDateTime)
-  );
-
-  return {
-    recordCount: UNIVERSE_SIZE,
-    records,
-    responseIds: SECURITY_IDS,
-    membership: MEMBERSHIP,
-    timing: {
-      startedAtMs,
-      responseReceivedAtMs: completedAtMs - 10,
-      completedAtMs,
-      durationMs: completedAtMs - startedAtMs
-    },
-    sourceMetadata: {
-      endpoint: "ScreenerHulPaging3",
-      source: "synthetic-workload",
-      cycleNumber
-    },
-    httpStatus: 200
-  };
-}
+  ?? path.resolve("test-results/workload/end-to-end-workload.json");
+const TARGET_MACHINE_CEILING_MS = 5 * 60 * 1000;
 
 async function openClient({ url, role, clientInstanceId }) {
   const socket = new WebSocket(url, { origin: ORIGIN });
   await once(socket, "open");
-
   let sequence = 0;
 
   async function send(message) {
@@ -194,8 +80,8 @@ function serviceConfig(dbPath) {
     port: 0,
     dbPath,
     maxInboundMessageBytes: 16 * 1024 * 1024,
-    producerHeartbeatMs: 5_000,
-    producerStaleAfterMs: 15_000,
+    producerHeartbeatMs: 5000,
+    producerStaleAfterMs: 15000,
     historyPageSize: 500,
     allowedOrigins: [ORIGIN]
   };
@@ -207,7 +93,6 @@ async function startService(dbPath) {
     serviceVersion: "market-flow-us-workload-proof",
     openDatabase: openMarketFlowUsDatabase
   });
-
   return {
     service,
     url: `ws://127.0.0.1:${service.port}`
@@ -223,162 +108,110 @@ function assertOk(response, label) {
   return response.payload.data;
 }
 
-function assertCurrent(current, expectedCycle) {
-  const data = assertOk(current, "Current read");
-  assert.equal(data.summary.rowCount, UNIVERSE_SIZE);
-  assert.equal(data.summary.lastCycleId, expectedCycle);
-  assert.equal(data.rows.length, UNIVERSE_SIZE);
-  assert.equal(data.rows[0].securityId, securityId(0));
-  assert.equal(data.rows.at(-1).securityId, securityId(UNIVERSE_SIZE - 1));
-  assert.equal(data.rows[0].Price, priceFor(0, expectedCycle));
+function expectedPrice(index, logicalCycle, dataPattern) {
+  const movementCycle = dataPattern === "static" ? 0 : logicalCycle;
+  return 100 + index + movementCycle;
+}
+
+function assertCurrent(response, profile, logicalCycle, generator) {
+  const data = assertOk(response, "Current read");
+  assert.equal(data.summary.rowCount, profile.universeSize);
+  assert.equal(data.rows.length, profile.universeSize);
+  assert.equal(data.rows[0].securityId, String(generator.paperIds[0]));
+  assert.equal(data.rows.at(-1).securityId, String(generator.paperIds.at(-1)));
+  assert.equal(
+    data.rows[0].Price,
+    expectedPrice(0, logicalCycle, profile.dataPattern)
+  );
   assert.equal(
     data.rows.at(-1).Price,
-    priceFor(UNIVERSE_SIZE - 1, expectedCycle)
+    expectedPrice(profile.universeSize - 1, logicalCycle, profile.dataPattern)
   );
 }
 
-function assertHistoryPage(response, expectedCycle) {
+function assertHistoryPage(response, expectedCompleted, logicalCycle, profile) {
   const data = assertOk(response, "History read");
-  assert.equal(data.rows.length, expectedCycle);
-  assert.equal(data.rows[0].cycleId, expectedCycle);
-  assert.equal(data.rows[0].Price, priceFor(0, expectedCycle));
+  assert.equal(data.rows.length, expectedCompleted);
+  assert.equal(
+    data.rows[0].Price,
+    expectedPrice(0, logicalCycle, profile.dataPattern)
+  );
   assert.equal(data.hasMore, false);
   assert.equal(data.nextCursor, null);
-  return data;
 }
 
-const GENERAL_SCANNER_QUERIES = Object.freeze({
-  join: `
-    SELECT l.security_id, u.PaperNameEng, l.Price
-    FROM latest AS l
-    JOIN universe AS u ON u.security_id = l.security_id
-    WHERE u.is_current = true
-    ORDER BY l.security_id
-    LIMIT 10
-  `,
-  groupHaving: `
-    SELECT security_id, COUNT(*) AS samples, MAX(Price) AS peak
-    FROM history
-    GROUP BY security_id
-    HAVING COUNT(*) >= 5
-    ORDER BY security_id
-    LIMIT 10
-  `,
-  windowRank: `
-    SELECT
-      security_id,
-      DailyVolume,
-      RANK() OVER (
-        ORDER BY DailyVolume DESC, security_id ASC
-      ) AS activity_rank
-    FROM latest
-    ORDER BY activity_rank, security_id
-    LIMIT 10
-  `,
-  timePredicate: `
-    WITH latest_time AS (
-      SELECT MAX(collected_at_ms) AS max_collected_at_ms
-      FROM history
-    )
-    SELECT h.security_id, COUNT(*) AS recent_samples
-    FROM history AS h
-    CROSS JOIN latest_time AS t
-    WHERE h.collected_at_ms >= t.max_collected_at_ms - 150000
-    GROUP BY h.security_id
-    HAVING COUNT(*) > 0
-    ORDER BY h.security_id
-    LIMIT 10
-  `
-});
-
-function stagedScannerSql() {
-  const query = MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.find(
-    (candidate) => candidate.queryId === "builtin:staged-candidate-ranking"
-  );
-  assert.ok(query, "Market Flow US staged Scanner built-in is missing");
-  return query.sql;
-}
-
-function assertGeneralScanner(response, name, expectedCycle) {
+function assertGeneralScanner(response, name, profile, logicalCycle, generator) {
   const data = assertOk(response, `Scanner ${name}`);
   assert.equal(data.rowCount, 10, `Scanner ${name} row count`);
 
   if (name === "join") {
     assert.deepEqual(data.rows[0].slice(0, 2), [
-      securityId(0),
+      String(generator.paperIds[0]),
       "Synthetic US Security 0000"
     ]);
-    assert.equal(data.rows[0][2], priceFor(0, expectedCycle));
+    assert.equal(
+      data.rows[0][2],
+      expectedPrice(0, logicalCycle, profile.dataPattern)
+    );
   } else if (name === "groupHaving") {
-    assert.deepEqual(data.rows[0].slice(0, 2), [
-      securityId(0),
-      String(expectedCycle)
-    ]);
+    assert.equal(data.rows[0][0], String(generator.paperIds[0]));
   } else if (name === "windowRank") {
     assert.deepEqual(data.rows[0], [
-      securityId(UNIVERSE_SIZE - 1),
-      (expectedCycle * 100_000) + (UNIVERSE_SIZE - 1),
+      String(generator.paperIds.at(-1)),
+      ((profile.dataPattern === "static" ? 0 : logicalCycle) * 100000)
+        + (profile.universeSize - 1),
       "1"
     ]);
   } else if (name === "timePredicate") {
-    assert.equal(data.rows[0][0], securityId(0));
+    assert.equal(data.rows[0][0], String(generator.paperIds[0]));
     assert.ok(Number(data.rows[0][1]) > 0);
-    assert.ok(Number(data.rows[0][1]) <= expectedCycle);
   }
 }
 
-function assertStagedScanner(response) {
+function assertStagedScanner(response, profile) {
   const data = assertOk(response, "Scanner staged candidate");
-  assert.equal(data.rowCount, 100, "staged candidate row count");
-
+  assert.equal(data.rowCount, Math.min(100, profile.universeSize));
   const columnNames = data.columns.map((column) => column.name);
-  const securityIdIndex = columnNames.indexOf("securityId");
   const stageIndex = columnNames.indexOf("stage_reached");
-  assert.ok(securityIdIndex >= 0, "staged candidate must expose securityId");
   assert.ok(stageIndex >= 0, "staged candidate must expose stage_reached");
-
+  const expectedStage = profile.dataPattern === "moving" ? 7 : 0;
   for (const row of data.rows) {
-    assert.match(String(row[securityIdIndex]), /^\d+$/u);
-    assert.equal(Number(row[stageIndex]), 7);
+    assert.equal(Number(row[stageIndex]), expectedStage);
   }
 }
 
-async function runReadSample({
+async function runReadProof({
   viewer,
-  cycleNumber,
-  metrics,
-  includeStaged = false
+  profile,
+  generator,
+  logicalCycle,
+  expectedCompleted,
+  metrics
 }) {
   const current = await measure(metrics.currentReadMs, () =>
     viewer.request("viewer.current.get"));
-  assertCurrent(current, cycleNumber);
+  assertCurrent(current, profile, logicalCycle, generator);
 
   const history = await measure(metrics.historyPageMs, () =>
     viewer.request("viewer.history.page", {
-      securityId: securityId(0),
+      securityId: String(generator.paperIds[0]),
       cursor: null
     }));
-  assertHistoryPage(history, cycleNumber);
+  assertHistoryPage(history, expectedCompleted, logicalCycle, profile);
 
   for (const [name, sql] of Object.entries(GENERAL_SCANNER_QUERIES)) {
     const response = await measure(metrics.generalScannerMs[name], () =>
       viewer.request("scanner.execute", { sql }));
-    assertGeneralScanner(response, name, cycleNumber);
+    assertGeneralScanner(response, name, profile, logicalCycle, generator);
   }
 
-  if (includeStaged) {
-    const response = await measure(metrics.stagedScannerMs, () =>
-      viewer.request("scanner.execute", { sql: stagedScannerSql() }));
-    assertStagedScanner(response);
-  }
+  const staged = await measure(metrics.stagedScannerMs, () =>
+    viewer.request("scanner.execute", { sql: stagedScannerSql() }));
+  assertStagedScanner(staged, profile);
 }
 
 async function durableCounts(viewer) {
-  const status = assertOk(
-    await viewer.request("viewer.status.get"),
-    "Status read"
-  );
-
+  const status = assertOk(await viewer.request("viewer.status.get"), "Status read");
   return {
     completedCycles: status.completedCycles,
     failedCycles: status.failedCycles,
@@ -388,45 +221,36 @@ async function durableCounts(viewer) {
   };
 }
 
-function createInitialReport() {
+function metricsSummary(metrics) {
   return {
-    schemaVersion: 2,
-    scenario: {
-      universeSize: UNIVERSE_SIZE,
-      cycles: CYCLE_COUNT,
-      expectedHistoryRows: EXPECTED_HISTORY_ROWS,
-      cycleSpacingMs: CYCLE_SPACING_MS,
-      readIntervalCycles: READ_INTERVAL_CYCLES,
-      stagedAgesSeconds: [10, 20, 30, 45, 60, 90, 120]
-    },
-    environment: {
-      node: process.version,
-      platform: process.platform,
-      arch: process.arch
-    },
-    result: "running",
-    counts: null,
-    dbFileBytes: null,
-    latencyMs: null,
-    restartToReadyMs: null,
-    error: null
+    commit: distribution(metrics.commitMs),
+    current: distribution(metrics.currentReadMs),
+    historyPage: distribution(metrics.historyPageMs),
+    scanner: {
+      general: {
+        overall: distribution(Object.values(metrics.generalScannerMs).flat()),
+        byQuery: Object.fromEntries(
+          Object.entries(metrics.generalScannerMs)
+            .map(([name, samples]) => [name, distribution(samples)])
+        )
+      },
+      stagedCandidate: distribution(metrics.stagedScannerMs)
+    }
   };
 }
 
-function sanitizedFailure(error, tempDir) {
-  const rawMessage = typeof error?.message === "string"
-    ? error.message
-    : "Representative workload failed.";
-  return {
-    name: typeof error?.name === "string" ? error.name : "Error",
-    message: rawMessage.replaceAll(tempDir, "<temp>").slice(0, 500)
-  };
-}
-
-test("representative 4096-security/180-cycle U.S. workload remains correct across reads, Scanner and restart", { timeout: 40 * 60 * 1000 }, async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-workload-"));
-  const dbPath = path.join(tempDir, "representative-us.duckdb");
-  const report = createInitialReport();
+async function runProfile(profile) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), `market-flow-us-${profile.name}-`));
+  const dbPath = path.join(tempDir, `${profile.name}.duckdb`);
+  const generator = createUsSyntheticGenerator({
+    universeSize: profile.universeSize,
+    cycleCount: profile.cycleCount,
+    cadenceMs: profile.cadenceMs,
+    firstPaperId: 1000000,
+    epochMs: SYNTHETIC_EPOCH_MS,
+    dataPattern: profile.dataPattern,
+    failureCycles: profile.failureCycles
+  });
   const metrics = {
     commitMs: [],
     currentReadMs: [],
@@ -436,87 +260,145 @@ test("representative 4096-security/180-cycle U.S. workload remains correct acros
     ),
     stagedScannerMs: []
   };
+  const report = {
+    name: profile.name,
+    targetAuthority: profile.targetAuthority,
+    scenario: {
+      universeSize: profile.universeSize,
+      cycles: profile.cycleCount,
+      cadenceMs: profile.cadenceMs,
+      dataPattern: profile.dataPattern,
+      configuredFailureCycles: profile.failureCycles,
+      expectedHistoryRows: null,
+      stagedAgesSeconds: [10, 20, 30, 45, 60, 90, 120]
+    },
+    result: "running",
+    counts: null,
+    dbFileBytes: null,
+    latencyMs: null,
+    restartToReadyMs: null,
+    wallClockMs: null,
+    error: null
+  };
 
   let service = null;
   let producer = null;
   let viewer = null;
-  let failure = null;
+  const wallStarted = performance.now();
 
   try {
     ({ service } = await startService(dbPath));
     const url = `ws://127.0.0.1:${service.port}`;
-
     producer = await openClient({
       url,
       role: "producer",
-      clientInstanceId: "workload-producer"
+      clientInstanceId: `${profile.name}-producer`
     });
     viewer = await openClient({
       url,
       role: "viewer",
-      clientInstanceId: "workload-viewer"
+      clientInstanceId: `${profile.name}-viewer`
     });
 
     assertOk(await producer.request("producer.session.start", {
-      startedAtMs: 2_000,
-      config: {
-        snapshotIntervalMs: CYCLE_SPACING_MS
-      }
+      startedAtMs: 2000,
+      config: { snapshotIntervalMs: profile.cadenceMs }
     }), "Producer session start");
 
-    const firstSnapshot = createSnapshot(1);
+    const firstSnapshot = generator.snapshot(1);
+    assertUsGeneratedRow(firstSnapshot.records[0]);
+    assertUsGeneratedRow(firstSnapshot.records.at(-1));
     const firstCandidate = buildUsCollectionCandidate(firstSnapshot);
-    const replaced = assertOk(
-      await producer.request("producer.universe.replace", {
-        loadedAtMs: firstCandidate.universe.loadedAtMs,
-        recordCount: firstCandidate.universe.recordCount,
-        securities: firstCandidate.universe.securities
-      }),
-      "Universe replace"
-    );
-    assert.equal(replaced.recordCount, UNIVERSE_SIZE);
+    const replaced = assertOk(await producer.request("producer.universe.replace", {
+      loadedAtMs: firstCandidate.universe.loadedAtMs,
+      recordCount: firstCandidate.universe.recordCount,
+      securities: firstCandidate.universe.securities
+    }), "Universe replace");
+    assert.equal(replaced.recordCount, profile.universeSize);
     assert.equal(replaced.universeRevision, 1);
 
-    for (let cycleNumber = 1; cycleNumber <= CYCLE_COUNT; cycleNumber += 1) {
-      const cycle = cycleNumber === 1
+    let completed = 0;
+    let failed = 0;
+    let lastSuccessfulLogicalCycle = null;
+    let lastCompletedCycleId = null;
+
+    for (let logicalCycle = 1; logicalCycle <= profile.cycleCount; logicalCycle += 1) {
+      if (generator.shouldFail(logicalCycle)) {
+        const failedAtMs = 10000 + (logicalCycle * profile.cadenceMs);
+        const failure = assertOk(await producer.request("producer.cycle.failed", {
+          report: {
+            phase: "provider-fetch",
+            startedAtMs: failedAtMs - 100,
+            failedAtMs,
+            requested: profile.universeSize,
+            received: null,
+            unique: null,
+            missing: null,
+            duplicates: null,
+            unexpected: null,
+            error: {
+              name: "SyntheticProviderError",
+              message: "Deterministic synthetic workload failure."
+            }
+          }
+        }), `Cycle ${logicalCycle} failure`);
+        assert.equal(failure.cycleId, logicalCycle);
+        failed += 1;
+        continue;
+      }
+
+      const cycle = logicalCycle === 1
         ? firstCandidate.cycle
-        : buildUsCompleteCycle({ snapshot: createSnapshot(cycleNumber) });
+        : buildUsCompleteCycle({ snapshot: generator.snapshot(logicalCycle) });
       const committed = await measure(metrics.commitMs, () =>
         producer.request("producer.cycle.commit", {
           universeRevision: replaced.universeRevision,
           cycle
         }));
-      const commitData = assertOk(committed, `Cycle ${cycleNumber} commit`);
-      assert.equal(commitData.cycleId, cycleNumber);
+      const commitData = assertOk(committed, `Cycle ${logicalCycle} commit`);
+      assert.equal(commitData.cycleId, logicalCycle);
+      completed += 1;
+      lastSuccessfulLogicalCycle = logicalCycle;
+      lastCompletedCycleId = commitData.cycleId;
 
-      assertOk(
-        await producer.request("producer.heartbeat", {
-          atMs: Date.now()
-        }),
-        `Cycle ${cycleNumber} heartbeat`
-      );
-
-      if (cycleNumber % READ_INTERVAL_CYCLES === 0) {
-        await runReadSample({
-          viewer,
-          cycleNumber,
-          metrics,
-          includeStaged: cycleNumber === CYCLE_COUNT
-        });
-      }
+      assertOk(await producer.request("producer.heartbeat", {
+        atMs: Date.now()
+      }), `Cycle ${logicalCycle} heartbeat`);
     }
 
-    const beforeRestartCounts = await durableCounts(viewer);
-    assert.deepEqual(beforeRestartCounts, {
-      completedCycles: CYCLE_COUNT,
-      failedCycles: 0,
-      latestCount: UNIVERSE_SIZE,
-      historyCount: EXPECTED_HISTORY_ROWS,
-      lastCompletedCycleId: CYCLE_COUNT
-    });
+    assert.ok(completed > 0, "profile must commit at least one complete cycle");
+    const expectedCounts = {
+      completedCycles: completed,
+      failedCycles: failed,
+      latestCount: profile.universeSize,
+      historyCount: profile.universeSize * completed,
+      lastCompletedCycleId
+    };
+    report.scenario.expectedHistoryRows = expectedCounts.historyCount;
+    const beforeRestart = await durableCounts(viewer);
+    assert.deepEqual(beforeRestart, expectedCounts);
+
+    if (profile.proveScanner) {
+      assert.ok(
+        lastSuccessfulLogicalCycle * profile.cadenceMs >= 120000,
+        "staged Scanner proof requires at least 120 seconds of logical history"
+      );
+      await runReadProof({
+        viewer,
+        profile,
+        generator,
+        logicalCycle: lastSuccessfulLogicalCycle,
+        expectedCompleted: completed,
+        metrics
+      });
+    } else {
+      const current = await measure(metrics.currentReadMs, () =>
+        viewer.request("viewer.current.get"));
+      assertCurrent(current, profile, lastSuccessfulLogicalCycle, generator);
+    }
 
     assertOk(await producer.request("producer.session.stop", {
-      stoppedAtMs: 10_000 + (CYCLE_COUNT * CYCLE_SPACING_MS) + 1_000,
+      stoppedAtMs: 10000 + (profile.cycleCount * profile.cadenceMs) + 1000,
       reason: "workload-complete"
     }), "Producer session stop");
 
@@ -526,74 +408,96 @@ test("representative 4096-security/180-cycle U.S. workload remains correct acros
     viewer = null;
     await service.close();
     service = null;
-
     report.dbFileBytes = (await stat(dbPath)).size;
 
-    const restartStarted = performance.now();
-    ({ service } = await startService(dbPath));
-    report.restartToReadyMs = roundMs(performance.now() - restartStarted);
-
-    viewer = await openClient({
-      url: `ws://127.0.0.1:${service.port}`,
-      role: "viewer",
-      clientInstanceId: "workload-viewer-restart"
-    });
-
-    await runReadSample({
-      viewer,
-      cycleNumber: CYCLE_COUNT,
-      metrics,
-      includeStaged: true
-    });
-
-    const afterRestartCounts = await durableCounts(viewer);
-    assert.deepEqual(afterRestartCounts, beforeRestartCounts);
-
-    report.counts = afterRestartCounts;
-    report.latencyMs = {
-      commit: distribution(metrics.commitMs),
-      current: distribution(metrics.currentReadMs),
-      historyPage: distribution(metrics.historyPageMs),
-      scanner: {
-        general: {
-          overall: distribution(Object.values(metrics.generalScannerMs).flat()),
-          byQuery: Object.fromEntries(
-            Object.entries(metrics.generalScannerMs)
-              .map(([name, samples]) => [name, distribution(samples)])
-          )
-        },
-        stagedCandidate: distribution(metrics.stagedScannerMs)
+    if (profile.proveRestart) {
+      const restartStarted = performance.now();
+      ({ service } = await startService(dbPath));
+      report.restartToReadyMs = roundMs(performance.now() - restartStarted);
+      viewer = await openClient({
+        url: `ws://127.0.0.1:${service.port}`,
+        role: "viewer",
+        clientInstanceId: `${profile.name}-viewer-restart`
+      });
+      assert.deepEqual(await durableCounts(viewer), expectedCounts);
+      if (profile.proveScanner) {
+        await runReadProof({
+          viewer,
+          profile,
+          generator,
+          logicalCycle: lastSuccessfulLogicalCycle,
+          expectedCompleted: completed,
+          metrics
+        });
       }
-    };
+    }
+
+    report.counts = expectedCounts;
+    report.latencyMs = metricsSummary(metrics);
+    report.wallClockMs = roundMs(performance.now() - wallStarted);
+    if (profile.targetAuthority) {
+      assert.ok(
+        report.wallClockMs <= TARGET_MACHINE_CEILING_MS,
+        `target 4096 x 180 profile exceeded ${TARGET_MACHINE_CEILING_MS} ms ceiling`
+      );
+    }
     report.result = "pass";
+    return report;
   } catch (error) {
-    failure = error;
+    report.wallClockMs = roundMs(performance.now() - wallStarted);
     report.result = "fail";
     report.error = sanitizedFailure(error, tempDir);
+    error.workloadReport = report;
+    throw error;
   } finally {
     try {
       await producer?.close();
-    } catch {
-      // Preserve the original workload result.
-    }
+    } catch {}
     try {
       await viewer?.close();
-    } catch {
-      // Preserve the original workload result.
-    }
+    } catch {}
     try {
       await service?.close();
-    } catch {
-      // Preserve the original workload result.
-    }
-
-    await mkdir(path.dirname(REPORT_PATH), { recursive: true });
-    await writeFile(
-      REPORT_PATH,
-      `${JSON.stringify(report, null, 2)}\n`,
-      "utf8"
-    );
+    } catch {}
     await rm(tempDir, { recursive: true, force: true });
+  }
+}
+
+test("Market Flow US end-to-end workload profiles prove bounded CI correctness and expose target scale", { timeout: 40 * 60 * 1000 }, async () => {
+  const profiles = resolveEndToEndProfiles();
+  const report = {
+    schemaVersion: 3,
+    product: "Market Flow US",
+    profileMode: workloadMode(),
+    environment: {
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch
+    },
+    result: "running",
+    profiles: [],
+    error: null
+  };
+  let failure = null;
+
+  try {
+    for (const profile of profiles) {
+      report.profiles.push(await runProfile(profile));
+    }
+    report.result = profiles.length === 0 ? "not-applicable" : "pass";
+  } catch (error) {
+    failure = error;
+    if (error.workloadReport) report.profiles.push(error.workloadReport);
+    report.result = "fail";
+    report.error = {
+      name: typeof error?.name === "string" ? error.name : "Error",
+      message: typeof error?.message === "string"
+        ? error.message.slice(0, 500)
+        : "End-to-end workload failed."
+    };
+  } finally {
+    await mkdir(path.dirname(REPORT_PATH), { recursive: true });
+    await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   }
 
   if (failure) throw failure;
