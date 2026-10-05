@@ -1,6 +1,6 @@
 # Demo Buy Protocol / Export Bounds
 
-This document owns the concrete bounded constants required by the Demo Buy + AI Investigation contracts. These limits are implementation requirements, not suggestions.
+This document owns the concrete bounded constants and temporal-authority rules required by the Demo Buy + AI Investigation contracts. These are implementation requirements, not suggestions.
 
 ## 1. Existing transport boundary
 
@@ -88,7 +88,89 @@ Consequences:
 
 AI-pack generation may delay later requests on that Viewer socket while its bounded request is being serviced, but it must not mutate or stop Scanner scheduling state. No second transport or global server-concurrency rewrite is introduced solely for export.
 
-## 7. AI Investigation export bounds
+## 7. Capture-time authority watermark
+
+The exact linked `buy_cycle_id` is not only the baseline row identifier; because successful market writes and Demo Buy capture share the same serialized writer, it is also the market-authority watermark available at capture time.
+
+For one captured item:
+
+```text
+prediction-time authoritative history:
+  same security_id
+  AND cycle_id <= buy_cycle_id
+
+post-capture authoritative history:
+  same security_id
+  AND cycle_id > buy_cycle_id
+```
+
+This cycle boundary is required in addition to local timestamps.
+
+Reason: a market snapshot may have been collected in the browser before `capturedAtMs` but may commit to DuckDB only after the Demo Buy capture. Timestamp-only forensic queries could therefore leak information backward that was not authoritative when the virtual buy was accepted.
+
+### Demo Buy horizon reads
+
+A future horizon row must satisfy both:
+
+```text
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms + horizon_ms
+ORDER BY collected_at_ms ASC, cycle_id ASC
+LIMIT 1
+```
+
+The `cycle_id > buy_cycle_id` condition is a safety/authority invariant. It prevents a pathological older cycle with an anomalous local timestamp from being treated as post-capture evidence.
+
+## 8. AI Investigation temporal partition
+
+Prediction-time target history is:
+
+```text
+same security_id
+AND cycle_id <= buy_cycle_id
+AND collected_at_ms >= captured_at_ms - 30 minutes
+AND collected_at_ms <= captured_at_ms
+ORDER BY collected_at_ms ASC, cycle_id ASC
+```
+
+`TARGET_AFTER.jsonl` is:
+
+```text
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms
+AND collected_at_ms <= captured_at_ms + 10 minutes
+ORDER BY collected_at_ms ASC, cycle_id ASC
+```
+
+Using `>= captured_at_ms` on the post side intentionally permits a later committed observation with the same millisecond timestamp; writer/cycle ordering, not millisecond precision, determines whether it was authoritative before or after capture.
+
+The exact baseline is exported separately and may also appear in the prediction-time window.
+
+### Outcome completeness watermark
+
+`COMPLETE_OUTCOME` is not based on wall-clock time alone.
+
+Define:
+
+```text
+evidenceWatermarkMs = MAX(history.collected_at_ms) in the currently opened DB
+postWindowEndMs     = captured_at_ms + 10 minutes
+```
+
+The pack is:
+
+```text
+COMPLETE_OUTCOME  when evidenceWatermarkMs >= postWindowEndMs
+PARTIAL_OUTCOME   otherwise
+```
+
+No special “day ended, therefore complete” shortcut exists in Phase 1. An archived DB whose persisted evidence never reached the 10-minute boundary remains honestly `PARTIAL_OUTCOME`.
+
+This classification says whether persisted market authority progressed through the requested time boundary; it does not guarantee that the target security itself has a future row.
+
+## 9. AI Investigation export bounds
 
 The AI Investigation Pack is bounded by evidence time rather than an arbitrary row-count sample:
 
@@ -104,7 +186,7 @@ The exporter writes evidence locally; history rows are not returned through WebS
 
 Generated pack files may contain every persisted target-security row inside the fixed time windows, including `raw_data`; they remain local artifacts and are not copied into diagnostics or the repository.
 
-## 8. Export atomicity and naming
+## 10. Export atomicity and naming
 
 The exporter:
 
@@ -125,7 +207,7 @@ If any write or final rename fails:
 - an already-existing successful pack is never overwritten;
 - no DuckDB authority is mutated.
 
-## 9. New-day source-version boundary
+## 11. New-day source-version boundary
 
 After schema v4 ships, `NEW_TRADING_DAY` must accept either:
 
@@ -149,6 +231,6 @@ inspect source without mutating it
 
 Demo Buy/context rows are never copied into the new active day. A v4 archive remains self-contained with its history and Demo Buy evidence. A v3 archive remains a valid historical pre-Demo-Buy Market Flow US DB.
 
-## 10. Verification ownership
+## 12. Verification ownership
 
-Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, UTF-8 multi-byte clipping, request-size preflight, acknowledgement-unknown behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, UTF-8 multi-byte clipping, request-size preflight, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
