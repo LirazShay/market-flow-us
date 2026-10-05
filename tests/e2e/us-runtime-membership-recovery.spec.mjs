@@ -47,7 +47,7 @@ async function fakeState(fake) {
 
 async function waitForRunning(page) {
   await expect.poll(async () => {
-    return await page.evaluate(() => globalThis.__MARKET_SCOPE_RUNTIME_V1__?.getState?.().state ?? null);
+    return await page.evaluate(() => globalThis.__MARKET_FLOW_US_RUNTIME_V1__?.getState?.().state ?? null);
   }).toBe("running");
 }
 
@@ -67,7 +67,7 @@ async function currentIds(service) {
 
 async function stopRuntime(page) {
   await page.evaluate(async () => {
-    const runtime = globalThis.__MARKET_SCOPE_RUNTIME_V1__;
+    const runtime = globalThis.__MARKET_FLOW_US_RUNTIME_V1__;
     if (runtime?.getState?.().state === "running") {
       await runtime.stop("test_cleanup");
     }
@@ -81,7 +81,7 @@ test("normal U.S. runtime applies add/remove membership, recovers from provider 
   try {
     await setScenario(fake, "US-03");
     await page.addInitScript(() => {
-      globalThis.__MARKET_SCOPE_CONFIG__ = {
+      globalThis.__MARKET_FLOW_US_CONFIG__ = {
         recorder: {
           snapshotIntervalMs: 100
         }
