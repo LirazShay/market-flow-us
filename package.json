@@ -16,6 +16,8 @@
     "test:acceptance:local": "node scripts/run-local-acceptance.mjs all",
     "test:acceptance:local:static": "node scripts/run-local-acceptance.mjs static",
     "test:acceptance:local:recovery": "node scripts/run-local-acceptance.mjs recovery",
+    "test:acceptance:local:isolated": "node scripts/run-local-acceptance.mjs isolated",
+    "test:acceptance:local:target": "node scripts/run-local-acceptance.mjs target",
     "test:workload": "node scripts/run-workload-profile.mjs ci",
     "test:workload:target-e2e": "node scripts/run-workload-profile.mjs target-e2e",
     "test:workload:target-day": "node scripts/run-workload-profile.mjs target-day",
