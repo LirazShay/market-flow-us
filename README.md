@@ -90,13 +90,11 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 אין להמיר static PASS ל־market-open PASS כאשר לא נצפה שינוי אמיתי.
 
-## מצב release
+## גבול release
 
-ה־U.S. runtime, schema v3, Current/Detail/Scanner, Fake Market, diagnostics, workload tooling וה־local acceptance package כבר מיושמים. `TREE 7.3` מבצע כעת release cleanup/documentation closure.
+ה־release מתקדם דרך deterministic offline proof, Local Fake Leumi acceptance, cleanup תפעולי ולבסוף target-machine acceptance. השלמה כוללת דורשת את חבילת `TREE 7.4`: daily-bounded target-machine performance, new-day lifecycle proof, authenticated static compatibility ו־market-open movement proof.
 
-השלמה כוללת עדיין תלויה ב־`TREE 7.4`: target-machine daily-bounded performance, new-day lifecycle proof, authenticated static compatibility ו־market-open movement proof.
-
-`STATUS.yaml` ו־`.planning/EXECUTION.yaml` הם מקור האמת למצב העדכני.
+`STATUS.yaml` ו־`.planning/EXECUTION.yaml` הם מקור האמת היחיד ל־execution pointer ולמצב העדכני.
 
 ## החלטות מוצר מרכזיות
 
