@@ -206,6 +206,9 @@ export function normalizeScannerQueryNameKey(name) {
     .toLowerCase();
 }
 
+// Explicit retained donor profile used only by schema-v2 regression proof.
+export const LEGACY_SCANNER_QUERIES = freezeQueries(LEGACY_BUILTIN_SOURCE);
+
 // Normal runtime is U.S. authority after TREE node 5.2 cutover.
 export const BUILTIN_SCANNER_QUERIES = freezeQueries(MARKET_FLOW_US_BUILTIN_SOURCE);
 
