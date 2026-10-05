@@ -1,527 +1,238 @@
 # Market Flow US Planning Decisions
 
-These decisions govern the U.S. conversion until explicitly reopened by evidence.
+These are the current durable planning decisions. Later-numbered decisions supersede conflicting details in earlier ones.
 
-## D-US-001 — Convert MarketScope incrementally; do not rewrite
-
-**Status:** resolved
-
-Market Flow US starts from the exact green MarketScope baseline and preserves proven architecture/behavior wherever the U.S. data contract does not require a change.
-
-Implementation order must favor boundary replacement plus regression proof over greenfield reconstruction.
-
-**Reopen only if:** a proven MarketScope mechanism is incompatible with the U.S. requirement.
-
-## D-US-002 — Bank Leumi ScreenerHulPaging3 is the initial provider source
+## D-US-001 — Incremental conversion, not rewrite
 
 **Status:** resolved
 
-Use:
+Preserve proven MarketScope architecture/behavior unless U.S. evidence or an explicit new capability requires change. Prefer boundary replacement plus regression proof over greenfield reconstruction.
 
-```text
-/lti/lti-app/api/Market/ScreenerHulPaging3
-```
-
-from the authenticated provider browser context with the extracted U.S. screener filters and current `pageCount=5000`.
-
-Do not hard-code the observed `4015` result count.
-
-If the provider returns fewer rows than `recordCount`, fail closed rather than inventing completeness.
-
-**Reopen only if:** current provider evidence shows one-request full retrieval no longer works.
-
-## D-US-003 — Canonical identity remains provider PaperId
+## D-US-002 — Initial provider is ScreenerHulPaging3
 
 **Status:** resolved
+
+Use the authenticated browser's U.S. `ScreenerHulPaging3` endpoint with the extracted filters and current `pageCount=5000`. Provider-reported completeness is validated exactly; observed market counts are not product constants.
+
+## D-US-003 — Canonical identity is validated PaperId
+
+**Status:** resolved
+
+After fail-closed source-type validation:
 
 ```text
 securityId = String(PaperId)
 ```
 
-`Symbol`, row order, names and `PaperIdYatab` are not canonical keys.
+Never key authority by Symbol, row order, name or PaperIdYatab.
 
-This preserves the existing product identity contract and Detail/Scanner navigation.
-
-## D-US-004 — One U.S. response maps to one existing-style complete cycle
+## D-US-004 — One U.S. response maps to one complete cycle
 
 **Status:** resolved
 
-Do not redesign the producer protocol/cycle authority.
+Reuse the existing complete-cycle protocol/ACK/transaction path with one segment (`chunkIndex=0`, `chunk_count=1`). Do not redesign cycle authority.
 
-Represent the one full U.S. response as:
-
-```text
-chunkIndex = 0
-chunk_count = 1
-```
-
-and reuse the existing complete-cycle/ACK/transaction path.
-
-The word `chunk` is retained physically in this migration to minimize risk; the U.S. provider is not claimed to be chunked.
-
-## D-US-005 — Universe membership comes from every validated full response
+## D-US-005 — Universe comes from every validated full response
 
 **Status:** resolved
 
-The response provides both membership and market rows.
+Same canonical membership reuses the current revision; changed membership replaces universe before committing that same response. Row reorder alone is not a membership change.
 
-Browser compares canonical membership with the accepted universe:
-
-- same membership -> commit under current revision;
-- changed membership -> replace universe, receive new revision, then commit that same response.
-
-Row reordering does not create a new universe revision.
-
-## D-US-006 — Keep history/latest mechanism; create incompatible U.S. schema v3
+## D-US-006 — U.S. market schema v3 preserved proven history/latest mechanics
 
 **Status:** resolved
 
-Keep:
+Keep append-only active-day history, full latest replacement, serialized writer, complete-cycle transaction and saved-query table. MarketScope v1/v2 are incompatible and are never semantically converted.
 
-- append-only `history`;
-- full-row `latest`;
-- complete-cycle transaction;
-- serialized writer;
-- saved-query table.
-
-U.S. market projection becomes schema v3.
-
-Do not semantically convert old MarketScope v1/v2 Israeli DB rows into U.S. rows.
-
-New default DB:
-
-```text
-data/market-flow-us.duckdb
-```
-
-Opening incompatible v1/v2 through Market Flow US fails without mutating that DB.
-
-D-US-022 defines the daily active-DB lifecycle; this decision does not require multi-day market history to accumulate inside the active file.
-
-## D-US-007 — Typed U.S. projection remains source-shaped
+## D-US-007 — U.S. projection remains source-shaped
 
 **Status:** resolved
 
-Promote the source fields listed in DATA_CONTRACT, including:
+Promote the documented U.S. source fields and always retain raw data. Do not strengthen empirical meanings such as `Price`, `DailyVolume`, `PaperMarketCap` or `TradeDateTime` without evidence.
 
-```text
-Price
-ChangePercent
-BidRate
-AskRate
-DailyVolume
-DailyHigh
-DailyLow
-YearHigh
-YearLow
-YesterdayRate
-PaperMarketCap
-TradeDateTime
-Symbol
-ExchangeName
-PaperNameEng
-PaperNameHeb
-```
-
-plus the other documented percentages/identity metadata.
-
-Always retain `raw_data`.
-
-Do not rename `Price` to LAST or claim units/timezone semantics not yet proven.
-
-## D-US-008 — Current/Detail keep the same UX model with U.S. columns
+## D-US-008 — Current/Detail preserve the proven UX model
 
 **Status:** resolved
 
-Current visible fields are the U.S. set documented in PRODUCT_SPEC.
+Use U.S. columns while retaining deterministic sorting, null/zero semantics, Detail/History paging/retry/navigation and display-name fallback.
 
-Default sort:
-
-```text
-DailyVolume DESC
-```
-
-Detail/history keep the existing page/retry/navigation/state contracts with U.S. fields.
-
-Display-name fallback:
-
-```text
-first non-empty:
-PaperNameEng
-→ PaperNameHeb
-→ Symbol
-→ securityId
-```
-
-## D-US-009 — Strategy remains editable Scanner SQL
+## D-US-009 — Strategy authority remains editable Scanner SQL
 
 **Status:** resolved
 
-No Strategy Engine, ranking service or hard-coded survivor pipeline.
+No Strategy Engine or hard-coded survivor/ranking service. Built-ins are ordinary editable SQL, including the staged-candidate example.
 
-Ship an editable built-in staged-candidate query.
-
-Initial example:
-
-```text
-10s → 20s → 30s → 45s → 60s → 90s → 120s
-predicate: current Price > prior Price
-result: highest contiguous stage_reached
-sort: stage, ChangePercent, DailyVolume, securityId
-```
-
-Changing stages/conditions is a SQL edit, not an application/schema change.
-
-## D-US-010 — No temporal precompute in the initial U.S. conversion
+## D-US-010 — No temporal precompute by default
 
 **Status:** resolved
 
-Do not add:
+Do not add predecessor columns, materialized short-window deltas, dynamic horizon schema or temporal-feature engine before intended-use measurement proves direct history reads materially insufficient.
 
-- `prev_*_snapshot_id` columns;
-- dynamic horizon schema;
-- materialized short-window percentage columns;
-- temporal feature engine.
-
-Use direct `history` SQL first.
-
-If measured intended-use evidence proves staged SQL materially impractical, reopen the smallest performance area with measurement.
-
-## D-US-011 — 4096 × 180 remains the heavy end-to-end profile, but not hosted-CI authority
+## D-US-011 — 4096 × 180 is target-machine heavy evidence, not hosted-CI authority
 
 **Status:** resolved
 
-The representative end-to-end target-machine profile remains:
+Heavy profile remains 4096 synthetic securities × 180 cycles. Hosted CI is correctness-first with bounded smoke/width checks; target-machine acceptance owns heavy timing PASS/FAIL.
 
-```text
-4096 synthetic securities
-180 cycles
-737280 history rows
-```
-
-This preserves approximately-4k breadth without hard-coding the observed provider count and avoids the older 4k × 600 shape.
-
-However, GitHub-hosted CI is not representative release-performance hardware. CI therefore runs smaller deterministic correctness/performance-smoke profiles, including approximately-4k width sanity, while the full `4096 × 180` timing PASS/FAIL belongs to final target-machine acceptance.
-
-The heavy profile includes staged-ranking measurement. The same configurable generator may also build isolated day-bounded persistence/read/Scanner profiles without replaying irrelevant layers.
-
-No hosted-runner latency number is promoted into a product SLO.
-
-## D-US-012 — Keep 3000 ms as initial offline/demo cadence only
+## D-US-012 — 3000 ms is an initial demo cadence only
 
 **Status:** resolved
 
-The imported 3000 ms snapshot interval remains the initial deterministic demo/workload logical cadence.
+The offline/demo cadence is configuration, not a provider SLA or proof that sustained live polling is safe.
 
-It is not a provider SLA or proof that sustained 3-second live polling is safe.
-
-Live behavior remains evidence-driven and configurable.
-
-## D-US-013 — U.S. branding is complete product branding
+## D-US-013 — Complete Market Flow US branding
 
 **Status:** resolved
 
-Target product/package/artifact naming uses `Market Flow US` / `market-flow-us`.
+Canonical product/package/artifact identities use `Market Flow US` / `market-flow-us`, including DB/runtime/bookmarklet/launcher names. Donor naming remains historical provenance only.
 
-Target key names include:
-
-```text
-package: market-flow-us
-DB: data/market-flow-us.duckdb
-runtime: market-flow-us.runtime.js
-bookmarklet: market-flow-us.bookmarklet.txt
-Windows launcher: START_MARKET_FLOW_US.cmd
-```
-
-Donor MarketScope names may remain only in provenance/history documents.
-
-## D-US-014 — Preserve Scanner security and saved-query ownership
+## D-US-014 — Preserve Scanner security and query-library ownership
 
 **Status:** resolved
 
-Keep DuckDB parser/type admission, zero parameters, side-effect rejection, hardened connection, Node-owned saved-query table, immutable built-ins and browser Draft/Persisted/Active separation.
-
-Add the staged candidate built-in without changing these mechanisms.
+Keep SELECT-only prepared admission, zero parameters, side-effect rejection, hardened connection, Node-owned saved-query persistence and browser Draft/Persisted/Active isolation.
 
 ## D-US-015 — Fake Market changes provider shape, not test architecture
 
 **Status:** resolved
 
-Replace MapHeat2/GetSecuritiesData behavior with stateful ScreenerHulPaging3 responses.
+Use the normal loopback HTTP fake/runtime/service/DuckDB path with deterministic U.S. screener scenarios. Reuse one configurable synthetic generator instead of separate giant fixture families.
 
-Keep the real loopback HTTP fake, normal runtime, deterministic scenarios and one-command demo.
-
-D-US-021 requires Fake Market/load tooling to share one configurable deterministic synthetic generator rather than duplicate large hard-coded fixtures.
-
-## D-US-016 — Authenticated-provider verification remains bounded and local
+## D-US-016 — Authenticated verification is bounded/local
 
 **Status:** resolved
 
-No GitHub credentials/live bank CI.
+No live bank CI. Keep a static/closed-market smoke distinct from a final market-open moving-provider gate. Reports remain sanitized and SHA-bound.
 
-The authenticated provider boundary is verified locally in two distinct modes:
-
-1. a lightweight static/closed-market smoke that permits repeated identical market values and proves shape, transport, validation, commit authority, Current/History and clean stop without pretending to prove market movement;
-2. a final market-open gate that verifies a bounded sustained run of **at least 20 consecutive complete U.S. cycles spanning at least 60 seconds** at the candidate collection cadence and requires observable provider-side market/freshness change across committed cycles.
-
-The full market-open gate still proves commit, Current, Detail/History, bounded Scanner, ownership and clean stop. It remains the only check that may declare the moving real-market boundary PASS.
-
-D-US-019 defines how these authenticated checks are sequenced with local Fake Leumi and target-machine acceptance.
-
-## D-US-017 — Planning order is audit → contracts → TREE → allocation
+## D-US-017 — Planning order is contracts → TREE → review → allocation → freeze
 
 **Status:** resolved
 
-Do not allocate implementation chats before:
+Implementation allocation/authorization follows exhaustive audit, coherent durable contracts, S&T decomposition, necessity/sufficiency/KISS/outside-in reviews and final freeze.
 
-1. exhaustive file audit;
-2. coherent U.S. durable contracts;
-3. new S&T tree;
-4. necessity/sufficiency/KISS review;
-5. Final Planning Review;
-6. freeze.
-
-The imported MarketScope execution history is not the U.S. execution plan.
-
-## D-US-018 — U.S. normal-runtime cutover occurs only at TREE 5.2
+## D-US-018 — Normal-runtime U.S. cutover occurred at TREE 5.2
 
 **Status:** resolved
 
-Execution exposed a staging contradiction: Browser CI is required for product-code changes, but switching an upstream component to the U.S. contract before its downstream U.S. dependencies exist makes the normal composed Browser path structurally fail even when the focused component is correct.
+Pre-cutover seams staged U.S. components without breaking normal Browser CI. `5.2` became the sole normal-runtime activation boundary; `7.3` completed superseded runtime cleanup.
 
-The migration therefore uses the existing construction/dependency/configuration seams as a pre-cutover staging boundary:
-
-- before TREE `5.2`, nodes `1.*` through `4.*` and `5.1` implement and prove U.S. behavior without replacing the normal built browser/runtime/demo/service composition;
-- the active proven composition remains Browser-CI green on every pre-cutover work unit;
-- no Browser test is skipped or disabled to conceal an incomplete integration;
-- no generic feature-flag system, duplicate product architecture or long-lived parallel subsystem is introduced;
-- legacy Israel-specific paths are compatibility-only during staging and receive no new product behavior.
-
-TREE `5.2` is the sole normal-runtime U.S. activation boundary. By then Chats 1–4 are already complete and Chat 5 owns `5.1 → 5.2 → 5.3` on one branch, so the U.S. provider, authority, trusted reads/UI, Scanner and Fake Market are available before activation and the Browser suite is migrated/green before merge.
-
-Final removal/audit of superseded authoritative Israel-only runtime paths remains owned by `7.3`.
-
-**Reopen only if:** existing construction seams cannot stage one of the U.S. components without creating materially greater complexity than an earlier integrated cutover.
-
-## D-US-019 — Final acceptance is split into deterministic local proof and deferred target-machine checks
+## D-US-019 — Final acceptance is deterministic-local first, target-machine/provider last
 
 **Status:** resolved
 
-The market may be static while development is being completed, so lack of price movement must not block deterministic product development or create a false failure.
-
-The release path is therefore split deliberately:
+Sequence:
 
 ```text
-automated/offline correctness candidate
-→ reusable configurable local Fake Leumi acceptance kit
-→ release cleanup/docs
-→ final target-machine acceptance bundle
+deterministic candidate
+→ reusable local Fake Leumi acceptance
+→ release closure
+→ final target-machine/authenticated acceptance
 ```
 
-The local Fake Leumi acceptance kit must reuse the normal Market Flow US runtime, local service and DuckDB rather than introduce a parallel product path. It must provide deterministic modes for:
+Synthetic movement never substitutes for real-provider movement; hosted timing never substitutes for target-machine performance.
 
-- repeated identical complete responses with stable membership;
-- moving synthetic values;
-- add/remove membership;
-- provider failure and recovery;
-- restart/persistence;
-- isolated persistence/read/Scanner load probes;
-- representative `4096 × 180` target-machine end-to-end reporting.
-
-All checks that require the user's authenticated browser or target computer are deferred to the final execution leaf. That final bundle contains exactly three acceptance families:
-
-1. **local Fake Leumi target-machine acceptance** — static/moving/failure/recovery, daily lifecycle and isolated/end-to-end mock load/performance;
-2. **authenticated closed/static-market smoke** — repeated equal provider values are valid and must still commit/history correctly; no market movement is required;
-3. **authenticated market-open acceptance** — bounded sustained collection with observable real provider market/freshness change and the full SHA-bound authority/read/Scanner/clean-stop proof.
-
-The closed/static-market smoke never substitutes for the market-open gate; synthetic movement never substitutes for real-provider evidence; hosted-CI timing never substitutes for target-machine performance acceptance.
-
-Development and release cleanup do not wait for market movement or the final heavy benchmark once the acceptance tooling itself has deterministic automated proof.
-
-The final target-machine leaf remains pending until the user performs the required checks. Overall product completion is not declared before those required acceptance results are PASS.
-
-D-US-025 extends this sequencing rule for the later Demo Buy feature: all Demo Buy implementation and deterministic re-closure must finish before the final target-machine leaf starts.
-
-## D-US-020 — Recurring automation speed is a first-class engineering requirement
+## D-US-020 — Recurring automation speed is an engineering requirement
 
 **Status:** resolved
 
-CI, tests and every repeatedly executed automated support path are development infrastructure. Excessive recurring runtime directly reduces iteration quality and therefore must be treated as an engineering defect rather than accepted background cost.
+Remove duplicated/setup/synchronization waste before accepting slow recurring verification. Do not hide avoidable slowness with larger timeouts/retries or weakened proof.
 
-This includes end-to-end wall-clock cost for:
-
-- workflow/job topology;
-- checkout/setup/cache/dependency installation;
-- builds;
-- unit/service/browser tests;
-- fixtures and Fake Market/Fake Leumi harnesses;
-- temporary service/DuckDB lifecycle;
-- cleanup/report generation;
-- benchmark/workload preparation and probes.
-
-The optimization priority is:
-
-```text
-remove repeated/duplicated work first
-→ refactor slow test/fixture/automation code
-→ improve synchronization/setup/cache/job topology
-→ preserve the same observable proof
-→ remeasure end-to-end
-```
-
-A green result does not excuse a materially slow recurring path. Executors must investigate slow individual tests and setup stages when they dominate feedback. Increasing timeouts/retries, hiding cost in another job/command, or repeatedly paying duplicated setup is not an acceptable substitute for fixing avoidable slowness.
-
-A broad high-value suite around 10–30 seconds can be accepted after its dominant costs are reviewed and no meaningful improvement remains without weakening proof or adding disproportionate complexity; record that state as **best practical verified state** and stop micro-optimizing it.
-
-Hosted CI should prefer correctness density over benchmark realism. Heavy benchmark work that is machine-dependent belongs in the dedicated target-machine acceptance path rather than being repeated on weaker runners.
-
-Coverage may not be weakened merely for speed. Performance refactoring should remove waste while preserving the same contractual evidence and diagnosability.
-
-## D-US-021 — One configurable synthetic generator drives Fake Market and load probes
+## D-US-021 — One configurable synthetic generator drives fake/load evidence
 
 **Status:** resolved
 
-Do not maintain separate giant fixture families for Fake Market, persistence benchmarks and Scanner/read benchmarks.
+Reuse one deterministic configurable U.S. generator at the narrowest useful layer: provider fake, direct persistence, direct read/Scanner seeding and full integration.
 
-Create one deterministic synthetic U.S. generator/profile boundary that can be configured for at least:
-
-- universe size;
-- cycle/history count or logical day shape;
-- cadence/timestamps;
-- static vs moving values;
-- membership changes;
-- deterministic failures/recovery;
-- reproducible seed.
-
-Reuse it at the narrowest useful layer:
-
-```text
-provider/browser behavior → Fake Market HTTP
-persistence behavior → validated generated cycles directly
-read/Scanner behavior → direct day-bounded DB seeding
-full integration → normal Fake Market → browser → service → DuckDB
-```
-
-This is test/support refactoring, not a second product implementation.
-
-## D-US-022 — Active market-data authority is one trading day, not multi-year storage
+## D-US-022 — Active market authority is one trading day
 
 **Status:** resolved
 
-The production active DuckDB is intended to contain the current trading day's market authority, not indefinitely accumulated months/years of intraday history.
+The production active DB is day-bounded. Prior days may archive; new day starts fresh market authority while saved Scanner queries survive. No multi-day analytics warehouse is introduced.
 
-Operational model:
-
-```text
-one trading day active DB
-→ stop producer/service safely
-→ optionally archive prior-day DB/data
-→ start a clean new-day market-data authority
-```
-
-Performance acceptance therefore uses one-day-bounded synthetic history shapes. It must not optimize or reject the design based on artificial multi-month/year active-history growth.
-
-Saved-query state is user configuration rather than disposable daily market data and must remain available across the new-day reset/rotation path.
-
-The release should document and prove the smallest safe new-day lifecycle; it does not need an analytics warehouse or long-term multi-day query subsystem.
-
-## D-US-023 — Demo Buy is strategy-validation evidence, not simulated execution
+## D-US-023 — Demo Buy is validation evidence, not simulated execution
 
 **Status:** resolved
 
-Phase 1 exists only to answer whether Scanner-selected candidates subsequently move up or down in persisted source `Price` over short horizons.
+Phase 1 supports manual selected/all/Top-X and session-only Auto All/Top-X observations. It does not add orders, manual buy price, fills, portfolio state, fees/slippage, sell rules, quantity, liquidity proof or aggregate strategy scoring. Repeated later capture of the same security is valid because observations are not positions.
 
-It therefore supports manual selected rows, all rows, Top X in exact Scanner-result order, and optional automatic All/Top-X capture. It does **not** introduce real orders, manual buy-price entry, fills, portfolio state, fees/slippage, sell rules, trade quantity, liquidity proof or strategy scorecards.
-
-The same security may be captured again in a later Scanner generation because each capture is an independent observation, not an open position.
-
-Phase 2 may later evaluate volume/liquidity/sellability evidence, but that work is not allowed to expand Phase 1.
-
-## D-US-024 — Demo Buy uses additive schema v4, exact history linkage and direct future-history reads
+## D-US-024 — Demo Buy uses additive schema v4, exact baseline linkage and direct trusted reads
 
 **Status:** resolved
 
-Advance the Market Flow US product schema from v3 to v4 with a transactional additive migration that preserves existing active-day market authority and saved Scanner queries.
+Schema v4 adds only `demo_buy_captures` and `demo_buy_items` on top of proven v3 market authority.
 
-Persist only two Demo Buy concepts:
-
-```text
-demo_buy_captures   = capture event + immutable Scanner provenance snapshot
-demo_buy_items      = selected ordered security IDs + exact buy_cycle_id linkage
-```
-
-Each item links the precise baseline row through:
+Each item links:
 
 ```text
 (buy_cycle_id, security_id)
 → history(cycle_id, security_id)
 ```
 
-The capture write uses the existing serialized writer so its ordering relative to market-cycle commits is deterministic. No user-supplied price is accepted.
+No user-supplied buy price or persisted horizon results exist.
 
-Future observations are not materialized. For each fixed Phase-1 horizon, read the first same-security `history` row whose `collected_at_ms >= captured_at_ms + horizon`, ordered by `collected_at_ms ASC, cycle_id ASC`. Missing future evidence remains `NULL`; percentage change is computed only from valid non-null prices and a non-zero baseline denominator.
+`buy_cycle_id` is also the capture-time authority watermark because market commits and capture share the serialized writer.
 
-Do not add a background horizon updater, temporal-feature subsystem, second database, second transport or dynamic horizon schema unless measured evidence later proves the direct bounded read model insufficient.
-
-Demo Buy state is active-day analytical state. A new-day reset does not copy Demo Buy rows into the fresh active DB; an optional archived prior-day DB remains self-contained with both the observations and referenced history.
-
-## D-US-025 — Demo Buy development precedes final target-machine acceptance
-
-**Status:** resolved
-
-The user's intended release sequence is now:
+For horizon H, the future row is the first row satisfying:
 
 ```text
-preserve completed U.S. migration evidence
-→ implement Demo Buy backend/schema/read authority
-→ implement Scanner capture + Demo Buy Viewer workflow
-→ rerun deterministic release closure on the new candidate
-→ only then execute final target-machine/authenticated acceptance
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms + H
+ORDER BY collected_at_ms ASC, cycle_id ASC
+LIMIT 1
 ```
 
-The previously unexecuted `7.4` evidence is not discarded; it is deferred because the accepted SHA must include Demo Buy.
+No background horizon updater/materialized result schema/new DB/new transport is added before evidence requires it.
 
-Completed nodes `1.1` through `7.3` remain historical valid evidence for the work they proved. A new post-feature release-closure leaf owns all deterministic gates/docs/status/open-PR/main-readiness work that must be refreshed after Demo Buy. `7.4` then depends on that refreshed candidate rather than the older `7.3` SHA.
-
-This is the smallest sequencing change that satisfies the user's preference to finish development before target-machine testing without reopening already-proven migration work.
-
-## D-US-026 — Demo Buy capture preserves original Scanner meaning under explicit protocol bounds
+## D-US-025 — Demo Buy + AI Investigation precede final target-machine acceptance
 
 **Status:** resolved
 
-Demo Buy capture semantics are source-row-first:
+Completed migration leaves through `7.3` remain historical evidence. Current sequence is:
 
 ```text
-choose Selected / All / first X source rows
+implement Demo Buy backend/read authority
+→ Scanner/Demo Buy UX
+→ AI Investigation exporter/UI
+→ post-feature deterministic re-closure 7.5
+→ final target-machine/authenticated 7.4
+```
+
+Final acceptance must run on the exact post-feature candidate.
+
+## D-US-026 — Capture preserves original Scanner meaning under bounded provenance
+
+**Status:** resolved
+
+Selection is source-row-first:
+
+```text
+Selected / All / first X source rows
 → validate every chosen identity
-→ dedupe canonical security IDs by first chosen occurrence
-→ preserve each retained row's original 1-based resultRank
+→ browser dedupe by first chosen canonical ID
+→ preserve original 1-based resultRank
 ```
 
-Node never silently dedupes or reorders malformed protocol input.
+Node requires unique ordered payload and never silently repairs it.
 
-To make capture implementation-ready and safely below the existing 16 MiB local WebSocket ceiling, the concrete limits in `docs/DEMO_BUY_PROTOCOL_LIMITS.md` are authoritative. In particular:
+Authoritative bounds are in `docs/DEMO_BUY_PROTOCOL_LIMITS.md`:
 
 ```text
 items <= 5000
 source SQL <= 1 MiB UTF-8
-Scanner context <= first 50 rows
-Scanner context <= first 128 columns
-one textual/serialized context cell <= 256 UTF-8 bytes after deterministic clipping
-serialized context JSON <= 2 MiB UTF-8
+context source rows <= 50
+retained columns <= 64 total, canonical identity mandatory
+textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping
+serialized context JSON <= 256 KiB UTF-8
 ```
 
-The frozen context is immutable decision provenance, not a second market authority. It never changes selected item identity/rank and it is never reconstructed later by re-running SQL against newer state.
+Node cross-checks every selected rank <=50 against the retained context rank+identity. Scanner may remain usable when a generation is not Demo-Buy-capturable; capture fails visibly rather than silently changing evidence.
 
-If exact SQL exceeds its Demo Buy provenance bound or deterministic context shaping cannot satisfy the contract, Scanner may remain usable but that result generation is not Demo-Buy-capturable; failure is visible rather than silently truncating exact SQL or changing capture meaning.
-
-## D-US-027 — A lost Demo Buy capture ACK is unknown, not failure, and is never auto-replayed
+## D-US-027 — Lost capture ACK is unknown, not failure
 
 **Status:** resolved
 
-The existing Viewer client rejects pending requests when the local WebSocket closes, while the server may already have committed the capture before its response is observed.
-
-Therefore browser capture outcomes are exactly:
+Capture outcomes are:
 
 ```text
 CONFIRMED_COMMITTED
@@ -529,64 +240,62 @@ CONFIRMED_REJECTED
 ACKNOWLEDGEMENT_UNKNOWN
 ```
 
-`ACKNOWLEDGEMENT_UNKNOWN` is not a confirmed rollback and must not trigger automatic replay. The Viewer blocks additional capture submission in that instance until explicit reconnect/relaunch, then refreshes Demo Buy before the user decides whether to submit a new observation.
+Unknown acknowledgement is never auto-replayed. Recovery is explicit reconnect/relaunch + Demo Buy refresh before another capture. Phase 1 adds no durable capture idempotency subsystem solely for this rare local race.
 
-Phase 1 does not add a durable idempotency/replay subsystem solely for this rare local disconnect race. Reopen this decision only if implementation/recovery evidence shows explicit refresh reconciliation is materially inadequate.
+Per-connection FIFO/shared writer remain intact; `capturedAtMs` is assigned only inside the actual serialized capture operation.
 
-The current service's per-connection FIFO and shared serialized writer remain intact. `capturedAtMs` is assigned only inside the actual writer operation, so browser click time and time waiting behind earlier work are not virtual-buy authority.
-
-## D-US-028 — AI Investigation is a local forensic evidence export with mandatory anti-hindsight separation
+## D-US-028 — AI Investigation is local anti-hindsight forensic export
 
 **Status:** resolved
 
-AI Investigation is part of the current pre-local-acceptance Demo Buy increment.
+No AI provider/API key/cloud upload/automatic SQL mutation.
 
-It does not call an AI provider, store an AI key, autonomously edit SQL or turn Market Flow US into an AI trading agent.
+For one Demo Buy target the pack contains exact query, bounded original Scanner context, prediction-time target history, exact baseline, post-capture history, trusted horizon outcomes, field guide and disciplined prompt.
 
-For one captured target it generates a deterministic local evidence pack containing:
+Prediction-time authority requires `cycle_id <= buy_cycle_id`; outcome evidence requires `cycle_id > buy_cycle_id`. Future facts may explain outcome and generate hypotheses but may never be presented as original predictive inputs.
 
-```text
-exact immutable Scanner SQL
-bounded frozen original Scanner comparison context
-30-minute pre-buy target history
-exact linked baseline
-10-minute post-buy target history
-trusted Demo Buy horizon outcomes
-field-semantics guide
-anti-hindsight investigation prompt
-```
+Targets outside retained Top-50 remain investigable with `targetInScannerContext=false` and explicit limits on peer reconstruction.
 
-Prediction-time evidence and outcome evidence are explicitly separated. Proposed Scanner improvements must cite evidence that existed by capture time; future evidence may explain the result and generate hypotheses but may not be leaked backward as though it were predictive input.
+Exporter writes atomically under a controlled ignored local root and never mutates DuckDB.
 
-The retained Scanner context is intentionally bounded. A target outside the retained first 50 rows remains investigable, but the pack marks `targetInScannerContext=false` and the prompt forbids fabricated peer/rank reconstruction.
-
-The exporter writes only beneath the controlled ignored local export root, accepts no browser-supplied path, uses temporary-directory + atomic-final-rename publication, never mutates DuckDB authority and never overwrites an existing successful pack. Failure leaves no misleading final bundle.
-
-The trusted Demo Buy evaluator is reused for `OUTCOME.json`; a second horizon algorithm is forbidden.
-
-## D-US-029 — New-day rollover accepts valid pre-feature v3 or post-feature v4 and always creates fresh v4
+## D-US-029 — New-day accepts valid v3 or v4 and always installs fresh v4
 
 **Status:** resolved
 
-After Demo Buy/schema-v4 ships, the operational new-day command must support an installed user who still has either:
+Source DB is inspected without mutation. v1/v2, running producer ownership and suspicious/corrupt states fail closed.
+
+Flow:
 
 ```text
-valid Market Flow US schema v3 active DB
-valid Market Flow US schema v4 active DB
-```
-
-The source DB is inspected without mutation. v1/v2, missing required tables, partial/corrupt v3/v4 state and running producer sessions fail closed.
-
-The rollover then:
-
-```text
-read scanner_saved_queries
-→ create temporary fresh schema-v4 DB
+read saved queries
+→ build temporary fresh schema-v4 DB
 → seed saved queries transactionally
-→ archive/move the original DB as-is
-→ atomically install the fresh v4 DB
+→ optionally archive/move source as-is
+→ atomically install fresh v4 active DB
 ```
 
-Only saved Scanner queries cross the new-day boundary. Market authority, Demo Buy captures/items/context and incomplete horizons never copy into the new active DB.
+Market/Demo Buy evidence does not copy into the new day. v4 archives remain self-contained; v3 archives remain valid pre-Demo-Buy history.
 
-A v4 archive remains self-contained with its referenced history and Demo Buy forensic evidence. A v3 archive remains a valid historical pre-Demo-Buy Market Flow US database.
+## D-US-030 — Demo Buy UX is explicit about background work, progressive evidence and bounded interaction
+
+**Status:** resolved
+
+Auto mode is persistent cross-surface Viewer-session state with direct Off control; enabling/changing Auto affects only future Scanner generations. Turning Off does not cancel an already dispatched capture.
+
+Scanner gains a **resumable** `Stop recurring scan` behavior using the existing scheduler seam; terminal Viewer destruction remains separate. While stopped, no new generations or Auto attempts occur; later Activate works normally.
+
+Demo Buy renders capture groups with sticky identity/baseline context and one compact horizon cell per horizon. `NO_FUTURE_OBSERVATION` is shown as Pending, while baseline/future-price problems are warning-style unavailable states.
+
+`Refresh latest` resets to the first keyset page; `Load more` continues the current walk. `demo.buy.observation.get(captureId, securityId)` refreshes one older observation in place so Auto cannot push the item out of inspectable reach.
+
+AI Investigation uses one Viewer-wide export slot, relative product export paths and clipboard fallback. A lost export ACK may be safely regenerated after reconnect because export is non-mutating and collision-safe.
+
+## D-US-031 — Wall-clock timestamps are diagnostics; writer/cycle ordering is authority
+
+**Status:** resolved
+
+Scanner start/completion, market collection and capture timestamps are useful forensic diagnostics but can regress under system-clock adjustment.
+
+Preserve raw timestamps. Derive duration/latency/age only when non-negative; otherwise return null plus a bounded timing-anomaly indicator. Do not reject a valid capture or reorder authority because of wall-clock anomalies.
+
+Market authority at capture is determined by `buy_cycle_id` and serialized writer order.
