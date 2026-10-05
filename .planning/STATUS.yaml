@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 must close the final 7.2 acceptance-audit gap before PR: remove duplicated isolated read/Scanner synthetic row formulas so the shared generator/config remains the single dataset authority. FR-8A/B/C/D now have separate normal-runtime proofs, explicit runner profiles, sub-checkpoint PASS/FAIL reporting and documented commands. Then run the required focused/bounded verification and re-audit success_evidence."
+next_action: "Chat 8 has closed the 7.2 acceptance-audit implementation gaps. Run the required focused/bounded verification for local acceptance, Browser/Fast/workload correctness and generator-driven isolated seeding; fix any blocking defect in this chat; then re-audit 7.2 success_evidence before marking done/opening PR."
 last_review: "R-US-EXEC-REOPEN-004"
