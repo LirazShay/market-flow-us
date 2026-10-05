@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 next executes TREE node 7.2: package the deterministic configurable local Fake Leumi acceptance flow using the proven normal runtime/service/DuckDB/generator/workload mechanisms."
+next_action: "Chat 8 continues TREE node 7.2 and must use .planning/FIRST_RUN_ACCEPTANCE_PLAN.md as the durable cross-node first-machine path: build/prove the deterministic local Fake Leumi acceptance/reporting foundation required before Chat 9 documents deployment and Chat 10 executes target-machine acceptance."
 last_review: "R-US-EXEC-REOPEN-004"
