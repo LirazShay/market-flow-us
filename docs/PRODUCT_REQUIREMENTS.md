@@ -16,11 +16,14 @@ continuous validated U.S. market snapshots
 → trustworthy per-security history
 → arbitrary safe analytical SQL
 → short-horizon validation of Scanner selections through Demo Buy
+→ evidence-driven AI-assisted forensic review of why a selection succeeded or failed
 ```
 
 The product is a controlled U.S. conversion of the proven MarketScope product. The goal is to preserve the product model that already worked in Israel and change only what the U.S. provider/data contract or an explicitly requested new product capability requires.
 
 Demo Buy exists to test whether a Scanner query is directionally useful before any real order-execution work: when a Scanner result selects a security and a Demo Buy capture is accepted, the product must later show what persisted source `Price` did after that virtual-buy moment.
+
+The AI Investigation Pack extends that validation loop without turning the product into an AI trading agent. It lets the user export a disciplined local evidence bundle that separates prediction-time evidence from later outcome evidence and asks an external AI to propose testable Scanner-SQL improvements without hindsight leakage.
 
 ## 2. Primary user outcomes
 
@@ -44,10 +47,13 @@ The user must be able to:
 16. see observed future `Price`, percentage change and an explicit `UP` / `DOWN` / `FLAT` outcome at 10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m and 10m;
 17. see an explicit unavailable reason when a trustworthy percentage cannot be produced, instead of treating every unavailable cell as merely “wait longer”;
 18. inspect immutable source-query provenance, including the activated SQL and Scanner timing, without later query edits rewriting old observations;
-19. understand collection/service health and the last committed authority;
-20. restart the local service without losing committed active-day history or active-day Demo Buy observations;
-21. run the whole product offline against one deterministic Fake Market;
-22. perform one bounded real-provider verification without placing credentials in the repository.
+19. generate a local AI Investigation Pack for one Demo Buy observation containing the exact query, retained original Scanner comparison context, pre-buy history, baseline, post-buy history, trusted outcomes and a field guide;
+20. copy a generated anti-hindsight AI prompt that asks for evidence-backed minimal SQL improvements, counterfactual peer checks and a validation plan instead of automatically editing the active query;
+21. regenerate a previously partial investigation after more same-day outcome history arrives;
+22. understand collection/service health and the last committed authority;
+23. restart the local service without losing committed active-day history or active-day Demo Buy observations/provenance;
+24. run the whole product offline against one deterministic Fake Market;
+25. perform one bounded real-provider verification without placing credentials in the repository.
 
 ## 3. Product surfaces
 
@@ -154,6 +160,50 @@ The screen exposes both the Node-authoritative capture time and the baseline row
 
 Full SQL provenance is available on demand per capture rather than repeated in every visible item row.
 
+### 3.5 AI Investigation Pack
+
+Each Demo Buy observation exposes:
+
+```text
+Generate AI Investigation Pack
+```
+
+The product generates the pack locally. It does not call an AI provider, store an AI API key or transmit evidence automatically.
+
+The pack contains:
+
+```text
+README.md
+PROMPT.md
+MANIFEST.json
+QUERY.sql
+SCANNER_CONTEXT.json
+TARGET_BEFORE.jsonl
+BASELINE.json
+TARGET_AFTER.jsonl
+OUTCOME.json
+FIELD_GUIDE.md
+```
+
+The investigation contract is owned by `docs/AI_INVESTIGATION_PACK.md`.
+
+The pack must make it impossible to confuse information that was available before the virtual buy with information observed afterward. The generated prompt labels facts, derived values and hypotheses separately and requires every proposed Scanner improvement to cite only prediction-time evidence.
+
+A capture freezes the first 50 Scanner source-result rows, with exact SQL order/ranks and bounded deterministic JSON-safe values, as comparison provenance. This context is not market authority and never changes the Scanner ranking.
+
+For a target inside the retained Top-50, the AI may compare its original Scanner output with nearby candidates. A target outside that retained context still produces a useful pack, but the manifest/prompt marks `targetInScannerContext=false` and forbids fabricated peer/rank reconstruction.
+
+Default forensic history windows are:
+
+```text
+30 minutes before capturedAtMs through capturedAtMs
+capturedAtMs through capturedAtMs + 10 minutes
+```
+
+A pack may be `PARTIAL_OUTCOME` before the full post-buy evidence boundary exists. Regeneration may later become `COMPLETE_OUTCOME`; immutable query/context/baseline evidence never changes.
+
+The user decides whether any AI suggestion becomes experimental Scanner SQL. The product never activates or edits a query automatically from AI output.
+
 ## 4. U.S. source requirement
 
 The current provider source is Bank Leumi's authenticated U.S. screener endpoint:
@@ -177,7 +227,7 @@ Therefore:
 - canonical product identity is `String(PaperId)` only after `PaperId` is validated as a non-blank string or JavaScript safe integer; malformed object/array/boolean/non-safe numeric identities fail closed at both Browser and Node authority boundaries;
 - a complete-response acquisition must validate exact row count and unique canonical IDs;
 - incomplete, duplicate, malformed or failed snapshots never replace Current and never append authoritative history;
-- Node commit acknowledgement is required before the browser treats a cycle as committed;
+- Node commit acknowledgement is required before the browser treats a market cycle as committed;
 - prior committed authority survives acquisition, transport, validation or persistence failure;
 - raw provider rows are retained;
 - `null`, numeric `0`, empty string and missing property remain distinguishable;
@@ -187,7 +237,9 @@ Therefore:
 - the exact linked `(buy_cycle_id, security_id)` remains immutable for that observation even as `latest` advances;
 - a missing immutable Demo Buy baseline link is an integrity error, not a normal unavailable horizon;
 - original Scanner `resultRank` is immutable capture provenance and may contain gaps for manual selections;
-- repeated Scanner captures are observations, not positions; the same security may appear in later captures again.
+- the retained Top-50 Scanner comparison context is immutable capture provenance and is never recomputed from a later market state;
+- repeated Scanner captures are observations, not positions; the same security may appear in later captures again;
+- generated AI packs are derivative local export artifacts and never become DB authority.
 
 ## 6. Current U.S. visible-data requirement
 
@@ -230,7 +282,7 @@ The U.S. product deliberately does not add:
 - background jobs that update Demo Buy horizon columns;
 - speculative new history indexes without measured need.
 
-Scanner SQL and Demo Buy evaluation read `history` directly. If representative workload proves a real bottleneck, optimize only that measured area later.
+Scanner SQL, Demo Buy evaluation and AI Investigation Pack history exports read `history` directly. If representative workload proves a real bottleneck, optimize only that measured area later.
 
 ## 8. Staged candidate SQL requirement
 
@@ -255,7 +307,7 @@ A successful Demo Buy capture has these semantics:
 
 ```text
 successful Scanner generation
-→ freeze query/timing/result provenance
+→ freeze query/timing/result provenance + bounded first-50 comparison context
 → choose manual selected source rows OR all source rows OR first X source rows
 → validate every chosen identity cell
 → reduce duplicate canonical IDs to first chosen occurrence
@@ -275,11 +327,23 @@ A recognized identity cell must be a non-blank canonical string. Manual invalid 
 
 A capture contains at most `5000` unique canonical security IDs. `Top X` is between `1` and `5000` **source rows**. `All` and auto-All never silently truncate a larger deduped selection. Manual empty selection is disabled/rejected; a successful automatic Scanner generation with zero chosen rows is a no-op and does not create an empty capture.
 
-One Viewer-level Demo Buy capture slot covers both manual and automatic capture. While a request is in flight, manual capture controls cannot double-submit; an automatic generation is visibly skipped rather than queued. Success or failure releases the slot and never stops Scanner scheduling.
+One Viewer-level Demo Buy capture slot covers both manual and automatic capture. While a request is in flight, manual capture controls cannot double-submit; an automatic generation is visibly skipped rather than queued. Success or confirmed rejection releases the slot and never stops Scanner scheduling.
 
 If the Scanner result does not expose exactly one recognized canonical security column, Demo Buy capture is unavailable for that result rather than guessing identity from `Symbol` or another field.
 
-Immutable source-generation provenance includes query ID/name/exact SQL, active interval, Scanner started/completed timestamps and source row count. It does not create a Strategy Engine or parse strategy meaning from SQL.
+Immutable source-generation provenance includes query ID/name/exact SQL, active interval, Scanner started/completed timestamps, source row count and bounded first-50 comparison context. It does not create a Strategy Engine or parse strategy meaning from SQL.
+
+### Capture acknowledgement uncertainty
+
+A transport error does not prove that a capture was rolled back. If the request may already have reached the service and the connection closes before the browser receives the response, the UI classifies the attempt as:
+
+```text
+ACKNOWLEDGEMENT_UNKNOWN
+```
+
+rather than `FAILED`.
+
+The capture slot is not blindly retried. The user must recover/reconnect and refresh Demo Buy before another capture action so already-committed evidence can be observed without silently creating a duplicate. A stable server rejection/rollback is `CONFIRMED_REJECTED`; a received success ACK is `CONFIRMED_COMMITTED`.
 
 ## 10. Demo Buy future-observation requirement
 
@@ -321,6 +385,8 @@ Phase 1 is intentionally approximate market-strategy validation. It assumes the 
 - Durable authority belongs to one localhost Node-owned DuckDB.
 - Browsers never open the production DuckDB directly.
 - No cloud backend is required.
+- AI Investigation Pack generation is local; no AI provider is contacted automatically.
+- No AI credential/API key is required or persisted.
 - Loopback bind/origin restrictions remain enforced.
 - Repository/test artifacts remain public-safe.
 
@@ -335,18 +401,20 @@ Preserve MarketScope fail-closed behavior:
 - recovery is explicit;
 - stale sessions are recovered on service restart;
 - failed Demo Buy capture does not partially create a capture event;
-- restart preserves active-day Demo Buy observations together with the active-day market DB;
+- lost capture acknowledgement is surfaced as unknown rather than falsely claiming rollback or automatically replaying;
+- restart preserves active-day Demo Buy observations together with their immutable capture/query/context provenance;
 - Demo Buy read failure never mutates stored observations;
 - Demo Buy capture failure/busy backpressure never stops or corrupts Scanner scheduling;
+- AI pack generation failure mutates neither DB authority nor the Demo Buy observation and is independently retryable;
 - a database marked schema v3 but already containing only part of the Demo Buy v4 structures is treated as inconsistent and fails closed rather than being silently accepted as a resumable migration.
 
 Automatic reconnect/replay is not required.
 
 ## 13. Offline development
 
-One deterministic local Fake Market must exercise the normal browser runtime, Node service, DuckDB, Current, Detail/History, Scanner and Demo Buy without real login.
+One deterministic local Fake Market must exercise the normal browser runtime, Node service, DuckDB, Current, Detail/History, Scanner, Demo Buy and AI Investigation Pack generation without real login.
 
-The fake must cover changing U.S. screener rows, dynamic membership, null/zero/missing values, malformed/incomplete responses, HTTP errors and delays, plus deterministic forward-price paths that make Demo Buy horizon assertions unambiguous.
+The fake must cover changing U.S. screener rows, dynamic membership, null/zero/missing values, malformed/incomplete responses, HTTP errors and delays, plus deterministic forward-price paths that make Demo Buy horizon assertions and AI-pack before/after evidence unambiguous.
 
 ## 14. Operational visibility and diagnosability
 
@@ -364,7 +432,7 @@ Keep the proven diagnostics model:
 - copyable sanitized Support Snapshot;
 - CLI fallback when the UI cannot start.
 
-Demo Buy errors/busy skips must remain ordinary local product diagnostics. Support snapshots must not dump stored SQL or authenticated/provider-private material; SQL provenance is shown only through the local on-demand capture-details affordance.
+Demo Buy errors/busy skips/acknowledgement-unknown states and AI-pack generation errors must remain ordinary local product diagnostics. Support snapshots must not dump stored SQL, full AI-pack evidence or authenticated/provider-private material; SQL provenance and pack contents are shown only through their explicit local user workflows.
 
 ## 15. Performance requirement
 
@@ -374,17 +442,21 @@ Representative workload must prove an approximately-4k-security U.S. shape and i
 
 Demo Buy pages are intentionally bounded more tightly than History because one item carries ten horizon results. Phase 1 uses 50-item keyset pages and one transactionally consistent trusted read snapshot per page.
 
+AI pack generation is an explicit user-triggered export, not a recurring background workload. Its 30-minute pre-window, 10-minute post-window and Top-50 Scanner context are bounded and must not stall recurring Scanner/collection work materially on representative data.
+
 Do not invent hard millisecond SLOs before measurement. Do not precompute every horizon, add a worker or add a new `history` index merely to avoid a query whose measured cost is already practical.
 
-If staged SQL, Demo Buy reads or persistence are materially too slow for practical use, that measured bottleneck becomes a focused optimization/replan.
+If staged SQL, Demo Buy reads, AI-pack export or persistence are materially too slow for practical use, that measured bottleneck becomes a focused optimization/replan.
 
 ## 16. Active-day lifecycle
 
-Demo Buy observations are part of the active trading day's analytical evidence.
+Demo Buy observations and their retained Scanner context are part of the active trading day's analytical evidence.
 
-The normal new-day operation may archive the prior DuckDB with its market history and Demo Buy observations, then create a fresh schema-v4 active-day market/Demo-Buy authority while preserving saved Scanner queries according to the existing new-day contract.
+The normal new-day operation may archive the prior DuckDB with its market history and Demo Buy observations/context, then create a fresh schema-v4 active-day market/Demo-Buy authority while preserving saved Scanner queries according to the existing new-day contract.
 
 Demo Buy horizon evaluation does not bridge into the next active-day database. If a late-day horizon was never observed before rollover, it remains unavailable in that day's self-contained evidence.
+
+AI packs already exported remain local files. New packs are generated only from the DB currently opened by the local product/service; no multi-day warehouse is introduced.
 
 Phase 1 does not create a multi-day strategy warehouse or cross-day aggregate database.
 
@@ -414,6 +486,10 @@ This phase does not include:
 - background horizon materialization;
 - cross-day strategy warehouse;
 - liquidity/fillability proof from volume/trade data;
+- automatic call to an AI provider;
+- storage of AI credentials;
+- automatic AI modification/activation of Scanner SQL;
+- internet/web enrichment inside the AI pack builder;
 - cloud backend;
 - replacing Node/DuckDB/WebSocket without evidence;
 - TradingView dependency.
@@ -427,9 +503,12 @@ The current product increment is complete only when:
 - Scanner and saved-query behavior remain intact;
 - staged-ranking SQL remains executable and measured;
 - Demo Buy manual/all/Top-X/automatic capture behavior is executable against exact authoritative buy-history rows with source-row-first Top-X semantics, original result-rank provenance, bounded/visible invalid/oversized/busy handling and no double-submit;
-- immutable Scanner query/interval/result timing provenance survives later query edits and can be inspected on demand;
+- capture acknowledgement uncertainty is handled without false rollback claims or automatic duplicate retries;
+- immutable Scanner query/interval/result timing plus bounded Top-50 comparison provenance survive later query edits and can be inspected/exported;
 - Demo Buy displays the fixed Phase-1 future `Price`/percentage/outcome horizons with explicit unavailable reasons and correct signal/capture/baseline timing;
 - bounded Demo Buy continuation is stable while newer automatic captures are inserted and each page is evaluated from one consistent DB snapshot;
+- AI Investigation Pack generation produces the documented local deterministic evidence bundle and anti-hindsight prompt, including honest `targetInScannerContext` and partial/complete outcome status;
+- AI pack regeneration changes only later outcome-dependent evidence and never edits Scanner SQL or DB authority;
 - Fake Market, Fast, Browser and representative workload gates are green for the post-feature candidate;
 - target-machine local acceptance and one-day lifecycle evidence are green on that candidate;
 - the SHA-bound authenticated boundary passes for closed/static compatibility;
