@@ -11,12 +11,15 @@ reuse proven MarketScope tests where behavior is unchanged
 → replace only provider/data-specific fixtures/assertions
 → keep Fast feedback fast
 → use Chromium for browser composition
-→ use representative workload for scale/performance
+→ use bounded workload smoke in CI for correctness/catastrophic regressions
+→ use configurable synthetic generators for isolated load probes
 → use deterministic local Fake Leumi acceptance before external checks
-→ defer authenticated target-machine checks to the final acceptance leaf
+→ defer heavy performance authority and authenticated target-machine checks to the final acceptance leaf
 ```
 
 No credentialed provider access belongs in CI.
+
+GitHub-hosted CI is **correctness-first**. It may record timing and run small performance sanity probes, but it is not the authority for heavy performance PASS/FAIL on the user's stronger intended machine.
 
 ### Automation-performance invariant
 
@@ -42,7 +45,7 @@ A broad, high-value recurring suite that covers many real integration boundaries
 
 The expected steady state is that focused checks remain very fast and broad recurring verification remains comfortably bounded. Hard ceilings are failure bounds, not performance targets.
 
-Long waits are treated as feedback/performance defects, not as permission to increase timeouts. Normal Fast/Browser jobs have a 3-minute hard ceiling. The representative 4096 × 180 workload has a 5-minute hard ceiling. Hitting a hard ceiling is a blocker to investigate and optimize.
+Normal Fast/Browser jobs keep a 3-minute hard ceiling, but ordinary success should be much faster. Heavy target-machine performance profiles have their own acceptance ceilings and must not be forced through hosted CI merely to obtain a number.
 
 ## 2. Layer 1 — Unit tests
 
@@ -175,6 +178,22 @@ The repeated-identical scenario is important: a closed/static market is not a fa
 
 Normal scenarios should not rely on Playwright interception.
 
+### Configurable synthetic generation
+
+Fake Market and load/performance tests must share one deterministic synthetic-data generator rather than maintain large duplicated fixture sets.
+
+The generator is externally configurable through a small documented profile/config boundary for at least:
+
+- universe size;
+- cycle/history count or logical day shape;
+- logical cadence/timestamps;
+- static vs moving data pattern;
+- deterministic membership changes;
+- deterministic failure/recovery points;
+- seed/reproducibility.
+
+Tests may use the generator directly without starting Fake Market when HTTP/browser behavior is irrelevant to the component being measured.
+
 ## 6. Layer 4 — Browser E2E
 
 Chromium runs against Fake Market + real local service + normal built runtime.
@@ -239,19 +258,67 @@ npm ci
 
 Failure evidence remains sanitized.
 
-## 9. Layer 5 — Representative U.S. workload
+## 9. Layer 5 — Workload correctness and performance-smoke tooling
 
-Manual/dispatch workload:
+Workload tooling has two deliberately different responsibilities.
+
+### A. Hosted-CI correctness/performance sanity
+
+GitHub CI runs **small deterministic profiles only**. The goal is broad correctness and early catastrophic-regression detection, not hardware benchmarking.
+
+Required CI coverage includes:
+
+- generated U.S. row/schema correctness;
+- exact completed/failed/latest/history counts;
+- restart preservation;
+- Current and History reads;
+- general Scanner SQL families;
+- staged Scanner correctness;
+- sanitized report structure;
+- at least one approximately-4096-security **single/few-cycle width sanity** so full-universe projection/serialization shape is exercised;
+- small multi-cycle history profile sufficient to exercise history growth and staged-query semantics.
+
+Timing from hosted CI is diagnostic. A materially surprising regression must be investigated, but a weak runner does not define release-performance PASS/FAIL.
+
+Do not run `4096 × 45` or `4096 × 180` repeatedly in CI merely to discover a bottleneck that can be isolated with a smaller profile.
+
+### B. Isolated performance probes
+
+Performance tests should exercise only the layers relevant to the metric:
+
+```text
+persistence probe
+→ generate validated cycle data directly
+→ persistence/DuckDB only
+
+read/Scanner probe
+→ seed deterministic day-bounded history efficiently
+→ Current/History/Scanner only
+
+end-to-end probe
+→ Fake Market HTTP
+→ browser/Recorder
+→ WebSocket/service
+→ DuckDB
+```
+
+Do not require browser/HTTP/WebSocket work when measuring only DuckDB reads or Scanner SQL. Do not replay thousands of real commits merely to create a Scanner dataset if deterministic direct seeding preserves the same schema/data invariants for that measurement.
+
+All materially changed SQL still requires the AGENTS static preflight and a tiny deterministic execution before any larger probe.
+
+### C. Heavy target-machine profile
+
+The acceptance kit exposes at least:
 
 ```text
 4096 securities
-180 cycles
+180 end-to-end cycles
 737280 history rows
 ```
 
-Synthetic rows use U.S. typed fields.
+for the final target machine.
 
-Required integrity:
+Required integrity remains:
 
 - 180 completed cycles;
 - zero failed cycles;
@@ -273,15 +340,17 @@ Measure:
 - restart-to-ready;
 - DB file size.
 
-The staged query must exercise at least the 10/20/30/45/60/90/120-second example against logical 3-second cycle spacing.
+The staged query must exercise at least the 10/20/30/45/60/90/120-second example against configured logical timestamps.
 
-Workload discipline:
+The 5-minute end-to-end ceiling is a **target-machine acceptance ceiling**, not a hosted-CI requirement.
 
-- correctness/count integrity is mandatory;
-- the complete representative workload has a 5-minute hard ceiling;
-- timeout is a performance blocker, not a reason to allow a longer run;
-- before the full workload, materially changed SQL must pass AGENTS static preflight and a small deterministic probe;
-- if ordinary use or intended Scanner cadence is materially impractical, performance is a blocker and the smallest affected area is reopened.
+### D. One-trading-day data horizon
+
+The active market-data DB is designed for one trading day, not for continuously accumulated month/year history.
+
+Performance reasoning and synthetic datasets therefore use a configurable **one-day-bounded** history shape. A read/Scanner performance profile may seed the amount of history implied by the configured trading-day duration and cadence directly, without waiting through a literal day of runtime.
+
+At day rollover, prior market data may be archived and the active market-data authority starts fresh for the new day. Saved-query state must survive the new-day operation. Long-term multi-day analysis inside the active DB is not a performance requirement for this release.
 
 ## 10. Layer 6 — Local Fake Leumi acceptance kit
 
@@ -299,6 +368,8 @@ Fake Leumi / ScreenerHulPaging3-shaped HTTP
 ```
 
 Do not introduce a second product implementation just for acceptance.
+
+The kit uses the configurable synthetic generator from Layer 5 so the same profile mechanism can drive tiny automated fixtures, isolated load probes and heavy target-machine runs.
 
 The kit must provide deterministic coverage for:
 
@@ -326,13 +397,15 @@ The kit must provide deterministic coverage for:
 - subsequent provider recovery commits normally;
 - service restart preserves committed authority.
 
-### Local scale/performance mode
+### Local scale/performance modes
 
-The kit exposes the representative `4096 × 180` workload in a user-runnable form instead of duplicating a second benchmark implementation.
+The kit exposes:
 
-It emits a sanitized machine-readable report containing the required counts and latency measurements. The same 5-minute hard ceiling applies on the target machine; exceeding it is reported as a performance failure that requires investigation rather than silent continuation.
+- isolated persistence profile;
+- isolated day-bounded read/Scanner profile;
+- representative `4096 × 180` end-to-end profile.
 
-The implementation of this kit must itself be automatically exercised with smaller deterministic fixtures so development can finish without waiting for the user or market hours.
+Each emits a sanitized machine-readable report. The implementation of the kit itself is automatically exercised with smaller deterministic fixtures so development can finish without waiting for the user or market hours.
 
 ## 11. Layer 7 — Final target-machine acceptance bundle
 
@@ -348,7 +421,10 @@ Required:
 - moving-market mode PASS;
 - failure/recovery PASS;
 - restart PASS;
-- representative `4096 × 180` mock load/performance PASS within the 5-minute hard ceiling.
+- isolated persistence profile PASS;
+- isolated one-trading-day read/Scanner profile PASS;
+- representative `4096 × 180` end-to-end mock load/performance PASS within the 5-minute target-machine ceiling;
+- new-day archive/reset lifecycle PASS with fresh market tables and saved queries preserved.
 
 ### B. Authenticated closed/static-market smoke
 
@@ -385,8 +461,8 @@ Preconditions:
 - final candidate/cleanup is complete;
 - Fast green;
 - Browser green;
-- representative workload green;
-- target-machine local Fake Leumi acceptance PASS;
+- bounded CI workload correctness/sanity green;
+- target-machine local Fake Leumi/performance acceptance PASS;
 - closed/static-market smoke PASS or repeated as part of the same final session;
 - no legacy/competing producer;
 - authenticated eligible provider page open;
@@ -447,15 +523,18 @@ Provider fixtures are synthetic and schema-shaped only.
 
 A migration implementation node closes only with the verification routed by TREE.
 
-Development may proceed through local acceptance tooling and release cleanup without waiting for market movement.
+Development may proceed through local acceptance tooling and release cleanup without waiting for market movement or the user's target-machine benchmark.
 
 Final product completion requires:
 
 ```text
 Fast green
 Browser green
-U.S. representative workload green
+bounded CI workload correctness/performance-smoke green
 local Fake Leumi target-machine acceptance PASS
+isolated one-day persistence/read/Scanner performance PASS
+4096 × 180 target-machine end-to-end performance PASS
+new-day archive/reset lifecycle PASS
 closed/static authenticated smoke PASS
 market-open authenticated acceptance PASS
 main CI green
