@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 const TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
 const REPORT_DIR = path.resolve("test-results", "acceptance");
@@ -10,7 +11,7 @@ const PLAYWRIGHT_CLI = path.resolve("node_modules", "@playwright", "test", "cli.
 const WORKLOAD_RUNNER = path.resolve("scripts", "run-workload-profile.mjs");
 const MAX_DIAGNOSTIC_CHARS = 4000;
 
-const PROFILES = Object.freeze({
+export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
   static: Object.freeze({
     checkpoint: "FR-7",
     kind: "playwright",
@@ -42,7 +43,11 @@ const PROFILES = Object.freeze({
   })
 });
 
-function boundedSanitizedText(value) {
+export function resolveLocalAcceptanceProfile(name) {
+  return LOCAL_ACCEPTANCE_PROFILES[name] ?? null;
+}
+
+export function sanitizeAcceptanceDiagnostic(value) {
   if (!value) return null;
   const cwd = process.cwd();
   const home = os.homedir();
@@ -175,14 +180,16 @@ async function runProfile(profile) {
   };
 }
 
-const profileName = process.argv[2] ?? "all";
-const profile = PROFILES[profileName];
+export async function runLocalAcceptanceCli(profileName = process.argv[2] ?? "all") {
+  const profile = resolveLocalAcceptanceProfile(profileName);
 
-if (!profile) {
-  console.error(`Unknown local acceptance profile: ${profileName}`);
-  console.error(`Allowed profiles: ${Object.keys(PROFILES).join(", ")}`);
-  process.exitCode = 2;
-} else {
+  if (!profile) {
+    console.error(`Unknown local acceptance profile: ${profileName}`);
+    console.error(`Allowed profiles: ${Object.keys(LOCAL_ACCEPTANCE_PROFILES).join(", ")}`);
+    process.exitCode = 2;
+    return null;
+  }
+
   const startedAt = Date.now();
   const identity = await candidateIdentity();
   const execution = await runProfile(profile);
@@ -212,7 +219,9 @@ if (!profile) {
           component: profile.kind === "workload" ? "workload-acceptance" : "local-acceptance",
           checkpoint: profile.checkpoint,
           code: result.signal ? "ACCEPTANCE_TERMINATED" : "ACCEPTANCE_TEST_FAILED",
-          message: boundedSanitizedText(result.error ?? result.output ?? "Local acceptance failed.")
+          message: sanitizeAcceptanceDiagnostic(
+            result.error ?? result.output ?? "Local acceptance failed."
+          )
         }
   };
 
@@ -231,4 +240,10 @@ if (!profile) {
   }
 
   process.exitCode = passed ? 0 : 1;
+  return report;
+}
+
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : null;
+if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
+  await runLocalAcceptanceCli();
 }
