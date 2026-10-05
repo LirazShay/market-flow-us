@@ -84,7 +84,31 @@ LIMIT 20;`,
     queryId: "builtin:staged-candidate-ranking",
     source: "builtin",
     name: "Staged candidate ranking",
-    sql: `SELECT
+    sql: `WITH anchors AS (
+  SELECT
+    l.security_id,
+    l.collected_at_ms,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 10000) AS price_10s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 20000) AS price_20s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 30000) AS price_30s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 45000) AS price_45s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 60000) AS price_60s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 90000) AS price_90s_ago,
+    first(h.Price ORDER BY h.collected_at_ms DESC, h.cycle_id DESC)
+      FILTER (WHERE h.collected_at_ms <= l.collected_at_ms - 120000) AS price_120s_ago
+  FROM latest AS l
+  LEFT JOIN history AS h
+    ON h.security_id = l.security_id
+   AND h.collected_at_ms <= l.collected_at_ms - 10000
+  GROUP BY l.security_id, l.collected_at_ms
+)
+SELECT
   l.security_id AS securityId,
   l.Symbol,
   l.PaperNameEng,
@@ -92,26 +116,26 @@ LIMIT 20;`,
   l.Price,
   l.ChangePercent,
   l.DailyVolume,
-  p10.Price AS price_10s_ago,
-  p20.Price AS price_20s_ago,
-  p30.Price AS price_30s_ago,
-  p45.Price AS price_45s_ago,
-  p60.Price AS price_60s_ago,
-  p90.Price AS price_90s_ago,
-  p120.Price AS price_120s_ago,
+  a.price_10s_ago,
+  a.price_20s_ago,
+  a.price_30s_ago,
+  a.price_45s_ago,
+  a.price_60s_ago,
+  a.price_90s_ago,
+  a.price_120s_ago,
   CASE
-    WHEN l.Price > p10.Price THEN
+    WHEN l.Price > a.price_10s_ago THEN
       CASE
-        WHEN l.Price > p20.Price THEN
+        WHEN l.Price > a.price_20s_ago THEN
           CASE
-            WHEN l.Price > p30.Price THEN
+            WHEN l.Price > a.price_30s_ago THEN
               CASE
-                WHEN l.Price > p45.Price THEN
+                WHEN l.Price > a.price_45s_ago THEN
                   CASE
-                    WHEN l.Price > p60.Price THEN
+                    WHEN l.Price > a.price_60s_ago THEN
                       CASE
-                        WHEN l.Price > p90.Price THEN
-                          CASE WHEN l.Price > p120.Price THEN 7 ELSE 6 END
+                        WHEN l.Price > a.price_90s_ago THEN
+                          CASE WHEN l.Price > a.price_120s_ago THEN 7 ELSE 6 END
                         ELSE 5
                       END
                     ELSE 4
@@ -125,62 +149,9 @@ LIMIT 20;`,
     ELSE 0
   END AS stage_reached
 FROM latest AS l
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 10000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p10 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 20000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p20 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 30000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p30 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 45000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p45 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 60000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p60 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 90000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p90 ON TRUE
-LEFT JOIN LATERAL (
-  SELECT h.Price
-  FROM history AS h
-  WHERE h.security_id = l.security_id
-    AND h.collected_at_ms <= l.collected_at_ms - 120000
-  ORDER BY h.collected_at_ms DESC, h.cycle_id DESC
-  LIMIT 1
-) AS p120 ON TRUE
+LEFT JOIN anchors AS a
+  ON a.security_id = l.security_id
+ AND a.collected_at_ms = l.collected_at_ms
 ORDER BY stage_reached DESC,
          l.ChangePercent DESC NULLS LAST,
          l.DailyVolume DESC NULLS LAST,
