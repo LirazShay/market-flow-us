@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "5.3"
+current_node: "6.1"
 blockers: []
-next_action: "Chat 5 executes TREE node 5.3: full U.S. Chromium E2E and recovery proof through the normal runtime."
+next_action: "Chat 6 executes TREE node 6.1 next; Chat 5 nodes 5.1-5.3 are done with full U.S. offline browser/runtime proof green."
 last_review: "R-US-EXEC-REOPEN-001"
