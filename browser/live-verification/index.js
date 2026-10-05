@@ -1,9 +1,9 @@
 import { runBoundedLiveVerification } from "./harness.js";
 
-export const LIVE_VERIFICATION_RESULT_KEY = "__MARKET_SCOPE_LIVE_VERIFICATION_RESULT_V1__";
-export const LIVE_VERIFICATION_PROMISE_KEY = "__MARKET_SCOPE_LIVE_VERIFICATION_PROMISE_V1__";
+export const LIVE_VERIFICATION_RESULT_KEY = "__MARKET_FLOW_US_LIVE_VERIFICATION_RESULT_V1__";
+export const LIVE_VERIFICATION_PROMISE_KEY = "__MARKET_FLOW_US_LIVE_VERIFICATION_PROMISE_V1__";
 
-const CANDIDATE_COMMIT = __MARKET_SCOPE_CANDIDATE_COMMIT__;
+const CANDIDATE_COMMIT = __MARKET_FLOW_US_CANDIDATE_COMMIT__;
 
 function safeUnexpectedFailure(now = () => Date.now()) {
   const completedAtMs = now();
@@ -32,10 +32,10 @@ function publishReport(target, report) {
   });
 
   const json = JSON.stringify(report, null, 2);
-  target.console?.info?.("[MarketScope live verification]", report);
+  target.console?.info?.("[Market Flow US live verification]", report);
 
   if (typeof target.prompt === "function") {
-    target.prompt("MarketScope live verification report (sanitized JSON):", json);
+    target.prompt("Market Flow US live verification report (sanitized JSON):", json);
   }
 
   return report;
