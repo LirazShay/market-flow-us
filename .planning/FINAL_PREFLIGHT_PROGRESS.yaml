@@ -1,8 +1,8 @@
-version: 1
+version: 2
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A9"
+current_stage: "A10"
 fr0_blocked_until_audit_closes: true
 
 stages:
@@ -15,282 +15,205 @@ stages:
   A6: done
   A7: done
   A8: done
-  A9: pending
+  A9: done
   A10: pending
 
 findings:
   - id: "A1-001"
     severity: HIGH
     area: "browser/provider/us-screener.js"
-    finding: "Provider fetch/JSON had no hard failure bound; a stalled provider request could leave Recorder cycleInFlight true and make runtime stop/relaunch wait indefinitely."
-    fix: "Added a 10-second provider request hard bound using AbortController plus Promise.race so acquisition/parse cannot block authority lifecycle indefinitely."
-    regression: "tests/unit/final-preflight-a1.test.mjs bounds a never-settling fetch."
-    state: "fixed; A1 CI green"
-
+    finding: "Provider fetch/JSON could stall indefinitely."
+    fix: "Added a 10-second AbortController/Promise.race hard bound."
+    regression: "tests/unit/final-preflight-a1.test.mjs"
+    state: fixed
   - id: "A1-002"
     severity: HIGH
     area: "browser/runtime/producer-bridge.js + browser/runtime/application.js"
-    finding: "producer.session.stop rejection re-armed heartbeat, and a launch failure after session start did not close the partial producer session; either path could leave a live producer while runtime state was error and make relaunch conflict with ownership."
-    fix: "stopSession now fails closed and tears down transport; launch failure drains/stops Recorder and closes any already-started producer session before remaining in error."
-    regression: "tests/unit/final-preflight-a1.test.mjs covers both stop rejection and partial-launch cleanup."
-    state: "fixed; A1 CI green"
-
+    finding: "Stop rejection/partial launch could leave live producer authority."
+    fix: "Stop fails closed and launch failure drains/stops Recorder plus partial producer session."
+    regression: "tests/unit/final-preflight-a1.test.mjs"
+    state: fixed
   - id: "A1-003"
     severity: MEDIUM
-    area: "browser/runtime/producer-bridge.js + browser/diagnostics/support-snapshot.js"
-    finding: "Several user-visible browser diagnostic/error strings still identified the local service as MarketScope after release branding cutover."
-    fix: "Changed reviewed A1 producer/support diagnostic strings and default producer client identity to Market Flow US."
-    regression: "Existing branding/diagnostic suites plus A1 Fast/Browser verification; repeat integrated proof at A9."
-    state: "fixed; A1 CI green"
-
+    area: "browser runtime/support diagnostics"
+    finding: "Reviewed diagnostics still exposed MarketScope branding."
+    fix: "Rebranded public diagnostics/producer identity to Market Flow US."
+    regression: "branding/diagnostic suites"
+    state: fixed
   - id: "A2-001"
     severity: HIGH
-    area: "browser/recorder/recorder.js -> producer.cycle.failed -> local authority"
-    finding: "Failed-cycle reports copied the raw provider/network Error.name and Error.message across the Browser-to-Node boundary, where they could be persisted in cycles.error_json and sessions.last_error_json. A provider error containing private/session material could therefore cross the public-safe boundary."
-    fix: "Recorder now keeps the raw error only in local latestError state and emits a fixed phase-specific sanitized descriptor through onFailure/ProducerBridge."
-    regression: "tests/unit/final-preflight-a2.test.mjs injects cookie/account/authorization sentinels and proves none cross the failure-report boundary; recorder-scheduling.test.mjs proves raw local debugging state remains available."
-    state: "fixed; A2 CI green"
-
+    area: "browser/recorder/recorder.js -> failed-cycle authority"
+    finding: "Raw provider/network error text crossed Browser-to-Node and could be persisted."
+    fix: "Only fixed phase-specific sanitized descriptors cross authority; raw error remains browser-local."
+    regression: "tests/unit/final-preflight-a2.test.mjs + recorder-scheduling.test.mjs"
+    state: fixed
   - id: "A2-002"
     severity: HIGH
     area: "local-service/database/writer.js"
-    finding: "The bulk writer flushed buffered history/latest work before executing ROLLBACK. If the Appender/flush itself was the failing persistence operation, rollback could fail before DuckDB received ROLLBACK, leaving the serialized writer connection in a poisoned transaction."
-    fix: "ROLLBACK now discards all non-authoritative bulk buffers/set-wise-copy state and executes directly on the underlying DuckDB connection without attempting a flush first."
-    regression: "tests/unit/database-writer.test.mjs proves buffered rows are discarded and proves ROLLBACK still reaches the underlying connection even when createAppender would throw; existing U.S. F1-F5 transaction regressions remain green."
-    state: "fixed; A2 CI green"
-
+    finding: "ROLLBACK flushed pending Appender work first, so flush failure could prevent rollback."
+    fix: "ROLLBACK discards pending non-authoritative buffers and executes directly."
+    regression: "tests/unit/database-writer.test.mjs + U.S. F1-F5 rollback suite"
+    state: fixed
   - id: "A3-001"
     severity: HIGH
     area: "local-service/reads/viewer-reads.js"
-    finding: "viewer.status re-emitted the stored last_error_json name/message. Databases produced before A2 hardening could therefore expose arbitrary legacy provider/network error text even though new failed-cycle writes are sanitized."
-    fix: "Trusted status reads now treat persisted failure JSON only as an error-presence signal and return a fixed public-safe collection error descriptor."
-    regression: "tests/service/final-preflight-a3.test.mjs injects legacy persisted cookie/account/authorization sentinels and proves none are returned; viewer-reads.test.mjs now asserts the generic descriptor."
-    state: "fixed; A3 CI green"
-
+    finding: "viewer.status could re-emit arbitrary legacy persisted error text."
+    fix: "Status exposes only allowlisted safe descriptors or one generic sanitized descriptor."
+    regression: "tests/service/final-preflight-a3.test.mjs + viewer-reads.test.mjs"
+    state: fixed
   - id: "A3-002"
     severity: MEDIUM
     area: "browser/viewer/client.js"
-    finding: "Viewer request diagnostics derived operationId from the global requestSequence after await. Concurrent requests completing out of order could therefore record another request's ID and mis-correlate the diagnostic trail."
-    fix: "sendRequest now returns the exact requestId together with the response; each request records diagnostics using its own captured requestId."
-    regression: "tests/unit/viewer-client.test.mjs completes concurrent Viewer requests out of order and proves exact diagnostic operationId correlation."
-    state: "fixed; A3 CI green"
-
+    finding: "Concurrent Viewer requests could record another request's diagnostic ID."
+    fix: "Each request captures and propagates its exact requestId."
+    regression: "tests/unit/viewer-client.test.mjs"
+    state: fixed
   - id: "A3-003"
     severity: MEDIUM
     area: "browser/viewer/client.js"
-    finding: "Reviewed Viewer client defaults and user-visible connection/error strings still used MarketScope after the Market Flow US branding cutover."
-    fix: "Rebranded the default Viewer client identity plus local-service connection/correlation/readiness messages to Market Flow US."
-    regression: "viewer-client.test.mjs plus full Fast/Browser branding verification."
-    state: "fixed; A3 CI green"
-
+    finding: "Viewer defaults/errors still used MarketScope branding."
+    fix: "Rebranded Viewer identity and service messages."
+    regression: "viewer-client/branding suites"
+    state: fixed
   - id: "A3-004"
     severity: MEDIUM
     area: "browser/viewer/detail-surface.js"
-    finding: "If History loadMore was in flight when an authoritative Detail refresh started, refresh superseded the old generation but left loadingMore true. The stale request could not clear it, leaving pagination disabled until Detail was reopened."
-    fix: "Authoritative Detail refresh explicitly releases stale pagination ownership before starting the new generation; stale continuation responses remain unable to mutate refreshed rows."
-    regression: "tests/unit/detail-surface.test.mjs proves refresh clears loadingMore while the superseded continuation is unresolved and that the stale page is ignored when it later completes."
-    state: "fixed; A3 CI green"
-
+    finding: "Refresh could supersede loadMore while leaving loadingMore locked true."
+    fix: "Authoritative refresh releases stale pagination ownership; stale pages remain ignored."
+    regression: "tests/unit/detail-surface.test.mjs"
+    state: fixed
   - id: "A4-001"
     severity: HIGH
     area: "Windows launchers"
-    finding: "SETUP.cmd enforced Node 24 only at install time. Post-setup launchers merely checked node_modules, so changing the active Node installation later could run Market Flow US on an unsupported runtime."
-    fix: "Added one small shared Windows Node-24 preflight and invoke it before dependency/product work from every post-setup launcher. SETUP.cmd retains its direct Node-24 check."
-    regression: "tests/unit/final-preflight-a4.test.mjs proves all post-setup launchers revalidate Node 24 before node_modules/product work."
-    state: "fixed; A4 CI green"
-
+    finding: "Node 24 was enforced only at setup time."
+    fix: "All post-setup launchers run a shared Node-24 preflight before product work."
+    regression: "tests/unit/final-preflight-a4.test.mjs"
+    state: fixed
   - id: "A4-002"
     severity: MEDIUM
     area: "START_DEMO.cmd"
-    finding: "The asynchronous browser opener trusted any HTTP 200 on port 4173. If an older demo already owned 4173, the launcher could open that stale process while the newly requested demo failed to bind."
-    fix: "Added a bounded loopback port-ownership preflight for 4173 and 8765 before starting the browser opener; occupied ports now fail before any stale page can be opened."
-    regression: "tests/unit/final-preflight-a4.test.mjs binds a real loopback port to prove rejection, then proves success after release and verifies launcher ordering."
-    state: "fixed; A4 CI green"
-
+    finding: "Browser opener could attach to an older process already serving port 4173."
+    fix: "Preflight ports 4173 and 8765 before launching the opener."
+    regression: "tests/unit/final-preflight-a4.test.mjs"
+    state: fixed
   - id: "A5-001"
     severity: HIGH
-    area: "scripts/run-local-acceptance.mjs + scripts/acceptance-process.mjs"
-    finding: "Local acceptance subprocesses had no runner-level hard bound. A hung Playwright/workload child or leaked descendant could leave FR-7/8/9 waiting indefinitely instead of producing a bounded FAIL."
-    fix: "Added bounded subprocess execution with non-Windows process-group cleanup and Windows taskkill tree cleanup. Playwright acceptance is bounded at 3 minutes per sub-check; workload acceptance is bounded above its existing 40-minute test ceiling."
-    regression: "tests/unit/final-preflight-a5.test.mjs starts a deliberately non-terminating child and proves TIMEOUT plus prompt reap, while normal exit status/output remain intact."
-    state: "fixed; A5 CI green"
-
+    area: "local acceptance subprocesses"
+    finding: "Hung children could leave FR-7/8/9 unbounded."
+    fix: "Added hard timeouts and process-tree cleanup."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
   - id: "A5-002"
     severity: MEDIUM
     area: "tests/workload/us-workload-support.mjs"
-    finding: "Workload detail artifacts sanitized only the profile temp directory, and the rethrown error retained its raw message; the top-level end-to-end report could therefore persist repo/home/temp paths or URLs."
-    fix: "Workload diagnostics now redact profile-temp, repo, home, system-temp and URLs, cap the message, and replace the rethrown Error.message with the sanitized form before any outer report records it."
-    regression: "tests/unit/final-preflight-a5.test.mjs injects path/URL sentinels and proves neither the report object nor the rethrown message retains them."
-    state: "fixed; A5 CI green"
-
+    finding: "Failure artifacts could retain local paths/URLs."
+    fix: "Sanitize repo/home/temp/profile paths and URLs before reports/rethrow."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
   - id: "A5-003"
     severity: HIGH
     area: "scripts/run-workload-profile.mjs"
-    finding: "Authoritative target-day/target-e2e runs inherited custom workload shape environment variables. Ambient experiment settings could shrink or alter an FR-9 target profile while it still reported an authoritative target profile name."
-    fix: "Non-custom workload profiles now scrub all shape/pattern/failure override variables before execution; custom retains configurability and explicit report-path overrides remain supported."
-    regression: "tests/unit/final-preflight-a5.test.mjs proves target-day/target-e2e ignore hostile custom overrides while custom preserves them."
-    state: "fixed; A5 CI green"
-
+    finding: "Authoritative target profiles could inherit custom shape overrides and false-PASS at reduced scale."
+    fix: "Non-custom profiles scrub all shape/pattern/failure overrides."
+    regression: "tests/unit/final-preflight-a5.test.mjs"
+    state: fixed
   - id: "A5-004"
     severity: MEDIUM
     area: "scripts/new-trading-day.mjs"
-    finding: "In --no-archive mode, a failure after the fresh DB had been installed could report rollover failure while leaving the fresh DB active and the prior authority at a temporary path, creating an ambiguous retry state."
-    fix: "Post-install failure in no-archive mode now moves the fresh DB back to the temporary slot, restores the exact prior active DB, and then removes the failed fresh candidate."
-    regression: "tests/service/final-preflight-a5.test.mjs injects after-fresh-install failure and proves the prior stopped session and saved query are restored with no temporary rollover files left."
-    state: "fixed; A5 CI green"
-
+    finding: "No-archive post-install failure could leave ambiguous fresh/prior DB state."
+    fix: "Restore exact prior active DB and remove failed fresh candidate."
+    regression: "tests/service/final-preflight-a5.test.mjs"
+    state: fixed
   - id: "A5-005"
     severity: MEDIUM
-    area: "scripts/new-trading-day.mjs CLI boundary"
-    finding: "Missing --db/--archive-dir values were not rejected consistently; an empty archive-dir could resolve to cwd and a following flag could be consumed as a path."
-    fix: "CLI path options now require an explicit non-flag value, and the API rejects empty archiveDir values."
-    regression: "tests/unit/final-preflight-a5.test.mjs covers missing/flag-as-value cases; tests/service/final-preflight-a5.test.mjs covers empty archiveDir API input."
-    state: "fixed; A5 CI green"
-
+    area: "scripts/new-trading-day.mjs CLI"
+    finding: "Missing path-option values could be consumed as flags/empty paths."
+    fix: "Require explicit non-flag values; reject empty archiveDir."
+    regression: "tests/unit/final-preflight-a5.test.mjs + tests/service/final-preflight-a5.test.mjs"
+    state: fixed
   - id: "A6-001"
     severity: HIGH
     area: ".github/workflows/fast-ci.yml"
-    finding: "Fast CI path filters omitted root Windows launchers plus START_HERE/FIRST_RUN_ACCEPTANCE/SCANNER_SQL_GUIDE even though Fast unit/service tests read and enforce those exact files. A release-critical launcher/runbook/schema-guide change could therefore bypass the tests intended to catch its drift."
-    fix: "Added root *.cmd, START_HERE.md, docs/FIRST_RUN_ACCEPTANCE.md and docs/SCANNER_SQL_GUIDE.md to both push and pull-request Fast CI path filters."
-    regression: "tests/unit/final-preflight-a6-ci.test.mjs proves every dependency is present in both Fast CI path-filter sets."
-    state: "fixed; A6 CI green"
-
+    finding: "Fast CI path filters omitted files directly enforced by Fast tests."
+    fix: "Added root *.cmd, START_HERE, FIRST_RUN_ACCEPTANCE and SCANNER_SQL_GUIDE to push/PR filters."
+    regression: "tests/unit/final-preflight-a6-ci.test.mjs"
+    state: fixed
   - id: "A6-002"
     severity: MEDIUM
     area: ".github/workflows/browser-ci.yml"
-    finding: "Browser E2E imports tests/service/helpers/service-fixture.mjs, but Browser CI did not listen to tests/service/helpers/**. A shared E2E service-helper change could therefore skip the Browser composition gate."
-    fix: "Added tests/service/helpers/** to both push and pull-request Browser CI path filters."
-    regression: "tests/unit/final-preflight-a6-ci.test.mjs proves the Browser dependency exists in both filter sets."
-    state: "fixed; A6 CI green"
-
+    finding: "Browser CI could skip changes to shared E2E service helpers."
+    fix: "Added tests/service/helpers/** to push/PR filters."
+    regression: "tests/unit/final-preflight-a6-ci.test.mjs"
+    state: fixed
   - id: "A6-003"
     severity: HIGH
-    area: "critical U.S. data/calculation regression proof"
-    finding: "Existing tests strongly covered schema v3, sampled typed projections and staged Scanner semantics, but there was no single systematic full-path proof that every public U.S. provider field lands in its exact history/latest column, nor an independent sentinel for every 10/20/30/45/60/90/120-second output that would catch an anchor-column swap."
-    fix: "Added a real provider-shaped -> collection candidate -> WebSocket/service -> DuckDB round-trip with unique sentinels for every typed field, plus a real DuckDB staged-Scanner fixture with distinct expected values and after-target decoys for all seven time anchors."
-    regression: "tests/service/final-preflight-a6-data-integrity.test.mjs proves exact history/latest mapping and exact latest-at-or-before resolution for each anchor independently."
-    state: "proof gap closed; A6 CI green"
-
+    area: "critical U.S. data/calculation proof"
+    finding: "No single systematic proof covered every promoted field and every 10/20/30/45/60/90/120-second anchor independently."
+    fix: "Added full provider->service->DuckDB field sentinels and distinct nearest-prior anchor sentinels with after-target decoys."
+    regression: "tests/service/final-preflight-a6-data-integrity.test.mjs"
+    state: "proof gap closed"
   - id: "A7-001"
     severity: HIGH
     area: "browser/provider/us-screener.js"
-    finding: "Provider PaperId validation canonicalized arbitrary JSON values with String(...). Malformed object/array/boolean identities or an unsafe numeric identity could therefore be converted into a plausible securityId instead of failing closed."
-    fix: "Provider identity now accepts only a non-empty string or a non-negative safe integer PaperId and rejects every other type before canonicalization."
-    regression: "tests/unit/final-preflight-a7.test.mjs proves object, array, boolean and unsafe numeric PaperId values are rejected."
-    state: "fixed; A7 CI green"
-
+    finding: "Arbitrary PaperId JSON values could be String(...) canonicalized into plausible IDs."
+    fix: "Accept only nonblank string or non-negative safe integer before canonicalization."
+    regression: "tests/unit/final-preflight-a7.test.mjs"
+    state: fixed
   - id: "A7-002"
     severity: HIGH
     area: "local-service/persistence/producer-authority.js"
-    finding: "Producer exclusivity was primarily guarded by the active WebSocket. If disconnect cleanup released in-memory ownership but interruption persistence failed, a second producer could start while a durable session was still status=running."
-    fix: "producer.session.start now performs a serialized DuckDB authority check and refuses to insert any new session while any durable running session exists. The new SELECT was documented through the mandatory 10-stage static SQL preflight before execution."
-    regression: "tests/service/final-preflight-a7.test.mjs creates a real durable orphan-running session, proves a second producer is rejected, resolves the orphan and then proves a new producer can start."
-    state: "fixed; A7 CI green"
-
+    finding: "Producer exclusivity could diverge from durable DB state after cleanup persistence failure."
+    fix: "Serialized session start checks for any durable running session before insert."
+    regression: "tests/service/final-preflight-a7.test.mjs"
+    sql_preflight: ".planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md"
+    state: fixed
   - id: "A7-003"
     severity: MEDIUM
-    area: "browser/runtime/producer-bridge.js + browser/viewer/refresh-controller.js"
-    finding: "The release commit-hint BroadcastChannel still used the donor namespace market-scope:v1. Market Flow US and an older MarketScope runtime on the same origin could therefore consume each other's refresh hints."
-    fix: "Renamed both release channel endpoints together to market-flow-us:v1; commit hints remain metadata-only and non-authoritative."
-    regression: "tests/unit/final-preflight-a7.test.mjs proves the release producer/viewer channel uses only the Market Flow US namespace."
-    state: "fixed; A7 CI green"
-
+    area: "browser producer/viewer commit hints"
+    finding: "Release BroadcastChannel still used donor market-scope:v1 namespace."
+    fix: "Renamed both endpoints to market-flow-us:v1."
+    regression: "tests/unit/final-preflight-a7.test.mjs"
+    state: fixed
   - id: "A7-004"
     severity: HIGH
-    area: "local-service/persistence/producer-authority.js U.S. universe boundary"
-    finding: "Even after Browser PaperId hardening, direct WebSocket U.S. universe payloads could still pass rawSource.PaperId or membership values through String(...) canonicalization at the Node authority boundary. A buggy producer could therefore persist a fabricated identity such as [object Object] or accept boolean membership."
-    fix: "The U.S. persistence adapter now uses the same strict string-or-safe-integer identity rule for rawSource.PaperId and requires membership entries to already be non-empty bounded strings; malformed identity fails before any universe mutation."
-    regression: "tests/service/final-preflight-a7.test.mjs sends malformed rawSource.PaperId and boolean membership through the real DuckDB authority and proves both are rejected with the universe remaining empty."
-    state: "fixed; A7 CI green"
-
+    area: "Node U.S. universe authority"
+    finding: "Direct WebSocket payloads could still String(...) malformed PaperId/membership values."
+    fix: "Node enforces the same strict U.S. identity boundary before persistence."
+    regression: "tests/service/final-preflight-a7.test.mjs"
+    state: fixed
   - id: "A8-001"
     severity: HIGH
-    area: "browser/live-verification + FR-13 contracts/runbooks"
-    finding: "TREE 7.4 and TEST_STRATEGY required market-open provider movement reflected in committed Current/History, but the executable live gate only proved a sustained authenticated static-compatible boundary. FR-13 therefore depended on an additional manual/ad-hoc observation that could not produce one deterministic SHA-bound PASS fact."
-    fix: "Kept base overall PASS as the static/closed compatibility fact and added a separate mechanical movement classification to the same SHA-bound live artifact. After base PASS it runs one bounded preflighted read-only Scanner witness over the exact committed cycle range, considers only persisted provider market/freshness fields, excludes collected_at_ms, and proves any witness through trusted Current/History before movement can PASS. No observed provider change remains PENDING; detected-but-unproven reflection is FAIL."
-    regression: "The new SQL received the mandatory 10-stage static preflight before first execution. tests/service/final-preflight-a8.test.mjs executes movement/static cases on real schema-v3 DuckDB/Scanner; tests/unit/final-preflight-a8.test.mjs proves PASS/PENDING/FAIL classification and bounded field/range behavior; live-verification build and Browser composition remain green."
-    state: "fixed; A8 CI green"
-
+    area: "browser/live-verification + FR-13 contracts"
+    finding: "Market-open movement required by TREE 7.4 had no deterministic SHA-bound executable PASS fact."
+    fix: "Live report now keeps base overall PASS separate and adds movement.status PASS/PENDING/FAIL from a bounded preflighted Scanner witness plus trusted Current/History reflection."
+    regression: "tests/service/final-preflight-a8.test.mjs + tests/unit/final-preflight-a8.test.mjs"
+    sql_preflight: ".planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md"
+    state: fixed
   - id: "A8-002"
     severity: MEDIUM
-    area: "DATA_CONTRACT / PRODUCT_REQUIREMENTS / PRODUCT_SPEC / TECHNICAL_SPEC identity wording"
-    finding: "After A7 fail-closed identity hardening, durable docs still described PaperId mostly as non-empty plus String(PaperId), which could be read as permitting generic object/boolean/non-safe-number canonicalization even though Browser and Node now reject those source types."
-    fix: "Aligned provider/data/product/technical contracts to accept only non-blank string or JavaScript safe-integer PaperId before canonicalization, with malformed types explicitly fail-closed."
-    regression: "tests/unit/final-preflight-a8-contract.test.mjs guards the identity wording and also ties the Product Spec Current column block exactly to the executable 15-column U.S. profile."
-    state: "fixed; A8 CI green"
+    area: "identity contract documentation"
+    finding: "Durable docs lagged the A7 PaperId fail-closed source-type contract."
+    fix: "Aligned DATA_CONTRACT/PRODUCT_REQUIREMENTS/PRODUCT_SPEC/TECHNICAL_SPEC to nonblank string or JS safe integer only."
+    regression: "tests/unit/final-preflight-a8-contract.test.mjs"
+    state: fixed
 
 reviewed_non_findings:
-  - id: "A2-REVIEW-001"
-    area: "schema-v3 bootstrap/reopen/rejection"
-    note: "Fresh schema-v3 exact columns/hardening, reopen with saved queries and stale-session recovery, and rejection of old MarketScope v1/v2 databases without mutation are already mechanically covered and remained green. No additional defect found."
-  - id: "A2-REVIEW-002"
-    area: "U.S. producer config boundary"
-    note: "The generic bridge/persistence retains legacy compatibility seams, but the production U.S. composition passes the marked createUsRecorderConfig object; JSON wire and persisted session config are cadence-only. The real bridge/service regression confirms {snapshotIntervalMs} only, so no release-path defect was recorded."
-  - id: "A2-REVIEW-003"
-    area: "producer loss/stale heartbeat/service restart"
-    note: "Existing real-service recovery proofs cover producer socket loss, stale heartbeat ownership release, clean service shutdown and restart recovery; all remained green after A2 changes."
-  - id: "A3-REVIEW-001"
-    area: "Current/Security/History authority"
-    note: "Schema-v3 projection, display-name fallback, historical-only lookup, zero/null preservation, 500-row keyset ordering and cursor-to-security binding are covered by real-service tests and remained green."
-  - id: "A3-REVIEW-002"
-    area: "Scanner admission and saved-query authority"
-    note: "Scanner still enforces one prepared SELECT, zero parameters and dynamic/side-effect-function rejection on the hardened Scanner connection. Saved-query CRUD is serialized/durable and its selected/draft/active-generation separation remained green. No SQL was materially changed in A3, so the AGENTS static-SQL re-entry rule was not triggered."
-  - id: "A3-REVIEW-003"
-    area: "Scanner query/result bounds"
-    note: "No arbitrary result-row cap was added: PRODUCT_SPEC requires exact Scanner result rows, while inbound requests are already bounded by the 16 MiB WebSocket max payload. Scanner runs on a separate hardened connection and executions are serialized/non-overlapping. Adding an implicit LIMIT would silently change user-authored SELECT semantics and is not justified by the frozen contract."
-  - id: "A4-REVIEW-001"
-    area: "package/build reproducibility"
-    note: "package.json and package-lock.json both pin Node 24.x plus exact DuckDB/ws/Playwright/esbuild versions. Browser and live-verification builders emit the contracted Market Flow US artifact names without source maps or arbitrary size ceilings."
-  - id: "A4-REVIEW-002"
-    area: "provider Origin and DB separation"
-    note: "Real-provider launchers derive only scheme+authority through System.Uri and pass MARKET_FLOW_US_ORIGIN to the loopback service, never cookies/tokens/full page URL. Production, demo and live-verification DBs remain separated as data/market-flow-us.duckdb, .demo/market-flow-us.duckdb and data/live-verification.duckdb."
-  - id: "A4-REVIEW-003"
-    area: "Windows quoting and exit propagation"
-    note: "Reviewed launchers anchor cwd with quoted %~dp0, quote generated artifact paths and Origin arguments, preserve command exit codes, and keep heavy acceptance/workload actions explicit rather than silently folding them into regular verification."
-  - id: "A5-REVIEW-001"
-    area: "Fake Market acceptance composition"
-    note: "FR-7/FR-8 static, moving, membership, provider-recovery and restart profiles use the built normal U.S. runtime, ScreenerHulPaging3 loopback Fake Market, real local service and real DuckDB. The acceptance scenarios do not rely on Playwright interception and assert non-overlap plus durable authority behavior."
-  - id: "A5-REVIEW-002"
-    area: "workload integrity"
-    note: "End-to-end and isolated workload proofs assert exact completed/failed/latest/history counts, last-cycle identity, restart preservation, Current/History values and Scanner families. Detail reports are removed before each authoritative run and must be newly produced before the acceptance envelope can PASS."
-  - id: "A5-REVIEW-003"
-    area: "default new-day lifecycle"
-    note: "Default rollover refuses a running producer session, builds a fresh schema-v3 DB before moving authority, archives the prior DB with collision refusal, preserves saved Scanner queries transactionally, restores the prior DB if install fails, and starts market tables clean. Existing plus A5 rollback tests remain green."
-  - id: "A6-REVIEW-001"
-    area: "critical provider -> DB -> reads data correctness"
-    note: "Schema v3 exact columns/types, complete raw source retention, every promoted U.S. string/numeric projection, zero/null semantics, latest replacement and Current/History trusted reads are now mechanically covered through real DuckDB/service paths. The new all-field sentinel round-trip passed; no data-column swap/drop/coercion defect was exposed."
-  - id: "A6-REVIEW-002"
-    area: "10/20/30/45/60/90/120-second staged calculations"
-    note: "Real DuckDB tests prove latest-at-or-before targeting, collected_at/cycle_id tie-breaks, contiguous-stage stopping, missing-history stopping, old fallback, recent NULL preservation, and now a distinct exact sentinel for every seven anchor output columns. No anchor calculation defect was exposed."
-  - id: "A6-REVIEW-003"
-    area: "suite isolation, skips/retries and recurring runtime"
-    note: "Fast ran 119 unit + 91 service tests with zero failures/skips/todos; service fixtures use isolated temp DuckDBs and ephemeral ports. Browser ran 22/22 with one worker, no configured retries and no skipped tests; serial execution protects fixed E2E port ownership. Fast remains under the documented ~30-second broad-suite ceiling; Browser E2E test execution measured about 20.5 seconds on the hosted runner with no evidence of hidden retry masking."
-  - id: "A6-REVIEW-004"
-    area: "workload/acceptance assertions"
-    note: "Workload and acceptance coverage already asserts authority counts, latest/history integrity, restart preservation and Scanner/read behavior rather than process exit alone; target-machine heavy performance authority remains correctly deferred to TREE 7.4."
-  - id: "A7-REVIEW-001"
-    area: "legacy donor Fake Market"
-    note: "tests/fake-market/server.mjs still contains MapHeat/GetSecuritiesData and market-scope runtime names, but repository routing shows it is a historical regression fixture only. The active U.S. local-acceptance/release route uses tests/fake-market-us and ScreenerHulPaging3; donor fixture text is intentionally retained as provenance and is not reachable from the release graph."
-  - id: "A7-REVIEW-002"
-    area: "shutdown/resource lifecycle"
-    note: "The active service clears producer heartbeat timers, closes all WebSockets, waits tracked connection tasks, closes the WebSocket server, drains the serialized writer and then closes DuckDB. Viewer closes its BroadcastChannel/client/scheduler, and acceptance subprocesses have bounded tree cleanup. No additional lifecycle defect was found."
-  - id: "A7-REVIEW-003"
-    area: "destructive filesystem boundaries"
-    note: "Demo reset resolves and checks containment under .demo before recursive deletion; new-day authority movement/rollback was already mechanically covered in A5. No release path was found that recursively deletes an arbitrary user-supplied path."
-  - id: "A7-REVIEW-004"
-    area: "background Viewer refresh promises"
-    note: "The void commit-hint/manual UI paths initially looked like possible unhandled rejection sites, but the invoked Current/Detail operational reads absorb expected service failures into explicit surface state and requestRefresh releases state in finally. Adding a blanket catch would hide programmer defects, so no change was justified."
-  - id: "A8-REVIEW-001"
-    area: "U.S. visible columns, provider request, schema and staged anchors"
-    note: "Mechanical reconciliation found the U.S. Current Product Spec block exactly matches the executable 15-column US_CURRENT_COLUMNS profile. ScreenerHulPaging3 request/pageCount, schema-v3 promoted fields, null/zero behavior and staged 10/20/30/45/60/90/120-second semantics are already mechanically guarded and remained aligned; the apparent 16-column count belonged only to the retained legacy Israel profile."
-  - id: "A8-REVIEW-002"
-    area: "commands, artifacts and DB defaults"
-    note: "package scripts, START_HERE/README/FIRST_RUN commands, Windows launchers and docs agree on Node 24, Market Flow US artifact names, service command, active/demo/live DB separation, local acceptance profiles and new-day operation. docs/USER_GUIDE.md exists and was aligned with the mechanical movement classification."
-  - id: "A8-REVIEW-003"
-    area: "Scanner guide and local Fake acceptance"
-    note: "SCANNER_SQL_GUIDE remains schema-v3/source-defined and its executable SQL examples/built-ins are mechanically checked by the real Scanner suite. LOCAL_FAKE_ACCEPTANCE routes to existing package/Windows profiles and remained consistent; no additional application SQL was changed by documentation reconciliation."
-
-cross_stage_observations: []
+  - id: "A2-REVIEW"
+    note: "Schema-v3 fresh/reopen/rejection, cadence-only U.S. config and loss/stale/restart recovery remained green."
+  - id: "A3-REVIEW"
+    note: "Trusted reads/cursor/null semantics, Scanner admission/saved-query state and exact-result semantics remained aligned."
+  - id: "A4-REVIEW"
+    note: "Pinned build/toolchain, Origin normalization, DB separation, quoting and exit propagation remained aligned."
+  - id: "A5-REVIEW"
+    note: "Fake Market uses normal U.S. composition; workload integrity and default new-day lifecycle remain mechanically covered."
+  - id: "A6-REVIEW"
+    note: "All promoted U.S. fields, staged anchors, suite isolation and authority-result assertions are mechanically covered; no data swap/drop/anchor defect was exposed."
+  - id: "A7-REVIEW"
+    note: "Legacy Israel Fake Market is test-only provenance; shutdown/resources and destructive filesystem boundaries are bounded; Viewer background refresh handling did not justify a catch-all."
+  - id: "A8-REVIEW"
+    note: "U.S. 15-column Current profile, Screener request, schema-v3 fields, staged anchors, commands/artifacts/DB defaults and Scanner guide were reconciled to executable reality."
+  - id: "A9-REVIEW"
+    note: "Final PR diff contains only audit fixes/tests/docs/workflow changes; no DB/data/dist artifacts, raw authenticated dumps, credentials/cookies/tokens/account identifiers or private machine paths were introduced. SENTINEL_* strings are synthetic regression fixtures."
 
 verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
@@ -301,11 +224,25 @@ verification:
   a6_code_candidate_sha: "d863bed337611f6b27a1f611e5dee975a9408395"
   a7_code_candidate_sha: "06ad9e074957137800f6155e6b372303a65ec0f2"
   a8_code_candidate_sha: "1b415e56b4c2885848ce695f021fad31209aede0"
+  a9_integrated_head_sha: "fc5dda80c9b45a6430d8f61cfe0c2e4e2641d4c6"
   focused_tests_added: true
   fast_ci: green
+  fast_unit: "128/128, 0 skipped, 0 todo"
+  fast_service: "95/95, 0 skipped, 0 todo"
+  fast_longest_layer_ms: 26503
   browser_ci: green
+  browser_e2e: "22/22, one worker, no retries/skips, ~25.0s"
+  browser_static_acceptance: green
   workload_ci: green
+  workload_isolated: "pass; 4096-wide single-cycle sanity plus bounded persistence/read/Scanner"
+  workload_end_to_end: "pass; 64 securities x 45 cycles = 2880 history rows with exact counts"
   planning_docs_ci: green
-  integrated_a9: pending
+  diff_scope_review: green
+  private_material_review: green
+  integrated_a9: green
 
-next: "A9 — Integrated proof after fixes"
+external_acceptance:
+  status: pending_external
+  reason: "Target Windows machine and authenticated provider/market-open conditions are intentionally unavailable in this audit chat; no external PASS is fabricated."
+
+next: "A10 — Closure, PR/merge/main-green verification, then record target-machine/provider acceptance as pending_external"
