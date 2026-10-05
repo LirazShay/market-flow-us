@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "6.3"
+current_node: "7.1"
 blockers: []
-next_action: "Chat 7 resumes TREE node 6.3 under R-US-EXEC-REOPEN-004: correctness-first bounded CI smoke, configurable isolated load probes, heavy performance deferred to final target-machine acceptance, and one-trading-day active DB semantics."
+next_action: "Chat 7 next executes TREE node 7.1: run the integrated deterministic offline release-candidate gate now that 6.3 workload tooling is closed and ready to land on main."
 last_review: "R-US-EXEC-REOPEN-004"
