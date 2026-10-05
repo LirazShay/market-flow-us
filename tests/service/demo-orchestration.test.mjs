@@ -8,88 +8,12 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { WebSocket } from "ws";
+import { collectUsCollectionCandidate } from "../../browser/collector/us-cycle.js";
+import { fetchValidatedSnapshot } from "../../browser/provider/us-screener.js";
 import { startDemo } from "../../scripts/demo-fake-market.mjs";
 import { resetDemoState } from "../../scripts/demo-reset.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-
-function security(securityId, paperName) {
-  return {
-    securityId: String(securityId),
-    paperName,
-    mapHeatDateChange: null,
-    rawMapHeat: {
-      PaperId: Number(securityId),
-      PaperName: paperName,
-      DateChange: null
-    }
-  };
-}
-
-function universe() {
-  return {
-    loadedAtMs: 1000,
-    recordCount: 2,
-    securities: [
-      security("1001", "Demo Alpha"),
-      security("1002", "Demo Beta")
-    ]
-  };
-}
-
-function rawSecurity(id) {
-  return {
-    Key: Number(id),
-    LastKnownRate: id === "1001" ? 101 : 202,
-    BaseRateChangePercentage: id === "1001" ? 1.5 : -0.5,
-    BuyLimit1: id === "1001" ? 100 : 201,
-    BuyVolume1: 10,
-    SellLimit1: id === "1001" ? 102 : 203,
-    SellVolume1: 12,
-    DailyDealsQuantity: 20,
-    LastDealVolume: 2,
-    DailyTurnover: 1000,
-    DailyNISRevenue: 2000,
-    DailyLowestRate: 90,
-    DailyHighestRate: 210,
-    LastDealTimeOnly: "10:00:00"
-  };
-}
-
-function completeCycle() {
-  return {
-    status: "complete",
-    startedAtMs: 2000,
-    completedAtMs: 2100,
-    durationMs: 100,
-    requested: 2,
-    received: 2,
-    unique: 2,
-    missing: 0,
-    duplicates: 0,
-    unexpected: 0,
-    chunks: [{
-      chunkIndex: 0,
-      requested: 2,
-      received: 2,
-      unique: 2,
-      requestStartedAtMs: 2010,
-      receivedAtMs: 2080,
-      completedAtMs: 2090,
-      durationMs: 80,
-      serverAsOfDate: "demo",
-      httpStatus: 200
-    }],
-    securities: ["1001", "1002"].map((securityId) => ({
-      securityId,
-      chunkIndex: 0,
-      chunkReceivedAtMs: 2080,
-      collectedAtMs: 2090,
-      serverAsOfDate: "demo",
-      data: rawSecurity(securityId)
-    }))
-  };
-}
 
 async function openClient({ url, origin, role, clientInstanceId }) {
   const socket = new WebSocket(url, { origin });
@@ -126,7 +50,6 @@ async function openClient({ url, origin, role, clientInstanceId }) {
     }
   };
 }
-
 
 async function startDemoCommand() {
   const child = spawn("npm", ["run", "demo:fake-market"], {
@@ -226,25 +149,33 @@ async function commitOneDemoCycle(handle) {
     const started = await producer.request("producer.session.start", {
       startedAtMs: 500,
       config: {
-        snapshotIntervalMs: 3000,
-        chunkDelayMs: 1000,
-        chunkSize: 187,
-        refreshUniverseEveryCycle: false
+        snapshotIntervalMs: 3000
       }
     });
     assert.equal(started.type, "response.ok");
 
-    const accepted = await producer.request("producer.universe.replace", universe());
+    let nowMs = 2000;
+    const candidate = await collectUsCollectionCandidate({
+      fetchSnapshot: () => fetchValidatedSnapshot({
+        fetchImpl: (input, init) => fetch(new URL(input, handle.url), init),
+        now: () => {
+          nowMs += 10;
+          return nowMs;
+        }
+      })
+    });
+
+    const accepted = await producer.request("producer.universe.replace", candidate.universe);
     assert.equal(accepted.type, "response.ok");
 
     const committed = await producer.request("producer.cycle.commit", {
       universeRevision: accepted.payload.data.universeRevision,
-      cycle: completeCycle()
+      cycle: candidate.cycle
     });
     assert.equal(committed.type, "response.ok");
 
     const stopped = await producer.request("producer.session.stop", {
-      stoppedAtMs: 2200,
+      stoppedAtMs: candidate.cycle.completedAtMs + 100,
       reason: "demo-proof"
     });
     assert.equal(stopped.type, "response.ok");
@@ -252,7 +183,6 @@ async function commitOneDemoCycle(handle) {
     await producer.close();
   }
 }
-
 
 test("npm run demo:fake-market starts the normal stack and prints one useful URL", async () => {
   await rm(path.join(ROOT, ".demo"), { recursive: true, force: true });
@@ -319,7 +249,7 @@ test("startDemo builds and starts the normal fake/service stack and emits exactl
   }
 });
 
-test("restarting startDemo reopens the same .demo DuckDB and preserves committed history", async () => {
+test("restarting startDemo reopens the same .demo DuckDB and preserves committed U.S. history", async () => {
   await rm(path.join(ROOT, ".demo"), { recursive: true, force: true });
 
   let first;
@@ -341,8 +271,8 @@ test("restarting startDemo reopens the same .demo DuckDB and preserves committed
     try {
       const beforeRestart = await firstViewer.request("viewer.status.get");
       assert.equal(beforeRestart.type, "response.ok");
-      assert.equal(beforeRestart.payload.data.historyCount, 2);
-      assert.equal(beforeRestart.payload.data.latestCount, 2);
+      assert.equal(beforeRestart.payload.data.historyCount, 4);
+      assert.equal(beforeRestart.payload.data.latestCount, 4);
     } finally {
       await firstViewer.close();
     }
@@ -368,8 +298,8 @@ test("restarting startDemo reopens the same .demo DuckDB and preserves committed
     try {
       const status = await viewer.request("viewer.status.get");
       assert.equal(status.type, "response.ok");
-      assert.equal(status.payload.data.historyCount, 2);
-      assert.equal(status.payload.data.latestCount, 2);
+      assert.equal(status.payload.data.historyCount, 4);
+      assert.equal(status.payload.data.latestCount, 4);
 
       const history = await viewer.request("viewer.history.page", {
         securityId: "1001",
@@ -377,6 +307,8 @@ test("restarting startDemo reopens the same .demo DuckDB and preserves committed
       });
       assert.equal(history.type, "response.ok");
       assert.equal(history.payload.data.rows.length, 1);
+      assert.equal(history.payload.data.rows[0].Symbol, "AAA");
+      assert.equal(history.payload.data.rows[0].Price, 100);
     } finally {
       await viewer.close();
     }
@@ -415,7 +347,6 @@ test("resetDemoState deletes only contained .demo state, refuses escape, and lea
     await rm(rootDir, { recursive: true, force: true });
   }
 });
-
 
 test("demo startup diagnostics preserve exact build, Fake Market and Node-listen boundaries", async () => {
   const rootDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-demo-diag-"));
