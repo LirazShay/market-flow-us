@@ -50,21 +50,26 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
   assert.equal(resolveLocalAcceptanceProfile("unknown"), null);
 });
 
-test("local acceptance diagnostics redact machine paths and URLs and stay bounded", () => {
-  const longTail = "x".repeat(5000);
+test("local acceptance diagnostics redact machine paths and URLs", () => {
   const raw = [
     `repo=${path.join(process.cwd(), "secret", "fixture.txt")}`,
     `home=${path.join(os.homedir(), "private", "state.json")}`,
     `temp=${path.join(os.tmpdir(), "market-flow-us", "fixture.duckdb")}`,
-    "provider=https://example.test/private/session?id=123",
-    longTail
+    "provider=https://example.test/private/session?id=123"
   ].join("\n");
 
   const sanitized = sanitizeAcceptanceDiagnostic(raw);
   assert.equal(typeof sanitized, "string");
-  assert.ok(sanitized.length <= 4000);
   assert.equal(sanitized.includes(process.cwd()), false);
   assert.equal(sanitized.includes(os.homedir()), false);
   assert.equal(sanitized.includes(os.tmpdir()), false);
   assert.equal(sanitized.includes("https://example.test"), false);
+  assert.match(sanitized, /<repo>|<home>|<temp>/);
+  assert.match(sanitized, /<url>/);
+});
+
+test("local acceptance diagnostics keep only a bounded tail", () => {
+  const sanitized = sanitizeAcceptanceDiagnostic("x".repeat(5000));
+  assert.equal(sanitized.length, 4000);
+  assert.equal(sanitized, "x".repeat(4000));
 });
