@@ -291,7 +291,7 @@ nodes:
   "4.3.2":
     status: approved
     strategy: "A Demo Buy capture records exactly which Scanner candidates would have been bought and which authoritative market row was the baseline at that serialized moment."
-    tactic: "Add demo.buy.capture validation/client-service protocol and a persistence authority that deduplicates ordered IDs by first occurrence, validates provenance/mode bounds, serializes through the existing writer, resolves every selected security from latest, stores exact buy_cycle_id links and commits all-or-nothing."
+    tactic: "Add demo.buy.capture validation/client-service protocol and a persistence authority that requires already-deduped ordered canonical IDs, independently validates identity/provenance/mode bounds, serializes through the existing writer, resolves every selected security from latest, stores exact buy_cycle_id links and commits all-or-nothing."
     parallel_assumptions:
       - "The existing serialized writer defines deterministic order relative to market-cycle commits."
       - "The existing history key (cycle_id, security_id) makes copied baseline Price/name fields unnecessary."
@@ -299,8 +299,8 @@ nodes:
       - "Schema rows alone do not define the virtual-buy moment, race behavior, validation or exact baseline linkage."
     sufficiency_assumptions: []
     success_evidence:
-      - "Protocol/unit tests reject malformed identity lists, inconsistent manual/all/top_x/automatic modes and invalid bounds with stable sanitized errors."
-      - "Real-service tests prove all-or-nothing capture, duplicate-ID first-occurrence reduction, monotonic capture IDs and immutable query ID/name/SQL provenance."
+      - "Protocol/unit tests reject malformed or duplicate identity payloads, inconsistent manual/all/top_x/automatic modes and invalid bounds with stable sanitized errors."
+      - "Real-service tests prove all-or-nothing capture, ordered unique item persistence, monotonic capture IDs and immutable query ID/name/SQL provenance."
       - "Writer-order tests prove capture links the cycle visible in latest at its serialized point: a prior committed cycle may be linked and a later queued cycle may not."
       - "The same security can be captured again in a later capture event because observations are not positions."
       - "Capture stores no user-supplied or copied buy Price."
@@ -359,7 +359,7 @@ nodes:
     success_evidence:
       - "Controls are available only when exactly one recognized securityId/security_id result column exists; Symbol or ambiguous columns are never guessed as identity."
       - "Rows whose recognized identity value is not a non-blank canonical string cannot be silently included; manual invalid rows are not selectable and All/Top-X/auto selections that would include an invalid row are refused visibly rather than skipping it."
-      - "Selected/All/Top-X preserve exact rendered SQL row order and stale checkbox selections do not migrate to a later result generation."
+      - "Selected/All/Top-X preserve exact rendered SQL row order, duplicate canonical IDs reduce to first occurrence before submission, and stale checkbox selections do not migrate to a later result generation."
       - "All and auto-All never silently truncate: after first-occurrence dedupe, more than 5000 unique IDs is visibly refused; Top-X is bounded to 1..5000."
       - "Active-generation query ID/name/exact SQL snapshot stays stable even if draft/library selection changes while that generation runs."
       - "Auto Off/All/Top-X attempts at most one capture request per successful Scanner generation, keeps at most one automatic capture request in flight, visibly skips a generation if that bounded slot is still busy, recovers after capture failure, and never stops Scanner scheduling."
@@ -384,7 +384,7 @@ nodes:
       - "Refreshing after deterministic new market cycles changes previously unavailable horizons to the Node-returned observed outcomes without mutating the stored capture."
       - "Normal runtime + Fake Market + real service/DuckDB Chromium E2E proves manual selected capture, Top-X ordering, automatic Top-X across generations, progressive horizon completion, positive/negative/flat outcomes, provenance immutability, identity-column refusal and recoverable capture/evaluation failure."
       - "Current, Detail/History, Scanner scheduling and Viewer lifecycle regression remain green."
-    depends_on: ["4.3.3", "5.2"]
+    depends_on: ["4.3.3", "4.4.1", "5.2"]
     children: []
 
   "5":
