@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
 import { buildBrowser } from "../../scripts/build-browser.mjs";
-import { startFakeMarket } from "../fake-market/server.mjs";
+import { startUsFakeMarket } from "../fake-market/us-server.mjs";
 import { createServiceFixture } from "../service/helpers/service-fixture.mjs";
 
 const SERVICE_PORT = 8765;
@@ -12,7 +13,7 @@ test.beforeAll(async () => {
 });
 
 async function startFake() {
-  return await startFakeMarket({
+  return await startUsFakeMarket({
     host: "127.0.0.1",
     port: 0,
     runtimePath: buildResult.runtimePath
@@ -22,7 +23,8 @@ async function startFake() {
 async function startService(fake) {
   return await createServiceFixture({
     origin: new URL(fake.baseUrl).origin,
-    config: { port: SERVICE_PORT }
+    config: { port: SERVICE_PORT },
+    openDatabase: openMarketFlowUsDatabase
   });
 }
 
@@ -83,6 +85,10 @@ test("normal built runtime starts one producer, reuses one Viewer and composes C
     expect(sessions).toEqual([{ status: "running", count: "1" }]);
 
     const currentTable = viewer.getByRole("table", { name: "שוק נוכחי" });
+    await expect(currentTable.getByRole("columnheader", { name: /DailyVolume/ })).toHaveAttribute(
+      "aria-sort",
+      "descending"
+    );
     await currentTable.locator("tbody tr").first().click();
     await expect(viewer.getByRole("table", { name: "היסטוריית נייר" })).toBeVisible();
 
@@ -215,8 +221,8 @@ test("service-unavailable launch makes no provider calls and an explicit relaunc
     await waitForCurrentRows(activeViewer);
 
     const afterRecovery = await fakeState(fake);
-    expect(afterRecovery.requestLog.some((entry) => entry.endpoint === "MapHeat2")).toBe(true);
-    expect(afterRecovery.requestLog.some((entry) => entry.endpoint === "GetSecuritiesData")).toBe(true);
+    expect(afterRecovery.requestLog.length).toBeGreaterThan(0);
+    expect(afterRecovery.requestLog.every((entry) => entry.endpoint === "ScreenerHulPaging3")).toBe(true);
   } finally {
     await stopRuntime(page).catch(() => {});
     for (const candidate of context.pages()) {
@@ -250,7 +256,8 @@ test("Scanner Query Library supports built-ins, CRUD, reopen persistence and act
     await expect(querySelect.locator("option")).toContainText([
       "טיוטה חדשה",
       "מובנה — All current fields",
-      "מובנה — Market ranking example"
+      "מובנה — U.S. market ranking example",
+      "מובנה — Staged candidate ranking"
     ]);
 
     await querySelect.selectOption("builtin:all-current-fields");
@@ -270,7 +277,7 @@ test("Scanner Query Library supports built-ins, CRUD, reopen persistence and act
     expect(activeHeaders.length).toBeGreaterThan(6);
 
     await querySelect.selectOption("builtin:market-ranking-example");
-    await expect(sqlInput).toHaveValue(/BaseRateChangePercentage/);
+    await expect(sqlInput).toHaveValue(/ChangePercent/);
     await expect(scannerTable.getByRole("columnheader")).toHaveText(activeHeaders);
 
     await nameInput.fill("Ranking Copy");
@@ -342,7 +349,10 @@ test("Scanner Query Library supports built-ins, CRUD, reopen persistence and act
       "מובנה — All current fields"
     );
     await expect(reopenedSelect.locator('option[value="builtin:market-ranking-example"]')).toHaveText(
-      "מובנה — Market ranking example"
+      "מובנה — U.S. market ranking example"
+    );
+    await expect(reopenedSelect.locator('option[value="builtin:staged-candidate-ranking"]')).toHaveText(
+      "מובנה — Staged candidate ranking"
     );
   } finally {
     await stopRuntime(page).catch(() => {});
