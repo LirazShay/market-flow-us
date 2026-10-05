@@ -148,45 +148,62 @@ async function candidateIdentity() {
   };
 }
 
+export async function existingDetailReportPaths(detailPath) {
+  try {
+    await access(detailPath);
+    return [path.relative(process.cwd(), detailPath)];
+  } catch {
+    return [];
+  }
+}
+
+export async function runCompositeAcceptance(profile, executeChild = runProfile) {
+  const subchecks = [];
+  const detailReports = [];
+  let failed = null;
+
+  for (const childName of profile.profiles) {
+    const childProfile = resolveLocalAcceptanceProfile(childName);
+    if (!childProfile || childProfile.kind === "composite") {
+      throw new Error(`Invalid composite acceptance child: ${childName}`);
+    }
+    const execution = await executeChild(childProfile, childName);
+    const childPassed = passedResult(execution.result);
+    subchecks.push({
+      profile: childName,
+      checkpoint: childProfile.checkpoint,
+      status: childPassed ? "PASS" : "FAIL",
+      exitCode: execution.result.code,
+      signal: execution.result.signal
+    });
+    detailReports.push(...execution.detailReports);
+    if (!childPassed) {
+      failed = `${childProfile.checkpoint}:${childName}`;
+      break;
+    }
+  }
+
+  return {
+    result: {
+      code: failed === null ? 0 : 1,
+      signal: null,
+      error: failed === null
+        ? null
+        : `Failed acceptance sub-checkpoint: ${failed}.`,
+      output: ""
+    },
+    summary: {
+      runner: "composite",
+      subchecks,
+      stoppedAt: failed
+    },
+    detailReports: [...new Set(detailReports)]
+  };
+}
+
 async function runProfile(profile) {
   if (profile.kind === "composite") {
-    const subchecks = [];
-    const detailReports = [];
-    const failed = [];
-
-    for (const childName of profile.profiles) {
-      const childProfile = resolveLocalAcceptanceProfile(childName);
-      if (!childProfile || childProfile.kind === "composite") {
-        throw new Error(`Invalid composite acceptance child: ${childName}`);
-      }
-      const execution = await runProfile(childProfile);
-      const childPassed = passedResult(execution.result);
-      subchecks.push({
-        profile: childName,
-        checkpoint: childProfile.checkpoint,
-        status: childPassed ? "PASS" : "FAIL",
-        exitCode: execution.result.code,
-        signal: execution.result.signal
-      });
-      detailReports.push(...execution.detailReports);
-      if (!childPassed) failed.push(`${childProfile.checkpoint}:${childName}`);
-    }
-
-    return {
-      result: {
-        code: failed.length === 0 ? 0 : 1,
-        signal: null,
-        error: failed.length === 0
-          ? null
-          : `Failed acceptance sub-checkpoints: ${failed.join(", ")}.`,
-        output: ""
-      },
-      summary: {
-        runner: "composite",
-        subchecks
-      },
-      detailReports: [...new Set(detailReports)]
-    };
+    return await runCompositeAcceptance(profile);
   }
 
   if (profile.kind === "playwright") {
@@ -221,24 +238,21 @@ async function runProfile(profile) {
     [WORKLOAD_RUNNER, profile.workloadProfile],
     { env }
   );
+  const detailReports = await existingDetailReportPaths(detailPath);
 
-  if (passedResult(result)) {
-    try {
-      await access(detailPath);
-    } catch {
-      return {
-        result: {
-          ...result,
-          code: 1,
-          error: `Workload profile passed without creating ${profile.detailReport}.`
-        },
-        summary: {
-          runner: "workload",
-          workloadProfile: profile.workloadProfile
-        },
-        detailReports: []
-      };
-    }
+  if (passedResult(result) && detailReports.length === 0) {
+    return {
+      result: {
+        ...result,
+        code: 1,
+        error: `Workload profile passed without creating ${profile.detailReport}.`
+      },
+      summary: {
+        runner: "workload",
+        workloadProfile: profile.workloadProfile
+      },
+      detailReports: []
+    };
   }
 
   return {
@@ -247,7 +261,7 @@ async function runProfile(profile) {
       runner: "workload",
       workloadProfile: profile.workloadProfile
     },
-    detailReports: [path.relative(process.cwd(), detailPath)]
+    detailReports
   };
 }
 
