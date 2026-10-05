@@ -1,9 +1,9 @@
 version: 2
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "demo_buy_comprehensive_reaudit"
+current_stage: "demo_buy_review_3_protocol_concurrency"
 current_node: "demo-buy-validation"
 blockers: []
-next_action: "Perform a fresh cross-layer Demo Buy planning review from GOAL through decisions, TREE/dependencies, schema/data, protocol/service, evaluation semantics, Scanner/Viewer UX, tests/workload/acceptance and execution handoff. Repair every material inconsistency before re-running necessity/sufficiency/KISS/outside-in review and freezing again. Initial re-audit has already identified unresolved contract ambiguity around duplicate-ID ownership, capture provenance/timing, provenance-detail transport, and Demo Buy page sizing. Production implementation remains unauthorized."
+next_action: "Review 2/5 (data/schema/persistence) is complete after repairing source-row-first Top-X semantics, immutable original resultRank provenance, Scanner signal-vs-capture timing, full generation provenance, fail-closed partial-v3 migration states, shared capture-slot assumptions, explicit unavailable reasons, 50-item Demo Buy paging, consistent read-snapshot semantics, on-demand capture provenance reads and evidence-first indexing. Next: Review 3/5 protocol/service/concurrency/lifecycle/failure semantics, repair every defect found, then stop at the next checkpoint. Production implementation remains unauthorized."
 last_review: "R-US-EXEC-REOPEN-005"
 implementation_authorized: false
