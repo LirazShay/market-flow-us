@@ -49,7 +49,7 @@ chats:
 
   "10":
     nodes:
-      "4.3.1": { state: blocked, result: "Comprehensive Demo Buy + AI Investigation planning re-audit is still active; contracts/reviews must be re-frozen and required planning CI must be available/green before implementation starts." }
+      "4.3.1": { state: blocked, result: "Demo Buy + AI Investigation planning is frozen and PR Planning Docs CI is green. Implementation remains blocked until the requested final external-user review passes, PR #17 is reviewed/squash-merged, main Planning Docs CI is green, open-PR state is clean, and root STATUS deliberately authorizes implementation." }
       "4.3.2": { state: pending, result: null }
 
   "11":
