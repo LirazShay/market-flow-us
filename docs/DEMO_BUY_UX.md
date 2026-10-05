@@ -120,9 +120,10 @@ Rules:
 3. changing Auto Top X takes effect from the next generation;
 4. one Viewer-wide capture slot covers manual and automatic capture;
 5. when capture is busy, a new automatic generation is skipped, not queued;
-6. a skipped generation does not stop Scanner scheduling;
-7. auto capture remains enabled after an ordinary confirmed rejection unless the failure is a deterministic generation-ineligibility condition the user must fix;
-8. after `ACKNOWLEDGEMENT_UNKNOWN`, capture is locked for that Viewer instance until explicit relaunch/recovery as defined by the protocol contract.
+6. a successful zero-row generation is a normal no-op, not an error and not a busy-skip;
+7. a skipped generation does not stop Scanner scheduling;
+8. auto capture remains enabled after an ordinary confirmed rejection unless the failure is a deterministic generation-ineligibility condition the user must fix;
+9. after `ACKNOWLEDGEMENT_UNKNOWN`, capture is locked for that Viewer instance until explicit relaunch/recovery as defined by the protocol contract.
 
 The UI does not append an unbounded log line for every generation. It shows a bounded status summary:
 
@@ -135,6 +136,8 @@ last skip/error reason
 ```
 
 For a deterministic recurring ineligibility such as oversized SQL or missing identity column, Auto remains configured but is visibly `Blocked for current result: <reason>` and no request is sent for that generation.
+
+A zero-row successful generation may update a compact `No candidates in latest generation` status but does not increment failure/skip counters.
 
 ## 7. Capture outcome states
 
@@ -185,6 +188,8 @@ Capture header
 ```
 
 Do not repeat exact SQL or large capture provenance in every item row.
+
+A 50-item page may split one large capture across page boundaries. Every page response must include enough compact capture metadata to render a header for each capture represented on that page. When a page starts in the middle of a capture, the UI repeats the capture header and may mark it `continued`; item rows are never shown without their capture context.
 
 ## 9. Demo Buy table layout
 
@@ -276,6 +281,29 @@ A failed refresh keeps the prior successfully rendered data visible and shows a 
 
 Loading the next page fails independently: already loaded captures/items remain visible and `Load more` can be retried.
 
+### Targeted observation refresh
+
+A user may keep one observation open for several minutes while Auto continues inserting newer captures. Therefore progressive inspection cannot depend only on `Refresh latest`, which may push the target out of the first page.
+
+Add one bounded Viewer-role read:
+
+```text
+demo.buy.observation.get
+```
+
+Payload:
+
+```text
+captureId
+securityId
+```
+
+It returns the same browser-ready baseline/timing/horizon model for exactly one existing capture item, using the same trusted evaluator and authority-watermark rules as `demo.buy.page`.
+
+The expanded row/investigation panel exposes `Refresh observation`. It updates that observation in place without changing list pagination or scrolling and remains usable while new Auto captures arrive.
+
+A targeted refresh error affects only that observation panel/row and preserves the prior trustworthy values.
+
 ## 12. Capture provenance details
 
 `View provenance / SQL` loads `demo.buy.capture.get` on demand.
@@ -319,6 +347,8 @@ current horizon progress
 ```
 
 `targetInScannerContext=false` is explanatory, not an error. The panel states that exact peer/rank reconstruction is limited but SQL/history/outcome investigation still works.
+
+The panel may use `demo.buy.observation.get` to refresh the target before generation so the visible outcome state and generated pack are based on current committed evidence without requiring a list reset.
 
 ## 14. AI pack generation workflow
 
@@ -399,6 +429,7 @@ Demo Buy must have explicit:
 - populated;
 - first-page read error;
 - continuation read error;
+- targeted-observation refresh error;
 - provenance-detail error;
 - AI-export error;
 - connection-lost/relaunch-required states.
@@ -467,15 +498,18 @@ Focused unit/Chromium proof must include at least:
 2. checkbox interaction never opens Detail;
 3. new Scanner generation resets selection and an in-flight capture keeps its frozen prior snapshot;
 4. Auto enabled after a result waits for the next generation;
-5. Auto indicator remains visible when navigating away from Scanner and can be turned off from Demo Buy;
-6. busy-auto skip increments bounded status without creating queued capture requests;
-7. capture confirmed/failed/acknowledgement-unknown states are distinct and actionable;
-8. Demo Buy renders grouped capture headers plus sticky identity columns and one compact cell per horizon;
-9. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
-10. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
-11. provenance-detail failure does not erase outcomes;
-12. AI investigation panel clearly shows context coverage and partial/complete status;
-13. one export slot prevents repeated Generate/Regenerate queueing;
-14. Copy AI Prompt and Copy folder path both have clipboard fallback;
-15. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
-16. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
+5. zero-row Auto generation is a no-op and does not count as error/skip;
+6. Auto indicator remains visible when navigating away from Scanner and can be turned off from Demo Buy;
+7. busy-auto skip increments bounded status without creating queued capture requests;
+8. capture confirmed/failed/acknowledgement-unknown states are distinct and actionable;
+9. Demo Buy renders grouped capture headers plus sticky identity columns and one compact cell per horizon;
+10. a capture split across page boundaries still has a visible repeated/continued capture header;
+11. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
+12. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
+13. `Refresh observation` updates an older open target in place while newer Auto captures continue to arrive;
+14. provenance-detail failure does not erase outcomes;
+15. AI investigation panel clearly shows context coverage and partial/complete status;
+16. one export slot prevents repeated Generate/Regenerate queueing;
+17. Copy AI Prompt and Copy folder path both have clipboard fallback;
+18. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
+19. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
