@@ -37,7 +37,7 @@ chats:
   "7":
     nodes:
       "6.3": { state: done, result: "A shared configurable U.S. synthetic generator now drives Fake Market and workload tooling; bounded CI proves exact counts, latest/history, restart, Current/History, general and staged Scanner correctness, isolated approximately-4k persistence width sanity, and sanitized reports, while heavy 4096 x 180 plus day-bounded profiles remain exposed for final target-machine acceptance; Fast/Browser/Planning/Workload CI are green." }
-      "7.1": { state: in_progress, result: null }
+      "7.1": { state: done, result: "Integrated candidate cb912741c22eeedec2b4f2ecf17348134e1814f3 passed Fast, Browser, Planning and bounded Workload gates with sanitized reports; Browser hosted-runner variance was reviewed against D-US-020 and recorded as the best practical verified state with no deterministic regression or avoidable focused+full duplication." }
 
   "8":
     nodes:
