@@ -18,6 +18,28 @@ reuse proven MarketScope tests where behavior is unchanged
 
 No credentialed provider access belongs in CI.
 
+### Automation-performance invariant
+
+Verification speed is part of the verification contract. Slow recurring automation is not harmless merely because it is correct or green.
+
+Measure the complete wall-clock path, including checkout, dependency installation/cache restore, build, fixture creation, service/DB startup, tests, browser setup, cleanup and report generation. Optimizing only the body of a test while leaving repeated setup expensive does not satisfy this rule.
+
+When a test, harness or workflow becomes materially slow, first prefer refactoring the repeated work itself:
+
+```text
+remove duplication
+→ share/reuse setup safely
+→ reduce unnecessary fixture/data size
+→ replace polling/sleeps with deterministic synchronization
+→ improve algorithm/query/test architecture
+→ improve cache/job topology
+→ remeasure end-to-end
+```
+
+Do not normalize slow tests. An individually slow test or setup path must be investigated even when the overall suite still passes. Do not increase timeouts/retries as the normal response to avoidable slowness. Do not delete meaningful coverage merely to make CI appear faster.
+
+The expected steady state is that the overwhelming majority of repeated development verification completes in seconds. Hard ceilings are failure bounds, not acceptable targets.
+
 Long waits are treated as feedback/performance defects, not as permission to increase timeouts. Normal Fast/Browser jobs have a 3-minute hard ceiling while their normal target remains seconds. The representative 4096 × 180 workload has a 5-minute hard ceiling. Hitting a hard ceiling is a blocker to investigate and optimize.
 
 ## 2. Layer 1 — Unit tests
@@ -192,6 +214,10 @@ full test:fast command: <= 10s target
 full Playwright execution: <= 12s target
 ordinary workflow hard ceiling: 3 minutes
 ```
+
+For every meaningful test/CI change, compare wall-clock cost with the prior shape. If a regression is avoidable, fix it before merge. Prefer reducing recurring setup and duplicate work before micro-optimizing assertion code.
+
+If one test, fixture, bootstrap, browser setup or cleanup path dominates elapsed time, treat that path as the next optimization target even if the suite remains under the hard ceiling.
 
 If U.S. fixture growth causes regression, remove avoidable setup/waiting before considering test deletion. Do not solve a slow test suite by simply increasing its timeout.
 
