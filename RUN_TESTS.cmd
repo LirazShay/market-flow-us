@@ -1,10 +1,10 @@
 @echo off
 setlocal
 pushd "%~dp0"
-title MarketScope Tests
+title Market Flow US Tests
 
 if not exist "node_modules" (
-  echo [ERROR] MarketScope is not set up yet.
+  echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
   echo.
   pause
@@ -13,7 +13,7 @@ if not exist "node_modules" (
 )
 
 echo ========================================
-echo MarketScope - Regular Verification
+echo Market Flow US - Regular Verification
 echo ========================================
 echo.
 
