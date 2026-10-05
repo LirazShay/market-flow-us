@@ -1,6 +1,6 @@
 schema_version: 2
 phase: implementation
-overall_status: in_progress
+overall_status: ready
 
 current:
   chat: 6
