@@ -5,7 +5,7 @@ overall_status: in_progress
 current:
   chat: 10
   node: "4.3.1"
-  title: "Demo Buy comprehensive planning re-audit before implementation"
+  title: "Demo Buy + AI Investigation comprehensive planning re-audit before implementation"
   status: blocked
 
 authority:
@@ -18,17 +18,17 @@ authority:
 planning_completion:
   file_audit_and_change_summary: pass
   durable_us_contracts_and_decisions: reopening
-  new_st_tree: reopening
+  new_st_tree: pass_reopened
   st_tree_review: pending
   second_pass_adversarial_review: pending
   final_planning_review: pending
   plan_freeze: reopened
-  execution_allocation: preserved_needs_revalidation
+  execution_allocation: pass_reopened
   handoff_verification: pending
   implementation_authorization: blocked_planning
 
 execution:
-  chats_total: 15
-  implementation_leaves_total: 26
+  chats_total: 17
+  implementation_leaves_total: 28
   current_chat: 10
   current_node: "4.3.1"
