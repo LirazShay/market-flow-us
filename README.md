@@ -82,13 +82,32 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 ה־gate משתמש בעמוד ספק שכבר authenticated בדפדפן ומוכיח sustained acquisition/commit/read/Scanner/ownership/clean-stop. תגובות שוק זהות ברצף הן חוקיות בשוק סגור או סטטי ואינן כשלעצמן כשל.
 
+Base compatibility PASS מסומן על ידי:
+
+```text
+overall = "PASS"
+```
+
 לפרטים: `docs/LIVE_VERIFICATION.md`.
 
 ### 3. Market-open movement acceptance
 
-השלמת המוצר דורשת בנוסף הוכחה בשוק פעיל שלפחות שינוי אמיתי אחד ב־provider market/freshness מגיע ל־Current/History. ה־live gate הקיים לבדו אינו טוען שהוא מוכיח movement; ה־movement-specific result נשאר חלק מה־final target-machine acceptance (`TREE 7.4`).
+אותו SHA-bound live gate מפיק גם classification נפרד לתנועת שוק אמיתית מתוך ה־cycles שהוא עצמו commit-תה. הוא מחפש שינוי רק בשדות provider שמורים, לא בזמן האיסוף המקומי, ומוכיח את ה־witness דרך Current ו־History.
 
-אין להמיר static PASS ל־market-open PASS כאשר לא נצפה שינוי אמיתי.
+השלמת FR-13 דורשת:
+
+```text
+overall = "PASS"
+movement.status = "PASS"
+```
+
+אם ה־base boundary עובר אבל לא נצפה שינוי אמיתי:
+
+```text
+movement.status = "PENDING"
+```
+
+ואין להמיר זאת ידנית ל־market-open PASS.
 
 ## גבול release
 
