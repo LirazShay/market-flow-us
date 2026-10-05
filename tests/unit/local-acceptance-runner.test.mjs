@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
 import {
   LOCAL_ACCEPTANCE_PROFILES,
+  existingDetailReportPaths,
   resolveLocalAcceptanceProfile,
+  runCompositeAcceptance,
   sanitizeAcceptanceDiagnostic
 } from "../../scripts/run-local-acceptance.mjs";
 
@@ -77,6 +80,47 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
     detailEnv: "MARKET_FLOW_US_WORKLOAD_REPORT"
   });
   assert.equal(resolveLocalAcceptanceProfile("unknown"), null);
+});
+
+test("composite local acceptance stops at the first failing checkpoint", async () => {
+  const calls = [];
+  const profile = resolveLocalAcceptanceProfile("all");
+  const execution = await runCompositeAcceptance(profile, async (_childProfile, childName) => {
+    calls.push(childName);
+    if (childName === "moving") {
+      return {
+        result: { code: 1, signal: null, error: "synthetic failure", output: "" },
+        summary: { runner: "fake" },
+        detailReports: []
+      };
+    }
+    return {
+      result: { code: 0, signal: null, error: null, output: "" },
+      summary: { runner: "fake" },
+      detailReports: []
+    };
+  });
+
+  assert.deepEqual(calls, ["static", "moving"]);
+  assert.equal(execution.result.code, 1);
+  assert.equal(execution.result.error, "Failed acceptance sub-checkpoint: FR-8A:moving.");
+  assert.equal(execution.summary.stoppedAt, "FR-8A:moving");
+  assert.deepEqual(execution.summary.subchecks.map((item) => item.status), ["PASS", "FAIL"]);
+});
+
+test("detail report paths are published only when the file exists", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-acceptance-test-"));
+  const detailPath = path.join(tempDir, "detail.json");
+
+  try {
+    assert.deepEqual(await existingDetailReportPaths(detailPath), []);
+    await writeFile(detailPath, "{}\n", "utf8");
+    const reports = await existingDetailReportPaths(detailPath);
+    assert.equal(reports.length, 1);
+    assert.equal(path.resolve(reports[0]), path.resolve(detailPath));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
 });
 
 test("local acceptance diagnostics redact machine paths and URLs", () => {
