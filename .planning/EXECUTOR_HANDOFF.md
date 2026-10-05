@@ -54,6 +54,24 @@ Do not ask the user to restate the plan.
 
 For every node, TREE `success_evidence` is the definition of done.
 
+## Automation-performance responsibility
+
+Every executor owns the speed of the automated paths it touches or discovers to be materially slow.
+
+Do not treat CI/test runtime as somebody else's infrastructure problem. The recurring cost of setup, build, fixtures, service/database startup, tests, browser harnesses, cleanup and reports is part of the engineering outcome.
+
+If a focused or full verification path is unexpectedly slow:
+
+```text
+localize the dominant recurring cost
+→ refactor/remove duplicate work
+→ preserve the same proof
+→ remeasure wall-clock end-to-end
+→ only then continue
+```
+
+Do not respond to avoidable slowness by increasing timeouts/retries or by accepting a green-but-slow test. Follow the AGENTS automation-performance contract and TEST_STRATEGY time budgets. Hard ceilings are blockers; normal feedback should be seconds.
+
 ## Diagnosability rule
 
 Whenever an assigned node changes an operational boundary/failure path, preserve/add the smallest stable checkpoint/error/support evidence required by AGENTS.
