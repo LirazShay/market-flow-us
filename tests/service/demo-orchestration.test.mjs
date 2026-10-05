@@ -307,8 +307,8 @@ test("restarting startDemo reopens the same .demo DuckDB and preserves committed
       });
       assert.equal(history.type, "response.ok");
       assert.equal(history.payload.data.rows.length, 1);
-      assert.equal(history.payload.data.rows[0].Symbol, "AAA");
-      assert.equal(history.payload.data.rows[0].Price, 100);
+      assert.equal(history.payload.data.rows[0].Symbol, "ALFA");
+      assert.equal(history.payload.data.rows[0].Price, 101.25);
     } finally {
       await viewer.close();
     }
