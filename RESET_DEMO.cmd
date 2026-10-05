@@ -1,10 +1,10 @@
 @echo off
 setlocal
 pushd "%~dp0"
-title MarketScope Demo Reset
+title Market Flow US Demo Reset
 
 if not exist "node_modules" (
-  echo [ERROR] MarketScope is not set up yet.
+  echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
   echo.
   pause
@@ -13,7 +13,7 @@ if not exist "node_modules" (
 )
 
 echo ========================================
-echo MarketScope - Reset Demo Data
+echo Market Flow US - Reset Demo Data
 echo ========================================
 echo Stop START_DEMO.cmd first.
 echo This deletes only the local .demo state used by Fake Market demo.
