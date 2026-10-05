@@ -46,13 +46,13 @@ Do not ask the user to restate the plan.
 | `2.*` schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence/protocol, TEST_STRATEGY service/schema sections |
 | `3.*` trusted reads/Viewer | PRODUCT_REQUIREMENTS Current/History, PRODUCT_SPEC Current/Detail, TECHNICAL_SPEC trusted reads, TEST_STRATEGY Viewer/E2E |
 | `4.1`–`4.2` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
-| `4.3.1` Demo Buy schema/persistence | DEMO_BUY_VALIDATION, AI_INVESTIGATION_PACK bounded context, DATA_CONTRACT schema-v4 facts, TECHNICAL_SPEC schema version + Demo Buy tables, TEST_STRATEGY schema-v4 lifecycle |
-| `4.3.2` Demo Buy capture authority | DEMO_BUY_VALIDATION capture/provenance/concurrency, AI_INVESTIGATION_PACK capture-context provenance, TECHNICAL_SPEC protocol + capture authority, TEST_STRATEGY Demo Buy capture integration |
+| `4.3.1` Demo Buy schema/persistence | DEMO_BUY_VALIDATION, AI_INVESTIGATION_PACK bounded context, DEMO_BUY_PROTOCOL_LIMITS, DATA_CONTRACT schema-v4 facts, TECHNICAL_SPEC schema version + Demo Buy tables, TEST_STRATEGY schema-v4 lifecycle |
+| `4.3.2` Demo Buy capture authority | DEMO_BUY_VALIDATION capture/provenance/concurrency, DEMO_BUY_PROTOCOL_LIMITS exact request/context/ACK bounds, AI_INVESTIGATION_PACK capture-context provenance, TECHNICAL_SPEC protocol + capture authority, TEST_STRATEGY Demo Buy capture integration |
 | `4.3.3` Demo Buy evaluation/read model | DEMO_BUY_VALIDATION horizons/read model, DATA_CONTRACT derived facts, TECHNICAL_SPEC evaluation/read model, TEST_STRATEGY trusted-read/evaluation + AGENTS SQL static preflight |
-| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_VALIDATION Scanner capture controls/auto backpressure, PRODUCT_SPEC Demo Buy capture, TECHNICAL_SPEC browser workflow, TEST_STRATEGY Scanner selection model |
+| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_VALIDATION Scanner capture controls/auto backpressure, DEMO_BUY_PROTOCOL_LIMITS browser preflight/ACK behavior, PRODUCT_SPEC Demo Buy capture, TECHNICAL_SPEC browser workflow, TEST_STRATEGY Scanner selection model |
 | `4.4.2` Demo Buy outcome screen | DEMO_BUY_VALIDATION Viewer UX, PRODUCT_REQUIREMENTS Demo Buy validation, PRODUCT_SPEC Demo Buy Viewer, TECHNICAL_SPEC Demo Buy surface, TEST_STRATEGY Browser E2E |
-| `4.5.1` AI Investigation exporter | AI_INVESTIGATION_PACK full contract, DATA_CONTRACT bounded context/history facts, TECHNICAL_SPEC `demo.buy.ai-pack.create`, TEST_STRATEGY AI pack unit/service proof |
-| `4.5.2` AI Investigation UI | AI_INVESTIGATION_PACK UI workflow, PRODUCT_REQUIREMENTS AI investigation outcome, PRODUCT_SPEC Demo Buy investigation flow, TEST_STRATEGY Chromium AI pack E2E |
+| `4.5.1` AI Investigation exporter | AI_INVESTIGATION_PACK full contract, DEMO_BUY_PROTOCOL_LIMITS export/prompt/path bounds, DATA_CONTRACT bounded context/history facts, TECHNICAL_SPEC `demo.buy.ai-pack.create`, TEST_STRATEGY AI pack unit/service proof |
+| `4.5.2` AI Investigation UI | AI_INVESTIGATION_PACK UI workflow, PRODUCT_REQUIREMENTS AI investigation outcome, PRODUCT_SPEC AI Investigation flow, TEST_STRATEGY Chromium AI pack E2E |
 | `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E + configurable synthetic generator, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
 | `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
 | `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY authenticated gates |
