@@ -1,6 +1,29 @@
 name: Market Flow US Workload
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "browser/**"
+      - "local-service/**"
+      - "shared/**"
+      - "tests/fake-market/**"
+      - "tests/workload/**"
+      - "scripts/run-workload-profile.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/workload-ci.yml"
+  pull_request:
+    paths:
+      - "browser/**"
+      - "local-service/**"
+      - "shared/**"
+      - "tests/fake-market/**"
+      - "tests/workload/**"
+      - "scripts/run-workload-profile.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/workload-ci.yml"
   workflow_dispatch:
   workflow_call:
 
