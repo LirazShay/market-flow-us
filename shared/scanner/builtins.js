@@ -206,20 +206,22 @@ export function normalizeScannerQueryNameKey(name) {
     .toLowerCase();
 }
 
-// Explicit retained donor profile used only by schema-v2 regression proof.
+// Retained only for the imported schema-v2 regression suite.
 export const LEGACY_SCANNER_QUERIES = freezeQueries(LEGACY_BUILTIN_SOURCE);
+export const BUILTIN_SCANNER_QUERIES = LEGACY_SCANNER_QUERIES;
 
-// Normal runtime is U.S. authority after TREE node 5.2 cutover.
-export const BUILTIN_SCANNER_QUERIES = freezeQueries(MARKET_FLOW_US_BUILTIN_SOURCE);
-
-// Explicit target export retained for focused contract tests and callers.
+// Market Flow US is the normal product query-library profile after TREE node 5.2.
 export const MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES = freezeQueries(
   MARKET_FLOW_US_BUILTIN_SOURCE
 );
 
-const BUILTIN_IDS = new Set(BUILTIN_SCANNER_QUERIES.map((query) => query.queryId));
+const BUILTIN_IDS = new Set(
+  MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.map((query) => query.queryId)
+);
 const BUILTIN_NAME_KEYS = new Set(
-  BUILTIN_SCANNER_QUERIES.map((query) => normalizeScannerQueryNameKey(query.name))
+  MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.map(
+    (query) => normalizeScannerQueryNameKey(query.name)
+  )
 );
 
 export function isBuiltinQueryId(queryId) {
@@ -246,7 +248,7 @@ export function mergeScannerQueryLibrary(userQueries = []) {
   });
 
   return Object.freeze([
-    ...BUILTIN_SCANNER_QUERIES,
+    ...MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES,
     ...sortedUsers
   ]);
 }
