@@ -200,11 +200,13 @@ Rules:
 - prefer refactoring automation/test code over accepting repeated waiting;
 - treat an unexplained material slowdown as an engineering defect owned by the chat that discovers it;
 - do not hide slow tests by increasing timeouts, adding retries, splitting the same expensive setup across more jobs, or moving the cost outside the measured command;
-- do not ignore an individually slow test merely because the total suite still passes;
+- investigate an individually slow test when it materially dominates feedback; do not chase harmless microseconds merely because a broad suite contains many tests;
 - when several valid implementations are possible, prefer the one that keeps recurring verification cheapest while preserving correctness and diagnosability;
 - optimize the highest recurring cost first because CI/test latency compounds across every future change;
 - remove valuable coverage only when it is genuinely redundant and the remaining proof protects the same observable contract;
 - hard ceilings are emergency failure bounds, never performance targets; normal repeated feedback should remain in seconds.
+
+A broad, high-value recurring suite that exercises many real integration boundaries may legitimately take up to roughly **30 seconds wall-clock**. That is an acceptance ceiling, not a target. Before accepting such a runtime, inspect the dominant costs for removable duplication, avoidable waiting/polling, oversized fixtures/bootstrap, unnecessary I/O or serialization, and other practical optimizations that preserve the same proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, record the measured result as the **best practical verified state** and stop micro-optimizing it. Reopen performance work when timing materially regresses or architecture/data shape changes.
 
 For meaningful changes to automation-heavy areas, inspect whether the touched path introduced or preserves avoidable repeated work. If so, fix/refactor it in the same work unit rather than carrying known automation debt forward.
 
