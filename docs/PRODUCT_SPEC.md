@@ -15,6 +15,8 @@ authenticated provider page
 
 Provider authentication remains browser-owned.
 
+The final post-Demo-Buy database contract is schema v4. Schema v4 preserves the existing U.S. market-authority tables and adds only the Demo Buy analytical observation tables required by this feature.
+
 ## 2. Product identity
 
 Product name: `Market Flow US`
@@ -111,7 +113,7 @@ Any failure rolls back the whole cycle.
 
 ## 7. U.S. public row projection
 
-The initial typed market projection is:
+The typed market projection is:
 
 ### String fields
 
@@ -252,9 +254,11 @@ Saved-query behavior remains unchanged:
 - create/update/delete are explicit;
 - active generation remains separate from selected draft.
 
+A result is Demo-Buy-capable only when it exposes exactly one recognized canonical identity column named `securityId` or `security_id`. Identity is never guessed from `Symbol`.
+
 ## 12. Built-in staged candidate query
 
-Market Flow US adds a built-in editable query named conceptually `Staged candidate ranking`.
+Market Flow US includes an editable built-in staged candidate query.
 
 Its first version uses source `Price` and target ages:
 
@@ -291,7 +295,139 @@ securityId ASC
 
 The query is an example, not hard-coded strategy behavior.
 
-## 13. Flow 8 — Failure/recovery
+## 13. Flow 8 — Create a Demo Buy capture
+
+Demo Buy validates Scanner selections without simulating a broker order.
+
+Supported capture modes from one successful Scanner result generation are:
+
+```text
+manual selected rows
+all rows
+first X rows (Top X)
+automatic all
+automatic Top X
+```
+
+`Top X` uses the exact order returned by the Scanner SQL. Demo Buy adds no hidden sorting or ranking.
+
+Within one result generation duplicate canonical IDs are reduced to the first occurrence. A single capture is bounded to at most 5000 unique canonical IDs. Manual empty selection does not create a capture; automatic zero-result selection is a no-op.
+
+The browser sends selected canonical IDs plus the immutable active-generation query provenance. It never sends a buy price.
+
+Node performs the capture through the existing serialized writer boundary. At that serialized point it:
+
+```text
+records captured_at_ms
+→ resolves every selected security in authoritative latest
+→ obtains each exact latest.cycle_id
+→ requires every item to resolve
+→ persists one capture and its ordered items
+→ COMMIT
+```
+
+If any item cannot be resolved, the whole capture fails and no partial Demo Buy event is stored.
+
+Each item therefore has an immutable baseline reference:
+
+```text
+(buy_cycle_id, security_id)
+→ history(cycle_id, security_id)
+```
+
+The linked history row owns the baseline `Price`, names, Symbol and baseline collection time. Demo Buy does not copy those market facts into the item.
+
+Repeated later captures of the same security are valid independent observations; they are not portfolio positions.
+
+## 14. Flow 9 — Evaluate Demo Buy outcomes
+
+Phase-1 horizons are fixed product behavior:
+
+```text
+10s
+20s
+30s
+45s
+60s
+90s
+120s
+3m
+5m
+10m
+```
+
+For a capture at `captured_at_ms` and a horizon `H`, Node's trusted Demo Buy read model finds:
+
+```text
+same security_id
+AND collected_at_ms >= captured_at_ms + H
+ORDER BY collected_at_ms ASC, cycle_id ASC
+LIMIT 1
+```
+
+This is the first authoritative market observation available at or after the requested horizon. The horizon clock starts at the Node-authoritative virtual-buy moment, not at an older baseline collection timestamp.
+
+If no qualifying future history row exists, that horizon is unavailable and returns `null` values rather than inferring from wall-clock time.
+
+For a matched future row:
+
+```text
+changePercent = ((futurePrice / baselinePrice) - 1) * 100
+```
+
+The percentage is `null` when the baseline price is null/zero, the future price is null, or no future row exists.
+
+Direction is derived by the read model:
+
+```text
+UP          changePercent > 0
+DOWN        changePercent < 0
+FLAT        changePercent = 0
+UNAVAILABLE changePercent is null
+```
+
+Each horizon also exposes the matched observation time and actual elapsed time from capture, so a collection delay is visible.
+
+No background updater or materialized horizon columns are required. Refreshing the Demo Buy screen recomputes the read model from persisted `history`.
+
+## 15. Flow 10 — Demo Buy Viewer
+
+The Viewer has a third top-level destination beside Current and Scanner:
+
+```text
+Demo Buy
+```
+
+The Demo Buy table is newest capture first and preserves Scanner selection rank inside each capture. It uses bounded keyset pagination and normal refresh.
+
+For each item the user can see at least:
+
+```text
+source query label
+capture time
+Symbol / display name
+securityId
+baseline collection time
+baseline Price
+10s Price / % / outcome
+20s Price / % / outcome
+30s Price / % / outcome
+45s Price / % / outcome
+60s Price / % / outcome
+90s Price / % / outcome
+120s Price / % / outcome
+3m Price / % / outcome
+5m Price / % / outcome
+10m Price / % / outcome
+```
+
+Unavailable horizons use the existing missing-value convention and an explicit `UNAVAILABLE` state. Direction must not rely on color alone.
+
+A wide horizontally scrollable table is acceptable for Phase 1. Source SQL may be shown in a details/expand affordance rather than repeated in each visible row.
+
+Automatic capture remains Viewer-session state and may continue while the user views Demo Buy. Capture failure is visible but does not stop Scanner scheduling.
+
+## 16. Flow 11 — Failure/recovery
 
 Preserve imported behavior:
 
@@ -300,9 +436,12 @@ Preserve imported behavior:
 - DB failure -> transaction rollback;
 - Viewer may continue to read last committed state after producer stop;
 - service restart marks stale running sessions interrupted;
-- explicit relaunch creates a new producer generation.
+- explicit relaunch creates a new producer generation;
+- Demo Buy capture failure is all-or-nothing and does not mutate market authority;
+- Demo Buy read failure does not mutate stored observations;
+- active-day Demo Buy observations survive service restart.
 
-## 14. Fake Market behavior
+## 17. Fake Market behavior
 
 Canonical Fake Market serves the normal browser runtime plus the U.S. screener endpoint.
 
@@ -318,9 +457,10 @@ It owns deterministic scenarios for:
 - malformed JSON/shape;
 - HTTP failure;
 - delayed response;
-- restart/persistence.
+- restart/persistence;
+- deterministic future price paths that produce positive, negative, flat and unavailable Demo Buy horizons.
 
-## 15. Polling cadence
+## 18. Polling cadence
 
 Configuration remains in seconds/milliseconds as an implementation timing value; no market-history schema is generated from it.
 
@@ -328,9 +468,9 @@ Initial offline/demo default remains the inherited 3000 ms snapshot interval.
 
 This is not a claim that the provider contract guarantees safe 3-second polling. Real-provider verification records actual behavior. If live evidence requires a slower default, change the collection configuration without changing data architecture.
 
-## 16. U.S. workload shape
+## 19. U.S. workload shape
 
-Representative workload:
+Representative heavy target-machine workload:
 
 ```text
 universe size = 4096 synthetic securities
@@ -338,22 +478,25 @@ cycles = 180
 history rows = 737280
 ```
 
-This proves approximately-4k scale without treating the observed 4015 as a product constant and keeps the manually triggered workload practical.
+This proves approximately-4k scale without treating the observed 4015 as a product constant.
 
-The workload measures:
+Hosted CI uses bounded correctness/performance-smoke profiles rather than the heavy target-machine workload.
+
+Workload coverage includes:
 
 - commit latency;
 - Current read;
 - History first/continuation page;
 - general Scanner JOIN/GROUP/window/time queries;
 - staged candidate query;
+- bounded Demo Buy capture/read evaluation over representative active-day observations;
 - restart-to-ready;
 - DB file size;
 - count integrity.
 
-No arbitrary latency threshold is a correctness gate in the first U.S. baseline.
+No arbitrary latency threshold is a correctness gate in hosted CI.
 
-## 17. Branding / generated artifacts
+## 20. Branding / generated artifacts
 
 Target names:
 
@@ -370,7 +513,24 @@ Windows launcher: START_MARKET_FLOW_US.cmd
 
 Old MarketScope names are donor history, not final product surface.
 
-## 18. Live verification
+## 21. Daily active-DB lifecycle
+
+The active DB covers one trading day.
+
+The new-day flow is:
+
+```text
+stop producer/service cleanly
+→ optionally archive prior-day DB
+→ create fresh schema-v4 active DB
+→ preserve scanner_saved_queries
+→ leave new demo_buy_captures/demo_buy_items empty
+→ start the new trading day
+```
+
+If a prior DB is archived, it remains self-contained with the Demo Buy observations and history rows they reference. The active product does not create a multi-day strategy warehouse in Phase 1.
+
+## 22. Live verification
 
 The bounded real-provider gate proves the authenticated provider/authority boundary and separately reports market-open movement evidence.
 
@@ -397,6 +557,29 @@ For final market-open acceptance the same SHA-bound report also contains a separ
 movement.status = PASS
 ```
 
-is required for FR-13. If the base authenticated boundary passes but no real provider-field change is observed, movement remains `PENDING`; it is never inferred from local collection timestamps and never upgraded manually. If a change is observed but its Current/History reflection is not proven, movement is `FAIL` while the already-proven static/base boundary remains a separate fact.
+is required for final moving-market acceptance. If the base authenticated boundary passes but no real provider-field change is observed, movement remains `PENDING`; it is never inferred from local collection timestamps and never upgraded manually.
+
+The final target-machine bundle also contains a deterministic local Demo Buy journey on the exact post-feature candidate so schema-v4 capture/evaluation/UI behavior is proven on the user's machine before completion.
 
 This is a bounded sustained proof, not a long-duration throttling/SLA guarantee. Only the live gate may report the external facts it actually verifies.
+
+## 23. Explicit Phase-1 non-goals
+
+Demo Buy Phase 1 does not add:
+
+```text
+real order placement
+manual buy-price entry
+fill simulation
+bid/ask execution modeling
+fees/slippage
+sell rules
+portfolio/risk state
+trade quantity
+volume-after-buy sellability analysis
+strategy aggregate dashboards/scorecards
+multi-day active analytics
+Strategy Engine
+```
+
+The requested volume/liquidity/fillability analysis belongs to a later Phase 2 after this increment is completely implemented and verified.
