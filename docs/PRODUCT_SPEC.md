@@ -1,317 +1,142 @@
 # Market Flow US Product Spec
 
-## 1. Runtime baseline
+## 1. Runtime topology
 
-Market Flow US preserves the proven MarketScope topology:
+Preserve the proven local topology:
 
 ```text
 authenticated provider page
-→ browser producer
+→ browser producer + Viewer
 → ws://127.0.0.1:8765
-→ localhost Node.js service
+→ localhost Node.js
 → native DuckDB
-→ browser Viewer
 ```
 
-Provider authentication remains browser-owned.
+Provider authentication remains browser-owned. Final post-feature schema is v4.
 
-The final post-feature database contract is schema v4. Schema v4 preserves the existing U.S. market-authority tables and adds only Demo Buy analytical observation/provenance state required by the current feature set.
+## 2. Product identity and market authority
 
-## 2. Product identity
+Canonical security identity is validated `String(PaperId)`. `Symbol` and names are metadata only.
 
-Product name: `Market Flow US`.
+Successful committed market cycles remain the only market authority. Demo Buy adds analytical observation/provenance facts; AI Investigation adds derivative local export files.
 
-Canonical security identity, after fail-closed source-type validation, is:
+## 3. Existing U.S. flows retained
+
+The product continues to provide:
+
+- exact `ScreenerHulPaging3` full-response validation;
+- canonical universe membership and serialized complete-cycle persistence;
+- append-only active-day `history` and full `latest` replacement;
+- Current with U.S. fields and `DailyVolume DESC` default;
+- Detail/History with 500-row keyset paging and historical-only lookup;
+- read-only Scanner SQL with hardened admission;
+- saved-query Draft/Persisted/Active separation;
+- deterministic Fake Market/runtime/service/DuckDB proof;
+- one-day active-DB lifecycle and saved-query preservation.
+
+Schema/provider field details remain owned by `DATA_CONTRACT.md` and `TECHNICAL_SPEC.md`.
+
+## 4. Scanner lifecycle
+
+Scanner exposes:
 
 ```text
-securityId = String(PaperId)
+Activate
+Stop recurring scan
 ```
 
-Accepted `PaperId` source types are a non-blank string or JavaScript safe integer. Objects, arrays, booleans and non-safe numeric identities are rejected rather than generically stringified.
+`Stop recurring scan` is resumable. It cancels future scheduled generations, invalidates any stale in-flight generation result for presentation/Auto purposes, keeps the Viewer alive and permits a later Activate. Terminal Viewer destruction remains a separate lifecycle action.
 
-`Symbol` is display/query metadata, not the primary key.
+Saved-query edits after activation do not mutate the immutable active-generation snapshot used by a produced result.
 
-## 3. Flow 1 — Start product
-
-1. User opens an eligible authenticated Bank Leumi provider page.
-2. User starts the local service with the exact provider Origin allowed.
-3. User runs the Market Flow US browser runtime/bookmarklet.
-4. Browser producer performs hello/session start.
-5. Viewer opens/reuses the product window.
-6. Collection starts only after local authority is ready.
-
-If service start/hello fails, UI reports failure and no collection success is claimed.
-
-## 4. Flow 2 — Acquire one U.S. snapshot
-
-The browser performs:
+Each successful result generation freezes:
 
 ```text
-GET /lti/lti-app/api/Market/ScreenerHulPaging3
+queryId / name
+exact active SQL
+active intervalMs
+startedAtMs / completedAtMs
+rowCount
+columns / rows
 ```
 
-using the configured U.S. screener filters documented in `DATA_CONTRACT`.
+A generation is Demo-Buy-capable only with exactly one recognized `securityId` or `security_id` column.
 
-A response is complete only when:
+## 5. Demo Buy selection/capture flow
 
-- HTTP status is successful;
-- `data.ScreenerHulPaging` exists;
-- `recordCount` is a positive safe integer;
-- `records` is an array;
-- `records.length === recordCount`;
-- every record has `PaperId` whose source type is a non-blank string or safe integer;
-- objects/arrays/booleans/non-safe numeric identities are rejected fail-closed;
-- canonical `String(PaperId)` values are unique after validation.
-
-`Symbol` absence is diagnostic-worthy but does not override `PaperId` identity.
-
-The cycle records browser timings and source envelope metadata needed for diagnostics while preserving each raw row.
-
-## 5. Flow 3 — Universe and cycle authority
-
-Every validated full response contains both membership and market rows.
-
-First response in a producer session:
+Supported capture modes:
 
 ```text
-derive universe
-→ producer.universe.replace
-→ receive universeRevision
-→ commit the same response under that revision
+manual selected
+all
+Top X
+auto all
+auto Top X
 ```
 
-Later responses:
-
-- same canonical membership -> commit under the accepted revision;
-- changed membership -> replace universe from the new complete response, receive the new revision, then commit that same response.
-
-Row reordering is not a membership change. Failed/incomplete provider input never changes universe authority and never commits history/latest.
-
-## 6. Flow 4 — Persist successful cycle
-
-Node validates running producer/session state, universe revision, exact membership, complete counters, unique IDs and raw-row identity.
-
-One serialized DuckDB transaction:
+Source-row semantics:
 
 ```text
-allocate cycle_id
-→ insert cycle metadata
-→ append every row to history
-→ replace latest
-→ update session counters
-→ COMMIT
+choose source rows by mode
+→ validate every chosen identity
+→ dedupe canonical IDs by first chosen occurrence
+→ retain original 1-based resultRank
 ```
 
-Any failure rolls back the whole cycle.
+`Top X` means the first X source rows **before** dedupe. Manual selection follows original result order, not click order.
 
-## 7. U.S. public row projection
+At user action time the browser synchronously freezes the displayed generation snapshot and selected source rows before any async submission. New Scanner results cannot alter that capture.
 
-String fields include:
+Exact capture/context/SQL/transport bounds are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`. The browser preflights; Node independently validates and rejects malformed duplicates/order/context rather than repairing them.
 
-```text
-Symbol
-PaperNameEng
-PaperNameHeb
-ExchangeName
-TradeDateTime
-CountryName
-CountryNameEng
-```
+The browser never sends a buy price.
 
-Numeric fields include:
+## 6. Capture authority
+
+Capture uses the existing serialized writer:
 
 ```text
-Price
-ChangePercent
-DailyHigh
-DailyLow
-YearHigh
-YearLow
-DailyVolume
-BeginYearChangePercent
-Month12ChangePercent
-Month36ChangePercent
-AskRate
-BidRate
-YesterdayRate
-PaperMarketCap
-PaperIdYatab
-CountryId
-PaperType
-ESGRatingId
-ESGScope
-```
-
-Every row also retains `raw_data JSON`. Missing/invalid typed values project to SQL NULL without rewriting raw JSON.
-
-## 8. Display-name rule
-
-Viewer `paperName` is the first non-empty value:
-
-```text
-PaperNameEng
-→ PaperNameHeb
-→ Symbol
-→ securityId
-```
-
-## 9. Flow 5 — Current
-
-Current reads authoritative `latest` joined with current universe metadata.
-
-Visible columns:
-
-```text
-paperName
-Symbol
-ExchangeName
-securityId
-Price
-ChangePercent
-BidRate
-AskRate
-DailyVolume
-DailyLow
-DailyHigh
-YesterdayRate
-PaperMarketCap
-TradeDateTime
-collectedAtMs
-```
-
-Behavior preserves BOOTING / EMPTY / MAIN / ERROR states, default `DailyVolume DESC`, deterministic identity tie-break, zero-vs-missing distinction, Detail navigation and sort/scroll preservation across refresh.
-
-## 10. Flow 6 — Detail / History
-
-Detail summary shows:
-
-```text
-Price
-ChangePercent
-BidRate
-AskRate
-DailyVolume
-TradeDateTime
-```
-
-History shows persisted U.S. fields including `collectedAtMs`, `cycleId`, Price/change/bid/ask/volume/high/low/yesterday/market-cap/time.
-
-History remains newest-first with 500-row cursor-bound keyset pages. Historical-only securities remain openable by canonical `securityId`.
-
-## 11. Flow 7 — Scanner and saved queries
-
-Scanner remains a general read-only analytical SQL surface:
-
-- exactly one statement;
-- SELECT only;
-- zero parameters;
-- side-effect helpers rejected;
-- hardened DuckDB connection;
-- exact result columns/rows returned;
-- no hidden application rank/filter/sort/limit.
-
-Saved-query behavior remains explicit Draft / Persisted / Active state. Loading does not activate. Built-ins are immutable but copyable.
-
-Each successful execution exposes Node `startedAtMs` and `completedAtMs`. Demo Buy freezes these timings together with exact active query/interval/result provenance; later draft/library edits never rewrite an existing generation.
-
-A result is Demo-Buy-capable only when it exposes exactly one recognized canonical identity column named `securityId` or `security_id`. Identity is never guessed from `Symbol`.
-
-## 12. Built-in staged candidate query
-
-The editable staged example uses source `Price` with target ages:
-
-```text
-10s, 20s, 30s, 45s, 60s, 90s, 120s
-```
-
-For each target age it chooses the nearest history row at/before the anchor, deterministic by `collected_at_ms DESC, cycle_id DESC`.
-
-Initial stage predicate:
-
-```text
-current.Price > prior.Price
-```
-
-`stage_reached` is contiguous from the first stage; missing/failed stage stops progression.
-
-Initial ordering:
-
-```text
-stage_reached DESC
-ChangePercent DESC NULLS LAST
-DailyVolume DESC NULLS LAST
-securityId ASC
-```
-
-This is editable SQL, not hard-coded strategy infrastructure.
-
-## 13. Flow 8 — Create a Demo Buy capture
-
-Supported modes from one successful Scanner generation:
-
-```text
-manual selected rows
-all source rows
-first X source rows (Top X)
-automatic all
-automatic Top X
-```
-
-Selection is source-row-first:
-
-1. choose rows according to mode;
-2. validate every chosen recognized identity value;
-3. reduce duplicate canonical IDs to first chosen occurrence;
-4. preserve each retained row's original 1-based Scanner `resultRank`.
-
-A duplicate inside Top X never backfills from a later row outside X. Manual ranks may contain gaps.
-
-One capture supports at most 5000 unique canonical IDs. `Top X` is 1..5000 source rows. All/auto-All never silently truncate. Empty manual selection does not submit; automatic zero-row selection is a no-op.
-
-The capture also freezes bounded original Scanner comparison context for later forensic analysis. Exact protocol/provenance limits are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`, including first-50 result rows, first-128 columns, exact SQL up to 1 MiB and bounded deterministic cell/context encoding. SQL provenance is never silently truncated.
-
-The browser sends ordered `{securityId, resultRank}` items plus immutable query/timing/result/context provenance. It never sends a buy price.
-
-One Viewer capture slot covers manual and automatic capture. Manual double-submit is disabled. An automatic generation arriving while capture is busy is visibly skipped rather than queued/replayed. Scanner scheduling continues.
-
-Node validates already-deduped ordered payload semantics and rejects malformed duplicates/ranks rather than repairing them.
-
-Capture runs through the existing serialized writer:
-
-```text
-validate bounded request
-→ enqueue behind prior writer work
+validate request
+→ enqueue behind earlier writer work
 → BEGIN
-→ captured_at_ms = Node clock
+→ assign captured_at_ms
 → resolve every selected security from authoritative latest
-→ require every item to resolve
-→ persist capture + immutable context + exact buy_cycle_id links
+→ persist capture + immutable Scanner context
+→ persist item (result_rank, security_id, buy_cycle_id)
 → COMMIT
 ```
 
-The baseline relation is:
+All selected items must resolve or the complete capture rolls back.
+
+For each item:
 
 ```text
 (buy_cycle_id, security_id)
 → history(cycle_id, security_id)
 ```
 
-The history row owns baseline market facts; they are not copied into Demo Buy items.
+The linked history row owns baseline market facts.
 
-Timing semantics remain distinct:
+`buy_cycle_id` is also the capture-time authority watermark:
 
 ```text
-signal/result-ready = source_result_completed_at_ms
-virtual buy         = captured_at_ms
-capture latency     = captured_at_ms - source_result_completed_at_ms
-baseline age        = captured_at_ms - baseline_collected_at_ms
+pre-capture authoritative market evidence: cycle_id <= buy_cycle_id
+post-capture authoritative evidence:       cycle_id > buy_cycle_id
 ```
 
-These are local analytical diagnostics, not broker execution claims.
+Timestamps are diagnostics and do not override this ordering.
 
-### Capture acknowledgement state
+## 7. Capture acknowledgement/backpressure
 
-After dispatch the Viewer distinguishes:
+One Viewer-wide capture slot covers manual and automatic capture.
+
+- manual second submit while busy: disabled/refused;
+- auto generation while busy: visibly skipped, never queued;
+- zero-row successful auto generation: normal no-op;
+- confirmed success/rejection releases the slot;
+- transport loss after dispatch may produce `ACKNOWLEDGEMENT_UNKNOWN`.
+
+Capture outcomes are:
 
 ```text
 CONFIRMED_COMMITTED
@@ -319,36 +144,49 @@ CONFIRMED_REJECTED
 ACKNOWLEDGEMENT_UNKNOWN
 ```
 
-`ACKNOWLEDGEMENT_UNKNOWN` means transport disappeared before a conclusive response; the capture may already have committed. It is never automatically replayed. Further capture is blocked in that Viewer instance until explicit reconnect/relaunch and Demo Buy refresh/inspection.
+Unknown acknowledgement is never blindly replayed. Recovery requires reconnect/relaunch and Demo Buy refresh/inspection before another capture.
 
-Repeated later captures of the same security remain valid independent observations, not positions.
+## 8. Automatic capture UX
 
-## 14. Flow 9 — Evaluate Demo Buy outcomes
-
-Fixed horizons:
+Auto mode is Viewer-session state:
 
 ```text
-10s
-20s
-30s
-45s
-60s
-90s
-120s
-3m
-5m
-10m
+Off | All | Top X
 ```
 
-For capture time `captured_at_ms` and horizon `H`, the trusted Node read model finds the first same-security row satisfying:
+Changes apply only to future successful Scanner generations and never retroactively capture the currently displayed result.
+
+When Auto is enabled, a persistent cross-surface toolbar indicator shows mode and offers `Turn off`. Turning Auto off does not cancel an already dispatched/in-flight capture; it only prevents future generation attempts.
+
+Stopping recurring Scanner generation stops future Auto attempts. Auto configuration may remain armed until a later Activate.
+
+A bounded summary reports latest capture/skip/error state and busy-skip count; no unbounded activity log is created.
+
+## 9. Demo Buy evaluation
+
+Fixed horizons are:
 
 ```text
-collected_at_ms >= captured_at_ms + H
+10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m, 10m
+```
+
+For horizon H:
+
+```text
+target_at_ms = captured_at_ms + H
+```
+
+The trusted Node evaluator selects the first row satisfying:
+
+```text
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= target_at_ms
 ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-The first qualifying row remains authoritative even if `Price` is NULL; later priced rows are not cherry-picked.
+The first qualifying row wins even when `Price` is NULL.
 
 Percentage:
 
@@ -359,219 +197,211 @@ Percentage:
 Outcome:
 
 ```text
-UP          > 0
-DOWN        < 0
-FLAT        = 0
-UNAVAILABLE no trustworthy percentage
+UP | DOWN | FLAT | UNAVAILABLE
 ```
 
-Unavailable reasons distinguish no future observation, baseline price unavailable, baseline zero and future price unavailable. A missing linked baseline row is an integrity error, not normal `UNAVAILABLE`.
+Unavailable reasons are:
 
-Matched horizons expose real observed time and actual elapsed time. Demo Buy pages are recomputed from history; no background updater/materialized horizon columns exist.
+```text
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+```
 
-Each page is evaluated from one transactionally consistent DuckDB statement snapshot.
+Missing baseline row is a stable integrity error, not an unavailable horizon.
 
-## 15. Flow 10 — Demo Buy Viewer
+No horizon values are persisted or updated in the background.
 
-Top-level destinations are:
+## 10. Read operations
+
+Keep protocol version 1 unless implementation proves incompatibility.
+
+Viewer-role Demo Buy operations are:
+
+```text
+demo.buy.capture
+demo.buy.page
+demo.buy.capture.get
+demo.buy.observation.get
+demo.buy.ai-pack.create
+```
+
+`demo.buy.page` uses fixed 50-item keyset pages ordered:
+
+```text
+capture_id DESC
+result_rank ASC
+```
+
+One page is evaluated from one consistent DuckDB statement snapshot. Newer Auto captures do not disturb an existing continuation walk.
+
+`demo.buy.capture.get(captureId)` returns immutable capture SQL/provenance on demand.
+
+`demo.buy.observation.get(captureId, securityId)` returns exactly one current browser-ready observation using the same trusted evaluator. It supports targeted progressive refresh without resetting list pagination.
+
+## 11. Demo Buy Viewer
+
+Top-level navigation:
 
 ```text
 Current | Scanner | Demo Buy
 ```
 
-Demo Buy orders `capture_id DESC, resultRank ASC` and uses fixed 50-item opaque-keyset pages. Newer auto captures do not disturb an existing continuation walk; Refresh from page one exposes them.
+The Demo Buy page renders capture groups. Capture-level query/timing/mode/provenance is shown once in the group header. If pagination splits a capture, the next page repeats the compact capture header and may mark it continued.
 
-Each observation shows source/capture/signal timing, manual/automatic marker, original result rank, identity/display, baseline time/age/Price and all ten horizon Price/%/outcome cells. Unavailable reason is inspectable and direction is not color-only.
-
-Full SQL/capture provenance is loaded on demand rather than repeated per row.
-
-Scanner remains mounted/scheduled while navigating to Demo Buy under the existing Viewer lifecycle.
-
-## 16. Flow 11 — Generate AI Investigation Pack
-
-From one Demo Buy observation the user can invoke:
+Leading columns stay sticky:
 
 ```text
-Generate AI Investigation Pack
+resultRank
+Symbol/display name
+securityId
+baseline Price
 ```
 
-The local Node service validates `captureId + securityId` membership and generates a controlled local evidence directory. The browser never supplies an output path and the product never calls an AI provider automatically.
-
-The pack contains:
+Each horizon is one compact cell, e.g.:
 
 ```text
-README.md
-PROMPT.md
-MANIFEST.json
-QUERY.sql
-SCANNER_CONTEXT.json
-TARGET_BEFORE.jsonl
-BASELINE.json
-TARGET_AFTER.jsonl
-OUTCOME.json
-FIELD_GUIDE.md
+UP +0.42%
+$123.45
 ```
 
-Evidence boundary:
+rather than three separate columns.
+
+`NO_FUTURE_OBSERVATION` displays as `Pending / ממתין`; baseline/future-price problems display as warning-style unavailable states. Text/symbol communicates direction independently of color.
+
+List actions:
 
 ```text
-prediction-time:
-  exact immutable query
-  frozen bounded original Scanner context
-  target history for 30 minutes ending at capturedAtMs
-  exact baseline
-
-outcome:
-  target history from capturedAtMs through +10 minutes
-  trusted Demo Buy horizon outcomes
+Refresh latest   → reset to first page
+Load more        → append stable continuation
+Refresh observation → update one expanded/selected item in place
 ```
 
-The prompt explicitly forbids hindsight leakage: a proposed Scanner rule may use only information that existed by capture time. Future evidence may explain what happened and suggest hypotheses but cannot be presented as an original predictive input.
+Errors preserve prior trustworthy data whenever possible.
 
-The retained comparison context is the bounded Top-50 original Scanner result. If the target row is retained, `targetInScannerContext=true` and peer/rank comparison is permitted. A valid target outside that retained context remains exportable with `targetInScannerContext=false`; the prompt explicitly forbids inventing its missing output row/peer neighborhood.
+## 12. Scanner result selection interaction
 
-The exporter reuses the trusted Demo Buy evaluator for `OUTCOME.json`, never implements a second horizon algorithm, and performs no DB write.
+A Demo-Buy-capable result adds accessible row checkboxes and selected count.
 
-Publication is atomic:
+Interactive controls inside a Scanner row do not trigger the existing row-to-Detail click/keyboard navigation. Invalid identity rows are visibly ineligible.
+
+Selection resets when a new rendered Scanner generation replaces the previous one.
+
+## 13. Schema v4
+
+Schema v4 adds only:
 
 ```text
-validate/read evidence
-→ write all files to an internally generated temp directory under exports/ai-investigations/
-→ close files
-→ atomic rename to a collision-safe final directory
+demo_buy_captures
+demo_buy_items
 ```
 
-Failure publishes no misleading complete directory and never overwrites an existing successful pack.
+Capture facts include immutable query/result timing and `source_result_context_json`; item facts include original `result_rank`, canonical identity and exact `buy_cycle_id`.
 
-Viewer exposes:
+No copied baseline price, future price, percentage or outcome is stored.
+
+Valid v3 migrates transactionally to v4. Suspicious partial v3+Demo structures fail closed. Fresh DBs boot v4. v1/v2 remain unsupported.
+
+No new `history` index is part of the initial contract; add one only after measured evidence and focused replan.
+
+## 14. Scanner comparison context
+
+The exact context contract is owned by `DEMO_BUY_PROTOCOL_LIMITS.md`.
+
+Current required behavior includes:
 
 ```text
-outcome evidence PARTIAL_OUTCOME / COMPLETE_OUTCOME
-context coverage true/false
-Generate
-Copy AI Prompt
-Regenerate
-local generated path
+first up to 50 source rows
+<=64 retained columns total
+canonical identity column always retained
+<=128 UTF-8 bytes per textual/serialized cell after deterministic clipping
+<=256 KiB serialized context
+exact SQL <=1 MiB UTF-8
 ```
 
-Regeneration may update later outcome-dependent evidence but never rewrites immutable query/context/baseline evidence.
+Original row ranks and source column metadata/omission/truncation metadata are preserved. Node cross-checks every selected item with `resultRank <= 50` against the context row identity before commit.
 
-## 17. Flow 12 — Schema-v4 lifecycle and recovery
+## 15. AI Investigation flow
 
-Fresh databases bootstrap directly as schema v4.
-
-A valid schema-v3 active DB migrates additively and transactionally to v4. A v3 database already containing partial Demo Buy structures fails closed instead of being silently normalized.
-
-Preserve existing failure/recovery behavior:
-
-- provider failure leaves prior authority unchanged;
-- DB failure rolls back;
-- WebSocket disconnect fails pending browser requests visibly;
-- Viewer may still read last committed authority after producer stop;
-- service restart recovers stale producer session state;
-- capture failure is all-or-nothing;
-- acknowledgement-unknown is not falsely called rollback and is not auto-replayed;
-- Demo Buy read/AI-export failures never mutate observations/market authority;
-- active-day Demo Buy observations/context survive service restart.
-
-No new `history` index is part of initial schema v4; optimization requires representative evidence.
-
-## 18. Fake Market behavior
-
-Canonical Fake Market serves normal runtime plus the U.S. screener endpoint and deterministic scenarios for movement, reorder, membership add/remove, duplicate/missing identity, recordCount mismatch, null/zero/missing values, malformed response, HTTP failure, delay, restart and recovery.
-
-For Demo Buy/AI Investigation it also provides deterministic trajectories producing `UP`, `DOWN`, `FLAT`, unavailable reasons, delayed observations and a failed high-ranked candidate with useful frozen comparison context.
-
-## 19. Polling cadence
-
-Initial offline/demo default remains 3000 ms. It is configuration, not a provider SLA or schema fact. Live-safe cadence remains evidence-driven.
-
-## 20. U.S. workload shape
-
-Heavy target-machine profile remains:
+From one Demo Buy item:
 
 ```text
-4096 securities
-180 cycles
-737280 history rows
+Investigate with AI
+→ Generate AI Investigation Pack
+→ Copy AI Prompt / Copy folder path
+→ Regenerate when later evidence exists
 ```
 
-Hosted CI uses bounded correctness/performance-smoke profiles.
+The product never calls an AI provider or mutates Scanner SQL automatically.
 
-Measured areas include cycle commit, Current, History, general/staged Scanner, 50-item Demo Buy evaluation, bounded AI-pack generation, Scanner/Demo Buy coexistence, restart-to-ready, DB size and count integrity.
-
-AI-pack performance is measured with realistic one-security 30-minute/10-minute export windows; do not create a full-universe forensic export benchmark.
-
-## 21. Branding / generated artifacts
-
-Target names include:
+Pack contents are owned by `AI_INVESTIGATION_PACK.md`. Core evidence is:
 
 ```text
-npm package: market-flow-us
-default DB: data/market-flow-us.duckdb
-demo DB: .demo/market-flow-us.duckdb
-browser runtime: dist/browser/market-flow-us.runtime.js
-bookmarklet: dist/browser/market-flow-us.bookmarklet.txt
-live runtime: dist/live-verification/market-flow-us-live-verification.js
-live bookmarklet: dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
-Windows launcher: START_MARKET_FLOW_US.cmd
-AI exports: exports/ai-investigations/
+exact query + immutable Scanner context
+prediction-time target history
+exact baseline
+post-capture target history
+trusted Demo Buy outcomes
+field guide
+anti-hindsight prompt
 ```
 
-`exports/` is ignored local user output and never a repository artifact.
+Prediction-time history requires `cycle_id <= buy_cycle_id`; outcome history requires `cycle_id > buy_cycle_id`. This prevents later-committed data from leaking backward merely because its wall-clock timestamp is earlier.
 
-## 22. Daily active-DB lifecycle
+The pack marks `targetInScannerContext`. A target outside retained Top-50 remains valid but cannot claim exact peer reconstruction.
 
-The active DB covers one trading day.
+One Viewer-wide AI-export slot prevents repeated Generate/Regenerate queueing.
 
-After schema v4 ships, New Trading Day accepts either a valid v3 source DB or valid v4 source DB, while rejecting v1/v2, partial/corrupt schema state and a running producer session.
+## 16. AI-pack publication
 
-Flow:
+Use a product-controlled ignored root:
 
 ```text
-stop producer/service
-→ inspect source without mutation
-→ preserve scanner_saved_queries only
-→ build temporary fresh schema-v4 DB
-→ seed saved queries transactionally
-→ optionally archive/move original source DB as-is
-→ atomically install fresh v4 active DB
+exports/ai-investigations/
 ```
 
-A v4 archive remains self-contained with history, Demo Buy/context and forensic source evidence. A v3 archive remains valid historical pre-Demo-Buy data. Demo Buy state never crosses into the fresh day, and future horizons never bridge across DB files.
+The browser supplies no path. Node writes to a temporary internal directory and atomically renames only after every required file succeeds. Existing successful packs are never overwritten.
 
-## 23. Live verification
+The Viewer receives a **relative product path**, not an absolute machine/user path.
 
-Authenticated proof remains bounded and local.
+A lost export acknowledgement may leave a valid local pack; after reconnect it is safe to generate another pack because export performs no DB mutation.
 
-Closed/static smoke may pass with repeated equal provider values while proving exact shape/commit/Current/History/Scanner/ownership/clean stop.
+Clipboard actions use the existing fallback pattern: try `navigator.clipboard`, otherwise reveal selectable text.
 
-Final market-open acceptance on the same SHA requires at least 20 consecutive complete cycles spanning at least 60 seconds plus at least one provider market/freshness field change reflected in committed Current/History.
+## 17. AI outcome evidence status
 
-No observed change leaves movement pending/inconclusive rather than fabricating PASS.
+`PARTIAL_OUTCOME` / `COMPLETE_OUTCOME` describe persisted evidence progress, not profitability or fillability.
 
-The final target-machine bundle also proves the local Demo Buy journey and local AI Investigation Pack generation/copy/regeneration on the exact final candidate. Acceptance does not require uploading the pack to any external AI.
+Completeness uses a committed post-capture evidence watermark reaching `captured_at_ms + 10m`. No “day ended therefore complete” shortcut exists; an archive whose evidence never reached that boundary remains partial.
 
-## 24. Explicit current non-goals
+## 18. New Trading Day
 
-Do not add:
+New Trading Day accepts structurally valid v3 or v4 source DBs, rejects v1/v2, corrupt/partial states and running producer ownership, preserves `scanner_saved_queries`, optionally archives the source as-is, and installs a fresh v4 active DB with empty Demo Buy state.
+
+Prior-day Demo Buy evidence never bridges into the new DB.
+
+## 19. Diagnostics and privacy
+
+Diagnostics may expose bounded operational state such as current surface, Auto mode, capture/export busy flags, skip counts and last outcome categories.
+
+Never include SQL text, Scanner rows, history rows, pack prompt/evidence, credentials, cookies, auth/session data or raw authenticated dumps.
+
+## 20. Performance discipline
+
+Use the existing architecture first:
 
 ```text
-real broker orders
-manual buy price
-fill simulator
-fees/slippage
-sell automation
-portfolio/risk engine
-trade quantity/liquidity proof
-Strategy Engine
-background horizon materialization
-cross-day strategy warehouse
-auto-capture replay queue
-AI provider integration/API keys
-automatic AI editing/activation of Scanner SQL
-internet/web enrichment for investigation
-causal claims from one failed observation
+static SQL preflight
+→ tiny deterministic fixtures
+→ bounded active-day workload
+→ optimize only on evidence
 ```
 
-Phase-2 liquidity/sellability work remains deferred until this increment is fully implemented and verified.
+Do not add background horizon materialization, a second transport/DB, a speculative history index or Strategy Engine before evidence requires it.
+
+## 21. Release boundary
+
+Deterministic implementation/reclosure completes before final target-machine/authenticated acceptance.
+
+The exact final candidate must prove Demo Buy capture/evaluation, Auto operability, targeted refresh and AI Investigation pack generation/regeneration locally before authenticated provider acceptance is considered complete.
