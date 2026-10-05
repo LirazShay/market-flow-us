@@ -120,6 +120,8 @@ Any new/materially changed SQL discovered during fixes must re-enter the AGENTS 
 
 ### A4 — Build, setup, launchers and Windows process orchestration
 
+Status: **done**
+
 Review:
 
 - `package.json` / lockfile assumptions;
@@ -269,9 +271,11 @@ No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
 | A3-002 | A3 | MEDIUM | `browser/viewer/client.js` | Concurrent requests recorded diagnostic operation IDs from the global post-await sequence, so out-of-order completion could mis-correlate diagnostics. | Capture and propagate each request's exact requestId through completion. | `tests/unit/viewer-client.test.mjs` | fixed; A3 CI green |
 | A3-003 | A3 | MEDIUM | `browser/viewer/client.js` | Viewer defaults and connection/error strings still exposed old MarketScope branding. | Rebranded Viewer identity and local-service messages to Market Flow US. | `viewer-client.test.mjs`, branding suites | fixed; A3 CI green |
 | A3-004 | A3 | MEDIUM | `browser/viewer/detail-surface.js` | A live authoritative refresh could supersede an in-flight History `loadMore` while leaving `loadingMore=true`, permanently disabling pagination in that Detail session. | Refresh now releases stale pagination ownership before starting the new generation; stale continuation data remains ignored. | `tests/unit/detail-surface.test.mjs` | fixed; A3 CI green |
+| A4-001 | A4 | HIGH | Windows launchers | Node 24 was enforced only by setup, so later Node-version drift could run the installed product/tests on an unsupported runtime. | Added one shared Node-24 preflight and invoke it before work from every post-setup launcher. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
+| A4-002 | A4 | MEDIUM | `START_DEMO.cmd` | The asynchronous browser opener trusted any HTTP 200 on port 4173, so an older demo could be opened while the new demo failed to bind. | Preflight both demo/service loopback ports before launching the opener. | `tests/unit/final-preflight-a4.test.mjs` | fixed; A4 CI green |
 
 Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
 ## Current pointer
 
-`A0`, `A1`, `A2` and `A3` are complete. Next stage is **A4 — Build, setup, launchers and Windows process orchestration**.
+`A0` through `A4` are complete. Next stage is **A5 — Fake Market, acceptance, workload and trading-day lifecycle**.
