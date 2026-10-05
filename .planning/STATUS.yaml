@@ -1,7 +1,9 @@
 version: 2
-plan_state: frozen
-current_stage: "implementation"
-current_node: "7.4"
+plan_state: active
+replan_mode: execution_reopen
+current_stage: "feature_planning"
+current_node: "demo-buy-validation"
 blockers: []
-next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit A0-A10 is complete; PR #16 was squash-merged as ba44509f39449623a26b79132bbb1e6dfab1723c, that merge commit passed Fast/Browser/Workload/Planning Docs CI, and no open PR remained. Next is FR-0 on the target Windows machine: fetch fresh main, require a clean working tree, record the exact HEAD SHA, verify current main CI/open-PR state, then execute FR-1..FR-14 one checkpoint at a time and stop on the first FAIL. Target-machine and authenticated provider/static/market-open evidence remains pending_external until it is actually run."
+next_action: "Replan the smallest affected area for the new Demo Buy strategy-validation feature. Preserve all completed U.S. migration evidence, block unexecuted final target-machine acceptance 7.4, define durable product/data/technical/test contracts, extend the S&T tree, review/freeze the revised baseline, repair execution allocation, then implement and verify the feature before returning to final target-machine acceptance on the new candidate SHA."
 last_review: "R-US-EXEC-REOPEN-004"
+implementation_authorized: false
