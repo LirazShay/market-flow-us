@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 final re-audit of TREE 7.2 success_evidence is PASS. The documented local Fake Leumi launcher uses the normal runtime/service/DuckDB and synthetic ScreenerHulPaging3 boundary; bounded proofs cover static, moving, membership, provider failure/recovery, restart and sanitized reporting; shared generator/config drives CI, isolated probes and target 4096 x 180 profiles; isolated day-bounded read/Scanner history is seeded directly without browser/transport replay; and the local path requires/stores no credentials or authenticated provider material. Current head 5f165eca275b6c975495cd5ec7c5952ad968aa3a has Planning Docs, Fast, Browser and Workload CI green. Next: mark 7.2 done, synchronize STATUS.yaml/.planning/EXECUTION.yaml/.planning/STATUS.yaml to the next truth, then make PR #11 merge-ready and complete the normal merge/main-CI gate."
+next_action: "TREE 7.2 is done and its final success_evidence re-audit passed. Keep Chat 8 authoritative until PR #11 is made merge-ready, the closure head receives required green CI, the PR diff is reviewed, the PR is squash-merged, and main CI is green. Only after that advance repository truth to Chat 9 / node 7.3."
 last_review: "R-US-EXEC-REOPEN-004"
