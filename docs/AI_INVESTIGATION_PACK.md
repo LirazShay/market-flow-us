@@ -4,13 +4,15 @@
 
 For one Demo Buy observation, generate a local reproducible evidence pack that helps an external AI answer:
 
-- why the exact Scanner SQL selected/ranked this security;
+- why the exact Scanner SQL returned/selected this security and, **only when the SQL ordering establishes ranking semantics**, why it appeared at its observed result position;
 - which warning signals were already available before the virtual buy;
 - what actually happened afterward;
 - what minimal SQL changes might have filtered/de-ranked the failed candidate;
 - what evidence would be needed to validate those changes across many observations.
 
 This is forensic strategy-improvement evidence, not an AI trading agent and not an autonomous query editor.
+
+`resultRank` / `result_rank` is a historical field name for the original 1-based returned Scanner row position. It is **not by itself proof of semantic rank, score quality or strategy preference**. A query without a deterministic `ORDER BY` may return a row first without meaning “best candidate”. The AI must inspect the exact SQL before using ranking language.
 
 ## 2. Product boundary
 
@@ -58,14 +60,15 @@ Every generated prompt instructs the AI to:
 6. never claim source `Price` proves a real fill/executable trade;
 7. treat one observation as insufficient to adopt a rule;
 8. recommend validation across multiple Demo Buy observations;
-9. state explicitly when context was truncated/omitted or the target was outside retained peer context.
+9. state explicitly when context was truncated/omitted or the target was outside retained peer context;
+10. treat `resultRank` as returned row position unless the exact SQL contains deterministic ordering logic that justifies a stronger ranking interpretation; if ordering is absent/ambiguous, say so explicitly and never call row 1 “the best”, “top-ranked” or equivalent.
 
 ## 4. Evidence sources
 
 The pack uses only local persisted/immutable evidence:
 
 - exact capture-level Scanner SQL/provenance;
-- original selected `resultRank`;
+- original selected `resultRank` (returned row position);
 - bounded Scanner comparison context frozen at capture;
 - target `history` rows that were authoritative before capture;
 - exact linked baseline row;
@@ -82,7 +85,7 @@ Re-running Scanner SQL later is not equivalent to the original generation becaus
 Exact shaping/bounds are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`:
 
 ```text
-source rows: first up to 50 in exact SQL order
+source rows: first up to 50 in exact SQL-returned order
 retained columns: <=64 total
 canonical identity column: mandatory even if originally after column 64
 textual/serialized cell: <=128 UTF-8 bytes after deterministic clipping
@@ -102,7 +105,7 @@ cell encoding/truncation metadata
 
 Numeric/null/boolean values are preserved exactly. Strings and encoded non-scalars may be clipped only by the deterministic documented rule and are explicitly marked.
 
-Context is provenance, not market authority and never changes row selection/rank semantics.
+Context is provenance, not market authority and never changes row selection/position semantics. Persisted row order is evidence of what Scanner returned; whether that order represents a meaningful ranking is determined only by analysis of the exact SQL ordering logic.
 
 ## 6. Context integrity / target coverage
 
@@ -114,7 +117,7 @@ captureId + securityId
 
 It must belong to that capture.
 
-At capture time, every selected item with `resultRank <= 50` is cross-checked against the retained context row at the same rank and canonical identity. A mismatch/missing/unusable identity causes capture failure before commit.
+At capture time, every selected item with `resultRank <= 50` is cross-checked against the retained context row at the same position and canonical identity. A mismatch/missing/unusable identity causes capture failure before commit.
 
 The pack derives:
 
@@ -122,8 +125,8 @@ The pack derives:
 targetInScannerContext: boolean
 ```
 
-- rank <=50 with matching retained row → `true`;
-- rank >50 → `false`, but pack generation still succeeds;
+- result position <=50 with matching retained row → `true`;
+- result position >50 → `false`, but pack generation still succeeds;
 - a target that should be retained but is missing/mismatched → integrity/export error, not `false`.
 
 When false, the prompt forbids pretending that the exact target row or peer neighborhood was retained.
@@ -214,6 +217,8 @@ file names / record counts
 context omission/truncation summary
 ```
 
+`resultRank` in the manifest is explicitly documented as the original returned row position, not a claim that SQL semantically ranked that row.
+
 ### `QUERY.sql`
 
 Exact immutable activated SQL. Never truncated.
@@ -240,7 +245,7 @@ The exact trusted Demo Buy evaluator output for all ten horizons. A second horiz
 
 ### `FIELD_GUIDE.md`
 
-Explains canonical identity; source-shaped/empirical field semantics; wall-clock diagnostics vs writer/cycle authority; null/zero/missing distinctions; and the Phase-1 non-fillability boundary.
+Explains canonical identity; source-shaped/empirical field semantics; wall-clock diagnostics vs writer/cycle authority; null/zero/missing distinctions; the Phase-1 non-fillability boundary; and the critical distinction between **returned result position (`resultRank`)** and a semantic rank established by explicit deterministic SQL ordering.
 
 ## 10. Prompt investigation sequence
 
@@ -249,8 +254,10 @@ Explains canonical identity; source-shaped/empirical field semantics; wall-clock
 ### A. Reconstruct the original decision
 
 - explain the SQL in plain language;
-- identify filters, computed values and ranking/tie-break logic;
-- when `targetInScannerContext=true`, explain the target's original rank relative to retained nearby candidates;
+- identify filters, computed values and ordering/tie-break logic;
+- first determine whether the SQL actually establishes a deterministic ranking/order. If not, call `resultRank` only “returned position” and explicitly state that row position does not prove strategy preference;
+- only when SQL ordering justifies it, explain why the target occupied that ranked position;
+- when `targetInScannerContext=true`, compare the target with retained nearby returned candidates without inventing unavailable fields;
 - when false, state the missing peer context and do not fabricate it;
 - report any omitted/truncated inputs that limit analysis.
 
@@ -281,11 +288,13 @@ overfitting risk
 additional Demo Buy evidence required
 ```
 
+If the original SQL had no deterministic ranking semantics, “de-ranked” must be replaced by the precise effect the proposed SQL would create, such as filtering the row or adding an explicit deterministic ordering rule.
+
 Prefer the smallest useful change before larger rewrites.
 
 ### E. Counterfactual/peer check
 
-State whether the change would have altered this target using only pre-buy evidence. When retained context permits, assess neighboring candidates; otherwise mark the counterfactual unproven.
+State whether the change would have altered this target using only pre-buy evidence. When retained context permits, assess neighboring returned candidates; otherwise mark the counterfactual unproven. Never infer semantic rank solely from source row position.
 
 ### F. Validation plan
 
@@ -337,7 +346,7 @@ Detailed UI behavior is owned by `DEMO_BUY_UX.md`.
 The investigation panel shows:
 
 ```text
-capture/target/original rank
+capture/target/original result position
 targetInScannerContext
 current horizon progress
 PARTIAL_OUTCOME | COMPLETE_OUTCOME
@@ -362,8 +371,9 @@ Regeneration may change only evidence legitimately added since the prior pack an
 `TEST_STRATEGY.md` must prove at least:
 
 - exact context bounds, identity-column retention and deterministic clipping;
-- context↔item rank/identity integrity;
+- context↔item result-position/identity integrity;
 - authority-watermark pre/post partition including misleading wall-clock cases;
+- `resultRank` is treated as returned position by default and AI ranking language is allowed only when deterministic SQL ordering justifies it, including an unordered-query regression case;
 - targetInScannerContext true/false/integrity paths;
 - exact baseline and trusted evaluator reuse;
 - partial→complete progression with no terminal-day shortcut;
