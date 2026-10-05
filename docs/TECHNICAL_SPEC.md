@@ -140,6 +140,8 @@ PRIMARY KEY (capture_id, security_id)
 UNIQUE (capture_id, result_rank)
 ```
 
+`result_rank` is the historical field name for the original 1-based returned Scanner row position. It does not itself establish semantic ranking; only the exact SQL ordering can do that.
+
 Use simple DuckDB CHECK constraints for direct row-shape/mode invariants where they remain simple. Cross-field/context semantics stay in service validation.
 
 A physical FK is not required in Phase 1; capture establishes the semantic baseline link and reads treat a missing link as corruption.
@@ -187,15 +189,15 @@ Rules:
 
 - exact object keys;
 - `items.length` is `1..5000`;
-- IDs/ranks are unique; ranks positive, strictly increasing and `<= rowCount`;
-- `top_x` ranks are `<= topX`, with `1 <= topX <= 5000`;
+- IDs/returned positions are unique; positions positive, strictly increasing and `<= rowCount`;
+- `top_x` positions are `<= topX`, with `1 <= topX <= 5000`;
 - automatic is valid only for `all`/`top_x`;
 - no buy-price field exists;
 - exact SQL must satisfy the Demo Buy provenance bound;
 - context must satisfy `docs/DEMO_BUY_PROTOCOL_LIMITS.md`;
-- for every item whose `resultRank <= 50`, context row/rank/identity must match exactly.
+- for every item whose `resultRank <= 50`, context row/position/identity must match exactly.
 
-Browser selects source rows first, then first-occurrence dedupes canonical IDs and preserves original `resultRank`. Node validates and never silently repairs protocol meaning.
+Browser selects source rows first, then first-occurrence dedupes canonical IDs and preserves original `resultRank` returned position. Node validates and never silently repairs protocol meaning.
 
 Response:
 
@@ -222,7 +224,9 @@ serialized context JSON          <= 256 KiB UTF-8
 
 Retain identity unconditionally, then fill remaining column budget from earliest source columns in original order. Preserve original column indexes/names and omission/truncation metadata.
 
-Arrays/objects use deterministic canonical JSON representation for provenance. If shaping cannot produce a valid context within bounds, capture fails visibly before commit; it does not silently drop extra evidence beyond the documented shaping rules.
+Arrays/objects use deterministic canonical JSON representation for **persisted local provenance**. If shaping cannot produce a valid context within bounds, capture fails visibly before commit; it does not silently drop extra evidence beyond the documented shaping rules.
+
+Persisted context is not automatically shareable; AI export derives the separate sharing-safe projection defined below and in `AI_INVESTIGATION_PACK.md`.
 
 ## 10. Capture execution and authority
 
@@ -451,12 +455,17 @@ Server:
 1. validates target membership;
 2. loads immutable query/context/timing provenance;
 3. validates `targetInScannerContext` semantics;
-4. loads exact baseline;
-5. loads authority-watermarked pre/post history;
-6. reuses the trusted evaluator for `OUTCOME.json`;
-7. generates deterministic sanitized files under product-controlled export root;
-8. atomically publishes the completed directory;
-9. returns bounded metadata/path/prompt text.
+4. loads exact baseline and authority-watermarked pre/post history;
+5. reuses the trusted evaluator for `OUTCOME.json`;
+6. derives the sharing-safe history/baseline and Scanner-context projections before any file write;
+7. verifies forbidden operational/session fields and redacted-value contents are absent from all shareable files/prompt/README/manifest;
+8. generates deterministic sanitized files under product-controlled export root;
+9. atomically publishes the completed directory;
+10. returns bounded metadata/path/prompt text.
+
+The history/baseline projection is an explicit allowlist of authority keys plus documented U.S. provider/source market fields and provider `raw_data`; it excludes `session_id`, producer/session/config/error/request metadata, `source_metadata_json` and absolute paths.
+
+The Scanner-context projection preserves structural metadata, canonical identity, numeric/null/boolean values and documented market text columns. Content of other string/array/object result values is not emitted; only bounded structural metadata plus `redactedForSharing: true` is written. Exact SQL is intentionally exported verbatim because it is user-authored content; UI/README must warn the user to review it before external sharing.
 
 Response contains only bounded metadata:
 
@@ -468,9 +477,10 @@ targetInScannerContext
 generatedAtMs
 promptText
 fileNames / recordCounts
+preserved/redacted/omitted counts
 ```
 
-`promptText` is capped at 256 KiB UTF-8. History/evidence files are not returned through WebSocket.
+`promptText` is capped at 256 KiB UTF-8. History/evidence files are not returned through WebSocket. Redacted content itself never enters response metadata or diagnostics.
 
 ## 20. AI export filesystem boundary
 
@@ -482,7 +492,7 @@ exports/ai-investigations/
 
 It is git-ignored. Browser never supplies a path.
 
-Generate into a temporary product-owned directory and atomically rename to a collision-safe final directory only after all required files are complete. Never overwrite an existing successful pack. Best-effort cleanup removes failed temporary output.
+Generate into a temporary product-owned directory and atomically rename to a collision-safe final directory only after all required files and sharing-safety checks are complete. Never overwrite an existing successful pack. Best-effort cleanup removes failed temporary output.
 
 Return/display a repository/product-relative path, never a machine-specific absolute user path.
 
@@ -546,6 +556,8 @@ Current | Scanner | Demo Buy
 
 Demo Buy is capture-grouped. Capture header owns query/timing/mode/provenance actions. Item table uses sticky leading identity/baseline columns and one compact cell per horizon containing outcome + percentage + Price where available.
 
+The UI labels `resultRank` as neutral returned `Position`/`Scanner position` unless it is explicitly explaining SQL ordering; position 1 must not be shown as “best/top-ranked” merely because it is first.
+
 Presentation rule:
 
 ```text
@@ -581,6 +593,8 @@ Copy AI Prompt
 Copy folder path
 ```
 
+Before Generate/Regenerate, show a concise pre-share reminder that the pack contains the user's exact Scanner SQL and market evidence, that Scanner SQL must not contain secrets, and that generated files should be reviewed before external sharing.
+
 At most one Generate/Regenerate request is in flight per Viewer. Additional export actions are visibly disabled/refused rather than queued.
 
 Clipboard follows existing support-snapshot behavior: `navigator.clipboard.writeText`, with visible/selectable fallback text when clipboard access is unavailable.
@@ -609,7 +623,7 @@ demo_buy.viewer
 
 Support Snapshot may include bounded operational state such as active top-level view, Auto mode, busy-skip count, capture/export slot state and last outcome category.
 
-Never include SQL text, Scanner rows, history rows, AI prompt/evidence, credentials/session data or raw authenticated dumps.
+Never include SQL text, Scanner rows, history rows, AI prompt/evidence, redacted source values, credentials/session data or raw authenticated dumps.
 
 ## 27. Fake Market / workload
 
@@ -625,11 +639,13 @@ NO_FUTURE_OBSERVATION
 BASELINE_PRICE_UNAVAILABLE
 BASELINE_PRICE_ZERO
 FUTURE_PRICE_UNAVAILABLE
-rank-1 candidate that later declines
+ordered position-1 candidate that later declines
+unordered returned position 1
 Top-50 peer differences
-rank>50 investigation target
+position>50 investigation target
 wall-clock anomaly fixture
 post-capture commit watermark fixture
+AI-sharing fixture containing operational/session Scanner columns that must be redacted/omitted
 ```
 
 Hosted CI remains correctness-first and bounded. Heavy target-machine profile remains:
@@ -671,9 +687,11 @@ AI exports: exports/ai-investigations/
 
 ## 30. Security boundary
 
-Preserve loopback-only service, exact allowed Origin, hardened DuckDB, no credential/session persistence, sanitized synthetic fixtures and no raw authenticated dumps.
+Preserve loopback-only service, exact allowed Origin, hardened DuckDB, no credential/session persistence in market evidence, sanitized synthetic fixtures and no raw authenticated dumps.
 
-Generated AI packs are explicit local user artifacts. They may contain local SQL/history evidence but are never committed automatically and never placed in Support Snapshot.
+Generated AI packs are explicit local user artifacts and are designed for optional sharing. Therefore they use the sharing-safe projection from `DATA_CONTRACT.md` / `AI_INVESTIGATION_PACK.md`, never raw `SELECT *` DB rows or raw persisted Scanner context. System-owned operational/session identifiers are excluded by construction; redacted contents are not copied into prompt/manifest/diagnostics. Exact user-authored SQL remains verbatim and requires the visible pre-share reminder.
+
+Packs are never committed automatically and never placed in Support Snapshot.
 
 ## 31. Final acceptance
 
@@ -684,6 +702,7 @@ Final target-machine acceptance additionally proves:
 ```text
 local Demo Buy progressive + targeted observation refresh
 local AI pack generation/copy/regeneration
+AI pack sharing-safe projection / no operational-session leakage
 new-day v3/v4 → fresh-v4 lifecycle
 4096x180 + isolated day-bounded probes
 authenticated static smoke
