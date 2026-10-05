@@ -171,6 +171,29 @@ That entrypoint injects `openMarketFlowUsDatabase`, so the production service bo
 
 Historical/generic fixtures may retain donor-era vocabulary only when they are not packaged or reachable through the normal product entrypoints and still protect reusable behavior. They must not be used to justify a production dependency on the retired provider path.
 
+## TREE 7.3 new-day SQL static preflight
+
+`AGENTS.md` requires at least ten explicit static validation/optimization stages before first execution of new or materially changed SQL. The new-day rollover SQL in `scripts/new-trading-day.mjs` was reviewed before any branch test/CI execution as follows.
+
+1. **Purpose and contract** — the read queries only identify schema-v3 validity, detect any `running` session and snapshot the exact saved-query library; the write query only restores those saved-query rows into a fresh schema-v3 DB. It must not mutate the prior active DB during inspection or copy prior-day market authority into the fresh DB.
+2. **Schema/data-source validation** — `information_schema.tables`, `schema_info.schema_version`, `sessions.session_id/status`, and all seven `scanner_saved_queries` columns match the current schema-v3 bootstrap. `query_id` is the primary key, `name_key` is unique, and `interval_ms` is positive by schema constraint.
+3. **Cardinality estimate** — table inventory is bounded by the small schema; `schema_info` is exactly one row; the running-session probe returns at most one row due to `LIMIT 1`; saved-query snapshot/restore is `O(Q)` where `Q` is the user's saved-query count. No market-history row is read or copied.
+4. **Access-path inventory** — four bounded inspection SELECTs plus one parameterized INSERT shape repeated once per saved query. There are no joins, correlated subqueries, lateral lookups or repeated scans of `history/latest/cycles/universe`.
+5. **Predicate/selectivity review** — the only potentially growing table inspected outside saved queries is `sessions`, filtered to `status = 'running'` and stopped after the first match. No market-data predicate is needed because market authority is intentionally not migrated into the fresh day.
+6. **Join and row-explosion review** — there are no joins and therefore no many-to-many/intermediate row multiplication. Each saved-query source row maps to exactly one parameterized INSERT.
+7. **Sort/group/window review** — only deterministic small-result ordering is used (`table_name`, `query_id`). There are no aggregations, windows, DISTINCT operations or large market-table sorts.
+8. **Repeated-work elimination** — rollover snapshots saved queries once, creates one fresh DB and restores them once. Reusing the normal schema-v3 bootstrap avoids duplicating schema DDL; using raw hardened inspection avoids invoking normal stale-session recovery against the prior DB merely to decide whether rollover is safe.
+9. **Boundedness/resource/failure review** — the saved-query restore is one transaction; failure rolls it back. The fresh DB is built at a temporary path before file replacement. If prior authority has already moved and fresh install fails, rollback attempts to restore it; otherwise the prior path remains explicitly recoverable. The old market DB is archived by rename rather than copied row-by-row.
+10. **Architecture/schema/code alternative review** — copying only `scanner_saved_queries` into a fresh schema-v3 DB is the smallest mechanism consistent with the one-trading-day authority contract. Extending the schema for multi-day history, migrating market tables, or introducing a second storage subsystem would violate KISS and the frozen daily-lifecycle decision.
+
+Additional static checks:
+
+- all inserted values are parameters; no user SQL text is interpolated into executable SQL;
+- inspected identifiers are fixed source identifiers, not user-controlled names;
+- DuckDB is opened with the existing hardened configuration;
+- prior-day inspection is read-only;
+- the first execution must therefore be the committed deterministic `new-trading-day` test fixture/CI path, not production data or a large workload.
+
 ## Release-closure status
 
 The audit no longer defines the active planning/execution pointer. `STATUS.yaml`, `.planning/STATUS.yaml` and `.planning/EXECUTION.yaml` own live operational state.
