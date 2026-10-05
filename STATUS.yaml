@@ -1,12 +1,12 @@
 schema_version: 2
-phase: implementation
-overall_status: in_progress
+phase: planning
+overall_status: blocked
 
 current:
   chat: 10
-  node: "7.4"
-  title: "Final target-machine acceptance"
-  status: in_progress
+  node: "4.3.1"
+  title: "Demo Buy + AI Investigation planning re-frozen after external-user review"
+  status: blocked
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -22,13 +22,19 @@ planning_completion:
   st_tree_review: pass
   second_pass_adversarial_review: pass
   final_planning_review: pass
+  external_user_from_zero_review: pass_after_corrections
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: pass
+  handoff_verification: pending_ci_recheck
+  implementation_authorization: blocked_merge_and_main_ci
 
 execution:
-  chats_total: 10
-  implementation_leaves_total: 20
+  chats_total: 17
+  implementation_leaves_total: 28
   current_chat: 10
-  current_node: "7.4"
+  current_node: "4.3.1"
+
+blockers:
+  - "PR #17 must pass the updated Planning Docs CI after the external-review corrections."
+  - "PR #17 must then be reviewed and squash-merged."
+  - "Main Planning Docs CI and open-PR state must be verified green/clean before phase advances to implementation."

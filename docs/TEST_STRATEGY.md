@@ -1,542 +1,316 @@
 # Market Flow US Test Strategy
 
-## 1. Core principles
+## 1. Principles
 
 Verification protects observable contracts, not implementation trivia.
 
-The U.S. conversion follows:
+Use:
 
 ```text
-reuse proven MarketScope tests where behavior is unchanged
-→ replace only provider/data-specific fixtures/assertions
-→ keep Fast feedback fast
-→ use Chromium for browser composition
-→ use bounded workload smoke in CI for correctness/catastrophic regressions
-→ use configurable synthetic generators for isolated load probes
-→ use deterministic local Fake Leumi acceptance before external checks
-→ defer heavy performance authority and authenticated target-machine checks to the final acceptance leaf
+fast unit tests
+→ real DuckDB/service integration
+→ Chromium composition
+→ bounded correctness-first workload in hosted CI
+→ deterministic local Fake Leumi acceptance
+→ final target-machine/authenticated acceptance
 ```
 
-No credentialed provider access belongs in CI.
+No credentialed provider access or external AI provider belongs in CI.
 
-GitHub-hosted CI is **correctness-first**. It may record timing and run small performance sanity probes, but it is not the authority for heavy performance PASS/FAIL on the user's stronger intended machine.
+Recurring automation speed is an engineering requirement. Remove duplicated work before increasing timeouts. Heavy performance authority belongs to the intended target machine.
 
-### Automation-performance invariant
+Every new/materially changed SQL statement must pass the AGENTS static SQL preflight before first execution, then a tiny deterministic fixture, then representative bounded measurement.
 
-Verification speed is part of the verification contract. Slow recurring automation is not harmless merely because it is correct or green.
+## 2. Preserve existing U.S. proof
 
-Measure the complete wall-clock path, including checkout, dependency installation/cache restore, build, fixture creation, service/DB startup, tests, browser setup, cleanup and report generation. Optimizing only the body of a test while leaving repeated setup expensive does not satisfy this rule.
+Do not weaken already-green proof for ScreenerHulPaging3 acquisition/completeness, canonical PaperId identity, Recorder non-overlap/universe revisions, schema-v3 market authority, cycle rollback, Current/Security/History reads, Scanner security/saved-query CRUD, Current/Detail/Scanner Chromium behavior, diagnostics, shared synthetic generator, local Fake Leumi tooling and packaging/live boundaries.
 
-When a test, harness or workflow becomes materially slow, first prefer refactoring the repeated work itself:
+Demo Buy/schema-v4 tests extend these rather than replacing them.
+
+## 3. Unit — Demo Buy selection/provenance
+
+Prove:
+
+- exactly one `securityId`/`security_id` column is required;
+- `Symbol` is never identity;
+- invalid identity rows are non-selectable;
+- All/Top-X/Auto refuse chosen ranges containing invalid identity instead of silently skipping;
+- manual selection preserves original 1-based `resultRank`, including gaps;
+- `resultRank` is the original returned row position and is not itself evidence that the SQL semantically ranked that row;
+- All selects all source rows before dedupe;
+- Top X selects exactly first X source rows before dedupe;
+- duplicate IDs reduce to first chosen occurrence and never backfill beyond X;
+- submitted IDs/positions are unique and positions strictly increasing;
+- Top X accepts only `1..5000` source rows;
+- All above 5000 unique items is refused, never truncated;
+- empty manual selection cannot submit;
+- zero-row successful Auto generation is no-op;
+- selection resets on new rendered generation;
+- capture freezes the exact rendered generation synchronously before async submission;
+- later Scanner refresh cannot mutate an in-flight capture snapshot;
+- query ID/name/SQL/interval/result timing/rowCount stay bound to the rendered generation despite draft/library edits.
+
+## 4. Unit — Scanner-context shaping
+
+Prove exact limits:
 
 ```text
-remove duplication
-→ share/reuse setup safely
-→ reduce unnecessary fixture/data size
-→ replace polling/sleeps with deterministic synchronization
-→ improve algorithm/query/test architecture
-→ improve cache/job topology
-→ remeasure end-to-end
+rows <= 50
+retained columns <= 64
+identity column always retained
+textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping
+serialized context <= 256 KiB UTF-8
+source SQL <= 1 MiB UTF-8 for Demo-Buy-capable generation
+selected unique items <= 5000
 ```
 
-Do not normalize avoidable slowness. An individually slow test or setup path must be investigated when it materially dominates feedback. Do not increase timeouts/retries as the normal response to avoidable slowness. Do not delete meaningful coverage merely to make CI appear faster.
+Cover exact-limit and limit+1 cases, including multi-byte UTF-8.
 
-A broad, high-value recurring suite that covers many real integration boundaries may legitimately take up to roughly **30 seconds wall-clock**. This is an acceptance ceiling, not a target. Before accepting that runtime, inspect the dominant costs for removable duplicated setup, unnecessary waiting/polling, oversized fixtures/bootstrap, avoidable I/O/serialization and other practical optimizations that preserve proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, document the measurement as the **best practical verified state** and stop micro-optimizing it.
+Also prove identity column beyond source column 64 is retained, non-identity columns preserve earliest source order, original source indexes/names are kept, omitted row/column metadata is explicit, arrays preserve order, object keys canonicalize deterministically, clipping is marked, and context failure never changes selection/positions.
 
-The expected steady state is that focused checks remain very fast and broad recurring verification remains comfortably bounded. Hard ceilings are failure bounds, not performance targets.
+## 5. Unit — Capture controller / Auto UX
 
-Normal Fast/Browser jobs keep a 3-minute hard ceiling, but ordinary success should be much faster. Heavy target-machine performance profiles have their own acceptance ceilings and must not be forced through hosted CI merely to obtain a number.
+Prove one Viewer-wide capture slot covers manual+Auto; double-submit is impossible; busy Auto generations are counted/skipped rather than queued; zero-row Auto is no-op; ordinary rejection releases the slot; `ACKNOWLEDGEMENT_UNKNOWN` locks capture until explicit recovery; there is no blind replay; Auto changes apply only to future successful generations; enabling Auto does not capture the already-rendered result; persistent Auto status follows Off/All/Top-X; Turn off affects future generations only; bounded summary replaces unbounded logs.
 
-## 2. Layer 1 — Unit tests
+## 6. Unit — Resumable Scanner Stop
 
-Unit tests cover pure/local behavior.
-
-Required U.S. unit proof includes:
-
-### Provider adapter
-
-- exact ScreenerHulPaging3 URL/query construction;
-- response extraction;
-- non-2xx rejection;
-- malformed JSON/shape rejection;
-- positive safe `recordCount`;
-- `records.length === recordCount`;
-- missing/empty `PaperId` rejection;
-- duplicate canonical `PaperId` rejection;
-- row reordering does not alter canonical membership;
-- `Symbol` missing is tolerated/diagnosed rather than used as identity;
-- null/zero/missing quote-like fields are preserved correctly;
-- source envelope metadata is retained safely.
-
-### Cycle shaping
-
-- one full response -> one segment with `chunkIndex=0`;
-- exact counters;
-- timing ordering;
-- exact membership;
-- source metadata attached;
-- raw row preserved.
-
-### Recorder
-
-- 3000 ms default remains a timing config, not a history-schema input;
-- no overlapping cycles;
-- stop prevents new cycles;
-- membership change routes through universe replace before cycle commit;
-- same membership reuses accepted universe revision;
-- failures are reported fail-closed.
-
-### Viewer models
-
-- U.S. Current columns;
-- default `DailyVolume DESC`;
-- deterministic null/zero/missing formatting;
-- Detail summary/history columns;
-- sort/state preservation.
-
-### Scanner built-ins
-
-- built-ins parse/execute against current schema;
-- staged-ranking SQL exposes `securityId`;
-- staged ranking is contiguous and deterministic;
-- missing historical stage stops progression;
-- tie-break order is deterministic.
-
-Any new or materially changed SQL must pass the AGENTS 10+ stage static SQL preflight before first execution. Regression execution of unchanged already-reviewed SQL remains normal.
-
-### Branding/build
-
-- Market Flow US generated filenames/global keys;
-- Windows launchers remain thin wrappers.
-
-## 3. Layer 2 — Real service integration
-
-Use real temporary DuckDB + real `ws`.
-
-Preserve imported service proof families:
-
-- DB bootstrap/close/restart;
-- unsupported schema rejection;
-- producer/session ownership;
-- heartbeat/stale recovery;
-- universe replacement;
-- complete cycle commit;
-- failed cycle persistence;
-- fault-injected rollback;
-- Current/status trusted reads;
-- Security/history paging;
-- Scanner admission/execution;
-- saved-query CRUD;
-- Support Snapshot.
-
-U.S.-specific assertions replace Israeli fields.
-
-## 4. Schema v3 tests
-
-Required:
-
-- fresh empty DB bootstraps as v3;
-- v3 contains exactly required tables;
-- v3 U.S. columns exist with expected types;
-- raw_data remains JSON;
-- old MarketScope v1/v2 DB is rejected without mutation;
-- default Market Flow US DB filename differs from old MarketScope filename;
-- saved-query library works in fresh v3;
-- restart preserves history/latest/query library.
-
-Do not test or implement semantic conversion of Israeli market rows into U.S. rows.
-
-## 5. Layer 3 — Canonical Fake Market
-
-Fake Market is a real loopback HTTP server used by the normal browser runtime.
-
-It serves the production U.S. path:
+Prove user-level Stop recurring scan is distinct from terminal destroy:
 
 ```text
-/lti/lti-app/api/Market/ScreenerHulPaging3
+Stop
+→ cancel future timer
+→ invalidate generation token
+→ ignore stale in-flight result
+→ keep Viewer/draft alive
+→ later Activate succeeds
 ```
 
-Required deterministic scenarios:
+If Auto remains armed, no capture occurs while scanning is stopped.
 
-1. complete moving U.S. response;
-2. repeated identical complete response with unchanged membership and quote values;
-3. same membership, different row order;
-4. security added;
-5. security removed;
-6. duplicate PaperId;
-7. missing PaperId;
-8. recordCount mismatch;
-9. null / numeric zero / missing fields;
-10. malformed response shape;
-11. HTTP error;
-12. delayed response;
-13. values advance across cycles;
-14. provider recovery after failure;
-15. service restart with persisted DB.
+## 7. Unit — Demo Buy evaluator
 
-The repeated-identical scenario is important: a closed/static market is not a failure. Repeated equal values must still validate, commit, append history and preserve the same universe revision.
-
-Normal scenarios should not rely on Playwright interception.
-
-### Configurable synthetic generation
-
-Fake Market and load/performance tests must share one deterministic synthetic-data generator rather than maintain large duplicated fixture sets.
-
-The generator is externally configurable through a small documented profile/config boundary for at least:
-
-- universe size;
-- cycle/history count or logical day shape;
-- logical cadence/timestamps;
-- static vs moving data pattern;
-- deterministic membership changes;
-- deterministic failure/recovery points;
-- seed/reproducibility.
-
-Tests may use the generator directly without starting Fake Market when HTTP/browser behavior is irrelevant to the component being measured.
-
-## 6. Layer 4 — Browser E2E
-
-Chromium runs against Fake Market + real local service + normal built runtime.
-
-Preserve current observable behavior:
-
-- runtime composition;
-- Current boot/empty/main/error;
-- Current U.S. columns and sort;
-- diagnostics;
-- Detail open/back;
-- history continuation/retry;
-- refresh state preservation;
-- Scanner execute/stop/repeat;
-- saved-query library;
-- Scanner-to-Detail navigation;
-- producer survives Viewer close;
-- explicit recovery after service interruption.
-
-At least one browser scenario must prove membership change from one full U.S. response to the next.
-At least one browser/service scenario must prove repeated identical complete responses remain valid authority rather than being misclassified as stale/failure solely because quote values do not move.
-
-## 7. Fast CI contract
-
-`npm run test:fast` remains:
+Fixed horizons exactly:
 
 ```text
-unit
-+
-real service integration
+10s,20s,30s,45s,60s,90s,120s,3m,5m,10m
 ```
 
-Keep the imported feedback-performance discipline.
+Prove target = `capturedAtMs + horizonMs`; future row requires `cycle_id > buy_cycle_id` and `collected_at_ms >= target`; earliest collected time then lowest cycle ID wins; qualifying `Price=NULL` row is not skipped; formula/signs/reason precedence are exact; missing baseline row is integrity error; Scanner completion never anchors horizons; clock anomalies never change authority and produce nullable diagnostic values plus timing-anomaly state.
 
-Targets remain guidance, not permission to weaken proof:
+## 8. Unit — Demo Buy UI model
+
+Prove capture grouping, page-mid-capture header repetition, sticky identity/base context, neutral `Position`/`Scanner position` wording for `resultRank`, one compact cell per horizon, Pending presentation for `NO_FUTURE_OBSERVATION`, warning presentation for non-temporal unavailable reasons, color-independent direction, horizon progress, `Refresh latest` reset semantics, `Load more` append semantics, `Refresh observation` in-place replacement, and smallest-surface error preservation.
+
+## 9. Unit — AI Investigation model
+
+Prove prediction/outcome separation; prediction-time history requires `cycle_id <= buy_cycle_id` plus the 30-minute window; outcome history requires `cycle_id > buy_cycle_id` plus capture→10-minute window; no post-watermark row leaks backward even with anomalous timestamps; Top-50/position>50 context behavior; missing expected Top-50 target is integrity error; `COMPLETE_OUTCOME` depends on committed post-watermark evidence reaching the 10-minute boundary rather than wall clock; prompt requests minimal SQL hypothesis, concrete pre-buy evidence, benefit, false-negative cost, overfitting risk and multi-observation validation; no automatic query activation; pack format/manifest/field-guide output is deterministic.
+
+Also prove ranking-language discipline with at least two fixtures:
+
+1. an unordered/select-only query where `resultRank=1` must be described only as **returned position 1** and the prompt explicitly refuses to call it best/top-ranked;
+2. a deterministic query with explicit `ORDER BY`/tie-breaks where the prompt may explain why the target occupied that ordered position using only retained prediction-time evidence.
+
+Prove sharing-safe projection rules independently of filesystem publication:
+
+- history/baseline export allowlists authority keys + documented provider market fields + provider `raw_data`;
+- `session_id`, producer/session/config/error/request metadata, `source_metadata_json` and absolute paths are absent;
+- Scanner-context numeric/null/boolean values survive;
+- documented market-text columns survive subject to existing bounded capture clipping;
+- arbitrary other string/array/object values are replaced by structural metadata with `redactedForSharing=true` and no original content;
+- manifest counts preserved/redacted/omitted values without including redacted content;
+- prompt/README/response/diagnostics contain no redacted content;
+- exact user-authored SQL remains verbatim and the pre-share warning is present.
+
+Use canary secret/session-like fixture values and assert those byte sequences do not occur anywhere in the generated shareable semantic model.
+
+## 10. Real DuckDB — schema v4
+
+### Fresh v4
+
+Prove exact two Demo Buy tables/columns/constraints plus unchanged U.S. market authority.
+
+### v3 → v4
+
+Seed valid v3 market authority + saved queries and prove transactional additive migration preserves them.
+
+### Partial-state rejection
+
+DB marked v3 with one/both Demo Buy structures fails closed instead of silently resuming unknown migration.
+
+### Migration faults
+
+Inject failures at multiple phases; original v3 remains usable and no accepted partial v4 remains.
+
+### New day
+
+Prove rollover accepts valid v3 or v4, rejects v1/v2/running/partial-corrupt states, preserves saved queries, can archive source unchanged, and installs fresh v4 with empty Demo Buy state.
+
+## 11. Real service — capture authority
+
+Using real `ws` + DuckDB prove:
+
+1. valid response returns capture ID/time/item count;
+2. no buy-price input exists;
+3. Node rejects duplicate/rank/order/range/mode/topX/bound errors;
+4. Node validates context-to-item position/identity for captured position <=50;
+5. identity-column-beyond-64 context remains valid;
+6. oversized SQL/context fails before commit;
+7. each item links exact latest cycle at writer point;
+8. market write before capture may become baseline;
+9. market write after capture cannot retroactively become baseline;
+10. unresolved selected security rolls back whole capture;
+11. capture IDs are monotonic;
+12. same security may be captured again later;
+13. query edits never rewrite capture provenance;
+14. persistence fault rolls back capture/items/context together;
+15. capture never mutates history/latest.
+
+## 12. Lost capture ACK
+
+Deterministically close transport after request dispatch before conclusive response. Prove browser state is `ACKNOWLEDGEMENT_UNKNOWN`, no auto-retry occurs, capture stays blocked until recovery, committed request refreshes to exactly one capture, uncommitted request refreshes to none, and only then may the user explicitly act again.
+
+## 13. Real service — trusted Demo Buy reads
+
+Prove `demo.buy.page`, `demo.buy.observation.get` and `demo.buy.capture.get`:
+
+- exact baseline join and stable baseline-integrity error;
+- `cycle_id > buy_cycle_id` post-capture invariant;
+- nearest-at/after target selection and tie-break;
+- null/zero/unavailable reasons;
+- delayed observed/elapsed time;
+- ordering `capture_id DESC, result_rank ASC`;
+- fixed 50-item page;
+- one transactionally consistent snapshot per page;
+- stable opaque cursor while new Auto captures arrive;
+- first-page refresh exposes new captures;
+- page omits repeated full SQL/context;
+- capture detail returns immutable SQL/provenance once;
+- targeted observation read uses identical evaluator semantics and updates one old target without resetting pagination;
+- restart persistence and new-day clearing/no cross-day horizons.
+
+## 14. Real filesystem/service — AI pack
+
+Using a temporary export root prove:
+
+1. target belongs to capture;
+2. SQL/context/baseline come from immutable persisted evidence, never re-running Scanner;
+3. pre/post history obey watermark + time windows;
+4. `OUTCOME.json` reuses trusted evaluator;
+5. Top-50/position>50 behavior is correct;
+6. partial→complete regeneration happens only after qualifying committed evidence reaches boundary;
+7. immutable SQL/context/baseline authority remains identical across regeneration;
+8. every required file exists with deterministic contract content;
+9. browser cannot choose output path;
+10. response/manifest path is repository-relative, not absolute machine path;
+11. `promptText` <= 256 KiB;
+12. write/rename failure never publishes misleading complete output;
+13. successful pack is never overwritten;
+14. export mutates no DB authority;
+15. restart can regenerate semantically equivalent evidence;
+16. diagnostics never dump SQL/history/prompt/evidence/redacted source values;
+17. `FIELD_GUIDE.md` and `PROMPT.md` define `resultRank` as returned row position and do not infer semantic rank without deterministic SQL ordering;
+18. history/baseline files contain the explicit sharing-safe market projection and no `session_id`, producer/session/config/error/request metadata, `source_metadata_json` or absolute paths;
+19. Scanner context emits arbitrary non-market strings/arrays/objects only as redaction metadata, while numeric/null/boolean and safe market-text values follow contract;
+20. a canary secret/session token placed in operational fields and arbitrary Scanner text is absent byte-for-byte from every generated file, `promptText`, response metadata and diagnostics;
+21. README/UI-facing pack metadata contains the pre-share warning that exact SQL is exported verbatim and generated files should be reviewed before external upload.
+
+Lost export ACK may be safely regenerated after reconnect because no DB authority changes; it creates a new collision-safe pack rather than reusing capture lost-ACK rules.
+
+## 15. Chromium — Scanner capture UX
+
+Prove accessible capture controls; checkbox never opens Detail; source-row-first Top-X/position behavior; actionable invalid/oversized refusal; frozen generation during concurrent refresh; Auto starts with next generation only; persistent Auto indicator across Current/Scanner/Demo Buy and Turn off; busy-skip bounded summary; resumable Stop recurring scan with stale-result suppression; distinct committed/rejected/acknowledgement-unknown UI.
+
+## 16. Chromium — Demo Buy outcome UX
+
+Prove empty guidance, capture-grouped rendering, header continuity across page split, compact ten-horizon cells, sticky identity context, neutral position label, Pending vs warning unavailable presentation, progressive UP/DOWN/FLAT/unavailable transitions, Refresh latest vs Load more, targeted Refresh observation on an item pushed off page one by newer Auto captures, provenance-detail error isolation, and Scanner continued operation while Demo Buy is visible.
+
+## 17. Chromium — AI Investigation UX
+
+Prove a failed returned-position-1 candidate workflow with both an explicitly ordered Scanner query and an unordered query; for the unordered query UI/prompt must not imply “best/top-ranked” merely from position 1. Also prove context coverage and partial/complete state; one export slot; relative folder path/file count; visible pre-share warning for exact SQL/evidence; Copy AI Prompt and Copy folder path clipboard fallbacks; targeted observation refresh before generation; partial regeneration; position>50 reduced-context pack; export error isolation; safe lost-export-ACK guidance; and absence of automatic AI upload/call/SQL activation.
+
+## 18. Fake Market scenarios
+
+Shared generator supports existing U.S. cases plus:
 
 ```text
-focused checks: as fast as practical
-broad full Fast/service verification: <= 30s acceptable steady-state ceiling after optimization review
-full Playwright execution: <= 12s target where practical
-ordinary workflow hard ceiling: 3 minutes
+UP
+DOWN
+FLAT
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+ordered position-1 candidate later declines
+unordered result position 1
+Top-50 peer differences
+position>50 target
+post-capture cycle with anomalously early collected_at_ms
+wall-clock regression diagnostics
+AI-sharing operational/session/string canaries
 ```
 
-The 30-second broad-suite figure is not a goal. A suite in the 10–30 second range is accepted only after the dominant costs have been reviewed and no meaningful avoidable improvement remains while preserving the same proof. Record such a reviewed state as the **best practical verified state** so future chats do not repeatedly reopen pointless micro-optimization unless timing regresses or architecture changes.
+Fixtures are synthetic/sanitized.
 
-For every meaningful test/CI change, compare wall-clock cost with the prior shape. If a regression is avoidable, fix it before merge. Prefer reducing recurring setup and duplicate work before micro-optimizing assertion code.
+## 19. Hosted workload
 
-If one test, fixture, bootstrap, browser setup or cleanup path materially dominates elapsed time, investigate that path even if the suite remains under the broad-suite ceiling. If the cost is inherent to valuable real integration proof and no material optimization remains, document that conclusion and move on.
+Hosted CI is correctness-first and bounded. Cover exact counts, restart, Current/History reads, general/staged Scanner, approximately-4k width sanity, 50-item Demo Buy page evaluation, targeted observation read, Scanner+Demo Buy coexistence, one bounded sharing-safe AI export and sanitized reporting.
 
-If U.S. fixture growth causes regression, remove avoidable setup/waiting before considering test deletion. Do not solve a slow test suite by simply increasing its timeout.
+No hosted timing becomes a product SLO.
 
-## 8. Browser CI contract
+## 20. Heavy target-machine workload
 
-For product-code changes:
-
-```text
-npm ci
-→ exact Chromium setup/cache
-→ npm run build:browser
-→ npm run test:e2e
-```
-
-Failure evidence remains sanitized.
-
-## 9. Layer 5 — Workload correctness and performance-smoke tooling
-
-Workload tooling has two deliberately different responsibilities.
-
-### A. Hosted-CI correctness/performance sanity
-
-GitHub CI runs **small deterministic profiles only**. The goal is broad correctness and early catastrophic-regression detection, not hardware benchmarking.
-
-Required CI coverage includes:
-
-- generated U.S. row/schema correctness;
-- exact completed/failed/latest/history counts;
-- restart preservation;
-- Current and History reads;
-- general Scanner SQL families;
-- staged Scanner correctness;
-- sanitized report structure;
-- at least one approximately-4096-security **single/few-cycle width sanity** so full-universe projection/serialization shape is exercised;
-- small multi-cycle history profile sufficient to exercise history growth and staged-query semantics.
-
-Timing from hosted CI is diagnostic. A materially surprising regression must be investigated, but a weak runner does not define release-performance PASS/FAIL.
-
-Do not run `4096 × 45` or `4096 × 180` repeatedly in CI merely to discover a bottleneck that can be isolated with a smaller profile.
-
-### B. Isolated performance probes
-
-Performance tests should exercise only the layers relevant to the metric:
+Final target-machine profile remains:
 
 ```text
-persistence probe
-→ generate validated cycle data directly
-→ persistence/DuckDB only
-
-read/Scanner probe
-→ seed deterministic day-bounded history efficiently
-→ Current/History/Scanner only
-
-end-to-end probe
-→ Fake Market HTTP
-→ browser/Recorder
-→ WebSocket/service
-→ DuckDB
-```
-
-Do not require browser/HTTP/WebSocket work when measuring only DuckDB reads or Scanner SQL. Do not replay thousands of real commits merely to create a Scanner dataset if deterministic direct seeding preserves the same schema/data invariants for that measurement.
-
-All materially changed SQL still requires the AGENTS static preflight and a tiny deterministic execution before any larger probe.
-
-### C. Heavy target-machine profile
-
-The acceptance kit exposes at least:
-
-```text
-4096 securities
+4096 synthetic securities
 180 end-to-end cycles
 737280 history rows
 ```
 
-for the final target machine.
+Also run isolated one-day persistence/read/Scanner/Demo Buy/AI probes using direct seeding when higher layers are irrelevant to the measured question.
 
-Required integrity remains:
+## 21. Local Fake Leumi acceptance
 
-- 180 completed cycles;
-- zero failed cycles;
-- latest count 4096;
-- history count 737280;
-- last completed cycle 180;
-- restart preserves counts.
+On exact post-feature candidate prove deterministic static/moving/membership/failure/restart behavior, schema-v4 Demo Buy capture/evaluation, progressive + targeted observation refresh, AI pack generation/copy/regeneration, sharing-safe no-operational/session-leak export, v3/v4→fresh-v4 new-day lifecycle and bounded workload reports through the normal runtime/service/DuckDB.
 
-Measure:
+## 22. Authenticated static smoke
 
-- cycle commit latency distribution;
-- Current read;
-- History page;
-- Scanner general JOIN;
-- Scanner GROUP/HAVING;
-- Scanner window;
-- Scanner time predicate;
-- staged candidate ranking;
-- restart-to-ready;
-- DB file size.
+No credentials in repository/CI. Closed/static market may repeat values while still proving provider shape/transport/authority/reads/Scanner/clean stop. It never substitutes for movement proof.
 
-The staged query must exercise at least the 10/20/30/45/60/90/120-second example against configured logical timestamps.
+## 23. Authenticated market-open gate
 
-The 5-minute end-to-end ceiling is a **target-machine acceptance ceiling**, not a hosted-CI requirement.
+Require **at least 20 consecutive complete ScreenerHulPaging3 responses** spanning at least 60 seconds on the exact candidate SHA, durable ACK/commit for every cycle, observable provider-side market/freshness movement, final Current/Security/History/Scanner/ownership/clean-stop proof and sanitized SHA-bound report.
 
-### D. One-trading-day data horizon
+## 24. Planning / release gates
 
-The active market-data DB is designed for one trading day, not for continuously accumulated month/year history.
-
-Performance reasoning and synthetic datasets therefore use a configurable **one-day-bounded** history shape. A read/Scanner performance profile may seed the amount of history implied by the configured trading-day duration and cadence directly, without waiting through a literal day of runtime.
-
-At day rollover, prior market data may be archived and the active market-data authority starts fresh for the new day. Saved-query state must survive the new-day operation. Long-term multi-day analysis inside the active DB is not a performance requirement for this release.
-
-## 10. Layer 6 — Local Fake Leumi acceptance kit
-
-The product must ship a documented local acceptance path that the user can run without an authenticated bank session or active market.
-
-The acceptance kit must reuse the normal product boundaries:
+Before implementation authorization:
 
 ```text
-Fake Leumi / ScreenerHulPaging3-shaped HTTP
-→ normal browser runtime / Recorder
-→ loopback WebSocket
-→ normal local service
-→ real DuckDB
-→ Current / Detail-History / Scanner
+plan frozen
+TREE structurally valid
+28 implementation leaves allocated exactly once
+R-US-DEMO-BUY-FINAL recorded
+final external-user review recorded
+Planning Docs CI green
+planning PR reviewed and merged
+main Planning CI green
 ```
 
-Do not introduce a second product implementation just for acceptance.
-
-The kit uses the configurable synthetic generator from Layer 5 so the same profile mechanism can drive tiny automated fixtures, isolated load probes and heavy target-machine runs.
-
-The kit must provide deterministic coverage for:
-
-### Static-market mode
-
-- several complete responses with identical membership and identical market values;
-- every response validates and receives durable COMMIT ACK;
-- `history` grows once per security per committed cycle;
-- `latest` remains the same values because the provider values are the same;
-- unchanged membership does not create false universe revisions;
-- Current/Security/History/ownership/clean stop remain correct.
-
-### Moving-market mode
-
-- synthetic values change across responses;
-- Current advances to the final committed values;
-- History preserves prior values;
-- Scanner can observe the synthetic movement using already-reviewed bounded SQL;
-- add/remove membership is handled through revision ACK before same-response commit.
-
-### Failure/recovery mode
-
-- deterministic provider failure occurs;
-- failure remains fail-closed and sanitized;
-- subsequent provider recovery commits normally;
-- service restart preserves committed authority.
-
-### Local scale/performance modes
-
-The kit exposes:
-
-- isolated persistence profile;
-- isolated day-bounded read/Scanner profile;
-- representative `4096 × 180` end-to-end profile.
-
-Each emits a sanitized machine-readable report. The implementation of the kit itself is automatically exercised with smaller deterministic fixtures so development can finish without waiting for the user or market hours.
-
-## 11. Layer 7 — Final target-machine acceptance bundle
-
-All checks that depend on the user's machine or authenticated browser are deliberately deferred to the final execution leaf. They do not block development of earlier leaves, but overall product completion still requires their PASS results.
-
-### A. User-run local Fake Leumi acceptance
-
-On the intended local machine, run the documented acceptance kit and retain its sanitized report.
-
-Required:
-
-- static-market mode PASS;
-- moving-market mode PASS;
-- failure/recovery PASS;
-- restart PASS;
-- isolated persistence profile PASS;
-- isolated one-trading-day read/Scanner profile PASS;
-- representative `4096 × 180` end-to-end mock load/performance PASS within the 5-minute target-machine ceiling;
-- new-day archive/reset lifecycle PASS with fresh market tables and saved queries preserved.
-
-### B. Authenticated closed/static-market smoke
-
-This is a lightweight local authenticated-browser check and may be performed while the market is not moving.
-
-It must not require quote changes.
-
-Required:
+Before final `7.4` acceptance:
 
 ```text
-producer hello/session
-→ at least 5 consecutive complete ScreenerHulPaging3 responses
-→ exact provider validation for every response
-→ stable membership reuses its revision
-→ COMMIT ACK for every cycle
-→ Current reflects the repeated provider values
-→ History contains every committed cycle even if values are identical
-→ Security read
-→ bounded already-reviewed Scanner query
-→ ownership/status
-→ clean producer stop
-```
-
-Repeated identical market values are an expected valid outcome for this smoke. This smoke proves current provider shape/transport/loopback/authority compatibility only; it does not prove real market movement.
-
-The report is sanitized and SHA-bound.
-
-### C. Authenticated market-open acceptance
-
-Run on the same final SHA when the market is active.
-
-Preconditions:
-
-- final candidate/cleanup is complete;
-- Fast green;
-- Browser green;
-- bounded CI workload correctness/sanity green;
-- target-machine local Fake Leumi/performance acceptance PASS;
-- closed/static-market smoke PASS or repeated as part of the same final session;
-- no legacy/competing producer;
-- authenticated eligible provider page open;
-- dedicated live-verification DB.
-
-Gate:
-
-```text
-producer hello/session
-→ at least 20 consecutive complete ScreenerHulPaging3 responses spanning at least 60 seconds at candidate cadence
-→ exact validation for every cycle
-→ universe ACK/revision handling
-→ COMMIT ACK for every cycle
-→ at least one observable provider market/freshness value changes across committed cycles
-→ Current on final committed cycle reflects final provider values
-→ Security
-→ History contains the committed live cycles and observed change
-→ bounded already-reviewed Scanner query
-→ ownership/status
-→ clean producer stop
-```
-
-The report is sanitized and SHA-bound.
-
-Only this market-open gate may declare the moving real-provider boundary PASS.
-
-If the market is genuinely open but the bounded run observes no market/freshness change, do not fabricate movement. Record the result as inconclusive for the movement-specific acceptance and rerun later rather than weakening the contract.
-
-## 12. Live-only facts
-
-Authenticated checks record rather than assume:
-
-- actual returned recordCount;
-- actual browser/provider Origin;
-- current response shape;
-- CSP/LNA loopback compatibility;
-- provider freshness indicators;
-- repeated full-response completeness across the bounded run;
-- whether market/freshness values are static or changing;
-- session/auth failure shape when encountered.
-
-Long-run throttling/polling behavior may require a separate bounded observation if normal use reveals a problem.
-
-## 13. Security verification
-
-Tests/fixtures/reports must not contain:
-
-- credentials;
-- cookies;
-- bearer/auth headers;
-- account IDs;
-- raw authenticated response dumps;
-- private browser state.
-
-Provider fixtures are synthetic and schema-shaped only.
-
-## 14. Completion evidence
-
-A migration implementation node closes only with the verification routed by TREE.
-
-Development may proceed through local acceptance tooling and release cleanup without waiting for market movement or the user's target-machine benchmark.
-
-Final product completion requires:
-
-```text
+4.3.* / 4.4.* / 4.5.* done
+7.5 deterministic re-closure done
 Fast green
 Browser green
-bounded CI workload correctness/performance-smoke green
-local Fake Leumi target-machine acceptance PASS
-isolated one-day persistence/read/Scanner performance PASS
-4096 × 180 target-machine end-to-end performance PASS
-new-day archive/reset lifecycle PASS
-closed/static authenticated smoke PASS
-market-open authenticated acceptance PASS
-main CI green
-no blocking defect
+Planning green
+bounded Workload green
+local Fake Leumi feature proof green
+feature/reclosure PR merged
+main green
+exact accepted candidate SHA recorded
 ```
+
+## 25. Completion rule
+
+Unit/service correctness, browser composition, deterministic local target-machine behavior, authenticated provider compatibility and market-open movement are separate evidence families; none substitutes for another.

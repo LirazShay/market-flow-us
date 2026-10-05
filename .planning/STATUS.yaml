@@ -1,7 +1,9 @@
 version: 2
 plan_state: frozen
-current_stage: "implementation"
-current_node: "7.4"
-blockers: []
-next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit A0-A10 is complete; PR #16 was squash-merged as ba44509f39449623a26b79132bbb1e6dfab1723c, that merge commit passed Fast/Browser/Workload/Planning Docs CI, and no open PR remained. Next is FR-0 on the target Windows machine: fetch fresh main, require a clean working tree, record the exact HEAD SHA, verify current main CI/open-PR state, then execute FR-1..FR-14 one checkpoint at a time and stop on the first FAIL. Target-machine and authenticated provider/static/market-open evidence remains pending_external until it is actually run."
-last_review: "R-US-EXEC-REOPEN-004"
+current_stage: "demo_buy_external_review_complete_waiting_merge_gate"
+current_node: "demo-buy-validation"
+blockers:
+  - "PR #17 must be Planning-Docs-CI green, reviewed/squash-merged, and main Planning Docs CI/open-PR state must be verified before implementation authorization."
+next_action: "External-user-from-zero review is complete and recorded as R-US-DEMO-BUY-EXTERNAL. It found and repaired two material defects: resultRank is returned position unless SQL ordering proves semantic ranking, and AI Investigation export must derive a sharing-safe projection that excludes system/session operational data and redacts arbitrary non-market text/object values. Keep production implementation unauthorized until PR #17 is green/reviewed/squash-merged and main Planning Docs CI/open-PR state is green; then deliberately advance to phase: implementation / Chat 10 / TREE 4.3.1."
+last_review: "R-US-DEMO-BUY-EXTERNAL"
+implementation_authorized: false

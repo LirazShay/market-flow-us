@@ -50,6 +50,8 @@ jobs:
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md
             docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md docs/SOURCE_EXTRACTION.md
             docs/SCANNER_SQL_GUIDE.md
+            docs/DEMO_BUY_VALIDATION.md docs/DEMO_BUY_PROTOCOL_LIMITS.md
+            docs/DEMO_BUY_UX.md docs/AI_INVESTIGATION_PACK.md
           )
 
           for file in "${required[@]}"; do
@@ -79,25 +81,61 @@ jobs:
           }
 
           grep -Fq '    children: ["1", "2", "3", "4", "5", "6", "7"]' .planning/TREE.yaml || {
-            echo "TREE root must contain seven U.S. migration capability branches"; exit 1;
+            echo "TREE root must contain seven capability branches"; exit 1;
           }
 
-          grep -Fq '  "7.3":' .planning/TREE.yaml || {
-            echo "TREE missing release-closure leaf 7.3"; exit 1;
+          for node in '"4.3.1"' '"4.3.2"' '"4.3.3"' '"4.4.1"' '"4.4.2"' '"4.5.1"' '"4.5.2"' '"7.5"' '"7.4"'; do
+            grep -Fq "  ${node}:" .planning/TREE.yaml || {
+              echo "TREE missing required Demo Buy/release leaf ${node}"; exit 1;
+            }
+          done
+
+          require_text() {
+            local needle="$1"
+            local file="$2"
+            grep -Fq "$needle" "$file" || {
+              echo "Missing planning invariant in $file: $needle"
+              exit 1
+            }
           }
 
-          grep -Fq '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
-          grep -Fq '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
-          grep -Fq '# Market Flow US Data Contract' docs/DATA_CONTRACT.md
-          grep -Fq '# Market Flow US Technical Spec' docs/TECHNICAL_SPEC.md
-          grep -Fq '# Market Flow US Test Strategy' docs/TEST_STRATEGY.md
+          require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
+          require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
+          require_text '# Market Flow US Data Contract' docs/DATA_CONTRACT.md
+          require_text '# Market Flow US Technical Spec' docs/TECHNICAL_SPEC.md
+          require_text '# Market Flow US Test Strategy' docs/TEST_STRATEGY.md
+          require_text '# Demo Buy Strategy Validation' docs/DEMO_BUY_VALIDATION.md
+          require_text '# Demo Buy Protocol / Export Bounds' docs/DEMO_BUY_PROTOCOL_LIMITS.md
+          require_text '# Demo Buy / AI Investigation UX Contract' docs/DEMO_BUY_UX.md
+          require_text '# AI Investigation Pack' docs/AI_INVESTIGATION_PACK.md
 
-          grep -Fq 'ScreenerHulPaging3' docs/DATA_CONTRACT.md
-          grep -Fq 'schema v3' docs/TECHNICAL_SPEC.md
-          grep -Fq '4096' docs/TEST_STRATEGY.md
-          grep -Fq '180 end-to-end cycles' docs/TEST_STRATEGY.md
-          grep -Fq 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
-          grep -Fq 'stage_reached' docs/PRODUCT_SPEC.md
+          require_text 'ScreenerHulPaging3' docs/DATA_CONTRACT.md
+          require_text 'schema v4' docs/TECHNICAL_SPEC.md
+          require_text 'demo.buy.capture' docs/TECHNICAL_SPEC.md
+          require_text 'demo.buy.page' docs/TECHNICAL_SPEC.md
+          require_text 'demo.buy.observation.get' docs/TECHNICAL_SPEC.md
+          require_text 'demo.buy.capture.get' docs/TECHNICAL_SPEC.md
+          require_text 'demo.buy.ai-pack.create' docs/TECHNICAL_SPEC.md
+          require_text 'cycle_id > buy_cycle_id' docs/TECHNICAL_SPEC.md
+          require_text 'cycle_id > buy_cycle_id' docs/DATA_CONTRACT.md
+          require_text '256 KiB' docs/DEMO_BUY_PROTOCOL_LIMITS.md
+          require_text 'retained columns <= 64' docs/DEMO_BUY_PROTOCOL_LIMITS.md
+          require_text 'Refresh observation' docs/DEMO_BUY_UX.md
+          require_text 'Auto Demo Buy:' docs/DEMO_BUY_UX.md
+          require_text 'ACKNOWLEDGEMENT_UNKNOWN' docs/DEMO_BUY_PROTOCOL_LIMITS.md
+          require_text 'targetInScannerContext' docs/AI_INVESTIGATION_PACK.md
+          require_text 'returned row position' docs/AI_INVESTIGATION_PACK.md
+          require_text 'sharing-safe export projection' docs/DATA_CONTRACT.md
+          require_text 'redactedForSharing' docs/AI_INVESTIGATION_PACK.md
+          require_text 'redactedForSharing' docs/TECHNICAL_SPEC.md
+          require_text 'canary secret/session' docs/TEST_STRATEGY.md
+          require_text 'D-US-032' .planning/DECISIONS.md
+          require_text 'D-US-033' .planning/DECISIONS.md
+          require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
+          require_text '4096' docs/TEST_STRATEGY.md
+          require_text '180 end-to-end cycles' docs/TEST_STRATEGY.md
+          require_text 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
+          require_text 'stage_reached' docs/SCANNER_SQL_GUIDE.md
 
           if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly' \
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
@@ -177,6 +215,9 @@ jobs:
           }
           for (const leaf of leaves) visit(leaf);
 
+          if (ids.length !== 39) throw new Error(`Expected 39 TREE nodes after Demo Buy+AI replan, found ${ids.length}`);
+          if (leaves.length !== 28) throw new Error(`Expected 28 implementation leaves after Demo Buy+AI replan, found ${leaves.length}`);
+
           const planState = fs.readFileSync('.planning/STATUS.yaml', 'utf8')
             .match(/^plan_state: ([a-z_]+)$/m)?.[1];
 
@@ -186,8 +227,11 @@ jobs:
               throw new Error('Frozen TREE must contain only approved nodes');
             }
             const reviews = fs.readFileSync('.planning/REVIEWS.md', 'utf8');
-            if (!reviews.includes('R-US-FINAL')) {
-              throw new Error('Frozen plan requires R-US-FINAL Final Planning Review');
+            if (!reviews.includes('R-US-DEMO-BUY-FINAL')) {
+              throw new Error('Frozen Demo Buy plan requires R-US-DEMO-BUY-FINAL review');
+            }
+            if (!reviews.includes('R-US-DEMO-BUY-EXTERNAL')) {
+              throw new Error('Frozen Demo Buy plan requires final external-user review');
             }
           }
 

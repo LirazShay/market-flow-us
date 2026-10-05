@@ -45,8 +45,37 @@ chats:
 
   "9":
     nodes:
-      "7.3": { state: done, result: "Release closure removes the superseded Israel browser acquisition path, aligns runtime/user/Scanner documentation to active U.S. schema-v3 truth, adds a safe one-trading-day rollover that preserves saved Scanner queries, and protects the release boundary with runtime/guide drift guards. Draft PR #13 candidate a80c88a4862542c2ba15ec731745d555901e0ac2 passed Fast, Browser, Planning and bounded Workload CI after root-cause fixes; user-dependent target-machine/authenticated acceptance remains exclusively TREE 7.4." }
+      "7.3": { state: done, result: "Release closure removes the superseded Israel browser acquisition path, aligns runtime/user/Scanner documentation to active U.S. schema-v3 truth, adds a safe one-trading-day rollover that preserves saved Scanner queries, and protects the release boundary with runtime/guide drift guards. Draft PR #13 candidate a80c88a4862542c2ba15ec731745d555901e0ac2 passed Fast, Browser, Planning and bounded Workload CI after root-cause fixes; user-dependent target-machine/authenticated acceptance remains deferred until the post-feature candidate." }
 
   "10":
     nodes:
-      "7.4": { state: in_progress, result: null }
+      "4.3.1": { state: blocked, result: "Demo Buy + AI Investigation planning passed the five formal reviews plus the final external-user-from-zero review after correcting returned-position semantics and sharing-safe AI export. Implementation remains blocked until PR #17 is Planning-Docs-CI green, reviewed/squash-merged, main Planning Docs CI is green, open-PR state is clean, and root STATUS deliberately authorizes implementation." }
+      "4.3.2": { state: pending, result: null }
+
+  "11":
+    nodes:
+      "4.3.3": { state: pending, result: null }
+
+  "12":
+    nodes:
+      "4.4.1": { state: pending, result: null }
+
+  "13":
+    nodes:
+      "4.4.2": { state: pending, result: null }
+
+  "14":
+    nodes:
+      "4.5.1": { state: pending, result: null }
+
+  "15":
+    nodes:
+      "4.5.2": { state: pending, result: null }
+
+  "16":
+    nodes:
+      "7.5": { state: pending, result: null }
+
+  "17":
+    nodes:
+      "7.4": { state: pending, result: null }
