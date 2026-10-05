@@ -41,7 +41,7 @@ chats:
 
   "8":
     nodes:
-      "7.2": { state: in_progress, result: null }
+      "7.2": { state: done, result: "Deterministic local Fake Leumi acceptance is implemented on the normal U.S. runtime/service/DuckDB path with separate static, moving, membership, provider recovery and restart checkpoints, sanitized SHA-bound reporting, Windows/npm launchers, shared-generator isolated day seeding and explicit target 4096 x 180 profiles; final re-audit passed and Planning/Fast/Browser/Workload CI were green before closure." }
 
   "9":
     nodes:
