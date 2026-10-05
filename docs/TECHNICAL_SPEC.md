@@ -2,38 +2,34 @@
 
 ## 1. Architecture
 
-Preserve the proven MarketScope architecture and extend it only at the existing Scanner/Viewer/Node boundaries:
+Preserve the proven MarketScope-derived topology and extend only existing boundaries:
 
 ```text
-provider browser
+authenticated provider browser
   ├─ U.S. ScreenerHulPaging3 adapter
-  ├─ complete-response validator
-  ├─ Recorder
-  ├─ Producer Bridge
+  ├─ Recorder / Producer Bridge
   └─ Viewer
        ├─ Current
        ├─ Detail / History
        ├─ Scanner
-       └─ Demo Buy
-              ├─ outcome inspection
-              └─ AI Investigation Pack export
+       └─ Demo Buy / AI Investigation
                      │
                      │ ws://127.0.0.1:8765
                      ▼
 localhost Node.js
   ├─ WebSocket protocol/service
   ├─ producer/session authority
-  ├─ serialized writer
+  ├─ one serialized writer
   ├─ native DuckDB
   ├─ trusted Viewer reads
-  ├─ Scanner
+  ├─ hardened Scanner
   ├─ saved-query library
   ├─ Demo Buy capture persistence
-  ├─ Demo Buy evaluation reads
+  ├─ Demo Buy evaluator/read model
   └─ deterministic local AI-pack exporter
 ```
 
-No cloud backend, no browser-owned production DB, no second transport, no Strategy Engine, no automatic AI provider call and no background horizon worker are introduced.
+Do not add a cloud backend, second transport, second DB authority, Strategy Engine, background horizon worker or automatic AI integration for this increment.
 
 ## 2. Runtime/tooling baseline
 
@@ -49,212 +45,39 @@ node:test
 @playwright/test / Chromium
 ```
 
-Do not change toolchain for Demo Buy/AI Investigation without evidence.
-
 ## 3. Canonical identity
-
-Canonical product identity is:
 
 ```text
 securityId = String(PaperId)
 ```
 
-but only after fail-closed U.S. source-type validation:
+after fail-closed source-type validation. `Symbol`, row order, names and `PaperIdYatab` never become primary identity.
 
-- string: accepted only when non-blank;
-- number: accepted only when `Number.isSafeInteger`;
-- object/array/boolean/non-safe numeric identities: rejected.
+Demo Buy/AI targets use canonical `security_id` only.
 
-Browser acquisition and Node universe authority independently enforce that same boundary. Generic `String(object)` canonicalization is not permitted.
+## 4. Existing market authority remains unchanged
 
-`Symbol`, provider row order, names and `PaperIdYatab` are never primary identity.
-
-Demo Buy and AI-pack target identity also use only canonical `security_id`; identity is never guessed from `Symbol`.
-
-## 4. Provider adapter boundary
-
-The U.S. provider adapter owns:
-
-- same-origin screener URL construction;
-- fetch;
-- parse;
-- exact completeness validation;
-- strict `PaperId` identity validation;
-- one-segment cycle shaping;
-- canonical membership extraction;
-- safe source metadata.
-
-It owns no persistence, Demo Buy or AI-pack behavior.
-
-## 5. Recorder behavior
-
-Preserve Recorder lifecycle/scheduling semantics.
-
-Configuration after U.S. conversion:
+The proven U.S. acquisition/authority design remains:
 
 ```text
-snapshotIntervalMs
+complete validated ScreenerHulPaging3 response
+→ membership handling
+→ one complete cycle
+→ serialized transaction
+→ history append
+→ latest full replacement
+→ ACK
 ```
 
-Initial demo/default interval:
+`history` remains keyed by `(cycle_id, security_id)` and `latest` by `security_id`.
 
-```text
-3000 ms
-```
+Demo Buy never mutates market authority.
 
-Live-safe cadence remains empirical and can change as configuration without schema redesign.
+## 5. Schema v4
 
-## 6. Protocol
+After this feature ships the active schema is **schema v4**.
 
-Keep protocol version `1` unless implementation proves a concrete incompatibility.
-
-Existing operations remain unchanged. Add Viewer-role operations:
-
-```text
-demo.buy.capture
-demo.buy.page
-demo.buy.capture.get
-demo.buy.ai-pack.create
-```
-
-Do not create a second protocol or HTTP API.
-
-### `demo.buy.capture`
-
-Payload:
-
-```text
-items: [
-  { securityId: string, resultRank: positive integer }
-]
-sourceQuery:
-  queryId: string | null
-  name: string | null
-  sql: string
-  intervalMs: positive safe integer
-sourceResult:
-  startedAtMs: non-negative safe integer
-  completedAtMs: non-negative safe integer
-  rowCount: non-negative safe integer
-  context: bounded deterministic first-50 Scanner rows + columns/ranks/truncation metadata
-selectionMode: manual | all | top_x
-isAutomatic: boolean
-topX: integer | null
-```
-
-Validation rules:
-
-- exact payload/object keys are enforced;
-- `items.length` is `1..5000`;
-- every identity is a non-empty bounded canonical string;
-- `securityId` values are unique; duplicate payload IDs are rejected, never repaired;
-- `resultRank` values are positive, unique, strictly increasing and `<= sourceResult.rowCount`;
-- for `top_x`, every `resultRank <= topX`;
-- `topX` is present only for `top_x`, with `1 <= topX <= 5000`;
-- `isAutomatic=true` is valid only for `all` or `top_x`;
-- `sourceQuery.intervalMs > 0`;
-- source SQL is exact activated SQL and remains bounded by the existing inbound-message boundary;
-- query ID/name are provenance only and may be null;
-- source-result context begins at rank 1, contains at most 50 source rows, preserves exact source order/ranks and carries explicit deterministic truncation metadata;
-- context shaping/encoding may not alter capture selection semantics;
-- no price field exists in the contract.
-
-The browser chooses source rows first, then reduces duplicate canonical IDs to first occurrence while retaining each remaining row's original 1-based `resultRank`. Node validates the already-canonical request and does not silently change its meaning.
-
-Response returns only capture authority facts:
-
-```text
-captureId
-capturedAtMs
-capturedItemCount
-```
-
-### Capture acknowledgement semantics
-
-The local service currently sequences requests per Viewer socket and capture itself is serialized again through the shared writer. `capturedAtMs` is therefore assigned only when the capture actually executes inside the writer boundary, after any prior socket/writer work.
-
-Browser outcomes are:
-
-```text
-CONFIRMED_COMMITTED       success response received
-CONFIRMED_REJECTED        stable server rejection/rollback response received
-ACKNOWLEDGEMENT_UNKNOWN   transport closed after request dispatch before a conclusive response
-```
-
-`ACKNOWLEDGEMENT_UNKNOWN` must not trigger automatic replay. The Viewer disables further capture submission until explicit reconnect/recovery and a Demo Buy refresh reconcile whether a committed capture is visible. This avoids introducing a new idempotency subsystem solely for a rare local disconnect race.
-
-### `demo.buy.page`
-
-Payload:
-
-```text
-cursor: string | null
-```
-
-The server owns a fixed Phase-1 page size of 50 evaluated items. The cursor is opaque and binds the last `(capture_id, result_rank)` in ordering:
-
-```text
-capture_id DESC
-result_rank ASC
-```
-
-One page response contains compact capture metadata, baseline data and all ten derived horizons, but does not repeat source SQL or full Scanner context per item.
-
-### `demo.buy.capture.get`
-
-Payload:
-
-```text
-captureId: positive safe integer
-```
-
-Returns one immutable capture header/provenance record including exact source SQL, source query identity/label, Scanner interval/result times/count, selection mode, automatic marker, Top-X value and committed item count. Full first-50 context is not duplicated unless explicitly required by the investigation export path.
-
-### `demo.buy.ai-pack.create`
-
-Payload:
-
-```text
-captureId: positive safe integer
-securityId: non-empty bounded canonical string
-```
-
-The server validates that the target belongs to the capture, then creates a deterministic local evidence bundle under an internally generated export path. The browser cannot provide an output path.
-
-The service reuses persisted immutable query/context/baseline evidence and the trusted Demo Buy evaluator. It does not re-run the Scanner SQL against current state to reconstruct the original decision.
-
-Response contains bounded metadata only:
-
-```text
-exportPath
-packFormatVersion
-outcomeEvidenceStatus
-targetInScannerContext
-generatedAtMs
-promptText
-fileNames / recordCounts
-```
-
-`promptText` is returned for Copy AI Prompt. Pack contents remain local files rather than a huge WebSocket response.
-
-### Errors
-
-Stable protocol semantics distinguish at least:
-
-```text
-invalid Demo Buy request
-Demo Buy integrity violation
-AI-pack target/context/export error
-generic DB/read failure
-```
-
-Exact error-code names must follow the repository's existing constant style. Missing future horizons are normal data, not errors.
-
-## 7. DuckDB authority
-
-Keep one Node-owned **active-day** DuckDB.
-
-Final schema v4 tables:
+Tables:
 
 ```text
 schema_info
@@ -268,201 +91,27 @@ demo_buy_captures
 demo_buy_items
 ```
 
-Keep:
+Fresh DBs bootstrap directly as v4.
 
-- one serialized writer;
-- separate trusted Viewer read connection;
-- separate hardened Scanner connection;
-- external-access/extension/secret hardening;
-- transactional complete-cycle authority;
-- append-only successful market history within the active trading day;
-- full-table `latest` replacement inside the same successful market transaction.
-
-Demo Buy uses the same writer for capture ordering but does not become market authority and does not mutate `history`/`latest`. AI-pack generation is read/export-only and performs no DB write.
-
-## 8. Schema version policy
-
-Historical states:
+Valid v3 migration:
 
 ```text
-MarketScope v1/v2   incompatible Israeli semantics
-Market Flow US v3   existing U.S. market authority
-Market Flow US v4   v3 authority + Demo Buy/AI-investigation provenance
-```
-
-Policy:
-
-- fresh Market Flow US DB bootstraps directly as v4;
-- v1/v2 remain unsupported and are rejected without mutation;
-- valid v3 is upgraded transactionally to v4;
-- valid v3 must contain neither Demo Buy table before migration;
-- if a DB claims v3 while either Demo Buy table already exists, startup fails closed as suspicious partial/corrupt state;
-- v3→v4 migration preserves all market authority and `scanner_saved_queries`;
-- migration failure leaves the original v3 DB semantically usable as v3 and must not leave a partial accepted v4 marker;
-- valid v4 requires both Demo Buy tables plus all existing U.S. required tables and the required capture-context column.
-
-Migration:
-
-```text
-validate v3 prerequisites
+validate exact v3 prerequisites
+→ require neither Demo Buy table already exists
 → BEGIN
-→ create demo_buy_captures including source_result_context_json
+→ create demo_buy_captures
 → create demo_buy_items
-→ update schema_info schema_version=4 and product_version
+→ update schema_info to v4/current product version
 → COMMIT
 ```
 
-Do not use `CREATE TABLE IF NOT EXISTS` to normalize an unexpected partial migration silently.
+A v3 DB containing partial Demo Buy structures fails closed; do not normalize it with `IF NOT EXISTS`. Fault injection must prove migration rollback leaves the original v3 usable.
 
-Add the smallest construction-only migration fault seam needed to prove rollback at multiple phases, mirroring the repository's existing persistence/migration fault-test style.
+No speculative `history` index is introduced before representative measurement proves one necessary.
 
-No new history index is required initially. The existing authority schema remains unchanged until representative Demo Buy/AI-pack workload proves a concrete bottleneck and a focused replan justifies a schema optimization.
+## 6. Demo Buy persisted schema
 
-## 9. Universe table
-
-Logical columns remain:
-
-```text
-security_id VARCHAR PRIMARY KEY
-is_current BOOLEAN
-universe_revision BIGINT
-first_seen_at_ms BIGINT
-last_seen_at_ms BIGINT
-Symbol VARCHAR NULL
-PaperNameEng VARCHAR NULL
-PaperNameHeb VARCHAR NULL
-ExchangeName VARCHAR NULL
-raw_source JSON NOT NULL
-```
-
-Universe replace retains all-seen rows and toggles `is_current` as already proven.
-
-## 10. Cycle table
-
-Keep the current cycle-authority shape.
-
-One U.S. full response is represented as one segment:
-
-```text
-chunk_count = 1
-chunks_json = JSON array with one response timing/metadata record
-```
-
-Failed cycles continue to record bounded counters/phase/error metadata without changing latest/history authority.
-
-## 11. `history` / `latest`
-
-Common columns remain the proven U.S. projection documented in DATA_CONTRACT, with keys:
-
-```text
-history PRIMARY KEY (cycle_id, security_id)
-latest PRIMARY KEY (security_id)
-```
-
-No predecessor-link, materialized horizon or Demo Buy result columns are added.
-
-## 12. Market persistence transaction
-
-Successful market commit remains:
-
-```text
-validate session/revision/exact membership
-→ BEGIN
-→ allocate cycle_id
-→ insert cycle
-→ persist every history row
-→ replace latest from that committed cycle
-→ update session success state
-→ COMMIT
-```
-
-Fault at any point rolls back all authority changes.
-
-## 13. Trusted market reads
-
-### Current
-
-Read all `latest` rows plus current-universe metadata, ordered deterministically by identity before browser-side sorting.
-
-### Security
-
-Resolve canonical `security_id` across current universe/history and return current row if available.
-
-### History
-
-500-row keyset pagination ordered:
-
-```text
-collected_at_ms DESC
-cycle_id DESC
-```
-
-Cursor remains bound to the requested security.
-
-## 14. Scanner
-
-Keep the existing security design:
-
-1. extract exactly one DuckDB statement;
-2. prepare;
-3. require `StatementType.SELECT`;
-4. require zero parameters;
-5. reject dynamic query helpers/side-effect functions;
-6. execute on hardened Scanner connection;
-7. JSON-safe encode exact result metadata/rows.
-
-No hidden rank/filter/sort/limit is added by Demo Buy.
-
-A Scanner result generation is Demo-Buy-capable only if its columns contain exactly one recognized canonical identity column named `securityId` or `security_id`.
-
-Each successful generation already carries Node result timing. Browser generation state freezes:
-
-```text
-queryId
-name
-exact SQL
-active intervalMs
-startedAtMs
-completedAtMs
-rowCount
-columns
-rows
-```
-
-This generation snapshot is immutable even if the draft/library selection changes later. Capture additionally shapes the first 50 source rows into bounded deterministic context provenance.
-
-## 15. Staged candidate built-in
-
-The built-in remains ordinary SQL over `latest` and `history` with exact nearest-prior semantics.
-
-Initial ages:
-
-```text
-10, 20, 30, 45, 60, 90, 120 seconds
-```
-
-Initial predicate:
-
-```text
-latest.Price > prior.Price
-```
-
-Prior match:
-
-```text
-same security_id
-prior collected_at_ms <= target anchor
-highest collected_at_ms
-then highest cycle_id tie-break
-```
-
-The SQL computes contiguous `stage_reached`, exposes `security_id AS securityId`, and orders by explicit SQL tie-breakers.
-
-New/materially changed SQL must pass mandatory static SQL preflight before first execution.
-
-## 16. `demo_buy_captures`
-
-Logical schema:
+### `demo_buy_captures`
 
 ```text
 capture_id BIGINT PRIMARY KEY
@@ -480,24 +129,7 @@ is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
 ```
 
-Rules:
-
-- committed `capture_id > 0`;
-- time/count values are non-negative at the application boundary;
-- `source_interval_ms > 0`;
-- `selection_mode ∈ {manual, all, top_x}`;
-- `top_x` is non-null only for `top_x` and is `1..5000`;
-- automatic mode is valid only for `all`/`top_x`;
-- source fields/context are immutable generation provenance;
-- source context contains only first up to 50 Scanner source rows, columns/ranks and explicit truncation metadata;
-- source SQL/context are stored once per capture;
-- no market Price or derived future-horizon value is stored here.
-
-Use simple DuckDB CHECK constraints for straightforward row-shape/mode invariants where they add safety without complex schema machinery. Service validation remains authoritative for cross-field/request/context semantics.
-
-## 17. `demo_buy_items`
-
-Logical schema:
+### `demo_buy_items`
 
 ```text
 capture_id BIGINT NOT NULL
@@ -508,126 +140,186 @@ PRIMARY KEY (capture_id, security_id)
 UNIQUE (capture_id, result_rank)
 ```
 
-`result_rank` is the original 1-based row position from the Scanner generation. Manual selections may therefore retain gaps.
+Use simple DuckDB CHECK constraints for direct row-shape/mode invariants where they remain simple. Cross-field/context semantics stay in service validation.
 
-Baseline relation:
+A physical FK is not required in Phase 1; capture establishes the semantic baseline link and reads treat a missing link as corruption.
+
+## 7. Protocol
+
+Keep protocol version `1` unless implementation proves incompatibility.
+
+Add Viewer-role operations:
 
 ```text
-(buy_cycle_id, security_id)
-→ history(cycle_id, security_id)
+demo.buy.capture
+demo.buy.page
+demo.buy.observation.get
+demo.buy.capture.get
+demo.buy.ai-pack.create
 ```
 
-A physical foreign key is not required in Phase 1. Capture resolves every baseline before insertion and trusted reads treat a missing semantic link as corruption. Do not introduce foreign-key/index complexity without evidence.
+No second API/transport is introduced.
 
-No copied baseline columns and no future-horizon columns are stored.
+## 8. `demo.buy.capture`
 
-## 18. Demo Buy capture authority
-
-Create one small Node persistence component using the existing serialized writer.
-
-The browser chooses rows before dedupe:
+Payload:
 
 ```text
-manual → checked source rows
-all    → every source row
-top_x  → exactly first X source rows
+items: [
+  { securityId: string, resultRank: positive integer }
+]
+sourceQuery:
+  queryId: string | null
+  name: string | null
+  sql: string
+  intervalMs: positive safe integer
+sourceResult:
+  startedAtMs: non-negative safe integer
+  completedAtMs: non-negative safe integer
+  rowCount: non-negative safe integer
+  context: bounded deterministic Scanner context
+selectionMode: manual | all | top_x
+isAutomatic: boolean
+topX: integer | null
 ```
 
-Every chosen row must have a valid identity. The browser reduces duplicate canonical IDs to first chosen occurrence, preserving each remaining row's original `resultRank`. `Top X` never backfills beyond X after a duplicate.
+Rules:
 
-The same immutable Scanner generation also yields the bounded first-50 context. Context shaping is independent from which rows are selected for capture.
+- exact object keys;
+- `items.length` is `1..5000`;
+- IDs/ranks are unique; ranks positive, strictly increasing and `<= rowCount`;
+- `top_x` ranks are `<= topX`, with `1 <= topX <= 5000`;
+- automatic is valid only for `all`/`top_x`;
+- no buy-price field exists;
+- exact SQL must satisfy the Demo Buy provenance bound;
+- context must satisfy `docs/DEMO_BUY_PROTOCOL_LIMITS.md`;
+- for every item whose `resultRank <= 50`, context row/rank/identity must match exactly.
 
-Node receives already-deduped items and validates without silently rewriting them:
+Browser selects source rows first, then first-occurrence dedupes canonical IDs and preserves original `resultRank`. Node validates and never silently repairs protocol meaning.
+
+Response:
 
 ```text
-1..5000 items
-unique securityId
-unique strictly increasing resultRank
-resultRank <= sourceResult.rowCount
-for top_x: resultRank <= topX
-valid mode/automatic/topX/provenance
-valid first-50 context order/ranks/bounds
+captureId
+capturedAtMs
+capturedItemCount
 ```
 
-Capture execution:
+## 9. Scanner-context bounds
+
+Concrete normative limits:
 
 ```text
-validate request + context
-→ enqueue on serialized writer
+selected unique items            <= 5000
+securityId UTF-16 code units     <= 128
+source SQL UTF-8 bytes           <= 1 MiB
+Scanner source rows retained     <= 50
+Scanner columns retained         <= 64 total
+canonical identity column        always retained
+textual/serialized cell          <= 128 UTF-8 bytes after deterministic clipping
+serialized context JSON          <= 256 KiB UTF-8
+```
+
+Retain identity unconditionally, then fill remaining column budget from earliest source columns in original order. Preserve original column indexes/names and omission/truncation metadata.
+
+Arrays/objects use deterministic canonical JSON representation for provenance. If shaping cannot produce a valid context within bounds, capture fails visibly before commit; it does not silently drop extra evidence beyond the documented shaping rules.
+
+## 10. Capture execution and authority
+
+Use the existing shared serialized writer:
+
+```text
+validate request/context
+→ enqueue behind prior work
 → BEGIN
-→ captured_at_ms = Node clock inside serialized operation
-→ resolve every ID from authoritative latest
-→ require all to resolve
-→ allocate positive monotonic committed capture_id
-→ insert one capture including immutable context
-→ insert items using latest.cycle_id as buy_cycle_id
+→ captured_at_ms = Node clock
+→ resolve every selected security from latest
+→ require all IDs to resolve
+→ allocate positive monotonic capture_id
+→ persist capture/context
+→ persist each latest.cycle_id as buy_cycle_id
 → COMMIT
 ```
 
-Writer ordering defines “buy now” precisely:
+All-or-nothing failure.
+
+Writer order determines virtual-buy authority:
 
 ```text
-market cycle commits first → capture may reference that cycle
-capture commits first      → capture references the prior latest cycle
+cycle commits first → capture may reference that cycle
+capture commits first → capture references prior latest cycle
 ```
 
-If any ID is absent from `latest`, any invariant fails, context shaping is invalid, or persistence fails, rollback the complete Demo Buy capture.
+`buy_cycle_id` is therefore both baseline identity and the captured item's authority watermark.
 
-Demo Buy failure must not poison the writer tail, Scanner scheduler or later captures.
+## 11. Timing diagnostics
 
-## 19. Demo Buy evaluation/read model
+Scanner `startedAtMs`/`completedAtMs`, market `collectedAtMs` and Demo Buy `capturedAtMs` are wall-clock diagnostics, not authority ordering.
 
-Create a trusted Node read component; do not calculate analytical results in the browser.
+Do not reject an otherwise authoritative capture merely because wall clock moved backward.
 
-Read ordering:
+Derived diagnostics:
 
 ```text
-capture_id DESC
-result_rank ASC
+scannerDurationMs = completed-started when non-negative else null
+captureLatencyMs  = captured-completed when non-negative else null
+baselineAgeMs     = captured-baselineCollected when non-negative else null
 ```
 
-Phase-1 page size is fixed at **50 items** because each item carries ten horizon result objects and is materially wider than a normal History row.
+Negative relationships set a bounded `timingAnomaly` indicator. Never clamp to zero or reorder authority using timestamps.
 
-The opaque cursor binds `(capture_id, result_rank)`. Continuation excludes later newly inserted captures, so an existing pagination walk has no duplicate/gap caused by automatic captures arriving between requests. Refresh from page one is what reveals newer captures.
+## 12. Capture acknowledgement semantics
 
-### Snapshot consistency
+Because a capture may commit before its response reaches the browser, client outcomes are:
 
-One `demo.buy.page` must obtain its 50 items, baseline rows and all ten horizons from **one transactionally consistent DuckDB read snapshot**.
+```text
+CONFIRMED_COMMITTED
+CONFIRMED_REJECTED
+ACKNOWLEDGEMENT_UNKNOWN
+```
 
-Prefer one set-wise `runAndReadAll` SQL statement/CTE on the existing Viewer read connection. Do not implement this as N×10 separate timed reads. Do not open a multi-statement `BEGIN` transaction on the shared Viewer read connection merely to obtain consistency, because other Viewer requests may use that connection; a single statement is the safe default boundary.
+Transport loss after request dispatch before a conclusive response is `ACKNOWLEDGEMENT_UNKNOWN`.
 
-For each item:
+Rules:
 
-1. join the exact baseline `history` row by `(buy_cycle_id, security_id)`; missing baseline -> stable Demo Buy integrity error;
-2. for each fixed horizon find the first same-security history row at or after `captured_at_ms + horizon`;
-3. use that first qualifying row even if its Price is NULL; never skip it for a later non-null value;
-4. return baseline/timing/provenance summary plus derived horizon model.
+- never auto-replay the unknown capture;
+- lock further capture submission for that Viewer instance;
+- require explicit reconnect/relaunch and Demo Buy refresh before a new capture;
+- do not label unknown as confirmed failure;
+- do not add durable idempotency solely for this rare local race unless evidence reopens the plan.
+
+## 13. Demo Buy evaluator
+
+One trusted Node evaluator owns all horizon semantics. Browser performs no independent market arithmetic.
 
 Fixed horizons in milliseconds:
 
 ```text
-10000
-20000
-30000
-45000
-60000
-90000
-120000
-180000
-300000
-600000
+10000, 20000, 30000, 45000, 60000,
+90000, 120000, 180000, 300000, 600000
 ```
 
-Future match:
+For one item and horizon:
+
+```text
+targetAtMs = captured_at_ms + horizonMs
+```
+
+Future row:
 
 ```text
 same security_id
-AND collected_at_ms >= target_at_ms
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= targetAtMs
 ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-Derived horizon fields:
+The first qualifying post-watermark row wins even if `Price` is NULL.
+
+Baseline is the exact `(buy_cycle_id, security_id)` history row; absence is a stable integrity error.
+
+Derived fields:
 
 ```text
 horizonMs
@@ -640,210 +332,307 @@ outcome
 unavailableReason
 ```
 
-Outcome:
+Outcome/reason semantics are defined by `DATA_CONTRACT` and `DEMO_BUY_VALIDATION`.
+
+## 14. `demo.buy.page`
+
+Payload:
 
 ```text
-UP           changePercent > 0
-DOWN         changePercent < 0
-FLAT         changePercent = 0
-UNAVAILABLE  changePercent is null
+cursor: string | null
 ```
 
-Unavailable reason precedence:
+Fixed Phase-1 page size: **50 items**.
+
+Ordering:
 
 ```text
-NO_FUTURE_OBSERVATION
-BASELINE_PRICE_UNAVAILABLE
-BASELINE_PRICE_ZERO
-FUTURE_PRICE_UNAVAILABLE
+capture_id DESC
+result_rank ASC
 ```
 
-A missing baseline row is an integrity error and never an unavailable reason.
+Cursor is opaque and binds the last `(capture_id,result_rank)`. Newer captures do not perturb an already-started continuation walk; `Refresh latest` starts a new walk.
 
-Compact item metadata includes source query ID/name and Scanner timing but **not source SQL/context**. Exact SQL is returned through `demo.buy.capture.get`; full context is consumed only by the investigation exporter.
+A page is evaluated from one transactionally consistent DuckDB read snapshot. Prefer one set-wise SQL statement/CTE on the existing Viewer read connection; do not implement N×10 timed queries.
 
-The read model recomputes from persisted `history` on every refresh/page request and never writes derived values back to Demo Buy tables.
+Response contains enough compact capture metadata to render capture grouping even when a capture spans page boundaries, plus item baseline/timing and ten horizons. Full SQL/context are not repeated per item.
 
-## 20. AI Investigation Pack exporter
+## 15. `demo.buy.observation.get`
 
-Create one small read/export component owned by the local Node service.
-
-Target:
+Payload:
 
 ```text
-captureId + securityId
+captureId: positive safe integer
+securityId: canonical bounded string
 ```
 
-The exporter:
+Return exactly one existing capture item using the **same evaluator and authority-watermark semantics** as `demo.buy.page`.
 
-1. validates target membership in the capture;
-2. loads exact immutable query/timing/Top-50 context provenance;
-3. verifies the exact baseline relation;
-4. derives `targetInScannerContext` and treats an expected-but-missing Top-50 row as integrity failure;
-5. reads target history from `capturedAtMs - 30m` through `capturedAtMs`;
-6. reads target history from `capturedAtMs` through `capturedAtMs + 10m`;
-7. reuses the trusted Demo Buy evaluator for all horizon outcomes;
-8. classifies outcome evidence as partial/complete;
-9. generates deterministic files under an internally controlled ignored export root;
-10. returns bounded metadata/path and prompt text.
+Purpose: `Refresh observation` updates an older observation in place while Auto capture continues adding newer captures. It must not reset list pagination or scroll state.
 
-Required files and prompt semantics are owned by `docs/AI_INVESTIGATION_PACK.md`.
+Not-found/membership mismatch is a stable read error. Targeted refresh mutates nothing.
 
-### Anti-hindsight boundary
+## 16. `demo.buy.capture.get`
 
-The exporter labels prediction-time and outcome evidence separately. The generated prompt must never present a post-capture history row as an input that could have been used by the original Scanner decision.
+Payload:
 
-If `targetInScannerContext=false`, the prompt must explicitly say that exact target/peer Scanner row comparison is unavailable and may not be fabricated.
+```text
+captureId: positive safe integer
+```
 
-### File-system boundary
+Return immutable capture header/provenance once:
 
-Use a fixed product-owned export root, conceptually:
+```text
+captureId
+capturedAtMs
+sourceQueryId/name/sql
+sourceIntervalMs
+sourceResultStartedAtMs/completedAtMs/rowCount
+selectionMode
+isAutomatic
+topX
+capturedItemCount
+timing anomaly summary when derivable
+```
+
+Do not repeat full first-50 context unless needed by the AI export path.
+
+## 17. AI Investigation temporal partition
+
+Prediction-time target history:
+
+```text
+same security_id
+AND cycle_id <= buy_cycle_id
+AND collected_at_ms >= captured_at_ms - 30 minutes
+AND collected_at_ms <= captured_at_ms
+ORDER BY collected_at_ms ASC, cycle_id ASC
+```
+
+Outcome target history:
+
+```text
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms
+AND collected_at_ms <= captured_at_ms + 10 minutes
+ORDER BY collected_at_ms ASC, cycle_id ASC
+```
+
+This prevents hindsight leakage from rows collected earlier but committed after capture.
+
+## 18. AI Investigation completeness
+
+```text
+postWindowEndMs = captured_at_ms + 10 minutes
+evidenceWatermarkMs = max collected_at_ms from committed cycles after buy_cycle_id
+```
+
+Then:
+
+```text
+COMPLETE_OUTCOME when evidenceWatermarkMs >= postWindowEndMs
+PARTIAL_OUTCOME otherwise
+```
+
+No wall-clock-only or “day ended” shortcut.
+
+## 19. `demo.buy.ai-pack.create`
+
+Payload:
+
+```text
+captureId
+securityId
+```
+
+Server:
+
+1. validates target membership;
+2. loads immutable query/context/timing provenance;
+3. validates `targetInScannerContext` semantics;
+4. loads exact baseline;
+5. loads authority-watermarked pre/post history;
+6. reuses the trusted evaluator for `OUTCOME.json`;
+7. generates deterministic sanitized files under product-controlled export root;
+8. atomically publishes the completed directory;
+9. returns bounded metadata/path/prompt text.
+
+Response contains only bounded metadata:
+
+```text
+exportPathRelative
+packFormatVersion
+outcomeEvidenceStatus
+targetInScannerContext
+generatedAtMs
+promptText
+fileNames / recordCounts
+```
+
+`promptText` is capped at 256 KiB UTF-8. History/evidence files are not returned through WebSocket.
+
+## 20. AI export filesystem boundary
+
+Root:
 
 ```text
 exports/ai-investigations/
 ```
 
-The browser supplies no path. Directory/file names are generated from sanitized product-controlled capture/security/time identifiers. The root is git-ignored.
+It is git-ignored. Browser never supplies a path.
 
-Writing export files must be all-or-visible-as-failed at the product level: generate into a temporary product-owned directory and publish/rename the completed folder only after all required files are written successfully. A failed generation must not leave a folder that looks complete.
+Generate into a temporary product-owned directory and atomically rename to a collision-safe final directory only after all required files are complete. Never overwrite an existing successful pack. Best-effort cleanup removes failed temporary output.
 
-Regeneration creates a new pack; it does not mutate prior export folders or DB evidence.
+Return/display a repository/product-relative path, never a machine-specific absolute user path.
 
-## 21. Browser Demo Buy workflow
+Transport loss after export request dispatch may leave a valid pack whose ACK was lost. Regeneration after reconnect is safe because export mutates no DB authority and creates a new collision-safe directory; this differs intentionally from capture lost-ACK handling.
 
-### Scanner-side capture state
+## 21. Browser Scanner/Demo Buy workflow
 
-Each successful Scanner generation freezes exact query/result provenance before later draft changes and prepares bounded first-50 comparison context.
-
-Manual controls:
+The browser keeps one immutable rendered Scanner generation snapshot for capture:
 
 ```text
-row checkboxes
-Demo Buy selected
-Demo Buy all
-Top X + Demo Buy Top X
+queryId/name/exact SQL
+active interval
+startedAtMs/completedAtMs
+rowCount
+columns/rows
 ```
 
-Automatic state is Viewer-session-only:
+Capture controls exist only with exactly one recognized canonical identity column.
+
+Manual/Auto modes:
 
 ```text
-off
-auto all
-auto Top X
+Selected
+All
+Top X
+Auto Off
+Auto All
+Auto Top X
 ```
 
-Selection semantics:
+One Viewer-wide capture slot prevents manual double-submit and unbounded auto queueing. Busy auto generation is visibly skipped. Zero-row generation is no-op.
 
-- invalid recognized identity rows are visibly non-selectable;
-- Selected/All/Top-X choose source rows first;
-- Top-X means exactly first X source rows;
-- chosen rows containing an invalid identity make All/Top-X/auto fail visibly rather than silently changing meaning;
-- duplicate canonical IDs reduce only after selection, preserving first occurrence and original result rank;
-- All/auto-All with more than 5000 unique IDs is refused visibly, never truncated;
-- zero selected IDs do not create an empty capture.
+Auto changes apply only to future successful Scanner generations. Enabling Auto never retroactively captures the currently rendered result.
 
-Use one Viewer-session Demo Buy capture slot shared by manual and automatic actions:
+A persistent top-level indicator exposes `Auto Demo Buy: All/Top X` and `Turn off` even while Scanner is hidden. Turn off prevents future generations; it does not pretend to cancel an already in-flight capture.
+
+## 22. Resumable Scanner Stop
+
+Scanner must expose a user-level **Stop recurring scan** distinct from terminal Viewer destruction.
+
+Behavior:
 
 ```text
-slot free + manual action → submit once, disable capture actions until response
-slot free + auto generation → submit once
-slot busy + auto generation → visibly skip, never enqueue/replay
-slot busy + manual action → controls remain disabled/busy
-confirmed success/rejection → release slot
-acknowledgement unknown → block new capture until reconnect + Demo Buy refresh reconciliation
+Stop recurring scan
+→ cancel future scheduled timer
+→ invalidate current generation token
+→ ignore stale in-flight result when it returns
+→ keep Viewer/query draft alive
+→ later Activate starts a new generation normally
 ```
 
-This prevents accidental manual double-submit, duplicate retry after uncertain ACK and unbounded auto queues while leaving Scanner scheduling independent.
+Auto mode may remain configured/armed but cannot produce captures while Scanner is stopped. Existing terminal scheduler destruction remains separate.
 
-### Demo Buy surface
+## 23. Demo Buy UX
 
-Add a third top-level Viewer destination beside Current and Scanner.
-
-Visible compact data includes:
+Top-level destinations:
 
 ```text
-source label
-capture time
-signal/result-completed timing or latency indicator
-manual/automatic marker
-original result rank
-Symbol / display name
-securityId
-baseline collection time / age
-baseline Price
-10s..10m Price / % / outcome
+Current | Scanner | Demo Buy
 ```
 
-Unavailable outcomes may expose their reason compactly via text/tooltip/details; the UI must not imply every unavailable state simply means “wait longer”.
+Demo Buy is capture-grouped. Capture header owns query/timing/mode/provenance actions. Item table uses sticky leading identity/baseline columns and one compact cell per horizon containing outcome + percentage + Price where available.
 
-Direction is conveyed textually/symbolically in addition to optional styling. Color alone is insufficient.
+Presentation rule:
 
-The table may scroll horizontally. It supports Refresh and bounded Load more/keyset paging. Source SQL/details are fetched on demand with `demo.buy.capture.get`.
+```text
+NO_FUTURE_OBSERVATION → Pending / waiting presentation
+other unavailable reasons → explicit UNAVAILABLE warning
+```
 
-Each observation also exposes `Generate AI Investigation Pack`. The UI shows partial/complete outcome status, whether the target is present in retained Scanner context, generated local path, `Copy AI Prompt`, `Regenerate` and visible export failure.
+Technical underlying outcome remains `UNAVAILABLE` in both cases.
 
-The current Viewer architecture keeps Scanner mounted while switching top-level views, so navigating to Demo Buy does not stop its scheduler/automatic mode. Viewer disposal still stops Scanner scheduling as today.
+Controls:
 
-## 22. Diagnostics
+```text
+Refresh latest
+Load more
+Refresh observation
+View provenance / SQL
+Investigate with AI
+```
 
-Keep the existing tracker/checkpoint architecture.
+First-page refresh failure preserves previously rendered trustworthy data. Continuation/target/provenance/export errors are scoped to the affected sub-surface.
 
-Stable concepts include:
+## 24. AI Investigation UX
+
+One expandable item panel owns:
+
+```text
+context coverage
+partial/complete evidence state
+current horizon progress
+Generate AI Investigation Pack
+Regenerate
+Copy AI Prompt
+Copy folder path
+```
+
+At most one Generate/Regenerate request is in flight per Viewer. Additional export actions are visibly disabled/refused rather than queued.
+
+Clipboard follows existing support-snapshot behavior: `navigator.clipboard.writeText`, with visible/selectable fallback text when clipboard access is unavailable.
+
+No automatic AI call/upload or SQL activation exists.
+
+## 25. Viewer transport sequencing
+
+Keep existing per-socket FIFO; do not redesign transport solely for Demo Buy.
+
+Demo Buy/AI requests are bounded and application-level capture/export slots prevent a second unbounded queue. Workload/Browser proof must ensure bounded Demo Buy refresh/export does not materially starve intended recurring Scanner use.
+
+## 26. Diagnostics
+
+Reuse the existing diagnostic tracker. Stable concepts include:
 
 ```text
 demo_buy.capture
 demo_buy.evaluate
 demo_buy.read
+demo_buy.observation_read
 demo_buy.provenance_read
 demo_buy.ai_pack
 demo_buy.viewer
 ```
 
-Support Snapshot remains sanitized and bounded. It may expose Demo Buy operational counts/checkpoint/busy-skip/ack-unknown/export status but must not dump stored query SQL, full AI-pack evidence or raw authenticated provider material.
+Support Snapshot may include bounded operational state such as active top-level view, Auto mode, busy-skip count, capture/export slot state and last outcome category.
 
-## 23. Fake Market and synthetic generator
+Never include SQL text, Scanner rows, history rows, AI prompt/evidence, credentials/session data or raw authenticated dumps.
 
-Fake Market serves the normal built runtime and the U.S. screener endpoint using deterministic stateful U.S. rows.
+## 27. Fake Market / workload
 
-For Demo Buy/AI investigation deterministic profiles must create future paths producing:
+Reuse the shared configurable U.S. synthetic generator.
+
+Deterministic Demo Buy/AI scenarios cover:
 
 ```text
 UP
 DOWN
 FLAT
-UNAVAILABLE
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+rank-1 candidate that later declines
+Top-50 peer differences
+rank>50 investigation target
+wall-clock anomaly fixture
+post-capture commit watermark fixture
 ```
 
-plus at least one rank-1 candidate that later falls, deterministic peers in the original Top-50 context, and at least one delayed observation whose actual elapsed time exceeds the nominal horizon.
-
-## 24. Build and local files
-
-Target outputs remain:
-
-```text
-dist/browser/market-flow-us.runtime.js
-dist/browser/market-flow-us.bookmarklet.txt
-dist/live-verification/market-flow-us-live-verification.js
-dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
-```
-
-Local files include:
-
-```text
-production active DB: data/market-flow-us.duckdb
-demo DB: .demo/market-flow-us.duckdb
-live DB: data/live-verification.duckdb
-AI exports: exports/ai-investigations/
-Windows launcher: START_MARKET_FLOW_US.cmd
-```
-
-`exports/` must be ignored by Git.
-
-## 25. Workload and performance profiles
-
-Hosted CI is correctness-first and uses bounded profiles.
-
-Heavy target-machine profile remains:
+Hosted CI remains correctness-first and bounded. Heavy target-machine profile remains:
 
 ```text
 4096 synthetic securities
@@ -851,87 +640,77 @@ Heavy target-machine profile remains:
 737280 history rows
 ```
 
-Use narrow isolated profiles:
+## 28. New-day lifecycle
+
+Active DB = one trading day.
+
+After schema v4 ships, new-day accepts valid v3 or valid v4 source DB and rejects v1/v2, running sessions and partial/corrupt states.
+
+Flow:
 
 ```text
-persistence → validated generated cycles → writer/DuckDB
-reads/Scanner/Demo Buy/AI pack → directly seeded day-bounded DB → trusted reads/evaluator/exporter
-end-to-end → Fake Market → browser → WebSocket/service → DuckDB
+inspect source without mutation
+→ read scanner_saved_queries
+→ create temporary fresh schema-v4 DB
+→ seed saved queries transactionally
+→ optionally archive/move original source unchanged
+→ atomically install fresh v4
 ```
 
-Demo Buy measurement includes bounded realistic captures/items over day-bounded history and coexistence with recurring Scanner use. AI-pack measurement uses one bounded 30m-before/10m-after target export and must not materially starve recurring Scanner use. Do not add a history index, precompute or materialized horizon schema unless measurement proves direct bounded reads materially insufficient.
+Fresh v4 starts with empty Demo Buy tables. Demo Buy horizons never cross into the new active DB. v4 archive remains self-contained with its history/provenance; v3 archive remains a valid pre-feature historical DB.
 
-## 26. Security
+## 29. Build/local artifacts
 
-Preserve:
-
-- loopback-only host;
-- exact allowed Origin;
-- no wildcard Origin;
-- no credentials/session material in Node payloads or repo;
-- no external DuckDB access/extensions/secrets;
-- no raw authenticated dumps in diagnostics/tests;
-- synthetic/sanitized fixtures only.
-
-Demo Buy provenance contains locally authored Scanner SQL, never provider credentials/session data. Generated AI packs are explicit local user artifacts and may contain local SQL/history evidence, but are never committed automatically and never included in Support Snapshot. No AI credential/API key is accepted or stored.
-
-## 27. Live verification boundary
-
-Live verification keeps authenticated provider compatibility and real market movement as separate facts exactly as already documented.
-
-The final target-machine bundle additionally proves one deterministic local Demo Buy + AI Investigation Pack journey on the same final SHA. Demo Buy/AI-pack outcomes never substitute for real-provider movement evidence.
-
-## 28. Daily active-DB lifecycle
-
-The active authority covers one trading day.
-
-New-day operation:
+Existing artifact names remain canonical Market Flow US names. Add only:
 
 ```text
-stop producer/service cleanly
-→ inspect current source DB as valid Market Flow US v3 or v4
-→ optionally archive prior-day DB/data
-→ create/reset fresh schema-v4 active authority
-→ preserve scanner_saved_queries
-→ start with empty demo_buy_captures/demo_buy_items
-→ start the new trading day
+AI exports: exports/ai-investigations/
 ```
 
-Requirements:
+`exports/` must be git-ignored.
 
-- v1/v2 and suspicious partial-v3 Demo Buy states remain rejected;
-- a valid v3 source is accepted for archive/saved-query extraction even if the user invokes New Trading Day before first starting the new v4 service;
-- no indefinite prior-day market/Demo-Buy accumulation in active DB;
-- archived prior-day DB remains self-contained with history, Demo Buy references and retained Scanner context;
-- saved queries survive reset;
-- archive/reset never occurs while active writer owns the DB;
-- failure leaves either prior DB or valid fresh DB recoverable;
-- Demo Buy horizons do not bridge across the new active-day DB boundary;
-- no cross-day Demo Buy warehouse is introduced in Phase 1.
+## 30. Security boundary
 
-## 29. Phase-1 non-goals
+Preserve loopback-only service, exact allowed Origin, hardened DuckDB, no credential/session persistence, sanitized synthetic fixtures and no raw authenticated dumps.
 
-Do not implement:
+Generated AI packs are explicit local user artifacts. They may contain local SQL/history evidence but are never committed automatically and never placed in Support Snapshot.
+
+## 31. Final acceptance
+
+The post-feature deterministic candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic local Fake Leumi Demo Buy/AI proof.
+
+Final target-machine acceptance additionally proves:
 
 ```text
-real broker orders
+local Demo Buy progressive + targeted observation refresh
+local AI pack generation/copy/regeneration
+new-day v3/v4 → fresh-v4 lifecycle
+4096x180 + isolated day-bounded probes
+authenticated static smoke
+authenticated market-open movement gate
+```
+
+All on the exact final candidate SHA.
+
+## 32. Explicit non-goals
+
+Do not add:
+
+```text
+real order placement
 manual buy price
-fill simulator
-bid/ask execution model
+fill simulation
 fees/slippage
-sell automation
-portfolio/risk engine
-trade quantity accounting
-volume/liquidity sellability analysis
+sell rules
+portfolio/risk state
+trade quantity/liquidity proof
 aggregate strategy scorecards
 multi-day active analytics
-Strategy Engine
 background horizon materialization
-replay queue for busy-skipped/ack-unknown captures
-AI provider integration
-AI API-key storage
+speculative history index
+capture replay queue
+AI provider/API key integration
 automatic AI SQL editing/activation
 web enrichment inside pack generation
+OS file-manager integration
 ```
-
-Phase 2 may revisit liquidity/volume/fillability only after Phase 1 is complete and verified.
