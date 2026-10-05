@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { access, mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -135,6 +135,7 @@ async function runProfile(profile) {
 
   const detailPath = path.join(DETAIL_DIR, profile.detailReport);
   await mkdir(DETAIL_DIR, { recursive: true });
+  await rm(detailPath, { force: true });
   const env = {
     ...process.env,
     [profile.detailEnv]: detailPath
