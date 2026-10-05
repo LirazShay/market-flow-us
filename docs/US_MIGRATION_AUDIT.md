@@ -16,7 +16,7 @@ The three pre-audit additions were:
 - `docs/US_PRODUCT_DIRECTION.md`
 - `docs/US_SOURCE_EVIDENCE.md`
 
-The exact per-file disposition is owned by `docs/US_MIGRATION_FILE_MAP.md`.
+The exact historical per-file disposition is owned by `docs/US_MIGRATION_FILE_MAP.md`.
 
 ## Second-pass verified disposition
 
@@ -29,12 +29,14 @@ DROP               3
 TOTAL             124
 ```
 
-Coverage proof:
+Coverage proof for that snapshot:
 
 - classified: 124/124;
 - duplicate classifications: 0;
 - missing classifications: 0;
 - extra classifications: 0.
+
+These counts remain historical evidence. Files proved superseded and removed later during execution remain represented in the original denominator rather than rewriting the audit after the fact.
 
 ## Main conclusion
 
@@ -48,7 +50,7 @@ Preserve:
 - one-producer/session lifecycle;
 - serialized writer;
 - atomic cycle commit/rollback;
-- append-only history;
+- append-only history within the active trading day;
 - full-row latest;
 - trusted Current/Security/History reads;
 - Current/Detail/Scanner product model;
@@ -70,10 +72,11 @@ Replace/adapt only the boundaries that U.S. provider/data/scale/branding require
 7. Adapt Current and Detail/History fields while preserving UX/state/paging behavior.
 8. Keep Scanner generic and add staged candidate ranking as editable SQL only.
 9. Replace provider-specific Fake Market fixtures/path with U.S. screener behavior.
-10. Replace the 561/chunk-specific workload with the 4096 x 180 U.S. workload.
+10. Replace the 561/chunk-specific workload with configurable U.S. workload tooling including the `4096 x 180` target profile.
 11. Adapt diagnostics/live verification to the U.S. path.
 12. Rename operational package/runtime/DB/launcher/CI surfaces to Market Flow US.
 13. Replace stale MarketScope planning guards/handoff artifacts before freeze.
+14. Bound the active production DB to one trading day with a safe archive/new-day operation that preserves saved queries.
 
 ## Explicit non-changes
 
@@ -88,23 +91,13 @@ Do not add during this conversion:
 - IBKR/order execution;
 - semantic conversion of Israeli historical DB rows into U.S. market rows.
 
-Direct `history` SQL is the initial strategy mechanism. Performance optimization is evidence-driven by the representative workload.
+Direct `history` SQL remains the strategy mechanism. Performance optimization is evidence-driven by the representative workload and target-machine acceptance.
 
-## Second-pass corrections
+## Planning-stage corrections retained as history
 
-The repeat review intentionally challenged the first audit and found:
+The repeat review intentionally challenged the first audit and corrected false KEEP classifications, stale planning infrastructure, live-repeatability requirements and execution-allocation validation.
 
-### False KEEP classifications
-
-Several reusable files still contained MarketScope branding/channels/fixtures or Israeli fields. They were moved to ADAPT, including diagnostics, Viewer broadcast/surface files, service-test helpers and Viewer refresh tests.
-
-`.planning/verify-handoff.mjs` also moved from KEEP to PLANNING_REPLACE because stronger allocation validation is required after replacing the old Planning CI.
-
-### Stale planning infrastructure
-
-The imported Planning CI and executor handoff still referenced old MarketScope nodes/reviews/workload/coverage. They were rewritten for the current U.S. tree.
-
-Three superseded legacy coverage artifacts were deleted:
+Three superseded planning-only coverage artifacts were removed:
 
 - `.planning/MASTER_COVERAGE.md`
 - `.planning/COVERAGE_MAP.yaml`
@@ -112,11 +105,7 @@ Three superseded legacy coverage artifacts were deleted:
 
 Whole-goal coverage now follows `.planning/FRAMEWORK.md` and is recorded in `.planning/REVIEWS.md`.
 
-### Live repeatability
-
-A one-cycle and then three-cycle live proof was judged too weak for a continuous collector.
-
-Final planned live proof is bounded but sustained:
+The sustained authenticated provider proof was strengthened to:
 
 ```text
 >= 20 consecutive complete cycles
@@ -125,49 +114,65 @@ AND
 at the candidate collection cadence
 ```
 
-This is short-run repeatability proof, not a long-duration provider SLA claim.
+That gate proves bounded sustained authenticated authority. It does not by itself prove changing market values; movement-specific evidence remains a distinct final market-open acceptance fact.
 
-### Execution allocation guard
+`.planning/verify-handoff.mjs` owns reusable execution-allocation validation for exact leaf allocation, dependency order, serial done-prefix discipline, execution-reopen invariants and STATUS-pointer consistency.
 
-The repeat review noticed that rewriting Planning CI had accidentally removed the old exact leaf-allocation guard.
+## TREE 7.3 final runtime audit
 
-`.planning/verify-handoff.mjs` now owns one reusable validation path for:
+The release-closure audit checks **authoritative runtime reachability**, not merely whether donor-era words appear somewhere in history/provenance/tests.
 
-- every implementation leaf assigned exactly once;
-- contiguous chat numbers;
-- valid execution states;
-- dependency order;
-- serial done-prefix discipline;
-- at most one `in_progress`;
-- dependency completion for done/in-progress nodes;
-- execution-reopen invariants;
-- implementation STATUS pointer correctness.
+### Browser authority
 
-## File-to-TREE coverage
-
-All **96** implementation-affecting files:
+The normal browser build entrypoint is:
 
 ```text
-88 ADAPT
-+ 8 REPLACE
-= 96
+scripts/build-browser.mjs
+→ browser/runtime/index.js
+→ browser/runtime/application.js
+→ browser/collector/us-cycle.js
+→ browser/provider/us-screener.js
+→ browser/provider/us-universe.js
 ```
 
-were mechanically routed to at least one implementation leaf.
+The default runtime therefore acquires one complete `ScreenerHulPaging3` U.S. response and does not depend on the old two-provider acquisition path.
 
-Result:
+After U.S. replacement proof, TREE `7.3` removed the superseded Israel acquisition implementation:
 
 ```text
-mapped:   96
-unmapped: 0
+browser/provider/universe.js
+browser/provider/securities.js
+browser/collector/cycle.js
+tests/unit/provider-data.test.mjs
 ```
 
-The 10 PLANNING_REPLACE files are owned by the planning process before execution.
-The 3 DROP files are intentionally removed.
-The 15 KEEP files require no U.S. implementation change; donor/provenance mentions are intentional where present.
+Their U.S. replacements and focused proof remain in the repository.
 
-## Current planning gate
+### Service/database authority
 
-The migration audit is now considered corrected.
+The normal package service command starts:
 
-The next stage is Final Planning Review, not implementation.
+```text
+local-service/server/index.js
+```
+
+That entrypoint injects `openMarketFlowUsDatabase`, so the production service boots schema v3 U.S. authority. Legacy schema helpers/adapters that remain inside reusable modules are not selected by the normal Market Flow US entrypoint and are not evidence of an authoritative Israel product path.
+
+### Mechanical release guard
+
+`tests/unit/release-runtime-audit.test.mjs` protects the release boundary by verifying that:
+
+- the superseded Israel acquisition modules are absent;
+- their U.S. replacements are present;
+- the actual generated browser runtime contains `ScreenerHulPaging3`;
+- the generated browser runtime contains neither `MapHeat2` nor `GetSecuritiesData`;
+- representative Israeli typed market fields are absent from the generated browser artifact;
+- the normal service command resolves to the Market Flow US server entrypoint and schema-v3 database bootstrap.
+
+Historical/generic fixtures may retain donor-era vocabulary only when they are not packaged or reachable through the normal product entrypoints and still protect reusable behavior. They must not be used to justify a production dependency on the retired provider path.
+
+## Release-closure status
+
+The audit no longer defines the active planning/execution pointer. `STATUS.yaml`, `.planning/STATUS.yaml` and `.planning/EXECUTION.yaml` own live operational state.
+
+TREE `7.3` prepares an exact release candidate for final target-machine acceptance. It must not claim overall completion before TREE `7.4` supplies the user-dependent target-machine workload, new-day lifecycle, authenticated static compatibility and market-open movement evidence.
