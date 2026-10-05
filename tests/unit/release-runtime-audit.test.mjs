@@ -29,18 +29,20 @@ test("superseded Israel acquisition implementation is absent from the release tr
   await access(path.join(ROOT, "tests/unit/us-provider-data.test.mjs"));
 });
 
-test("normal browser artifact contains only the U.S. acquisition contract", async () => {
+test("normal browser artifact and default composition use only the U.S. acquisition authority", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-release-audit-"));
   try {
     const result = await buildBrowser({ outDir: tempDir });
     const runtime = await readFile(result.runtimePath, "utf8");
+    const application = await rootFile("browser/runtime/application.js");
 
     assert.match(runtime, /ScreenerHulPaging3/);
     assert.doesNotMatch(runtime, /MapHeat2|GetSecuritiesData/);
-    assert.doesNotMatch(
-      runtime,
-      /LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyDealsQuantity|DailyNISRevenue/
-    );
+
+    assert.match(application, /collectUsCollectionCandidate/);
+    assert.match(application, /US_CURRENT_PROFILE/);
+    assert.match(application, /US_DETAIL_PROFILE/);
+    assert.match(application, /MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
