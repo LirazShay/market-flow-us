@@ -1,56 +1,33 @@
 # Market Flow US Data Contract
 
-## 1. Ownership and evidence level
+## 1. Ownership
 
-This document owns provider/data truth used by Market Flow US and the distinction between persisted facts, derived Demo Buy evaluation and derivative AI-investigation export evidence.
+This document owns current provider/data truth and the distinction between:
 
-The Bank Leumi U.S. endpoint is empirically observed, not an official public API contract. Every provider field is therefore either:
+```text
+provider/market authority facts
+Demo Buy persisted local facts
+Demo Buy derived read-model facts
+AI Investigation derivative export evidence
+```
 
-- **proven shape** — observed and reproduced;
-- **source-named semantic** — useful but exact external meaning may remain empirical;
-- **unknown** — must not be silently upgraded into a stronger claim.
+Historical migration evidence remains in the dedicated U.S. evidence/audit documents. This file describes the current product contract.
 
-Raw provider rows are retained so later discoveries do not destroy information.
+The Bank Leumi U.S. source is empirically observed, not an official immutable API contract. Unknown provider semantics must remain unknown rather than being strengthened by naming assumptions.
 
-Demo Buy adds local analytical facts. The AI Investigation Pack adds local derivative export artifacts. Neither may be confused with provider-originated market authority.
+## 2. Provider source
 
-## 2. Provider endpoint
-
-Current source:
+Current endpoint:
 
 ```text
 GET /lti/lti-app/api/Market/ScreenerHulPaging3
 ```
 
-The request runs in the already-authenticated provider browser context using a relative same-origin URL.
+The request runs from the already-authenticated provider browser context using a relative same-origin URL. Market Flow US never embeds credentials, cookies, tokens or account identifiers.
 
-No credentials/cookies/tokens are encoded by Market Flow US.
-
-## 3. Current full-result request
-
-Initial request parameters:
+The currently proven request uses the U.S. screener filters and:
 
 ```text
-region=1
-Country=2
-indexIdArray=0
-paperType=1
-sectorIdArray=0
-subSectorIdArray=0
-changePercentFrom=-999999999
-changePercentTo=999999999
-volumeFrom=-999999999
-volumeTo=999999999
-marketCapFrom=-999999999999999
-marketCapTo=999999999999999
-beginYearChangePercentFrom=-999999999
-beginYearChangePercentTo=999999999
-month12ChangePercentFrom=-999999999
-month12ChangePercentTo=999999999
-month36ChangePercentFrom=-999999999
-month36ChangePercentTo=999999999
-EsdRatingModeSelected=0
-EsdRatingModeValueSelected=0
 page=1
 pageCount=5000
 orderFieldName=DailyVolume
@@ -58,143 +35,41 @@ orderDir=DESC
 rt=true
 ```
 
-`pageCount=5000` is the currently proven practical request size, not a permanent provider guarantee.
+`pageCount=5000` is a current practical envelope, not a permanent market-size guarantee.
 
-If the provider later reports more rows than returned, the snapshot fails closed. Do not silently treat a partial page as a complete universe.
+A response becomes authoritative only when HTTP/JSON/envelope validation succeeds, `recordCount` is a positive safe integer, `records.length === recordCount`, every row has a valid `PaperId`, canonical IDs are unique and any present success code is valid. Incomplete or ambiguous responses fail closed.
 
-## 4. Observed response envelope
+## 3. Canonical security identity
 
-Expected high-level shape:
-
-```text
-data.ScreenerHulPaging.recordCount
-data.ScreenerHulPaging.maxDateChange
-data.ScreenerHulPaging.records[]
-
-resultCode
-rsCount
-rtIsr
-rtUsa
-logtm
-reqtm
-responsetm
-serverId
-version
-```
-
-The following envelope fields are diagnostic/source metadata, not business identity:
-
-```text
-maxDateChange
-rsCount
-rtIsr
-rtUsa
-logtm
-reqtm
-responsetm
-serverId
-version
-```
-
-## 5. Complete-response validation
-
-A response may become an authoritative cycle only when all are true:
-
-1. HTTP response is 2xx.
-2. JSON parsing succeeds.
-3. `data.ScreenerHulPaging` exists and is an object.
-4. `recordCount` is a positive safe integer.
-5. `records` is an array.
-6. `records.length === recordCount`.
-7. every row is an object;
-8. every row has `PaperId` whose source type is either a string or a JavaScript safe integer; blank strings, objects, arrays, booleans and non-safe numeric identities are rejected;
-9. after that type validation, `String(PaperId)` is non-empty and unique across the response;
-10. if `resultCode` is present, it is `0`.
-
-The collector records warnings/diagnostics, but does not necessarily fail the snapshot, when:
-
-- `Symbol` is missing;
-- quote-like fields are null/missing;
-- `TradeDateTime` appears old;
-- `serverId` or `version` changes;
-- `recordCount` changes;
-- `rtUsa` is false or absent.
-
-Warnings must not fabricate field values.
-
-## 6. Canonical identity
-
-Canonical product identity, **after the accepted `PaperId` source-type validation above**, is:
+Canonical identity is:
 
 ```text
 securityId = String(PaperId)
 ```
 
-The Node authority independently enforces the same fail-closed U.S. identity boundary before universe persistence; malformed values are never canonicalized with generic `String(object)` behavior.
+but only after source-type validation:
 
-Do not key market authority or Demo Buy observations by:
+- non-blank string: accepted;
+- JavaScript safe integer: accepted;
+- object/array/boolean/non-safe numeric/blank identity: rejected.
 
-- array index;
-- `Id`;
-- `Symbol`;
-- `PaperIdYatab`;
-- display name.
+The browser and Node authority independently enforce this boundary.
 
-`Symbol` may change and is query/display metadata.
-
-## 7. Observed source row fields
-
-Observed fields include:
-
-### Identity / display
+Never key authority or Demo Buy by:
 
 ```text
+row index
 Id
-PaperId
-PaperNameEng
-PaperNameHeb
 Symbol
-ExchangeName
 PaperIdYatab
-CountryId
-CountryName
-CountryNameEng
-PaperType
+display name
 ```
 
-### Market-like fields
+`Symbol` and names are display/query metadata only.
 
-```text
-Price
-ChangePercent
-DailyHigh
-DailyLow
-YearHigh
-YearLow
-DailyVolume
-BeginYearChangePercent
-Month12ChangePercent
-Month36ChangePercent
-TradeDateTime
-AskRate
-BidRate
-YesterdayRate
-PaperMarketCap
-```
+## 4. Source-shaped U.S. projection
 
-### Other observed fields
-
-```text
-Logo
-ESGRatingId
-ESGScope
-```
-
-No consumer may assume every row contains every field.
-
-## 8. Typed projection
-
-The U.S. DuckDB public market projection promotes the following source fields while retaining `raw_data`.
+Every successful market row keeps `raw_data JSON` and promotes the current typed projection.
 
 ### VARCHAR
 
@@ -234,180 +109,99 @@ ESGScope
 
 Projection rule:
 
-- finite JavaScript number -> DOUBLE;
-- string -> VARCHAR;
-- wrong type / absent / non-finite -> SQL NULL;
-- raw JSON preserves the original value/property presence.
-
-`PaperId` is represented separately as canonical `security_id`.
-
-## 9. Source and local-time semantics that remain intentionally distinct
-
-### Price
-
-Persist as source column `Price`.
-
-Do not rename it to `Last` or `LastPrice` until provider/live evidence establishes that stronger semantic.
-
-Demo Buy may compare source `Price` values mechanically. Such a comparison is analytical evidence only and does not establish an executable/fillable trade price.
-
-### DailyVolume
-
-Persist as `DailyVolume`.
-
-Do not describe its unit more strongly than the source field name until verified.
-
-### PaperMarketCap
-
-Persist as `PaperMarketCap`.
-
-Exact unit remains empirical.
-
-### TradeDateTime
-
-Persist the delivered string exactly as `TradeDateTime`.
-
-Do not parse it into the authoritative collection timestamp or assume timezone/session semantics.
-
-### collected_at_ms
-
-Browser-generated collection time is the authoritative local acquisition timestamp for history ordering and relative-time SQL.
-
-It is independent from `TradeDateTime`.
-
-### Scanner result timing
-
-A successful Scanner result already carries Node-produced local execution times:
-
 ```text
-startedAtMs
-completedAtMs
+finite JS number → DOUBLE
+string            → VARCHAR
+wrong type/missing/non-finite → SQL NULL
+raw_data          → preserve original source value/property presence
 ```
 
-Demo Buy stores those values as immutable **Scanner-generation provenance** together with the active Scanner interval. They describe when the analytical result was produced; they are not provider/exchange timestamps and do not become market authority.
+Do not rename `Price` to a stronger semantic such as `LastPrice`; do not assert exact units/timezones for source-named fields until live evidence proves them.
 
-`source_result_completed_at_ms` is the result/signal-ready time used only to explain the delay between a Scanner result and the later virtual-buy acceptance.
+## 5. Time fields and authority
 
-### captured_at_ms
-
-`captured_at_ms` is a Node-generated local timestamp assigned inside the serialized Demo Buy writer operation. It marks the virtual-buy event in local product time.
-
-It is not a provider timestamp, exchange timestamp or claim about real order execution.
-
-Demo Buy future-horizon targets are measured from `captured_at_ms`. The baseline market row may have an earlier `collected_at_ms` because it is the latest authoritative observation available when the capture is serialized.
-
-Derived timing diagnostics such as `captureLatencyMs = capturedAtMs - sourceResultCompletedAtMs` and `baselineAgeMs = capturedAtMs - baselineCollectedAtMs` are exposed only when the local timestamps make a non-negative value meaningful; they are not persisted market facts.
-
-## 10. Validated snapshot/cycle shape
-
-To minimize conversion risk, Market Flow US preserves the existing complete-cycle protocol shape.
-
-One full U.S. response maps to exactly one collection segment:
+The product intentionally distinguishes:
 
 ```text
-chunkIndex = 0
-chunk_count = 1
+TradeDateTime                    source-delivered string
+collected_at_ms                  local market-row collection timestamp
+Scanner startedAtMs/completedAtMs local Scanner execution diagnostics
+captured_at_ms                   local Demo Buy acceptance timestamp inside writer work
+cycle_id / writer order          market-authority ordering
 ```
 
-Cycle:
+Wall-clock timestamps are diagnostics. They do not override serialized writer/cycle ordering when clocks regress or disagree.
+
+Derived timing diagnostics are returned only when non-negative:
 
 ```text
-status = complete
-startedAtMs
-completedAtMs
-durationMs
-requested = recordCount
-received = records.length
-unique = canonical unique PaperId count
-missing = 0
-duplicates = 0
-unexpected = 0
-chunks = [single response timing/metadata entry]
-securities = one item per row
+scannerDurationMs
+captureLatencyMs
+baselineAgeMs
 ```
 
-Each security item contains:
+Otherwise the value is `null` and a bounded timing-anomaly indicator explains which diagnostic could not be trusted. Raw timestamps remain unchanged.
+
+## 6. Market cycle authority
+
+One validated U.S. full response maps to one complete producer segment/cycle. Successful persistence remains transactional:
 
 ```text
-securityId
-chunkIndex = 0
-chunkReceivedAtMs
-collectedAtMs
-sourceMetadata
-data = raw provider row
+validate session/revision/exact membership
+→ BEGIN
+→ allocate cycle_id
+→ insert cycle
+→ append every row to history
+→ replace latest from that committed cycle
+→ update session state
+→ COMMIT
 ```
 
-This preserves the proven Node protocol/persistence boundary without pretending the U.S. source is actually chunked.
-
-## 11. Universe contract
-
-A validated response also defines its canonical current membership.
-
-Universe row metadata includes at least:
+Keys:
 
 ```text
-security_id
-is_current
-universe_revision
-first_seen_at_ms
-last_seen_at_ms
-symbol
-paper_name_eng
-paper_name_heb
-exchange_name
-raw_source
+history PRIMARY KEY (cycle_id, security_id)
+latest  PRIMARY KEY (security_id)
 ```
 
-On the first valid response, browser replaces universe then commits that same snapshot.
+Failed/incomplete cycles never alter authoritative `history`/`latest`.
 
-On later responses:
+## 7. Null / zero / missing
 
-- identical canonical membership -> reuse accepted universe revision;
-- changed membership -> replace universe from the newly validated response, receive a new revision, then commit that same response.
-
-A changed row order does not constitute a membership change.
-
-## 12. Null / zero / missing contract
-
-These remain distinct source facts:
+These are distinct source facts:
 
 ```text
-property missing
-property present = null
-property present = ""
-property present = 0
+missing property
+null
+empty string
+numeric 0
 ```
 
-Typed SQL projection may map wrong-type/missing values to SQL NULL, but `raw_data` preserves the original distinction.
+Typed projection may map invalid/missing values to SQL NULL, but `raw_data` preserves original distinction. UI must never render numeric zero as missing.
 
-UI formatting must never display numeric zero as missing.
+## 8. Schema versions
 
-For Demo Buy evaluation, absence of a qualifying future history row is also distinct from a future row whose `Price` is SQL NULL. Both produce an unavailable percentage, but the trusted read model preserves that distinction through an explicit unavailable reason.
-
-A missing immutable baseline row is different again: it violates a persisted Demo Buy integrity invariant and must surface as an integrity/read error rather than `UNAVAILABLE`.
-
-## 13. Dynamic count contract
-
-Observed on 2026-10-04:
+Historical/current meanings:
 
 ```text
-recordCount = 4015
-records.length = 4015
+MarketScope v1/v2  incompatible Israeli semantics
+Market Flow US v3  proven U.S. market authority + scanner_saved_queries
+Market Flow US v4  v3 authority + Demo Buy / AI-investigation provenance
 ```
 
-This proves only the tested screener result set at that time.
+Fresh Market Flow US DBs bootstrap directly as v4 after this feature ships.
 
-The product must not hard-code 4015 or claim this endpoint equals every U.S.-listed security.
+Valid v3 may migrate transactionally to v4 only when neither Demo Buy table already exists. A DB marked v3 with partial Demo Buy structures is suspicious/corrupt and fails closed; migration never silently resumes through `IF NOT EXISTS`.
 
-The current acquisition request is bounded by `pageCount=5000`; Demo Buy therefore also bounds one capture to at most 5000 unique canonical security IDs. That is a product/transport bound, not a claim that the market permanently contains at most 5000 securities.
+Migration failure leaves the original v3 authority semantically usable as v3.
 
-## 14. Schema-v4 Demo Buy persisted facts
+No new `history` index is part of the initial v4 contract. Add one only after representative workload demonstrates a concrete need and planning is reopened for that change.
 
-Schema v4 preserves all schema-v3 market authority and adds two local analytical tables.
+## 9. Schema-v4 Demo Buy persisted facts
+
+Schema v4 adds exactly two Demo Buy tables.
 
 ### `demo_buy_captures`
-
-Persisted local facts:
 
 ```text
 capture_id BIGINT PRIMARY KEY
@@ -425,32 +219,19 @@ is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
 ```
 
-`selection_mode` is exactly one of:
-
-```text
-manual
-all
-top_x
-```
-
 Rules:
 
 - `capture_id > 0` for committed captures;
-- `captured_at_ms`, source result times and row count are non-negative safe-integer values at the application boundary;
+- timestamp/count inputs are non-negative safe integers at the application boundary;
 - `source_interval_ms > 0`;
-- `top_x` is non-null only when `selection_mode = top_x` and is in `1..5000`;
-- `is_automatic = true` is valid only for `all` or `top_x`;
-- query/result timing fields are immutable Scanner-generation provenance, not market authority;
-- source SQL is stored once per capture rather than per item;
-- `source_result_context_json` freezes only the first 50 source-result rows in exact SQL order plus result columns/ranks/truncation metadata;
-- source-result context is immutable provenance, not a recomputable market snapshot and not a second authority;
-- later query edits never mutate old capture provenance.
-
-The schema should enforce simple shape/mode invariants with CHECK constraints where DuckDB supports them cleanly, while protocol/service validation remains the primary semantic boundary.
+- `selection_mode ∈ {manual, all, top_x}`;
+- `top_x` exists only for `top_x` and is `1..5000`;
+- automatic mode is valid only for `all`/`top_x`;
+- source query/timing/context fields are immutable Scanner-generation provenance;
+- source SQL is stored once per capture;
+- no baseline Price or future outcome is copied here.
 
 ### `demo_buy_items`
-
-Persisted local facts:
 
 ```text
 capture_id BIGINT NOT NULL
@@ -461,255 +242,262 @@ PRIMARY KEY (capture_id, security_id)
 UNIQUE (capture_id, result_rank)
 ```
 
-`result_rank` is the original 1-based Scanner row position in that generation. It is not re-numbered after manual selection or duplicate reduction, so ranks such as `2, 7, 20` remain meaningful provenance.
+`result_rank` is the original 1-based Scanner result position, not a dense selection rank.
 
-The authoritative baseline relation is:
+The baseline relation is:
 
 ```text
 (buy_cycle_id, security_id)
 → history(cycle_id, security_id)
 ```
 
-The Demo Buy item does **not** persist a copied baseline price, Symbol, name, future price, percentage, outcome or unavailable reason. Those values are read/derived from market history.
+A missing linked baseline after successful capture is corruption/integrity failure, not an ordinary unavailable outcome.
 
-A physical foreign key is not required for Phase 1. The capture transaction resolves the baseline before insertion and trusted reads treat a missing semantic baseline as corruption. Do not add foreign-key/index complexity unless implementation evidence shows a concrete safety/performance benefit.
+No copied baseline/future Price, percentage, outcome or unavailable-reason fields are persisted.
 
-### Frozen Scanner comparison context
+## 10. Bounded Scanner comparison provenance
 
-`source_result_context_json` contains only deterministic bounded Scanner-generation provenance:
+`source_result_context_json` freezes context from the exact successful Scanner generation; it is never reconstructed by re-running SQL later.
+
+Concrete bounds are owned by `docs/DEMO_BUY_PROTOCOL_LIMITS.md` and are currently:
 
 ```text
-columns
-rows: first up to 50 source rows
-resultRank: original 1-based rank for every retained row
-truncation metadata
+first source rows                 <= 50
+retained columns                  <= 64 total
+canonical identity column         mandatory even when beyond source column 64
+textual/serialized cell           <= 128 UTF-8 bytes after deterministic clipping
+serialized context JSON           <= 256 KiB UTF-8
+exact source SQL                  <= 1 MiB UTF-8 for Demo-Buy-capable generation
+capture unique items              <= 5000
 ```
 
-It preserves Scanner output values, not provider authority. Arbitrary Scanner expressions/aliases may therefore appear in the retained rows.
-
-The context is allowed to mark clipped cell values explicitly, but may not silently alter result order, ranks or normal values that fit the documented bounds. If context shaping cannot produce a valid bounded representation, the capture request fails before commit rather than persisting a falsely complete context.
-
-For later investigation:
+Context preserves:
 
 ```text
-targetInScannerContext = true
+original row order
+original 1-based resultRank
+original retained-column index/name
+omitted row/column metadata
+explicit cell truncation/encoding metadata
 ```
 
-only when the selected item's exact original row is present in the retained context. Targets outside the original Top-50 remain valid Demo Buy observations but cannot claim direct peer/rank reconstruction from retained Scanner rows.
+Canonical identity values are never clipped into ambiguity.
 
-## 15. Schema-v3 → v4 migration integrity
+For every captured item with `resultRank <= 50`, Node requires the frozen context row at that exact rank to exist and to contain the same canonical identity. A mismatch fails the complete capture before commit.
 
-A valid v3 database contains the proven U.S. authority tables plus `scanner_saved_queries` and **no Demo Buy tables**.
+A target with rank > 50 is valid but later AI investigation reports `targetInScannerContext=false`.
 
-Migration contract:
+## 11. Demo Buy selection/capture facts
+
+Selection is defined before duplicate reduction:
 
 ```text
-validate exact v3 prerequisites
-→ reject suspicious partial Demo Buy table state
+manual → checked source rows
+all    → all source rows
+top_x  → exactly first X source rows
+```
+
+Every chosen row must have a valid canonical identity. Duplicate IDs reduce to the first chosen occurrence in the browser; retained items keep original `resultRank`. Top X never backfills from rows after X.
+
+Node accepts only already-deduped ordered `{securityId,resultRank}` items and rejects duplicate/malformed/out-of-range protocol input rather than repairing it silently.
+
+Inside the shared serialized writer:
+
+```text
+validate bounded request/context
 → BEGIN
-→ create demo_buy_captures
-→ create demo_buy_items
-→ update schema_info.schema_version = 4 and product_version
+→ captured_at_ms = Node clock
+→ resolve every security from current authoritative latest
+→ require every security to resolve
+→ allocate capture_id
+→ persist capture
+→ persist each latest.cycle_id as buy_cycle_id
 → COMMIT
 ```
 
-If a DB claims schema v3 while either Demo Buy table already exists, startup fails closed with an unsupported/corrupt-schema error. The implementation must not use `CREATE TABLE IF NOT EXISTS` to normalize a partial migration silently.
+Failure is all-or-nothing.
 
-Migration failure at any injected phase must leave the original v3 database semantically usable as v3 with its market authority and saved queries intact.
+## 12. Capture authority watermark
 
-Fresh databases bootstrap directly as v4. Existing valid v4 databases require both Demo Buy tables in addition to the established U.S. tables and require the documented `source_result_context_json` capture column.
+For one item, `buy_cycle_id` is both the exact baseline cycle and the market-authority watermark available at capture time.
 
-MarketScope v1/v2 remain incompatible and are rejected without mutation.
-
-No new `history` index is required by the schema contract up front. The existing history authority remains unchanged; add an evaluation/export-oriented index only if representative Demo Buy/AI-pack workload evidence proves the direct bounded read model materially insufficient and a focused replan approves that schema change.
-
-## 16. Demo Buy selection and capture semantics
-
-Selection is defined against one immutable Scanner generation **before** duplicate reduction:
-
-1. `manual` chooses the checked source rows;
-2. `all` chooses every source row;
-3. `top_x` chooses exactly the first X source rows in SQL result order;
-4. every chosen row must contain a valid non-blank canonical identity string;
-5. duplicate canonical IDs reduce to the first chosen occurrence in the browser;
-6. each remaining item retains its original 1-based `result_rank`.
-
-Therefore Top X never backfills from a later row after a duplicate. For example, if duplicate identities occur inside the first ten source rows, Top-10 may persist fewer than ten unique Demo Buy items.
-
-The browser sends already-deduped ordered `{securityId, resultRank}` items plus the bounded first-50 source-result context. Node independently validates but does **not** silently dedupe malformed protocol input:
-
-- 1..5000 items are required for an actual capture;
-- every `securityId` is canonical/non-blank/bounded;
-- every `resultRank` is positive, unique and within `source_result_row_count`;
-- item ranks are strictly increasing in Scanner result order;
-- every `securityId` is unique in the request;
-- for `top_x`, every rank is `<= top_x`;
-- retained context ranks/order must match the declared source result and begin at rank 1 with at most 50 rows;
-- invalid/duplicate/out-of-order input is rejected atomically.
-
-At one serialized capture boundary:
-
-1. validate request/provenance/mode/context bounds;
-2. enqueue behind prior serialized writer work;
-3. begin one transaction;
-4. assign Node `captured_at_ms`;
-5. resolve every selected `security_id` against authoritative `latest`;
-6. require every selected security to resolve;
-7. allocate a positive monotonic committed `capture_id`;
-8. store each resolved latest row's `cycle_id` as `buy_cycle_id`;
-9. persist one capture plus all items atomically;
-10. commit.
-
-Failure to resolve any selected security fails the entire capture. The same security may appear in multiple later captures because these are observations, not positions.
-
-A zero-row automatic Scanner result is a browser-side no-op and creates no empty capture.
-
-## 17. Demo Buy derived evaluation facts
-
-Demo Buy evaluation is a trusted read model, not additional stored market authority.
-
-Fixed Phase-1 horizons:
+Prediction-time authoritative target history:
 
 ```text
-10000
-20000
-30000
-45000
-60000
-90000
-120000
-180000
-300000
-600000 milliseconds
+same security_id
+AND cycle_id <= buy_cycle_id
 ```
 
-For one item and horizon `H`:
+Post-capture authoritative history:
+
+```text
+same security_id
+AND cycle_id > buy_cycle_id
+```
+
+This watermark is required in addition to timestamps. It prevents a market observation collected earlier but committed only after the Demo Buy from leaking backward into prediction-time evidence.
+
+## 13. Derived Demo Buy evaluation
+
+Fixed horizons:
+
+```text
+10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m, 10m
+```
+
+For horizon `H`:
 
 ```text
 target_at_ms = captured_at_ms + H
 ```
 
-The future observation is the first persisted market-history row satisfying:
+Future observation:
 
 ```text
 same security_id
+AND cycle_id > buy_cycle_id
 AND collected_at_ms >= target_at_ms
 ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-The first qualifying authoritative row wins even when its `Price` is SQL NULL. The evaluator must not skip that row and cherry-pick a later non-null price.
+The first qualifying post-watermark row wins even if its `Price` is NULL; never skip it to cherry-pick a later priced row.
 
-The baseline value comes from the linked `(buy_cycle_id, security_id)` history row. That row must exist; its absence is a Demo Buy integrity failure rather than an unavailable horizon.
-
-Derived values include:
+Percentage:
 
 ```text
-baselinePrice
-baselineCollectedAtMs
-baselineAgeMs
-captureLatencyMs
-futurePrice
-observedAtMs
-actualElapsedMs = observedAtMs - capturedAtMs
-changePercent = ((futurePrice / baselinePrice) - 1) * 100
+((futurePrice / baselinePrice) - 1) * 100
 ```
 
-Derived outcome is:
+Outcome:
 
 ```text
-UP           when changePercent > 0
-DOWN         when changePercent < 0
-FLAT         when changePercent = 0
-UNAVAILABLE  when changePercent is NULL
+UP           changePercent > 0
+DOWN         changePercent < 0
+FLAT         changePercent = 0
+UNAVAILABLE  changePercent is NULL
 ```
 
-When outcome is `UNAVAILABLE`, one reason is exposed with this precedence:
+Unavailable-reason precedence:
 
 ```text
-NO_FUTURE_OBSERVATION      no qualifying future row
-BASELINE_PRICE_UNAVAILABLE baseline Price is NULL
-BASELINE_PRICE_ZERO        baseline Price is zero
-FUTURE_PRICE_UNAVAILABLE   matched future row exists but Price is NULL
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
 ```
 
-A missing baseline row is never converted into one of these reasons; it remains an integrity error.
+The read model also exposes target/observed/elapsed times. A bounded page is evaluated from one transactionally consistent DuckDB read snapshot. Derived values are never persisted as market authority.
 
-These prices/percentages/outcomes/reasons are application-derived analytical facts. They are not provider fields and are not persisted as market authority.
+## 14. AI Investigation evidence partition
 
-A bounded evaluated page must observe one transactionally consistent DuckDB read snapshot so baseline and all ten horizons for that page cannot be assembled from different writer commit points.
-
-## 18. AI Investigation Pack derived/export facts
-
-An AI Investigation Pack is generated from one persisted Demo Buy target identified by:
+An investigation target is:
 
 ```text
 capture_id + security_id
 ```
 
-The pack is derivative evidence, not a database authority table.
-
-Prediction-time source set:
+Prediction-time history is limited by both watermark and time window:
 
 ```text
-exact stored Scanner SQL/provenance
-retained first-50 Scanner result context
-selected item's original result_rank
-history rows for same security where
-  captured_at_ms - 30 minutes <= collected_at_ms <= captured_at_ms
-exact linked baseline row
+same security_id
+AND cycle_id <= buy_cycle_id
+AND captured_at_ms - 30m <= collected_at_ms
+AND collected_at_ms <= captured_at_ms
 ```
 
-Outcome source set:
+Outcome history is:
 
 ```text
-history rows for same security where
-  captured_at_ms <= collected_at_ms <= captured_at_ms + 10 minutes
-trusted Demo Buy horizon evaluator output
+same security_id
+AND cycle_id > buy_cycle_id
+AND collected_at_ms >= captured_at_ms
+AND collected_at_ms <= captured_at_ms + 10m
 ```
 
-The exporter never interpolates missing history observations and never moves an outcome fact into prediction-time evidence.
+`BASELINE.json` is the exact linked baseline row. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
 
-`targetInScannerContext` is derived from the immutable retained context. If a target should be inside the retained Top-50 but its row is missing, that is an integrity/export error. If its original rank is outside the retained context, a pack remains valid with `targetInScannerContext=false` and must not claim exact candidate-vs-peer reconstruction.
+`targetInScannerContext=true` only when the exact target row is present in retained context. A missing expected Top-50 target row is integrity failure; rank > 50 remains valid with `false` and no fabricated peer reconstruction.
 
-`PARTIAL_OUTCOME` and `COMPLETE_OUTCOME` are export-status classifications only; neither is persisted as market authority.
+## 15. Partial versus complete investigation evidence
 
-Generated files under the ignored local export root may contain the user's local SQL/history evidence, but repository fixtures/diagnostics must remain synthetic/sanitized and must not copy those local packs into version control.
+Define:
 
-## 19. Daily lifecycle relation
+```text
+postWindowEndMs = captured_at_ms + 10m
+evidenceWatermarkMs = MAX(history.collected_at_ms)
+  from committed cycles after the capture watermark in the opened DB
+```
 
-Demo Buy observations and retained Scanner comparison context belong to the same active-day evidence boundary as the `history` rows they reference.
+Then:
 
-At new-day reset:
+```text
+COMPLETE_OUTCOME when evidenceWatermarkMs >= postWindowEndMs
+PARTIAL_OUTCOME  otherwise
+```
 
-- prior-day DB may be archived as one self-contained file;
-- the new-day path accepts a structurally valid existing Market Flow US v3 or v4 source DB for saved-query preservation/archive, while still rejecting v1/v2 or suspicious partial-v3 Demo Buy states;
-- fresh active DB is always the current schema v4;
-- market authority tables start fresh;
-- `demo_buy_captures` and `demo_buy_items` start empty;
-- `scanner_saved_queries` are preserved/restored;
-- no Demo Buy row/context is copied into a DB that does not contain its referenced history;
-- horizon evaluation never joins into the new active-day DB; any prior-day horizon without a qualifying row before rollover remains unavailable in that prior day's self-contained evidence.
+Wall-clock passage alone does not make evidence complete. An archived day that never persisted evidence through the boundary remains honestly partial.
 
-This v3-or-v4 source acceptance matters when the user installs a schema-v4 release and runs New Trading Day before the normal service has had a chance to migrate the prior v3 active DB. Archiving that valid v3 DB and creating a fresh v4 DB is valid and must not require an unnecessary pre-rollover service start.
+Complete evidence does not guarantee every target horizon has a usable Price and does not imply fillability/profitability.
 
-Already generated AI packs remain independent local files. New packs are generated only from the DB explicitly opened by the local service; no cross-day strategy warehouse is introduced.
+## 16. AI Investigation export facts
 
-## 20. External facts reserved for live verification
+Generated packs are derivative local artifacts, never DB authority.
 
-Still empirical:
+They may contain exact local Scanner SQL/history evidence but must not contain credentials, cookies, auth headers, account identifiers or raw authenticated HTTP/session dumps.
 
-- safe sustained polling cadence;
-- throttling/rate-limit behavior;
-- session-expiry response;
-- market-open versus closed behavior;
-- pre-market/after-hours behavior;
-- exact `rt=true` freshness semantics;
-- exchange/consolidation coverage;
-- exact `DailyVolume` unit;
-- exact `PaperMarketCap` unit;
-- exact `Price` semantics;
-- exact timezone/session semantics of `TradeDateTime`;
-- permanent maximum `pageCount`.
+The controlled export root is repository-relative and ignored:
 
-Until verified, code/docs must remain conservative.
+```text
+exports/ai-investigations/
+```
+
+Viewer-visible/export-manifest paths are relative to this product root, not machine-specific absolute user paths.
+
+The browser cannot supply an output path.
+
+## 17. Active-day lifecycle
+
+The active DB represents one trading day.
+
+New-day accepts either:
+
+```text
+valid v3 source DB
+valid v4 source DB
+```
+
+and rejects v1/v2, running producer sessions, missing required structures and suspicious partial/corrupt v3/v4 states.
+
+Flow:
+
+```text
+inspect source without mutation
+→ read scanner_saved_queries
+→ build fresh schema-v4 DB
+→ seed saved queries transactionally
+→ optionally archive/move original source unchanged
+→ atomically install fresh v4 DB
+```
+
+Market authority and Demo Buy captures/items/context do not cross into the fresh active DB. A v4 archive remains self-contained with its history and Demo Buy evidence; a v3 archive remains valid historical pre-feature authority.
+
+Generated AI packs remain independent local files.
+
+## 18. External facts reserved for live verification
+
+Still empirical and not upgraded by Demo Buy:
+
+```text
+safe sustained polling cadence
+provider throttling/session-expiry behavior
+market-open/closed/pre/after-hours behavior
+rt=true freshness meaning
+exchange/consolidation coverage
+exact Price semantics
+DailyVolume/PaperMarketCap units
+TradeDateTime timezone/session semantics
+permanent pageCount maximum
+```
+
+Code/docs must remain conservative until live evidence proves stronger semantics.
