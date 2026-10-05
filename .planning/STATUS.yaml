@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "7.2"
+current_node: "7.3"
 blockers: []
-next_action: "TREE 7.2 is done and its final success_evidence re-audit passed. Keep Chat 8 authoritative until PR #11 is made merge-ready, the closure head receives required green CI, the PR diff is reviewed, the PR is squash-merged, and main CI is green. Only after that advance repository truth to Chat 9 / node 7.3."
+next_action: "TREE 7.2 is done. Repository truth now points to Chat 9 / node 7.3 as the first open execution node, but do not begin Chat 9 implementation until PR #11 completes the remaining Chat 8 merge gate: closure-head CI green, diff review, squash merge, and main CI green."
 last_review: "R-US-EXEC-REOPEN-004"
