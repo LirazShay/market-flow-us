@@ -9,7 +9,7 @@ export const SCREENER_HUL_PATH = "/lti/lti-app/api/Market/ScreenerHulPaging3";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const DEFAULT_RUNTIME_PATH = path.join(ROOT, "dist", "browser", "market-flow-us.runtime.js");
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
-const SCENARIOS = new Set(Array.from({ length: 16 }, (_, index) => `US-${String(index + 1).padStart(2, "0")}`));
+const SCENARIOS = new Set(Array.from({ length: 17 }, (_, index) => `US-${String(index + 1).padStart(2, "0")}`));
 const ADVANCING_SCENARIOS = new Set([
   "US-01", "US-02", "US-03", "US-04", "US-08", "US-11", "US-12", "US-13", "US-14", "US-15", "US-16"
 ]);
