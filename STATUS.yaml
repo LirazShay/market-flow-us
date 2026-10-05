@@ -4,9 +4,9 @@ overall_status: in_progress
 
 current:
   chat: 5
-  node: "5.2"
-  title: "Normal U.S. runtime and demo cutover"
-  status: in_progress
+  node: "5.3"
+  title: "Full U.S. Chromium E2E and recovery"
+  status: ready
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -30,4 +30,4 @@ execution:
   chats_total: 9
   implementation_leaves_total: 19
   current_chat: 5
-  current_node: "5.2"
+  current_node: "5.3"
