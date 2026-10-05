@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createUsSyntheticGenerator } from "./us-synthetic.mjs";
 
 export const SCREENER_HUL_PATH = "/lti/lti-app/api/Market/ScreenerHulPaging3";
 
@@ -42,171 +43,17 @@ const REQUIRED_QUERY = Object.freeze({
 });
 
 const BASE_UNIVERSE = Object.freeze(["1001", "1002", "1003", "1004"]);
+const FIXTURE_GENERATOR = createUsSyntheticGenerator({
+  universeSize: 5,
+  cycleCount: 10000,
+  cadenceMs: 3000,
+  firstPaperId: 1001,
+  preset: "fake-market",
+  dataPattern: "moving"
+});
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function rowFor(id, cycle) {
-  if (id === "1001") {
-    return {
-      Id: 501,
-      PaperId: 1001,
-      PaperNameEng: "Fixture Alpha US",
-      PaperNameHeb: "Fixture Alpha",
-      Symbol: "ALFA",
-      ExchangeName: "Fixture Exchange A",
-      PaperIdYatab: 9001,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 101.25 + cycle,
-      ChangePercent: 1.2 + cycle * 0.1,
-      DailyHigh: 103 + cycle,
-      DailyLow: 99.5,
-      YearHigh: 130,
-      YearLow: 80,
-      DailyVolume: 100000 + cycle * 1000,
-      BeginYearChangePercent: 8.5,
-      Month12ChangePercent: 12.5,
-      Month36ChangePercent: 31.5,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 101.5 + cycle,
-      BidRate: 101 + cycle,
-      YesterdayRate: 100,
-      PaperMarketCap: 500000000 + cycle * 10000,
-      ESGRatingId: 3,
-      ESGScope: 1,
-      ExtraSyntheticField: `alpha-${cycle}`
-    };
-  }
-
-  if (id === "1002") {
-    return {
-      Id: 502,
-      PaperId: 1002,
-      PaperNameEng: "Fixture Beta US",
-      PaperNameHeb: "Fixture Beta",
-      Symbol: "BETA",
-      ExchangeName: "Fixture Exchange B",
-      PaperIdYatab: 9002,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 0,
-      ChangePercent: -0.4 - cycle * 0.05,
-      DailyHigh: 10 + cycle,
-      DailyLow: 0,
-      YearHigh: 15,
-      YearLow: 0,
-      DailyVolume: 0,
-      BeginYearChangePercent: null,
-      Month12ChangePercent: 0,
-      Month36ChangePercent: -4,
-      TradeDateTime: null,
-      AskRate: null,
-      BidRate: 0,
-      YesterdayRate: 0,
-      PaperMarketCap: null,
-      ESGRatingId: null,
-      ESGScope: 0
-    };
-  }
-
-  if (id === "1003") {
-    return {
-      Id: 503,
-      PaperId: 1003,
-      PaperNameEng: "Fixture Gamma US",
-      Symbol: "GAMA",
-      ExchangeName: "Fixture Exchange A",
-      CountryId: 2,
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: null,
-      ChangePercent: 0,
-      DailyHigh: 51 + cycle,
-      DailyLow: 48,
-      YearHigh: 65,
-      YearLow: 40,
-      DailyVolume: 25000 + cycle * 250,
-      Month12ChangePercent: null,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 50.5 + cycle,
-      YesterdayRate: 50,
-      PaperMarketCap: 125000000
-    };
-  }
-
-  if (id === "1004") {
-    return {
-      Id: 504,
-      PaperId: 1004,
-      PaperNameEng: "Fixture Delta US",
-      PaperNameHeb: "Fixture Delta",
-      Symbol: "DLTA",
-      ExchangeName: "Fixture Exchange C",
-      PaperIdYatab: 9004,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 72.75 + cycle * 0.5,
-      ChangePercent: 0.8 + cycle * 0.05,
-      DailyHigh: 74 + cycle,
-      DailyLow: 70,
-      YearHigh: 90,
-      YearLow: 60,
-      DailyVolume: 60000 + cycle * 700,
-      BeginYearChangePercent: 5,
-      Month12ChangePercent: 9,
-      Month36ChangePercent: 22,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 73 + cycle * 0.5,
-      BidRate: 72.5 + cycle * 0.5,
-      YesterdayRate: 72,
-      PaperMarketCap: 300000000 + cycle * 5000,
-      ESGRatingId: 2,
-      ESGScope: 1
-    };
-  }
-
-  if (id === "1005") {
-    return {
-      Id: 505,
-      PaperId: 1005,
-      PaperNameEng: "Fixture Epsilon US",
-      PaperNameHeb: "Fixture Epsilon",
-      Symbol: "EPSI",
-      ExchangeName: "Fixture Exchange B",
-      PaperIdYatab: 9005,
-      CountryId: 2,
-      CountryName: "Fixture Country",
-      CountryNameEng: "Fixture Country",
-      PaperType: 1,
-      Price: 33 + cycle,
-      ChangePercent: 2.4,
-      DailyHigh: 34 + cycle,
-      DailyLow: 30,
-      YearHigh: 40,
-      YearLow: 20,
-      DailyVolume: 90000 + cycle * 500,
-      BeginYearChangePercent: 15,
-      Month12ChangePercent: 20,
-      Month36ChangePercent: 45,
-      TradeDateTime: `fixture-cycle-${cycle}`,
-      AskRate: 33.2 + cycle,
-      BidRate: 32.8 + cycle,
-      YesterdayRate: 32,
-      PaperMarketCap: 175000000,
-      ESGRatingId: 4,
-      ESGScope: 2
-    };
-  }
-
-  throw new Error(`Unknown synthetic security ${id}`);
 }
 
 function json(response, statusCode, body) {
@@ -313,12 +160,18 @@ function screenerPayload(records, recordCount, cycle) {
 
 function rowsFor(state) {
   const cycle = state.logicalCycleIndex;
-  let records = universeFor(state).map((id) => rowFor(id, cycle));
+  let records = universeFor(state).map((id) =>
+    FIXTURE_GENERATOR.rowForPaperId(Number(id), cycle));
 
   if (state.scenario === "US-02") {
     records = records.reverse();
   } else if (state.scenario === "US-05") {
-    records = [records[0], records[1], { ...clone(records[0]), PaperNameEng: "Fixture Duplicate US" }, records[3]];
+    records = [
+      records[0],
+      records[1],
+      { ...clone(records[0]), PaperNameEng: "Fixture Duplicate US" },
+      records[3]
+    ];
   } else if (state.scenario === "US-06") {
     const missing = clone(records[1]);
     delete missing.PaperId;
@@ -341,7 +194,10 @@ async function handleScreener(request, response, url, state) {
   }
 
   state.activeScreenerRequests += 1;
-  state.maxActiveScreenerRequests = Math.max(state.maxActiveScreenerRequests, state.activeScreenerRequests);
+  state.maxActiveScreenerRequests = Math.max(
+    state.maxActiveScreenerRequests,
+    state.activeScreenerRequests
+  );
 
   try {
     if (state.scenario === "US-11") {
@@ -366,7 +222,9 @@ async function handleScreener(request, response, url, state) {
 
     const cycle = state.logicalCycleIndex;
     const records = rowsFor(state);
-    const recordCount = state.scenario === "US-07" ? records.length + 1 : records.length;
+    const recordCount = state.scenario === "US-07"
+      ? records.length + 1
+      : records.length;
     json(response, 200, screenerPayload(records, recordCount, cycle));
 
     if (ADVANCING_SCENARIOS.has(state.scenario)) {
@@ -390,7 +248,10 @@ export async function startUsFakeMarket({
 
   const server = createServer(async (request, response) => {
     try {
-      const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "127.0.0.1"}`);
+      const url = new URL(
+        request.url ?? "/",
+        `http://${request.headers.host ?? "127.0.0.1"}`
+      );
 
       if (request.method === "GET" && url.pathname === "/") {
         text(
