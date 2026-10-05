@@ -2,13 +2,13 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A2"
+current_stage: "A3"
 fr0_blocked_until_audit_closes: true
 
 stages:
   A0: done
   A1: done
-  A2: pending
+  A2: done
   A3: pending
   A4: pending
   A5: pending
@@ -43,6 +43,33 @@ findings:
     regression: "Existing branding/diagnostic suites plus A1 Fast/Browser verification; repeat integrated proof at A9."
     state: "fixed; A1 CI green"
 
+  - id: "A2-001"
+    severity: HIGH
+    area: "browser/recorder/recorder.js -> producer.cycle.failed -> local authority"
+    finding: "Failed-cycle reports copied the raw provider/network Error.name and Error.message across the Browser-to-Node boundary, where they could be persisted in cycles.error_json and sessions.last_error_json. A provider error containing private/session material could therefore cross the public-safe boundary."
+    fix: "Recorder now keeps the raw error only in local latestError state and emits a fixed phase-specific sanitized descriptor through onFailure/ProducerBridge."
+    regression: "tests/unit/final-preflight-a2.test.mjs injects cookie/account/authorization sentinels and proves none cross the failure-report boundary; recorder-scheduling.test.mjs proves raw local debugging state remains available."
+    state: "fixed; A2 CI green"
+
+  - id: "A2-002"
+    severity: HIGH
+    area: "local-service/database/writer.js"
+    finding: "The bulk writer flushed buffered history/latest work before executing ROLLBACK. If the Appender/flush itself was the failing persistence operation, rollback could fail before DuckDB received ROLLBACK, leaving the serialized writer connection in a poisoned transaction."
+    fix: "ROLLBACK now discards all non-authoritative bulk buffers/set-wise-copy state and executes directly on the underlying DuckDB connection without attempting a flush first."
+    regression: "tests/unit/database-writer.test.mjs proves buffered rows are discarded and proves ROLLBACK still reaches the underlying connection even when createAppender would throw; existing U.S. F1-F5 transaction regressions remain green."
+    state: "fixed; A2 CI green"
+
+reviewed_non_findings:
+  - id: "A2-REVIEW-001"
+    area: "schema-v3 bootstrap/reopen/rejection"
+    note: "Fresh schema-v3 exact columns/hardening, reopen with saved queries and stale-session recovery, and rejection of old MarketScope v1/v2 databases without mutation are already mechanically covered and remained green. No additional defect found."
+  - id: "A2-REVIEW-002"
+    area: "U.S. producer config boundary"
+    note: "The generic bridge/persistence retains legacy compatibility seams, but the production U.S. composition passes the marked createUsRecorderConfig object; JSON wire and persisted session config are cadence-only. The real bridge/service regression confirms {snapshotIntervalMs} only, so no release-path defect was recorded."
+  - id: "A2-REVIEW-003"
+    area: "producer loss/stale heartbeat/service restart"
+    note: "Existing real-service recovery proofs cover producer socket loss, stale heartbeat ownership release, clean service shutdown and restart recovery; all remained green after A2 changes."
+
 cross_stage_observations:
   - id: "A3-CANDIDATE-001"
     area: "browser/viewer/client.js"
@@ -53,12 +80,12 @@ cross_stage_observations:
 
 verification:
   a1_candidate_sha: "aec83fc95bd0b27facc96db3aed0818971ff8485"
+  a2_candidate_sha: "50bc330502bb6f4a6c8de48368d08ad2f5d01921"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
   workload_ci: green
   planning_docs_ci: green
-  latest_planning_pointer_browser_ci: green
   integrated_a9: pending
 
-next: "A2 — Local service, DuckDB schema, persistence, protocol and recovery"
+next: "A3 — Trusted reads, Viewer and Scanner"
