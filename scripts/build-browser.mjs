@@ -39,8 +39,8 @@ export async function buildBrowser({ outDir = path.join(ROOT, "dist", "browser")
   const bookmarklet = packageBookmarklet(compactRuntime);
   await mkdir(outDir, { recursive: true });
 
-  const runtimePath = path.join(outDir, "market-scope.runtime.js");
-  const bookmarkletPath = path.join(outDir, "market-scope.bookmarklet.txt");
+  const runtimePath = path.join(outDir, "market-flow-us.runtime.js");
+  const bookmarkletPath = path.join(outDir, "market-flow-us.bookmarklet.txt");
 
   await Promise.all([
     writeFile(runtimePath, readableRuntime, "utf8"),
@@ -60,6 +60,6 @@ const isDirect = process.argv[1] && path.resolve(process.argv[1]) === fileURLToP
 if (isDirect) {
   const result = await buildBrowser();
   process.stdout.write(
-    `Built browser runtime (${result.runtimeBytes} bytes) and bookmarklet (${result.bookmarkletBytes} bytes).\n`
+    `Built Market Flow US browser runtime (${result.runtimeBytes} bytes) and bookmarklet (${result.bookmarkletBytes} bytes).\n`
   );
 }
