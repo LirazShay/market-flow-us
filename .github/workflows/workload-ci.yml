@@ -11,7 +11,7 @@ jobs:
   representative-workload:
     name: 4096 x 180 representative U.S. workload
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v4
