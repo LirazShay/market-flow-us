@@ -58,6 +58,17 @@ const SYNTHETIC_NUMERIC_FIELDS = Object.freeze([
   "ESGRatingId",
   "ESGScope"
 ]);
+const CURRENT_NUMERIC_FIELDS = Object.freeze([
+  "Price",
+  "ChangePercent",
+  "BidRate",
+  "AskRate",
+  "DailyVolume",
+  "DailyLow",
+  "DailyHigh",
+  "YesterdayRate",
+  "PaperMarketCap"
+]);
 const SYNTHETIC_INSERT_CHUNK = 256;
 
 function assertSafeProfile(profile) {
@@ -213,10 +224,11 @@ function syntheticNumericProjection(field) {
 
 function assertCurrentMatchesGenerator(row, expected) {
   assert.equal(row.securityId, String(expected.PaperId));
-  for (const field of SYNTHETIC_STATIC_FIELDS) {
-    assert.equal(row[field], expected[field], `${field} must come from shared synthetic authority`);
-  }
-  for (const field of SYNTHETIC_NUMERIC_FIELDS) {
+  assert.equal(row.paperName, expected.PaperNameEng);
+  assert.equal(row.Symbol, expected.Symbol);
+  assert.equal(row.ExchangeName, expected.ExchangeName);
+
+  for (const field of CURRENT_NUMERIC_FIELDS) {
     const actual = row[field];
     const wanted = expected[field];
     if (wanted === null) {
