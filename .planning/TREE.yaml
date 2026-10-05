@@ -13,12 +13,13 @@ nodes:
     necessary_assumptions: []
     sufficiency_assumptions:
       - "Provider acquisition alone is insufficient without U.S. persistence, reads, UI, Scanner, deterministic proof and release evidence."
-      - "Scanner SQL alone cannot answer whether a historical selection later moved as predicted; exact Demo Buy capture and forward-history evaluation are additionally required."
+      - "Scanner SQL alone cannot answer whether a historical selection later moved as predicted; exact Demo Buy capture, evaluation and user-visible outcome inspection are additionally required."
       - "The seven branches jointly cover the requested product while continuing to exclude real order execution, portfolio logic and Phase-2 liquidity/sellability analysis."
     success_evidence:
       - "Every implementation-ready leaf is completed with its stated evidence."
       - "The authoritative runtime no longer depends on MapHeat2/GetSecuritiesData or Israeli typed market fields."
       - "Current, Detail/History, Scanner and Demo Buy operate over the final schema-v4 authority, with Demo Buy preserving exact links to authoritative history rows."
+      - "The Node evaluation layer, not the DB or browser, derives horizon Price/change/direction from persisted history and the Viewer exposes those outcomes clearly."
       - "Fast CI, Browser CI and bounded correctness/performance-smoke verification are green on the final post-Demo-Buy candidate; GitHub-hosted CI is not the authority for heavy target-machine performance."
       - "The local Fake Leumi acceptance tooling is proven and the final target-machine bundle passes daily-bounded mock/performance, Demo Buy local validation, static-provider and market-open authenticated checks."
       - "Final branding/docs/launchers describe Market Flow US and main is green with no blocking defect."
@@ -200,7 +201,7 @@ nodes:
   "4":
     status: approved
     strategy: "Scanner remains the general editable strategy surface over U.S. authority and can validate whether its ordered candidate selections subsequently rise or fall through a minimal Demo Buy observation workflow, without introducing a Strategy Engine or order simulator."
-    tactic: "Preserve Scanner admission/execution/saved-query ownership and existing U.S. built-ins, then add additive schema-v4 Demo Buy persistence/read authority plus Scanner capture controls, stable query provenance, optional bounded automatic capture and a dedicated forward-horizon Viewer surface."
+    tactic: "Preserve Scanner admission/execution/saved-query ownership and existing U.S. built-ins, then add a separately owned Demo Buy persistence layer, capture authority, evaluation/read model, Scanner capture workflow and dedicated outcome screen."
     parallel_assumptions:
       - "The imported read-only Scanner and saved-query mechanisms are already sufficient for arbitrary U.S. analytical SQL and should not be rewritten."
       - "A virtual-buy observation needs only exact selection provenance, an immutable link to the authoritative baseline history row and direct future-history evaluation."
@@ -208,13 +209,14 @@ nodes:
     necessary_assumptions:
       - "The product goal now includes both flexible Scanner candidate selection and evidence about whether those candidates moved as predicted afterward."
     sufficiency_assumptions:
-      - "U.S. Scanner SQL behavior, durable exact Demo Buy capture/evaluation and one direct browser workflow are sufficient to validate short-horizon strategy predictions; real execution and Phase-2 liquidity analysis remain unnecessary."
+      - "Existing Scanner behavior, Demo Buy authority/evaluation and the complete user workflow together are sufficient to validate short-horizon strategy predictions; real execution and Phase-2 liquidity analysis remain unnecessary."
     success_evidence:
       - "Existing Scanner built-ins, scheduling, saved-query security and Detail navigation remain green."
-      - "Schema v4 preserves U.S. market authority and saved queries while storing exact Demo Buy capture/item links without copied baseline market facts."
+      - "Schema v4 preserves U.S. market authority and saved queries while storing only Demo Buy capture/item facts and exact baseline links."
+      - "Node evaluates the fixed horizons from history and returns Price/change/direction without persisted outcome columns."
       - "Selected/All/Top-X and automatic All/Top-X captures preserve SQL result ordering and immutable active-generation query provenance."
-      - "Demo Buy reads expose baseline Price plus 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m future Price/change with deterministic nearest-at-or-after semantics and NULL for unavailable evidence."
-      - "Normal browser + Fake Market E2E proves capture, auto capture, provenance stability, positive/negative horizons and recoverable capture failure."
+      - "The dedicated Demo Buy screen clearly shows baseline plus 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m outcome cells with Price, percent and up/down/flat/unavailable state."
+      - "Normal browser + Fake Market E2E proves capture, progressive horizon completion, provenance stability, positive/negative/flat outcomes and recoverable failure."
     depends_on: []
     children: ["4.1", "4.2", "4.3", "4.4"]
 
@@ -252,45 +254,133 @@ nodes:
 
   "4.3":
     status: approved
-    strategy: "Node/DuckDB durably records each Demo Buy capture against the exact authoritative market row visible at its serialized virtual-buy moment and returns deterministic short-horizon evaluation from persisted history."
-    tactic: "Advance schema v3 to additive v4 with demo_buy_captures/demo_buy_items, preserve v3 market authority and saved queries transactionally, add Viewer-role capture/page protocol operations, serialize capture writes through the existing writer, and compute bounded paged horizon reads directly from history using first-at-or-after target timestamps."
+    strategy: "Demo Buy backend authority is explicit: persistence stores only durable virtual-buy facts, capture resolves the exact authoritative baseline, and a separate evaluation/read layer computes what happened afterward."
+    tactic: "Decompose backend work into additive schema-v4 persistence, serialized capture/protocol authority, and bounded future-horizon evaluation/read-model service."
     parallel_assumptions:
-      - "The existing serialized writer already provides the ordering boundary needed to define which latest cycle is authoritative at capture time."
-      - "The history primary key (cycle_id, security_id) is sufficient to identify an immutable baseline without duplicating Price/Symbol/name fields into Demo Buy rows."
-      - "One Viewer page times ten fixed horizons is a bounded read problem and does not justify materialized horizon columns before measurement."
+      - "Separating persistence facts from derived evaluation avoids both duplicated market facts and hidden browser-side semantics."
+      - "The existing writer and history tables already contain the authority needed by all three backend responsibilities."
     necessary_assumptions:
-      - "Browser selection controls cannot create trustworthy historical evidence unless Node owns capture atomicity, exact baseline linkage, persistence, migration and future-observation semantics."
+      - "A reliable Demo Buy screen requires trustworthy persistence, exact capture semantics and a single authoritative calculation layer."
+    sufficiency_assumptions:
+      - "Schema/persistence, capture authority and evaluation/read model together provide all backend facts and calculations required by the user workflow without a background updater."
+    success_evidence:
+      - "All three backend leaves pass their focused real-DuckDB/service evidence."
+      - "No calculated horizon Price/change/direction is persisted in Demo Buy tables."
+      - "No browser-side DuckDB query or independent horizon algorithm is needed."
+    depends_on: []
+    children: ["4.3.1", "4.3.2", "4.3.3"]
+
+  "4.3.1":
+    status: approved
+    strategy: "Schema v4 durably stores the minimum Demo Buy facts and safely upgrades an existing v3 Market Flow US active-day database without losing market authority or saved queries."
+    tactic: "Add demo_buy_captures and demo_buy_items plus transactional v3→v4 migration/fresh-v4 bootstrap; integrate restart and new-day lifecycle so active-day Demo Buy rows persist across restart but are not copied into a fresh trading day."
+    parallel_assumptions:
+      - "Two small relational tables are sufficient because baseline/future market facts already live in history."
+      - "An additive migration is safer and simpler than forcing a fresh DB for an already-valid U.S. active day."
+    necessary_assumptions:
+      - "Capture/evaluation cannot be durable or migration-safe without explicit schema lifecycle ownership."
     sufficiency_assumptions: []
     success_evidence:
-      - "Real DuckDB tests prove fresh v4 bootstrap and transactional v3→v4 migration preserving cycles/history/latest/universe/sessions/scanner_saved_queries; injected migration failure leaves the original v3 DB unchanged."
-      - "Real service tests prove Demo Buy input validation, all-or-nothing capture, duplicate-ID first-occurrence reduction, monotonic capture IDs, immutable provenance, and exact (buy_cycle_id, security_id) linkage determined by serialized writer order."
-      - "The same security can be captured again in a later event without position semantics."
-      - "Paged reads are deterministic by capture_id DESC then selection_rank ASC and use a bounded keyset cursor."
-      - "For each fixed horizon, the first same-security history row at or after captured_at_ms+horizon is returned with observed/elapsed time; no row, NULL price or zero baseline denominator yields NULL percentage as contracted."
-      - "Restart preserves active-day Demo Buy observations, while new-day reset clears Demo Buy state and preserves saved queries."
-      - "New/materially changed Demo Buy SQL passes mandatory static SQL preflight before execution and bounded workload timing is recorded without adding precompute."
+      - "Fresh DB bootstraps as schema v4 with exactly the documented Demo Buy tables/constraints in addition to existing U.S. authority tables."
+      - "Transactional v3→v4 migration preserves sessions/universe/cycles/history/latest/scanner_saved_queries; injected migration failure leaves original v3 unchanged."
+      - "Restart preserves active-day Demo Buy rows."
+      - "New-day reset starts fresh market/Demo Buy tables while preserving scanner_saved_queries; an optional archived prior-day DB remains self-contained with its referenced history."
     depends_on: ["2.3"]
+    children: []
+
+  "4.3.2":
+    status: approved
+    strategy: "A Demo Buy capture records exactly which Scanner candidates would have been bought and which authoritative market row was the baseline at that serialized moment."
+    tactic: "Add demo.buy.capture validation/client-service protocol and a persistence authority that deduplicates ordered IDs by first occurrence, validates provenance/mode bounds, serializes through the existing writer, resolves every selected security from latest, stores exact buy_cycle_id links and commits all-or-nothing."
+    parallel_assumptions:
+      - "The existing serialized writer defines deterministic order relative to market-cycle commits."
+      - "The existing history key (cycle_id, security_id) makes copied baseline Price/name fields unnecessary."
+    necessary_assumptions:
+      - "Schema rows alone do not define the virtual-buy moment, race behavior, validation or exact baseline linkage."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "Protocol/unit tests reject malformed identity lists, inconsistent manual/all/top_x/automatic modes and invalid bounds with stable sanitized errors."
+      - "Real-service tests prove all-or-nothing capture, duplicate-ID first-occurrence reduction, monotonic capture IDs and immutable query ID/name/SQL provenance."
+      - "Writer-order tests prove capture links the cycle visible in latest at its serialized point: a prior committed cycle may be linked and a later queued cycle may not."
+      - "The same security can be captured again in a later capture event because observations are not positions."
+      - "Capture stores no user-supplied or copied buy Price."
+    depends_on: ["4.3.1"]
+    children: []
+
+  "4.3.3":
+    status: approved
+    strategy: "One authoritative Node evaluation/read model answers what happened after each virtual buy at every required short horizon."
+    tactic: "Add demo.buy.page bounded keyset reads that join each item to its exact baseline history row, select the first same-security history row at/after each target timestamp, compute Price change percentage and up/down/flat/unavailable direction, expose actual observation/elapsed time, and return a browser-ready flattened read model."
+    parallel_assumptions:
+      - "A bounded page times ten fixed horizons is small enough to evaluate directly from history before introducing precompute."
+      - "Centralizing calculations in Node keeps DB storage minimal and prevents browser implementations from drifting in semantics."
+    necessary_assumptions:
+      - "Persisted virtual-buy facts do not answer the user's question until later history is resolved, calculated and shaped for presentation."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "All materially new evaluation SQL passes the repository's mandatory static SQL preflight before first execution."
+      - "Real-DuckDB fixtures prove first-at-or-after matching with collected_at_ms ASC/cycle_id ASC tie-break, including delayed collection gaps."
+      - "Baseline/future NULL and zero-denominator edge cases return NULL percentage and `unavailable`; positive/negative/zero changes return `up`/`down`/`flat` exactly."
+      - "Read model includes baseline identity/display/Price, captured/provenance fields, all ten horizons, target/observed/elapsed timestamps, Price, percent and direction."
+      - "Results order capture_id DESC then selection_rank ASC with cursor-bound 500-row keyset pagination and stable continuation."
+      - "A bounded representative active-day fixture records acceptable diagnostic timing; no materialized horizon columns/background updater are added absent measured need."
+    depends_on: ["4.3.1"]
     children: []
 
   "4.4":
     status: approved
-    strategy: "The user can turn the exact current Scanner result generation into manual or automatic Demo Buy observations and inspect their short-horizon outcomes through a simple dedicated Viewer surface."
-    tactic: "Extend Scanner UI/model/client with exact canonical-ID gating, generation-stable query provenance, selected/all/Top-X capture and bounded auto All/Top-X queuing; add a top-level Demo Buy surface with refresh, keyset pagination and the fixed horizon columns while preserving Scanner scheduling and existing Current/Detail behavior."
+    strategy: "The user can create Demo Buys directly from Scanner results and later inspect a clear dedicated screen that answers whether each candidate went up, down or stayed flat over each horizon."
+    tactic: "Separate the browser work into Scanner capture controls/generation provenance and a dedicated Demo Buy outcome surface consuming only the Node read model."
     parallel_assumptions:
       - "The existing Scanner scheduler already provides the successful result-generation boundary needed for optional automatic capture."
-      - "Keeping automatic mode as Viewer-session state avoids inventing durable strategy configuration."
-      - "A horizontally scrollable table with explicit Price/% pairs is sufficient for Phase 1 and avoids premature dashboards/scorecards."
+      - "A dedicated outcome surface is clearer and less fragile than overloading Scanner results with evolving future data."
     necessary_assumptions:
-      - "Backend observations alone do not let the user conveniently select Scanner candidates or judge whether the strategy prediction succeeded."
+      - "Backend persistence/evaluation alone is not a usable strategy-validation product."
+    sufficiency_assumptions:
+      - "Scanner capture UX plus the Demo Buy outcome screen cover the complete Phase-1 user workflow from candidate selection through later inspection."
+    success_evidence:
+      - "Both browser leaves pass focused unit/browser proof and the composed normal-runtime Fake Market E2E journey."
+      - "The Viewer never reconstructs market-history horizon semantics independently of the Node read model."
+    depends_on: []
+    children: ["4.4.1", "4.4.2"]
+
+  "4.4.1":
+    status: approved
+    strategy: "The exact current Scanner result generation can be converted into manual or automatic Demo Buy capture requests without changing SQL ranking or losing source-query meaning."
+    tactic: "Extend Scanner model/surface/client with exact recognized-ID gating, generation-stable query provenance, per-row selection, Selected/All/Top-X actions and Viewer-session Auto Off/All/Top-X with serialized/bounded capture requests and visible success/failure feedback."
+    parallel_assumptions:
+      - "The Scanner result table already owns row order and the scheduler already owns successful result generations."
+      - "Session-only auto configuration is sufficient for Phase 1 and avoids a new durable strategy-settings model."
+    necessary_assumptions:
+      - "Without capture controls, the user cannot practically create the virtual-buy observations whose outcomes are being tested."
     sufficiency_assumptions: []
     success_evidence:
-      - "Unit/browser tests prove capture controls appear only with exactly one recognized securityId/security_id column, manual selection does not leak across result generations, and Top X preserves exact SQL row order."
-      - "Active-generation query ID/name/SQL provenance remains stable when another draft or saved query is edited while the generation is running."
-      - "Automatic Off/All/Top-X creates one bounded capture request per successful generation, recovers after a capture failure and does not stop Scanner scheduling."
-      - "Demo Buy screen exposes source label/capture time/Symbol/display name/baseline Price and all fixed horizon Price/% values with existing missing-value semantics, refresh and Load-more/keyset behavior."
-      - "Normal runtime + Fake Market + real service/DuckDB Chromium E2E proves selected capture, Top-X order, automatic Top-X across later generations, future NULL→observed transitions, deterministic positive/negative percentages, provenance immutability, identity-column refusal and visible recoverable capture failure."
-      - "Current, Detail/History, Scanner and Viewer lifecycle regression suites remain green and no Strategy Engine/order-execution behavior is introduced."
-    depends_on: ["4.3", "4.2", "5.2"]
+      - "Controls are available only when exactly one recognized securityId/security_id result column exists; Symbol or ambiguous columns are never guessed as identity."
+      - "Selected/All/Top-X preserve exact rendered SQL row order and stale checkbox selections do not migrate to a later result generation."
+      - "Active-generation query ID/name/exact SQL snapshot stays stable even if draft/library selection changes while that generation runs."
+      - "Auto Off/All/Top-X issues at most one bounded capture request per successful Scanner generation, recovers after capture failure and does not stop Scanner scheduling."
+      - "Successful/failed captures are visibly acknowledged with no manual price input."
+    depends_on: ["4.3.2", "4.2", "5.2"]
+    children: []
+
+  "4.4.2":
+    status: approved
+    strategy: "A dedicated Demo Buy screen makes the strategy result understandable at a glance by showing the baseline and exactly what happened afterward at every requested horizon."
+    tactic: "Add a third top-level Viewer destination that pages/refetches demo.buy.page and renders source/capture/baseline columns plus one outcome cell per fixed horizon containing Price, percentage and explicit ↑ up / ↓ down / = flat / unavailable state; include loading/empty/error, Refresh, Load more and compact provenance details."
+    parallel_assumptions:
+      - "A horizontally scrollable per-observation table is the smallest surface that exposes all ten short horizons without inventing dashboards or aggregate scorecards."
+      - "Refreshing a calculated read model naturally supports progressive horizon completion as normal history collection continues."
+    necessary_assumptions:
+      - "Persisting/calculating observations is insufficient if the user cannot inspect whether each would-be purchase actually rose or fell afterward."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "Unit/browser tests cover loading, empty, error, populated, refresh and Load-more states plus null/zero formatting."
+      - "Each visible observation shows source label, capture time, manual/automatic marker, selection rank, Symbol/display name and baseline Price."
+      - "Each 10s/20s/30s/45s/60s/90s/120s/3m/5m/10m cell shows returned Price, percent and explicit direction; unavailable results are clearly marked and direction is understandable without color alone."
+      - "Refreshing after deterministic new market cycles changes previously unavailable horizons to the Node-returned observed outcomes without mutating the stored capture."
+      - "Normal runtime + Fake Market + real service/DuckDB Chromium E2E proves manual selected capture, Top-X ordering, automatic Top-X across generations, progressive horizon completion, positive/negative/flat outcomes, provenance immutability, identity-column refusal and recoverable capture/evaluation failure."
+      - "Current, Detail/History, Scanner scheduling and Viewer lifecycle regression remain green."
+    depends_on: ["4.3.3", "5.2"]
     children: []
 
   "5":
@@ -520,12 +610,12 @@ nodes:
       - "Without re-closure, final acceptance could run against code whose new schema/UI/protocol changes have not passed the integrated release gates or whose durable documentation still describes the old candidate."
     sufficiency_assumptions: []
     success_evidence:
-      - "Canonical durable contracts and user/Scanner docs describe schema v4, Demo Buy capture/provenance/horizons/daily lifecycle and explicit Phase-2 non-goals consistently with implemented behavior."
+      - "Canonical durable contracts and user/Scanner docs describe schema v4, Demo Buy capture/provenance/evaluation/UI/horizons/daily lifecycle and explicit Phase-2 non-goals consistently with implemented behavior."
       - "Full Fast, Browser, Planning Docs and bounded Workload verification are green on the integrated Demo Buy candidate; any recurring-runtime regression is reviewed under D-US-020."
-      - "Bounded workload/local Fake Leumi automation exercises Demo Buy read/capture correctness without adding an unnecessarily huge full-day matrix."
+      - "Bounded workload/local Fake Leumi automation exercises Demo Buy capture/evaluation/read/UI correctness without adding an unnecessarily huge full-day matrix."
       - "No blocking defect or unexpected open PR remains; the feature/reclosure PR is reviewed and squash-merged and main CI is green."
       - "STATUS.yaml, .planning/STATUS.yaml, EXECUTION and handoff truth point to final target-machine leaf 7.4 and identify the exact accepted-candidate SHA rather than the older pre-Demo-Buy release SHA."
-    depends_on: ["4.4", "7.3"]
+    depends_on: ["4.4.2", "7.3"]
     children: []
 
   "7.4":
