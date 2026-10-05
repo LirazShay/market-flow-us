@@ -4,6 +4,7 @@ import path from "node:path";
 
 const TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
 const REPORT_DIR = path.resolve("test-results", "acceptance");
+const PLAYWRIGHT_CLI = path.resolve("node_modules", "@playwright", "test", "cli.js");
 const MAX_DIAGNOSTIC_CHARS = 4000;
 
 const PROFILES = Object.freeze({
@@ -30,21 +31,19 @@ function boundedSanitizedText(value) {
     .slice(-MAX_DIAGNOSTIC_CHARS);
 }
 
-async function run(command, args, { capture = false } = {}) {
+async function run(command, args) {
   return await new Promise((resolve) => {
     const child = spawn(command, args, {
       shell: false,
       env: process.env,
-      stdio: capture ? ["ignore", "pipe", "pipe"] : ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"]
     });
 
     let output = "";
     const onData = (chunk, stream) => {
       const text = chunk.toString();
       stream.write(text);
-      if (capture || text) {
-        output = `${output}${text}`.slice(-MAX_DIAGNOSTIC_CHARS * 2);
-      }
+      output = `${output}${text}`.slice(-MAX_DIAGNOSTIC_CHARS * 2);
     };
 
     child.stdout?.on("data", (chunk) => onData(chunk, process.stdout));
@@ -66,7 +65,7 @@ async function run(command, args, { capture = false } = {}) {
 }
 
 async function gitValue(args) {
-  const result = await new Promise((resolve) => {
+  return await new Promise((resolve) => {
     const child = spawn("git", args, {
       shell: false,
       stdio: ["ignore", "pipe", "ignore"]
@@ -78,7 +77,6 @@ async function gitValue(args) {
     child.on("error", () => resolve(null));
     child.on("exit", (code) => resolve(code === 0 ? stdout.trim() : null));
   });
-  return result;
 }
 
 async function candidateIdentity() {
@@ -101,15 +99,14 @@ if (!profile) {
   const startedAt = Date.now();
   const identity = await candidateIdentity();
   const args = [
-    "playwright",
+    PLAYWRIGHT_CLI,
     "test",
     TEST_FILE,
     "--reporter=line"
   ];
   if (profile.grep) args.push("--grep", profile.grep);
 
-  const executable = process.platform === "win32" ? "npx.cmd" : "npx";
-  const result = await run(executable, args, { capture: true });
+  const result = await run(process.execPath, args);
   const finishedAt = Date.now();
   const passed = result.code === 0 && result.signal === null && result.error === null;
 
