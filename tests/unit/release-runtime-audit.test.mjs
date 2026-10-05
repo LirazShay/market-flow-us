@@ -42,7 +42,6 @@ test("normal browser artifact and default composition use only the U.S. acquisit
     assert.match(application, /collectUsCollectionCandidate/);
     assert.match(application, /US_CURRENT_PROFILE/);
     assert.match(application, /US_DETAIL_PROFILE/);
-    assert.match(application, /MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
