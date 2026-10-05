@@ -6,7 +6,7 @@ current:
   chat: 7
   node: "7.1"
   title: "Integrated offline release candidate gate"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
