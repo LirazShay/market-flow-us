@@ -1,9 +1,10 @@
 version: 2
-plan_state: active
+plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "canonical_contract_alignment"
+current_stage: "frozen_waiting_for_ci"
 current_node: "demo-buy-validation"
-blockers: []
-next_action: "Demo Buy S&T is decomposed to implementation-ready responsibilities: 4.3.1 schema/migration/persistence, 4.3.2 serialized capture authority/protocol, 4.3.3 Node evaluation/read model, 4.4.1 Scanner capture UX, 4.4.2 dedicated Demo Buy outcome screen, followed by 7.5 post-feature deterministic release re-closure and deferred 7.4 target-machine acceptance. Structural dependency review found 36 nodes, 26 leaves, no missing dependencies/cycles/invalid parents/one-child decompositions. Next: align canonical PRODUCT_SPEC/DATA_CONTRACT/TECHNICAL_SPEC/TEST_STRATEGY and user/Scanner contracts with docs/DEMO_BUY_VALIDATION.md, challenge boundary details such as capture-size/provenance semantics, then run formal necessity/sufficiency/KISS + outside-in/adversarial review before freeze. Implementation remains unauthorized."
-last_review: "R-US-EXEC-REOPEN-004"
+blockers:
+  - "Required GitHub Actions/CI is currently unavailable, so the planning work unit cannot complete its required CI/merge gate and production implementation remains unauthorized."
+next_action: "When GitHub Actions is available again: run the required Planning Docs/PR CI for plan/demo-buy-validation, repair any failure, review the planning diff, squash-merge to main, verify main CI/open-PR truth, then deliberately switch root STATUS.yaml to phase: implementation at Chat 10 / node 4.3.1 and set implementation_authorized: true. Do not implement before that gate passes."
+last_review: "R-US-EXEC-REOPEN-005"
 implementation_authorized: false
