@@ -6,6 +6,7 @@ import {
   DIAGNOSTIC_CODES,
   formatCliDiagnostic
 } from "../shared/diagnostics/index.js";
+import { openMarketFlowUsDatabase } from "../local-service/database/database.js";
 import { DEFAULT_SERVICE_CONFIG } from "../local-service/server/config.js";
 import { startMarketScopeService } from "../local-service/server/service.js";
 import { startUsFakeMarket } from "../tests/fake-market/us-server.mjs";
@@ -79,6 +80,7 @@ export async function startDemo({
   buildBrowserImpl = buildBrowser,
   startFakeMarketImpl = startUsFakeMarket,
   startServiceImpl = startMarketScopeService,
+  openDatabase = openMarketFlowUsDatabase,
   diagnosticTracker = createDiagnosticTracker({ productVersion: DEMO_VERSION })
 } = {}) {
   if (typeof output !== "function") {
@@ -147,7 +149,8 @@ export async function startDemo({
         allowedOrigins: [fakeOrigin]
       },
       serviceVersion: DEMO_VERSION,
-      diagnosticTracker
+      diagnosticTracker,
+      openDatabase
     });
 
     diagnosticTracker.recordSuccess({
