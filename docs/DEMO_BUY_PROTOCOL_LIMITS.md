@@ -1,0 +1,154 @@
+# Demo Buy Protocol / Export Bounds
+
+This document owns the concrete bounded constants required by the Demo Buy + AI Investigation contracts. These limits are implementation requirements, not suggestions.
+
+## 1. Existing transport boundary
+
+The local WebSocket service keeps the existing inbound-message limit:
+
+```text
+16 MiB
+```
+
+Demo Buy must remain comfortably below that transport ceiling; it must not rely on `ws` rejecting an oversized message as ordinary product validation.
+
+## 2. Demo Buy capture provenance bounds
+
+A Demo Buy capture request is valid only when all of the following hold:
+
+```text
+selected unique items            <= 5000
+securityId UTF-16 code units     <= 128
+source SQL UTF-8 bytes           <= 1 MiB
+Scanner context source rows      <= 50
+Scanner context source columns   <= 128
+one textual/serialized cell      <= 256 UTF-8 bytes after deterministic clipping
+serialized context JSON          <= 2 MiB UTF-8
+```
+
+The browser performs the same preflight before submission and Node validates independently.
+
+The complete encoded request must still fit the existing 16 MiB WebSocket boundary.
+
+## 3. Scanner-context shaping
+
+Context is taken from the exact successful Scanner generation, never by re-running SQL.
+
+Deterministic shaping order:
+
+1. take source rows 1..50 in exact Scanner order;
+2. take source columns 1..128 in exact Scanner column order;
+3. preserve JSON-safe `null`, boolean and finite numeric values exactly;
+4. preserve strings exactly while their UTF-8 representation is <= 256 bytes;
+5. deterministically UTF-8 clip longer strings at a valid code-point boundary and mark that cell truncated;
+6. for JSON-safe non-scalar values, serialize deterministically, clip the serialized representation to the same 256-byte limit and mark its encoded/truncated form explicitly;
+7. record omitted-row/omitted-column counts and all cell-truncation metadata;
+8. serialize the complete context object and require its UTF-8 size <= 2 MiB.
+
+If deterministic shaping cannot produce a valid context within these limits, the capture fails visibly before commit. It must not silently drop additional rows/columns beyond the specified shaping rules.
+
+Context truncation never changes which rows are selected for Demo Buy and never changes an item's original `resultRank`.
+
+## 4. SQL provenance
+
+Demo Buy preserves the exact activated SQL text. If its UTF-8 size exceeds 1 MiB, Scanner execution itself may still be a valid Scanner operation, but that generation is not Demo-Buy-capturable. The Viewer explains that Demo Buy provenance exceeds the capture bound.
+
+SQL is never truncated for persisted provenance or AI Investigation.
+
+## 5. Capture acknowledgement states
+
+After request dispatch, the browser distinguishes exactly:
+
+```text
+CONFIRMED_COMMITTED
+CONFIRMED_REJECTED
+ACKNOWLEDGEMENT_UNKNOWN
+```
+
+`ACKNOWLEDGEMENT_UNKNOWN` means transport closed before a conclusive response and the capture may already have committed.
+
+Rules:
+
+- never auto-replay an acknowledgement-unknown capture;
+- block additional capture submission in that Viewer instance until explicit reconnect/relaunch;
+- after reconnect, refresh Demo Buy before the user chooses to submit another capture;
+- do not label acknowledgement-unknown as confirmed failure;
+- do not add a durable idempotency subsystem in Phase 1 unless implementation evidence proves this recovery contract inadequate.
+
+## 6. Per-connection sequencing
+
+The current local service serializes messages per WebSocket connection. Demo Buy keeps that model.
+
+Consequences:
+
+- `capturedAtMs` is assigned only inside the serialized writer operation, after any earlier same-connection and writer work;
+- browser click time is not the virtual-buy authority;
+- Demo Buy/AI-pack operations must remain bounded so they do not create an unbounded same-connection queue;
+- automatic capture never queues behind another in-flight capture; it is visibly skipped according to the Demo Buy contract.
+
+AI-pack generation may delay later requests on that Viewer socket while its bounded request is being serviced, but it must not mutate or stop Scanner scheduling state. No second transport or global server-concurrency rewrite is introduced solely for export.
+
+## 7. AI Investigation export bounds
+
+The AI Investigation Pack is bounded by evidence time rather than an arbitrary row-count sample:
+
+```text
+pre-buy history window    30 minutes ending at capturedAtMs
+post-buy history window   capturedAtMs through capturedAtMs + 10 minutes
+Scanner comparison        persisted bounded context above
+```
+
+The exporter writes evidence locally; history rows are not returned through WebSocket. The WebSocket response contains only bounded metadata, generated path and prompt text.
+
+`promptText` UTF-8 size is capped at 256 KiB. The normal generated prompt is expected to be far smaller; exceeding the cap is an export error rather than silent prompt truncation.
+
+Generated pack files may contain every persisted target-security row inside the fixed time windows, including `raw_data`; they remain local artifacts and are not copied into diagnostics or the repository.
+
+## 8. Export atomicity and naming
+
+The exporter:
+
+```text
+validate target/evidence
+→ create an internally generated temporary directory under exports/ai-investigations/
+→ write every required file
+→ fsync/close as provided by normal Node file APIs
+→ atomically rename the completed directory to its final name
+```
+
+The final directory name is generated only by Node and contains sanitized capture/security identifiers plus generation metadata and a collision-safe internally generated suffix. The browser never supplies a path.
+
+If any write or final rename fails:
+
+- no final directory is reported as complete;
+- best-effort cleanup removes the temporary directory;
+- an already-existing successful pack is never overwritten;
+- no DuckDB authority is mutated.
+
+## 9. New-day source-version boundary
+
+After schema v4 ships, `NEW_TRADING_DAY` must accept either:
+
+```text
+valid Market Flow US v3 source DB
+valid Market Flow US v4 source DB
+```
+
+It must reject v1/v2, missing required tables, partial/corrupt v3/v4 states and running producer sessions.
+
+Rollover semantics are:
+
+```text
+inspect source without mutating it
+→ read scanner_saved_queries
+→ build fresh schema-v4 DB
+→ seed saved queries transactionally
+→ archive/move original source DB as-is
+→ atomically install fresh v4 DB
+```
+
+Demo Buy/context rows are never copied into the new active day. A v4 archive remains self-contained with its history and Demo Buy evidence. A v3 archive remains a valid historical pre-Demo-Buy Market Flow US DB.
+
+## 10. Verification ownership
+
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, UTF-8 multi-byte clipping, request-size preflight, acknowledgement-unknown behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
