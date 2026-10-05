@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit is active on draft PR #16 before FR-0; A1 and A2 are complete with discovered defects fixed and branch verification green. Continue at A3 using .planning/FINAL_PREFLIGHT_PROGRESS.yaml. FR-0 remains blocked until A1-A10 close green and the audit PR is merged/main verified."
+next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit is active on draft PR #16 before FR-0; A1 and A2 are complete with discovered defects fixed and required branch verification green. Continue at A3 using .planning/FINAL_PREFLIGHT_PROGRESS.yaml. FR-0 remains blocked until A1-A10 close green and the audit PR is merged/main verified."
 last_review: "R-US-EXEC-REOPEN-004"
