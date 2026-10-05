@@ -242,7 +242,7 @@ PRIMARY KEY (capture_id, security_id)
 UNIQUE (capture_id, result_rank)
 ```
 
-`result_rank` is the original 1-based Scanner result position, not a dense selection rank.
+`result_rank` is the original 1-based Scanner **returned row position**, not a dense selection rank and not proof that the query semantically ranked that row. Stronger ranking meaning exists only when the exact Scanner SQL contains deterministic ordering logic that establishes it.
 
 The baseline relation is:
 
@@ -274,8 +274,8 @@ capture unique items              <= 5000
 Context preserves:
 
 ```text
-original row order
-original 1-based resultRank
+original returned row order
+original 1-based resultRank / returned position
 original retained-column index/name
 omitted row/column metadata
 explicit cell truncation/encoding metadata
@@ -283,9 +283,11 @@ explicit cell truncation/encoding metadata
 
 Canonical identity values are never clipped into ambiguity.
 
-For every captured item with `resultRank <= 50`, Node requires the frozen context row at that exact rank to exist and to contain the same canonical identity. A mismatch fails the complete capture before commit.
+For every captured item with `resultRank <= 50`, Node requires the frozen context row at that exact returned position to exist and to contain the same canonical identity. A mismatch fails the complete capture before commit.
 
-A target with rank > 50 is valid but later AI investigation reports `targetInScannerContext=false`.
+A target with returned position > 50 is valid but later AI investigation reports `targetInScannerContext=false`.
+
+Persisted context may contain arbitrary user-selected Scanner output because it is local forensic provenance. **Persisted context is not automatically safe to share externally.** AI export must derive the separate sharing-safe projection defined in section 16 rather than serializing this object verbatim.
 
 ## 11. Demo Buy selection/capture facts
 
@@ -297,7 +299,7 @@ all    → all source rows
 top_x  → exactly first X source rows
 ```
 
-Every chosen row must have a valid canonical identity. Duplicate IDs reduce to the first chosen occurrence in the browser; retained items keep original `resultRank`. Top X never backfills from rows after X.
+Every chosen row must have a valid canonical identity. Duplicate IDs reduce to the first chosen occurrence in the browser; retained items keep original `resultRank` / returned position. Top X never backfills from rows after X.
 
 Node accepts only already-deduped ordered `{securityId,resultRank}` items and rejects duplicate/malformed/out-of-range protocol input rather than repairing it silently.
 
@@ -415,9 +417,9 @@ AND collected_at_ms >= captured_at_ms
 AND collected_at_ms <= captured_at_ms + 10m
 ```
 
-`BASELINE.json` is the exact linked baseline row. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
+`BASELINE.json` derives from the exact linked baseline row. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
 
-`targetInScannerContext=true` only when the exact target row is present in retained context. A missing expected Top-50 target row is integrity failure; rank > 50 remains valid with `false` and no fabricated peer reconstruction.
+`targetInScannerContext=true` only when the exact target row is present in retained context. A missing expected Top-50 target row is integrity failure; returned position > 50 remains valid with `false` and no fabricated peer reconstruction.
 
 ## 15. Partial versus complete investigation evidence
 
@@ -440,11 +442,61 @@ Wall-clock passage alone does not make evidence complete. An archived day that n
 
 Complete evidence does not guarantee every target horizon has a usable Price and does not imply fillability/profitability.
 
-## 16. AI Investigation export facts
+## 16. AI Investigation sharing-safe export projection
 
-Generated packs are derivative local artifacts, never DB authority.
+Generated packs are derivative local artifacts intended for optional external sharing; they are never DB authority and **must not be raw DB/context dumps**.
 
-They may contain exact local Scanner SQL/history evidence but must not contain credentials, cookies, auth headers, account identifiers or raw authenticated HTTP/session dumps.
+### 16.1 Target history / baseline
+
+`TARGET_BEFORE.jsonl`, `BASELINE.json` and `TARGET_AFTER.jsonl` include only:
+
+```text
+cycle_id
+security_id
+universe_revision
+collected_at_ms
+documented U.S. provider/source market fields
+raw_data provider market record
+```
+
+They exclude system-owned operational/session fields including:
+
+```text
+session_id
+producer_instance_id
+source_metadata_json
+session/config/error payloads
+transport/request metadata
+absolute local paths
+```
+
+`raw_data` is allowed only under the existing contract that it is the preserved provider market record and contains no browser authentication/session material. If that source contract changes, AI export must fail/reopen planning rather than silently broadening shareable evidence.
+
+### 16.2 Scanner context
+
+`SCANNER_CONTEXT.json` is a deterministic sharing-safe projection of persisted `source_result_context_json`.
+
+Always preserve structural metadata, returned row position, canonical identity, `null`, booleans and finite numeric result values. Text content may be preserved only for the documented market-text/identity columns:
+
+```text
+securityId
+security_id
+Symbol
+PaperNameEng
+PaperNameHeb
+ExchangeName
+TradeDateTime
+CountryName
+CountryNameEng
+```
+
+Any other string/array/object result value is represented only by column/index/type plus `redactedForSharing: true` and bounded length/truncation metadata; its content is not exported.
+
+This prevents accidental system/operational disclosure from arbitrary Scanner output while still retaining numeric user-defined signals. The product does not attempt to protect a user who deliberately aliases secret content into a market-safe column or embeds a secret directly in user-authored SQL; the UI/README must explicitly remind the user that exact SQL is exported verbatim and should be reviewed before sharing.
+
+### 16.3 Manifest / diagnostics
+
+`MANIFEST.json` includes bounded counts of preserved/redacted context values and omitted operational history fields, but never redacted content. No redacted content may leak through `PROMPT.md`, `README.md`, diagnostics or WebSocket response metadata.
 
 The controlled export root is repository-relative and ignored:
 
@@ -452,9 +504,7 @@ The controlled export root is repository-relative and ignored:
 exports/ai-investigations/
 ```
 
-Viewer-visible/export-manifest paths are relative to this product root, not machine-specific absolute user paths.
-
-The browser cannot supply an output path.
+Viewer-visible/export-manifest paths are relative to this product root, not machine-specific absolute user paths. The browser cannot supply an output path.
 
 ## 17. Active-day lifecycle
 
