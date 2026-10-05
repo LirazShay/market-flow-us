@@ -1,0 +1,59 @@
+version: 1
+baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
+branch: "audit/final-preflight"
+draft_pr: 16
+current_stage: "A2"
+fr0_blocked_until_audit_closes: true
+
+stages:
+  A0: done
+  A1: done
+  A2: pending
+  A3: pending
+  A4: pending
+  A5: pending
+  A6: pending
+  A7: pending
+  A8: pending
+  A9: pending
+  A10: pending
+
+findings:
+  - id: "A1-001"
+    severity: HIGH
+    area: "browser/provider/us-screener.js"
+    finding: "Provider fetch/JSON had no hard failure bound; a stalled provider request could leave Recorder cycleInFlight true and make runtime stop/relaunch wait indefinitely."
+    fix: "Added a 10-second provider request hard bound using AbortController plus Promise.race so acquisition/parse cannot block authority lifecycle indefinitely."
+    regression: "tests/unit/final-preflight-a1.test.mjs bounds a never-settling fetch."
+    state: "fixed; branch CI pending"
+
+  - id: "A1-002"
+    severity: HIGH
+    area: "browser/runtime/producer-bridge.js + browser/runtime/application.js"
+    finding: "producer.session.stop rejection re-armed heartbeat, and a launch failure after session start did not close the partial producer session; either path could leave a live producer while runtime state was error and make relaunch conflict with ownership."
+    fix: "stopSession now fails closed and tears down transport; launch failure drains/stops Recorder and closes any already-started producer session before remaining in error."
+    regression: "tests/unit/final-preflight-a1.test.mjs covers both stop rejection and partial-launch cleanup."
+    state: "fixed; branch CI pending"
+
+  - id: "A1-003"
+    severity: MEDIUM
+    area: "browser/runtime/producer-bridge.js + browser/diagnostics/support-snapshot.js"
+    finding: "Several user-visible browser diagnostic/error strings still identified the local service as MarketScope after release branding cutover."
+    fix: "Changed reviewed A1 producer/support diagnostic strings and default producer client identity to Market Flow US."
+    regression: "Existing branding/diagnostic suites plus A9 full Fast/Browser verification."
+    state: "fixed; branch CI pending"
+
+cross_stage_observations:
+  - id: "A3-CANDIDATE-001"
+    area: "browser/viewer/client.js"
+    note: "Viewer client still contains user-visible MarketScope service strings/default client identity; review/fix under A3 rather than expanding A1 scope."
+  - id: "A8-CANDIDATE-001"
+    area: "docs/LIVE_VERIFICATION.md / TREE 7.4"
+    note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
+
+verification:
+  focused_tests_added: true
+  draft_pr_ci: pending
+  integrated_a9: pending
+
+next: "A2 — Local service, DuckDB schema, persistence, protocol and recovery"
