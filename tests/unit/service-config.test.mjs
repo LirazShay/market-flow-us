@@ -10,7 +10,7 @@ test("service config uses secure defaults and accepts repeatable exact Origins",
   const config = parseServiceConfig([
     "--allowed-origin", "https://example.test",
     "--allowed-origin", "http://127.0.0.1:9000"
-  ], { cwd: "/tmp/market-scope-config" });
+  ], { cwd: "/tmp/market-flow-us-config" });
 
   assert.equal(config.host, "127.0.0.1");
   assert.equal(config.port, DEFAULT_SERVICE_CONFIG.port);
@@ -24,7 +24,7 @@ test("service config uses secure defaults and accepts repeatable exact Origins",
   ]);
   assert.equal(
     config.dbPath,
-    path.resolve("/tmp/market-scope-config", "data", "market-scope.duckdb")
+    path.resolve("/tmp/market-flow-us-config", "data", "market-flow-us.duckdb")
   );
 });
 
@@ -34,13 +34,13 @@ test("service config accepts explicit local overrides only", () => {
     "--host", "::1",
     "--port", "0",
     "--allowed-origin", "http://localhost:3210"
-  ], { cwd: "/tmp/market-scope-config" });
+  ], { cwd: "/tmp/market-flow-us-config" });
 
   assert.equal(config.host, "::1");
   assert.equal(config.port, 0);
   assert.equal(
     config.dbPath,
-    path.resolve("/tmp/market-scope-config", "state", "test.duckdb")
+    path.resolve("/tmp/market-flow-us-config", "state", "test.duckdb")
   );
 });
 
