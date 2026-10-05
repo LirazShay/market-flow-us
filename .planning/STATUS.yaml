@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit A0-A9 is complete on draft PR #16 with integrated Fast/Browser/Workload/Planning verification green and no open BLOCKER/HIGH finding. Continue at A10 using .planning/FINAL_PREFLIGHT_PROGRESS.yaml: perform final PR review, squash merge, verify main CI/open-PR state, record the new main SHA, and leave target-machine/authenticated-provider acceptance explicitly pending_external because those external checks are not available in this chat."
+next_action: "Chat 10 / TREE 7.4 remains in progress. Final adversarial preflight audit A0-A10 is complete; PR #16 was squash-merged as ba44509f39449623a26b79132bbb1e6dfab1723c, that merge commit passed Fast/Browser/Workload/Planning Docs CI, and no open PR remained. Next is FR-0 on the target Windows machine: fetch fresh main, require a clean working tree, record the exact HEAD SHA, verify current main CI/open-PR state, then execute FR-1..FR-14 one checkpoint at a time and stop on the first FAIL. Target-machine and authenticated provider/static/market-open evidence remains pending_external until it is actually run."
 last_review: "R-US-EXEC-REOPEN-004"
