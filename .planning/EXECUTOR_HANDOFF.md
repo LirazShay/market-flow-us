@@ -2,8 +2,7 @@
 
 This is the compact GitHub-only bootstrap for numbered implementation chats.
 
-`.planning/TREE.yaml` owns Strategy, Tactic, dependencies and success evidence.
-`.planning/EXECUTION.yaml` owns chat allocation/state only.
+`.planning/TREE.yaml` owns Strategy/Tactic/dependencies/success evidence. `.planning/EXECUTION.yaml` owns chat allocation/state.
 
 ## Authorization gate
 
@@ -13,61 +12,55 @@ Production implementation is allowed only when all are true:
 .planning/STATUS.yaml -> plan_state: frozen
 .planning/STATUS.yaml -> implementation_authorized: true
 STATUS.yaml -> phase: implementation
-.planning/EXECUTION.yaml -> allocated (not chats: {})
+.planning/EXECUTION.yaml -> allocated
 ```
 
 Otherwise do not code.
-
-A frozen plan may intentionally remain in root `phase: planning` while a required planning/CI/merge gate is unavailable. That state is reviewed/prepared planning, not implementation authorization.
 
 ## Fresh executor read order
 
 For `אני צאט N תתחיל`:
 
-1. fetch current `main`;
+1. fetch fresh `main`;
 2. read `AGENTS.md`;
-3. read root `STATUS.yaml`;
+3. read `STATUS.yaml`;
 4. read `.planning/STATUS.yaml`;
 5. read this file;
 6. read `.planning/EXECUTION.yaml` and locate Chat N;
-7. read only Chat N's assigned TREE leaf nodes and their direct dependencies;
-8. verify dependency states in EXECUTION;
-9. load only routed durable contracts/tests/code;
-10. if Chat N is not the current available chat, report the blocker and do not code;
-11. otherwise use one focused feature branch for the chat work unit and execute its nodes in listed order.
+7. read only assigned TREE leaves + direct dependencies;
+8. verify every dependency is `done` in EXECUTION;
+9. load only the contracts/tests/code routed below;
+10. if Chat N/current node/dependencies do not authorize work, report blocker and do not code;
+11. otherwise create one focused feature branch and execute assigned leaves in order.
 
 Do not ask the user to restate the plan.
 
-## Context routing
+## Contract routing
 
-| Node family | Primary durable contracts/evidence |
+| Node | Primary durable truth |
 |---|---|
-| `1.*` U.S. acquisition | DATA_CONTRACT, PRODUCT_SPEC flows 2–5, TECHNICAL_SPEC provider/Recorder, TEST_STRATEGY unit/provider sections |
-| `2.*` schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence/protocol, TEST_STRATEGY service/schema sections |
-| `3.*` trusted reads/Viewer | PRODUCT_REQUIREMENTS Current/History, PRODUCT_SPEC Current/Detail, TECHNICAL_SPEC trusted reads, TEST_STRATEGY Viewer/E2E |
-| `4.1`–`4.2` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
-| `4.3.1` Demo Buy schema/persistence | DEMO_BUY_VALIDATION, AI_INVESTIGATION_PACK bounded context, DEMO_BUY_PROTOCOL_LIMITS, DATA_CONTRACT schema-v4 facts, TECHNICAL_SPEC schema version + Demo Buy tables, TEST_STRATEGY schema-v4 lifecycle |
-| `4.3.2` Demo Buy capture authority | DEMO_BUY_VALIDATION capture/provenance/concurrency, DEMO_BUY_PROTOCOL_LIMITS exact request/context/ACK bounds, AI_INVESTIGATION_PACK capture-context provenance, TECHNICAL_SPEC protocol + capture authority, TEST_STRATEGY Demo Buy capture integration |
-| `4.3.3` Demo Buy evaluation/read model | DEMO_BUY_VALIDATION horizons/read model, DATA_CONTRACT derived facts, TECHNICAL_SPEC evaluation/read model, TEST_STRATEGY trusted-read/evaluation + AGENTS SQL static preflight |
-| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_VALIDATION Scanner capture controls/auto backpressure, DEMO_BUY_PROTOCOL_LIMITS browser preflight/ACK behavior, PRODUCT_SPEC Demo Buy capture, TECHNICAL_SPEC browser workflow, TEST_STRATEGY Scanner selection model |
-| `4.4.2` Demo Buy outcome screen | DEMO_BUY_VALIDATION Viewer UX, PRODUCT_REQUIREMENTS Demo Buy validation, PRODUCT_SPEC Demo Buy Viewer, TECHNICAL_SPEC Demo Buy surface, TEST_STRATEGY Browser E2E |
-| `4.5.1` AI Investigation exporter | AI_INVESTIGATION_PACK full contract, DEMO_BUY_PROTOCOL_LIMITS export/prompt/path bounds, DATA_CONTRACT bounded context/history facts, TECHNICAL_SPEC `demo.buy.ai-pack.create`, TEST_STRATEGY AI pack unit/service proof |
-| `4.5.2` AI Investigation UI | AI_INVESTIGATION_PACK UI workflow, PRODUCT_REQUIREMENTS AI investigation outcome, PRODUCT_SPEC AI Investigation flow, TEST_STRATEGY Chromium AI pack E2E |
-| `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E + configurable synthetic generator, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
-| `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
-| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY authenticated gates |
-| `6.3` workload/tooling | TEST_STRATEGY workload correctness/performance-smoke + isolated probes, TECHNICAL_SPEC workload/generator/daily DB sections, Scanner staged-query contract, AGENTS SQL static preflight |
-| `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/bounded-workload correctness/sanity gates + all affected leaf evidence |
-| `7.2` local acceptance kit | TEST_STRATEGY Local Fake Leumi acceptance kit, configurable generator, Fake Market/runtime/service/workload reuse, target-machine launcher/report contract |
-| `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, TECHNICAL_SPEC daily DB lifecycle, US_MIGRATION_FILE_MAP and TREE success evidence |
-| `7.5` post-feature re-closure | all Demo Buy + AI Investigation canonical contracts + USER_GUIDE/SCANNER_SQL_GUIDE, full Fast/Browser/Planning/Workload gates, local Fake Leumi Demo Buy/AI proof, PR/main/open-PR truth |
-| `7.4` final target-machine acceptance | TEST_STRATEGY final target-machine bundle: local Fake Leumi + Demo Buy + AI Investigation user journey + isolated day-bounded probes + 4096x180 end-to-end performance + new-day reset/archive + authenticated static-market smoke + authenticated market-open gate |
+| `1.*` acquisition | DATA_CONTRACT, PRODUCT_SPEC, TECHNICAL_SPEC provider/Recorder, TEST_STRATEGY |
+| `2.*` market schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence, TEST_STRATEGY |
+| `3.*` reads/Viewer | PRODUCT_REQUIREMENTS, PRODUCT_SPEC, TECHNICAL_SPEC reads, TEST_STRATEGY |
+| `4.1`–`4.2` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY |
+| `4.3.1` Demo Buy schema | DEMO_BUY_VALIDATION §§5,10,16; DEMO_BUY_PROTOCOL_LIMITS; DATA_CONTRACT v4; TECHNICAL_SPEC schema; TEST_STRATEGY migration/context |
+| `4.3.2` capture authority | DEMO_BUY_VALIDATION §§3–9; DEMO_BUY_PROTOCOL_LIMITS; DECISIONS D-US-026/027/031; TECHNICAL_SPEC protocol/capture; TEST_STRATEGY capture/lost-ACK |
+| `4.3.3` evaluation/read model | DEMO_BUY_VALIDATION §§7,11–13; DEMO_BUY_PROTOCOL_LIMITS watermark; TECHNICAL_SPEC `demo.buy.page/capture.get/observation.get`; TEST_STRATEGY read/evaluation; AGENTS SQL preflight |
+| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_UX Scanner/Auto/Stop sections; PRODUCT_REQUIREMENTS Scanner/Auto; PRODUCT_SPEC Scanner/capture; TEST_STRATEGY browser model |
+| `4.4.2` Demo Buy surface | DEMO_BUY_UX capture groups/horizon layout/refresh/errors; PRODUCT_REQUIREMENTS Demo Buy UX; PRODUCT_SPEC Viewer; TEST_STRATEGY Browser E2E |
+| `4.5.1` AI exporter | AI_INVESTIGATION_PACK; DEMO_BUY_PROTOCOL_LIMITS export/watermark; DATA_CONTRACT; TECHNICAL_SPEC exporter; TEST_STRATEGY AI unit/service |
+| `4.5.2` AI UX | DEMO_BUY_UX investigation/export/clipboard sections; AI_INVESTIGATION_PACK Viewer flow; PRODUCT_SPEC; TEST_STRATEGY Chromium |
+| `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser, DATA_CONTRACT, PRODUCT_SPEC runtime |
+| `6.1` packaging | TECHNICAL_SPEC files/artifacts, build/launcher/docs tests |
+| `6.2` diagnostics/live | AGENTS diagnosability, TECHNICAL_SPEC diagnostics/live, TEST_STRATEGY authenticated gates |
+| `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC performance, shared generator, AGENTS SQL preflight |
+| `7.1`–`7.3` historical closure | TREE evidence + existing release/local acceptance contracts |
+| `7.5` post-feature reclosure | all Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + full deterministic gates + PR/main/open-PR truth |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI journey/heavy workload/new-day/authenticated gates |
 
-For every node, TREE `success_evidence` is the definition of done.
+TREE `success_evidence` is always definition-of-done.
 
-## Post-replan execution sequence
-
-The serial allocation is intentionally:
+## Post-replan serial allocation
 
 ```text
 Chat 10: 4.3.1 → 4.3.2
@@ -80,133 +73,137 @@ Chat 16: 7.5
 Chat 17: 7.4
 ```
 
-Do not jump directly to release re-closure or final target-machine acceptance. `7.5` requires the complete AI Investigation UI leaf, and `7.4` is last and depends on the exact post-feature release candidate produced by `7.5`.
+Do not skip to reclosure/acceptance. `7.5` requires the complete AI UX path; `7.4` is last.
 
-## Automation-performance responsibility
+## Demo Buy invariants
 
-Every executor owns the speed of the automated paths it touches or discovers to be materially slow.
-
-If a focused or full verification path is unexpectedly slow:
+### Selection/provenance
 
 ```text
-localize the dominant recurring cost
-→ refactor/remove duplicate work
-→ preserve the same proof
-→ remeasure wall-clock end-to-end
-→ only then continue
+choose source rows
+→ validate every identity
+→ browser dedupe by first chosen occurrence
+→ preserve original resultRank
 ```
 
-Do not normalize avoidable slowness with larger timeouts/retries. Hosted CI is correctness-first; heavy `4096 × 180` and realistic one-day performance PASS/FAIL remain target-machine evidence.
+Exact bounds live in `DEMO_BUY_PROTOCOL_LIMITS.md`: 5000 items, 1 MiB SQL, first 50 context rows, <=64 retained columns with canonical identity mandatory, 128-byte clipped textual/serialized cells, <=256 KiB context.
 
-## Daily DB lifecycle invariant
+Node rejects malformed duplicates/order/context and cross-checks selected ranks <=50 against context identity.
 
-The active production market-data DB represents one trading day.
+### Authority
 
-Demo Buy observations and their bounded Scanner-context provenance are active-day evidence linked to active-day history. They persist across service restart but do not migrate into a fresh next-day DB. New-day rotation accepts a valid v3 or v4 source, preserves saved queries, optionally archives the source unchanged, and creates a fresh schema-v4 active DB with empty Demo Buy state. Unresolved future horizons never bridge into the new DB.
-
-## Demo Buy / AI Investigation KISS invariants
-
-Do not introduce a Strategy Engine, order/fill simulator, portfolio model, background horizon worker, materialized horizon-result columns, second database/transport, cross-day strategy warehouse or auto-capture replay queue.
-
-Persist capture facts plus the bounded original Scanner comparison context only. Calculate outcomes in the trusted Node read model.
-
-AI Investigation is also local and bounded:
+No browser-supplied price.
 
 ```text
-Demo Buy observation
-→ deterministic local evidence pack
-→ user copies/uploads it to an AI of choice
+baseline = history(buy_cycle_id, security_id)
+prediction-time authority: cycle_id <= buy_cycle_id
+post-capture authority:    cycle_id > buy_cycle_id
 ```
 
-Do not add AI credentials, automatic cloud calls, web enrichment, autonomous Scanner SQL edits/activation, causal claims from one observation, or a second horizon algorithm. `OUTCOME.json` must reuse the trusted Demo Buy evaluator.
+Horizon match must also satisfy `cycle_id > buy_cycle_id` and `collected_at_ms >= captured_at_ms + H`.
 
-## Acknowledgement uncertainty invariant
+Wall-clock timestamps are diagnostics only. Preserve raw values; negative derived durations/latencies/ages become null + timing anomaly, never authority reordering.
 
-A Demo Buy capture request can commit before the WebSocket ACK reaches the Viewer. Therefore transport loss after request submission is not proof of rollback.
-
-The UI/service contract distinguishes:
+### Capture acknowledgement
 
 ```text
-confirmed committed
-confirmed rejected/rolled back
+CONFIRMED_COMMITTED
+CONFIRMED_REJECTED
 ACKNOWLEDGEMENT_UNKNOWN
 ```
 
-There is no blind automatic retry for an unknown capture result. Recovery is explicit through refresh/relaunch/inspection so duplicate observations are not created accidentally.
+Never blindly replay acknowledgement-unknown capture.
 
-## Diagnosability rule
+### Backpressure
 
-Whenever an assigned node changes an operational boundary/failure path, preserve/add the smallest stable checkpoint/error/support evidence required by AGENTS. Do not add a parallel logging framework.
+One Viewer-wide capture slot. Busy Auto generations are visibly skipped, not queued. One Viewer-wide AI-export slot; extra Generate/Regenerate actions do not queue.
 
-AI Investigation diagnostics may report pack/capture IDs, status and file counts, but must not dump full SQL/history payloads or private provider/session material.
+## Scanner/Viewer UX invariants
 
-## Donor repository rule
+- Scanner result capture always refers to the exact rendered active generation, not edited draft text.
+- Capture freezes generation + row selection synchronously before async submit.
+- Checkbox/control interaction must not trigger row-to-Detail navigation.
+- Auto is Viewer-session state, visible across surfaces and directly switchable Off.
+- Auto changes apply only to future generations; Off does not cancel an already in-flight capture.
+- Scanner has a **resumable** Stop recurring scan distinct from terminal Viewer destroy; later Activate works.
+- Demo Buy page uses capture groups, sticky identity/baseline columns and one compact cell per horizon.
+- `NO_FUTURE_OBSERVATION` is shown as Pending; other unavailable reasons remain warnings.
+- `Refresh latest` resets page one; `Load more` continues keyset walk; `Refresh observation` uses `demo.buy.observation.get` and does not reset pagination.
 
-Do not preload donor repos. Normal execution uses Market Flow US durable truth.
+## AI Investigation invariants
 
-Consult `market-scope`, `trading-us` or `market-flow` only when the assigned node explicitly cites unresolved provenance or a concrete contradiction is discovered. Write any materially resolved fact back into Market Flow US durable docs before continuing.
+AI Investigation is local evidence packaging only:
 
-## Availability
+```text
+Demo Buy observation
+→ deterministic local pack
+→ user copies/uploads to AI of choice
+```
 
-A leaf is available only when every TREE `depends_on` leaf is `done` in EXECUTION.
+No AI credential/cloud call/web enrichment/automatic Scanner mutation.
 
-Within one chat:
-- execute assigned nodes in listed order;
-- same-chat dependencies unlock as earlier nodes become done;
-- do not skip a blocked earlier assigned node.
+Prediction-time and outcome evidence obey the same `buy_cycle_id` watermark. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
 
-Across chats, root STATUS points to the current numbered chat once implementation is authorized.
+Exporter accepts no browser path, publishes temp-dir→atomic-rename under `exports/ai-investigations/`, returns a product-relative path, never overwrites a successful pack and mutates no DB.
+
+A lost export ACK may be regenerated after reconnect because export is non-mutating/collision-safe. Clipboard operations require manual-copy fallback.
+
+## Schema/new-day invariants
+
+Valid v3 migrates transactionally to v4; suspicious partial-v3 Demo structures fail closed. Fresh DB boots v4. No speculative history index.
+
+New Trading Day accepts valid v3 or v4 source, rejects v1/v2/corrupt/running states, preserves saved queries only, optionally archives source unchanged and installs fresh v4 with empty Demo Buy state.
+
+## Performance / KISS
+
+Do not add Strategy Engine, order/fill simulator, portfolio model, background horizon updater, materialized horizon columns, second DB/transport, cross-day strategy warehouse, capture replay queue or AI-agent subsystem.
+
+If recurring verification is materially slow:
+
+```text
+localize dominant cost
+→ remove duplication/waste
+→ preserve proof
+→ remeasure
+```
+
+Hosted CI is correctness-first; heavy 4096×180/day-bounded performance remains target-machine evidence.
+
+## Diagnostics/security
+
+Preserve the existing checkpoint/support architecture; do not add parallel logging.
+
+Support evidence may contain bounded status/counters/IDs but never credentials, cookies, auth/session data, raw authenticated dumps, stored SQL, Scanner/history evidence or AI prompt contents.
 
 ## Work-unit lifecycle
 
-For each assigned leaf:
+For each leaf:
 
 ```text
-set in_progress on working branch
-→ implement smallest sufficient contract
-→ focused proof
-→ required broader verification
-→ satisfy TREE success_evidence
-→ set done + concise result
-→ advance STATUS/EXECUTION on same branch
-```
-
-Then:
-
-```text
-PR
-→ required CI green
-→ review diff
+set in_progress
+→ proof/test first when practical
+→ smallest sufficient implementation
+→ focused verification
+→ required broader gates
+→ satisfy success_evidence
+→ set done/result
+→ update STATUS/EXECUTION
+→ PR
+→ CI green
+→ diff review
 → squash merge
-→ verify main CI
-→ audit open PRs
+→ main CI green
+→ open-PR audit
 ```
 
-Do not open a second evidence-only closure PR.
+A blocking defect stays with the discovering chat: root cause → fix → regression/proof → affected verification → green.
 
-If required GitHub Actions/CI is unavailable, do not substitute an unverified merge or start the next implementation unit. Keep the work blocked until the required gate can run and pass.
+If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area per FRAMEWORK, repair/review/freeze, then continue.
 
-## Planning defect discovered during execution
+If required GitHub Actions/CI is unavailable, do not merge unverified work or start the next implementation unit.
 
-Follow `FRAMEWORK.md` execution-reopen rules:
+## Final acceptance
 
-- stop the affected leaf;
-- mark it blocked with factual reason;
-- root phase -> planning;
-- plan_state -> active;
-- no node remains in_progress;
-- reopen only the smallest affected planning area;
-- preserve valid done work;
-- re-freeze and repair allocation before resuming.
+Only `7.4`/Chat 17 owns user-dependent authenticated browser, target-machine heavy performance and market-open checks. It also proves a complete local Demo Buy + AI Investigation user journey on the exact accepted SHA; sending the generated pack to an external AI is not itself an acceptance prerequisite.
 
-## Final user-dependent acceptance rule
-
-All checks that require the user's authenticated browser, target Windows machine, heavy target-machine performance or active market are allocated only to TREE `7.4` / Chat 17.
-
-Earlier chats build and automatically prove acceptance tooling with bounded deterministic fixtures. `7.4` additionally proves that the user can generate/copy/regenerate an AI Investigation Pack from a real local Demo Buy observation on the exact accepted SHA; this remains a local export and does not require sending it to any external AI as an acceptance prerequisite.
-
-## Completion discipline
-
-A chat/node result is not product completion.
-
-Overall product completion additionally requires `4.3.*`, `4.4.*`, `4.5.*`, `7.5`, final `7.4`, and the normal PR/merge/main-green closure in AGENTS.
+Overall completion requires every assigned leaf done, deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
