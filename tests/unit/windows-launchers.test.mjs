@@ -11,13 +11,14 @@ async function launcher(name) {
 }
 
 test("Windows launchers remain thin wrappers around canonical npm commands", async () => {
-  const [setup, demo, reset, tests, real, live] = await Promise.all([
+  const [setup, demo, reset, tests, real, live, newDay] = await Promise.all([
     launcher("SETUP.cmd"),
     launcher("START_DEMO.cmd"),
     launcher("RESET_DEMO.cmd"),
     launcher("RUN_TESTS.cmd"),
     launcher("START_MARKET_FLOW_US.cmd"),
-    launcher("PREPARE_LIVE_VERIFICATION.cmd")
+    launcher("PREPARE_LIVE_VERIFICATION.cmd"),
+    launcher("NEW_TRADING_DAY.cmd")
   ]);
 
   assert.match(setup, /npm ci/);
@@ -46,7 +47,12 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(live, /market-flow-us-live-verification\.bookmarklet\.txt/);
   assert.doesNotMatch(live, /MarketScope|MARKETSCOPE|market-scope/i);
 
-  for (const content of [setup, demo, reset, tests, real, live]) {
+  assert.match(newDay, /npm run db:new-day/);
+  assert.match(newDay, /data\\archive\\/);
+  assert.match(newDay, /Saved Scanner queries/);
+  assert.doesNotMatch(newDay, /\b(?:del|erase|rd|rmdir)\b/i);
+
+  for (const content of [setup, demo, reset, tests, real, live, newDay]) {
     assert.match(content, /pushd "%~dp0"/);
     assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }
