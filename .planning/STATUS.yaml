@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 implementation gaps are closed, but focused/bounded runtime verification is still pending: the current execution container cannot reach GitHub to obtain the branch and does not have the pinned project dependencies installed, while the branch has no PR-triggered workflow run yet. Do not mark 7.2 done. Obtain executable Fast/Browser/workload evidence for the exact candidate SHA, fix any blocking defect in Chat 8, then re-audit success_evidence before marking done/opening the merge PR."
+next_action: "Chat 8 focused/bounded verification is green on candidate SHA e22b11c0504ad1db857ef5f1e760c689ece43f0b via draft PR #11: Planning Docs CI, Fast CI, Browser CI, bounded end-to-end/4k-width workload, and isolated persistence/read/Scanner workload all succeeded; Browser CI also proved the local acceptance entry point. Re-audit TREE 7.2 success_evidence against these exact results before marking the node done or making the PR merge-ready."
 last_review: "R-US-EXEC-REOPEN-004"
