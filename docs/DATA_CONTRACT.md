@@ -369,6 +369,8 @@ UI formatting must never display numeric zero as missing.
 
 For Demo Buy evaluation, absence of a qualifying future history row is also distinct from a future row whose `Price` is SQL NULL. Both produce an unavailable percentage, but trusted reads may preserve enough detail to diagnose which condition occurred.
 
+A missing immutable baseline row is different again: it violates a persisted Demo Buy integrity invariant and must surface as an integrity/read error rather than `UNAVAILABLE`.
+
 ## 13. Dynamic count contract
 
 Observed on 2026-10-04:
@@ -444,11 +446,12 @@ At one serialized capture boundary:
 
 1. preserve Scanner result order;
 2. reduce duplicate canonical IDs to first occurrence;
-3. reject more than 5000 unique IDs;
-4. require at least one selected ID for an actual capture;
-5. resolve every selected ID against authoritative `latest`;
-6. store each resolved row's `cycle_id` as `buy_cycle_id`;
-7. persist one capture plus all items atomically.
+3. reject malformed/blank identities;
+4. reject more than 5000 selected/raw or unique IDs at the protocol/authority boundary;
+5. require at least one selected ID for an actual capture;
+6. resolve every selected ID against authoritative `latest`;
+7. store each resolved row's `cycle_id` as `buy_cycle_id`;
+8. persist one capture plus all items atomically.
 
 Failure to resolve any selected security fails the entire capture.
 
@@ -490,7 +493,7 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-The baseline value comes from the linked `(buy_cycle_id, security_id)` history row.
+The baseline value comes from the linked `(buy_cycle_id, security_id)` history row. That row must exist; its absence is a Demo Buy integrity failure rather than an unavailable horizon.
 
 Derived values include:
 
@@ -532,7 +535,8 @@ At new-day reset:
 - market authority tables start fresh;
 - `demo_buy_captures` and `demo_buy_items` start empty;
 - `scanner_saved_queries` are preserved/restored;
-- no Demo Buy row is copied into a DB that does not contain its referenced history.
+- no Demo Buy row is copied into a DB that does not contain its referenced history;
+- horizon evaluation never joins into the new active-day DB; any prior-day horizon without a qualifying row before rollover remains unavailable in that prior day's self-contained evidence.
 
 ## 18. External facts reserved for live verification
 
