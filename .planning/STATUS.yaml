@@ -3,5 +3,5 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.2"
 blockers: []
-next_action: "Chat 8 must close the two remaining 7.2 acceptance-audit gaps before PR: split/document FR-8A/B/C/D so failure reports identify the failing sub-checkpoint; and remove duplicated isolated read/Scanner synthetic row formulas so the shared generator/config remains the single dataset authority. The normal-runtime moving-values proof is now present. Then run the required focused/bounded verification and re-audit success_evidence."
+next_action: "Chat 8 must close the final 7.2 acceptance-audit gap before PR: remove duplicated isolated read/Scanner synthetic row formulas so the shared generator/config remains the single dataset authority. FR-8A/B/C/D now have separate normal-runtime proofs, explicit runner profiles, sub-checkpoint PASS/FAIL reporting and documented commands. Then run the required focused/bounded verification and re-audit success_evidence."
 last_review: "R-US-EXEC-REOPEN-004"
