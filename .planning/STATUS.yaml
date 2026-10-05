@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "5.2"
+current_node: "5.3"
 blockers: []
-next_action: "Chat 5 executes TREE node 5.2 next; node 5.1 is done with U.S. Fake Market proof green while legacy normal runtime remains unchanged until cutover."
+next_action: "Chat 5 executes TREE node 5.3 next; nodes 5.1 and 5.2 are done with U.S. Fake Market, normal runtime/demo cutover and required CI green."
 last_review: "R-US-EXEC-REOPEN-001"
