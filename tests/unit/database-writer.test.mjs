@@ -36,26 +36,8 @@ function createFakeConnection() {
 
   function appender(table) {
     return {
-      appendBigInt(value) {
-        events.push(["appendBigInt", table, value]);
-      },
-      appendInteger(value) {
-        events.push(["appendInteger", table, value]);
-      },
-      appendDouble(value) {
-        events.push(["appendDouble", table, value]);
-      },
-      appendVarchar(value) {
-        events.push(["appendVarchar", table, value]);
-      },
-      appendBoolean(value) {
-        events.push(["appendBoolean", table, value]);
-      },
-      appendNull() {
-        events.push(["appendNull", table]);
-      },
-      endRow() {
-        events.push(["endRow", table]);
+      appendDataChunk(chunk) {
+        events.push(["appendDataChunk", table, chunk.getRows()]);
       },
       flushSync() {
         events.push(["flush", table]);
@@ -84,7 +66,7 @@ function createFakeConnection() {
   };
 }
 
-test("serialized writer batches consecutive history/latest rows and flushes at authority boundaries", async () => {
+test("serialized writer batches consecutive history/latest rows into data chunks and flushes at authority boundaries", async () => {
   const fake = createFakeConnection();
   const writer = createSerializedWriter(fake.connection);
 
@@ -107,14 +89,19 @@ test("serialized writer batches consecutive history/latest rows and flushes at a
     fake.events.filter(([name, table]) => name === "createAppender" && table === "latest").length,
     1
   );
-  assert.equal(
-    fake.events.filter(([name, table]) => name === "endRow" && table === "history").length,
-    2
+
+  const historyChunks = fake.events.filter(
+    ([name, table]) => name === "appendDataChunk" && table === "history"
   );
-  assert.equal(
-    fake.events.filter(([name, table]) => name === "endRow" && table === "latest").length,
-    2
+  const latestChunks = fake.events.filter(
+    ([name, table]) => name === "appendDataChunk" && table === "latest"
   );
+  assert.equal(historyChunks.length, 1);
+  assert.equal(latestChunks.length, 1);
+  assert.deepEqual(historyChunks[0][2], [
+    [1n, "101", 0, 10, JSON.stringify({ securityId: "101", price: 10 })],
+    [1n, "202", 0, 20, JSON.stringify({ securityId: "202", price: 20 })]
+  ]);
 
   const rawSql = fake.events
     .filter(([name]) => name === "run")
@@ -143,7 +130,7 @@ test("serialized writer batches consecutive history/latest rows and flushes at a
   assert.ok(latestFlush >= 0 && latestFlush < updateSession);
 });
 
-test("serialized writer flushes buffered rows inside the transaction before rollback and preserves the original error", async () => {
+test("serialized writer flushes buffered chunk rows inside the transaction before rollback and preserves the original error", async () => {
   const fake = createFakeConnection();
   const writer = createSerializedWriter(fake.connection);
   const expected = new Error("synthetic F2");
@@ -162,12 +149,16 @@ test("serialized writer flushes buffered rows inside the transaction before roll
     (error) => error === expected
   );
 
+  const appendIndex = fake.events.findIndex(
+    ([name, table]) => name === "appendDataChunk" && table === "history"
+  );
   const flushIndex = fake.events.findIndex(
     ([name, table]) => name === "flush" && table === "history"
   );
   const rollbackIndex = fake.events.findIndex(
     ([name, sql]) => name === "run" && sql === "ROLLBACK"
   );
+  assert.ok(appendIndex >= 0 && appendIndex < flushIndex);
   assert.ok(flushIndex >= 0 && flushIndex < rollbackIndex);
 });
 
