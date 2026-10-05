@@ -1,10 +1,10 @@
 @echo off
 setlocal
 pushd "%~dp0"
-title MarketScope Live Verification
+title Market Flow US Live Verification
 
 if not exist "node_modules" (
-  echo [ERROR] MarketScope is not set up yet.
+  echo [ERROR] Market Flow US is not set up yet.
   echo Run SETUP.cmd first.
   echo.
   pause
@@ -13,40 +13,40 @@ if not exist "node_modules" (
 )
 
 echo ========================================
-echo MarketScope - Real Provider Verification
+echo Market Flow US - Real Provider Verification
 echo ========================================
 echo This is the bounded release verification gate.
 echo Use a clean current checkout and keep the authenticated provider page open.
-echo Stop any other MarketScope producer/service first.
+echo Stop any other Market Flow US producer/service first.
 echo.
 
-set "MARKETSCOPE_PROVIDER_URL="
-set /p "MARKETSCOPE_PROVIDER_URL=Provider page URL: "
-if not defined MARKETSCOPE_PROVIDER_URL goto :invalid_url
+set "MARKET_FLOW_US_PROVIDER_URL="
+set /p "MARKET_FLOW_US_PROVIDER_URL=Provider page URL: "
+if not defined MARKET_FLOW_US_PROVIDER_URL goto :invalid_url
 
-set "MARKETSCOPE_ORIGIN="
-for /f "delims=" %%O in ('powershell -NoProfile -Command "$u=$null; if([uri]::TryCreate($env:MARKETSCOPE_PROVIDER_URL,[System.UriKind]::Absolute,[ref]$u) -and ($u.Scheme -eq 'http' -or $u.Scheme -eq 'https') -and -not [string]::IsNullOrWhiteSpace($u.Host) -and [string]::IsNullOrEmpty($u.UserInfo)){ $u.GetLeftPart([System.UriPartial]::Authority) }"') do set "MARKETSCOPE_ORIGIN=%%O"
+set "MARKET_FLOW_US_ORIGIN="
+for /f "delims=" %%O in ('powershell -NoProfile -Command "$u=$null; if([uri]::TryCreate($env:MARKET_FLOW_US_PROVIDER_URL,[System.UriKind]::Absolute,[ref]$u) -and ($u.Scheme -eq 'http' -or $u.Scheme -eq 'https') -and -not [string]::IsNullOrWhiteSpace($u.Host) -and [string]::IsNullOrEmpty($u.UserInfo)){ $u.GetLeftPart([System.UriPartial]::Authority) }"') do set "MARKET_FLOW_US_ORIGIN=%%O"
 
-if not defined MARKETSCOPE_ORIGIN goto :invalid_url
+if not defined MARKET_FLOW_US_ORIGIN goto :invalid_url
 
 echo.
 echo Exact allowed Origin:
-echo   %MARKETSCOPE_ORIGIN%
+echo   %MARKET_FLOW_US_ORIGIN%
 echo.
 
 echo [1/2] Building the SHA-bound live verification gate...
 call npm run build:live-verification
 if errorlevel 1 goto :fail
 
-if not exist "dist\live-verification\market-scope-live-verification.bookmarklet.txt" (
+if not exist "dist\live-verification\market-flow-us-live-verification.bookmarklet.txt" (
   echo [ERROR] Live-verification bookmarklet output was not created.
   goto :fail
 )
 
 echo.
 echo [2/2] Preparing the bounded gate...
-type "dist\live-verification\market-scope-live-verification.bookmarklet.txt" | clip
-start "" notepad.exe "%~dp0dist\live-verification\market-scope-live-verification.bookmarklet.txt"
+type "dist\live-verification\market-flow-us-live-verification.bookmarklet.txt" | clip
+start "" notepad.exe "%~dp0dist\live-verification\market-flow-us-live-verification.bookmarklet.txt"
 
 echo.
 echo The live-verification bookmarklet was copied to the clipboard and opened in Notepad.
@@ -58,7 +58,7 @@ echo.
 echo Starting the dedicated loopback service with data\live-verification.duckdb...
 echo.
 
-call npm run service -- --db data/live-verification.duckdb --allowed-origin "%MARKETSCOPE_ORIGIN%"
+call npm run service -- --db data/live-verification.duckdb --allowed-origin "%MARKET_FLOW_US_ORIGIN%"
 set "RESULT=%ERRORLEVEL%"
 
 echo.
