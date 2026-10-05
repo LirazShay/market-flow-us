@@ -41,11 +41,13 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.doesNotMatch(real, /MarketScope|MARKETSCOPE|market-scope/i);
 
   assert.match(live, /npm run build:live-verification/);
-  assert.match(live, /--allowed-origin "%MARKETSCOPE_ORIGIN%"/);
+  assert.match(live, /--allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
   assert.match(live, /--db data\/live-verification\.duckdb/);
-  assert.match(live, /market-scope-live-verification\.bookmarklet\.txt/);
+  assert.match(live, /market-flow-us-live-verification\.bookmarklet\.txt/);
+  assert.doesNotMatch(live, /MarketScope|MARKETSCOPE|market-scope/i);
 
   for (const content of [setup, demo, reset, tests, real, live]) {
     assert.match(content, /pushd "%~dp0"/);
+    assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }
 });
