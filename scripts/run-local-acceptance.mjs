@@ -4,7 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
+const MEMBERSHIP_RECOVERY_TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
+const MOVING_VALUES_TEST_FILE = "tests/e2e/us-runtime-moving-values.spec.mjs";
 const REPORT_DIR = path.resolve("test-results", "acceptance");
 const DETAIL_DIR = path.join(REPORT_DIR, "details");
 const PLAYWRIGHT_CLI = path.resolve("node_modules", "@playwright", "test", "cli.js");
@@ -15,17 +16,43 @@ export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
   static: Object.freeze({
     checkpoint: "FR-7",
     kind: "playwright",
+    testFile: MEMBERSHIP_RECOVERY_TEST_FILE,
     grep: "repeated identical complete responses"
   }),
-  recovery: Object.freeze({
-    checkpoint: "FR-8",
+  moving: Object.freeze({
+    checkpoint: "FR-8A",
     kind: "playwright",
-    grep: "preserves committed authority|applies add/remove membership"
+    testFile: MOVING_VALUES_TEST_FILE,
+    grep: "moves Current values while preserving prior values in History"
+  }),
+  membership: Object.freeze({
+    checkpoint: "FR-8B",
+    kind: "playwright",
+    testFile: MEMBERSHIP_RECOVERY_TEST_FILE,
+    grep: "applies add/remove membership under acknowledged universe revisions"
+  }),
+  "provider-recovery": Object.freeze({
+    checkpoint: "FR-8C",
+    kind: "playwright",
+    testFile: MEMBERSHIP_RECOVERY_TEST_FILE,
+    grep: "records provider failure, recovers, and executes staged Scanner"
+  }),
+  restart: Object.freeze({
+    checkpoint: "FR-8D",
+    kind: "playwright",
+    testFile: MEMBERSHIP_RECOVERY_TEST_FILE,
+    grep: "preserves committed authority across service restart"
   }),
   all: Object.freeze({
     checkpoint: "FR-7+FR-8",
-    kind: "playwright",
-    grep: null
+    kind: "composite",
+    profiles: Object.freeze([
+      "static",
+      "moving",
+      "membership",
+      "provider-recovery",
+      "restart"
+    ])
   }),
   isolated: Object.freeze({
     checkpoint: "FR-9",
@@ -58,6 +85,10 @@ export function sanitizeAcceptanceDiagnostic(value) {
     .replaceAll(temp, "<temp>")
     .replace(/https?:\/\/[^\s)\]}>]+/gi, "<url>")
     .slice(-MAX_DIAGNOSTIC_CHARS);
+}
+
+function passedResult(result) {
+  return result.code === 0 && result.signal === null && result.error === null;
 }
 
 async function run(command, args, { env = process.env } = {}) {
@@ -118,11 +149,51 @@ async function candidateIdentity() {
 }
 
 async function runProfile(profile) {
+  if (profile.kind === "composite") {
+    const subchecks = [];
+    const detailReports = [];
+    const failed = [];
+
+    for (const childName of profile.profiles) {
+      const childProfile = resolveLocalAcceptanceProfile(childName);
+      if (!childProfile || childProfile.kind === "composite") {
+        throw new Error(`Invalid composite acceptance child: ${childName}`);
+      }
+      const execution = await runProfile(childProfile);
+      const childPassed = passedResult(execution.result);
+      subchecks.push({
+        profile: childName,
+        checkpoint: childProfile.checkpoint,
+        status: childPassed ? "PASS" : "FAIL",
+        exitCode: execution.result.code,
+        signal: execution.result.signal
+      });
+      detailReports.push(...execution.detailReports);
+      if (!childPassed) failed.push(`${childProfile.checkpoint}:${childName}`);
+    }
+
+    return {
+      result: {
+        code: failed.length === 0 ? 0 : 1,
+        signal: null,
+        error: failed.length === 0
+          ? null
+          : `Failed acceptance sub-checkpoints: ${failed.join(", ")}.`,
+        output: ""
+      },
+      summary: {
+        runner: "composite",
+        subchecks
+      },
+      detailReports: [...new Set(detailReports)]
+    };
+  }
+
   if (profile.kind === "playwright") {
     const args = [
       PLAYWRIGHT_CLI,
       "test",
-      TEST_FILE,
+      profile.testFile,
       "--reporter=line"
     ];
     if (profile.grep) args.push("--grep", profile.grep);
@@ -131,7 +202,7 @@ async function runProfile(profile) {
       result: await run(process.execPath, args),
       summary: {
         runner: "playwright",
-        testFile: TEST_FILE,
+        testFile: profile.testFile,
         grep: profile.grep
       },
       detailReports: []
@@ -151,7 +222,7 @@ async function runProfile(profile) {
     { env }
   );
 
-  if (result.code === 0 && result.signal === null && result.error === null) {
+  if (passedResult(result)) {
     try {
       await access(detailPath);
     } catch {
@@ -195,7 +266,7 @@ export async function runLocalAcceptanceCli(profileName = process.argv[2] ?? "al
   const execution = await runProfile(profile);
   const result = execution.result;
   const finishedAt = Date.now();
-  const passed = result.code === 0 && result.signal === null && result.error === null;
+  const passed = passedResult(result);
 
   const report = {
     schemaVersion: 1,
@@ -231,6 +302,11 @@ export async function runLocalAcceptanceCli(profileName = process.argv[2] ?? "al
 
   console.log(`\nLocal acceptance ${profileName}: ${report.status}`);
   console.log(`Report: ${path.relative(process.cwd(), reportPath)}`);
+  if (execution.summary.runner === "composite") {
+    for (const subcheck of execution.summary.subchecks) {
+      console.log(`${subcheck.checkpoint} ${subcheck.profile}: ${subcheck.status}`);
+    }
+  }
   for (const detailReport of execution.detailReports) {
     console.log(`Detail report: ${detailReport}`);
   }
