@@ -6,7 +6,7 @@ current:
   chat: 5
   node: "5.2"
   title: "Normal U.S. runtime and demo cutover"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
