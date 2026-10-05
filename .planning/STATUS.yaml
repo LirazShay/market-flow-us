@@ -1,10 +1,9 @@
 version: 2
-plan_state: frozen
+plan_state: active
 replan_mode: execution_reopen
-current_stage: "frozen_waiting_for_ci"
+current_stage: "demo_buy_comprehensive_reaudit"
 current_node: "demo-buy-validation"
-blockers:
-  - "Required GitHub Actions/CI is currently unavailable, so the planning work unit cannot complete its required CI/merge gate and production implementation remains unauthorized."
-next_action: "When GitHub Actions is available again: run the required Planning Docs/PR CI for plan/demo-buy-validation, repair any failure, review the planning diff, squash-merge to main, verify main CI/open-PR truth, then deliberately switch root STATUS.yaml to phase: implementation at Chat 10 / node 4.3.1 and set implementation_authorized: true. Do not implement before that gate passes."
+blockers: []
+next_action: "Perform a fresh cross-layer Demo Buy planning review from GOAL through decisions, TREE/dependencies, schema/data, protocol/service, evaluation semantics, Scanner/Viewer UX, tests/workload/acceptance and execution handoff. Repair every material inconsistency before re-running necessity/sufficiency/KISS/outside-in review and freezing again. Initial re-audit has already identified unresolved contract ambiguity around duplicate-ID ownership, capture provenance/timing, provenance-detail transport, and Demo Buy page sizing. Production implementation remains unauthorized."
 last_review: "R-US-EXEC-REOPEN-005"
 implementation_authorized: false
