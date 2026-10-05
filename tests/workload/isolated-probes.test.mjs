@@ -36,7 +36,8 @@ function assertSafeProfile(profile) {
     cycleCount: profile.cycleCount,
     cadenceMs: profile.cadenceMs,
     persistenceUniverseSize: profile.persistenceUniverseSize,
-    persistenceCycles: profile.persistenceCycles
+    persistenceCycles: profile.persistenceCycles,
+    widthUniverseSize: profile.widthUniverseSize
   })) {
     assert.ok(Number.isSafeInteger(value) && value > 0, `${name} must be a positive safe integer`);
   }
@@ -78,8 +79,12 @@ async function seedPersistenceAuthority(connection, universeSize, cadenceMs) {
   `);
 }
 
-async function runPersistenceProbe(profile, tempDir) {
-  const dbPath = path.join(tempDir, "isolated-persistence.duckdb");
+async function runPersistenceProbe(profile, tempDir, {
+  universeSize = profile.persistenceUniverseSize,
+  cycles = profile.persistenceCycles,
+  dbName = "isolated-persistence.duckdb"
+} = {}) {
+  const dbPath = path.join(tempDir, dbName);
   const database = await openMarketFlowUsDatabase({
     dbPath,
     productVersion: "market-flow-us-isolated-persistence"
@@ -91,8 +96,8 @@ async function runPersistenceProbe(profile, tempDir) {
     cycleAdapter: MARKET_FLOW_US_CYCLE_ADAPTER
   });
   const generator = createUsSyntheticGenerator({
-    universeSize: profile.persistenceUniverseSize,
-    cycleCount: profile.persistenceCycles,
+    universeSize,
+    cycleCount: cycles,
     cadenceMs: profile.cadenceMs,
     firstPaperId: FIRST_PAPER_ID,
     epochMs: SYNTHETIC_EPOCH_MS,
@@ -103,11 +108,11 @@ async function runPersistenceProbe(profile, tempDir) {
   try {
     await seedPersistenceAuthority(
       database.writerConnection,
-      profile.persistenceUniverseSize,
+      universeSize,
       profile.cadenceMs
     );
 
-    for (let cycle = 1; cycle <= profile.persistenceCycles; cycle += 1) {
+    for (let cycle = 1; cycle <= cycles; cycle += 1) {
       const completeCycle = buildUsCompleteCycle({ snapshot: generator.snapshot(cycle) });
       const result = await measure(commitMs, () => persistence.commitCycle({
         sessionId: "isolated-persistence",
@@ -124,14 +129,14 @@ async function runPersistenceProbe(profile, tempDir) {
         (SELECT COUNT(*) FROM cycles WHERE status = 'complete') AS completedCycles
     `);
     const [counts] = reader.getRowObjectsJson();
-    assert.equal(Number(counts.historyCount), profile.persistenceUniverseSize * profile.persistenceCycles);
-    assert.equal(Number(counts.latestCount), profile.persistenceUniverseSize);
-    assert.equal(Number(counts.completedCycles), profile.persistenceCycles);
+    assert.equal(Number(counts.historyCount), universeSize * cycles);
+    assert.equal(Number(counts.latestCount), universeSize);
+    assert.equal(Number(counts.completedCycles), cycles);
 
     return {
-      universeSize: profile.persistenceUniverseSize,
-      cycles: profile.persistenceCycles,
-      historyRows: profile.persistenceUniverseSize * profile.persistenceCycles,
+      universeSize,
+      cycles,
+      historyRows: universeSize * cycles,
       commitLatencyMs: distribution(commitMs),
       dbFileBytes: (await stat(dbPath)).size
     };
@@ -375,7 +380,7 @@ async function runReadScannerProbe(profile, tempDir) {
 test("isolated Market Flow US persistence/read/Scanner probes stay layer-specific", { timeout: 40 * 60 * 1000 }, async () => {
   const profile = resolveIsolatedProfile();
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     product: "Market Flow US",
     profileMode: workloadMode(),
     targetAuthority: profile?.targetAuthority ?? false,
@@ -387,6 +392,7 @@ test("isolated Market Flow US persistence/read/Scanner probes stay layer-specifi
     result: profile === null ? "not-applicable" : "running",
     wallClockMs: null,
     persistence: null,
+    widthCycle: null,
     readScanner: null,
     error: null
   };
@@ -398,6 +404,11 @@ test("isolated Market Flow US persistence/read/Scanner probes stay layer-specifi
     if (profile !== null) {
       assertSafeProfile(profile);
       report.persistence = await runPersistenceProbe(profile, tempDir);
+      report.widthCycle = await runPersistenceProbe(profile, tempDir, {
+        universeSize: profile.widthUniverseSize,
+        cycles: 1,
+        dbName: "isolated-width.duckdb"
+      });
       report.readScanner = await runReadScannerProbe(profile, tempDir);
       report.result = "pass";
     }
