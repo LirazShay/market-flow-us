@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   representative-workload:
-    name: 561 x 600 representative workload
+    name: 4096 x 180 representative U.S. workload
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -26,7 +26,7 @@ jobs:
 
       - name: Run representative workload
         env:
-          MARKETSCOPE_WORKLOAD_REPORT: test-results/workload/representative-workload.json
+          MARKET_FLOW_US_WORKLOAD_REPORT: test-results/workload/representative-workload.json
         run: npm run test:workload
 
       - name: Print sanitized benchmark report
