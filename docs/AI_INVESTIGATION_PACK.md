@@ -25,12 +25,14 @@ Demo Buy observation
 → Investigate with AI
 → Generate local pack
 → Copy AI Prompt / Copy folder path
-→ user uploads/pastes evidence to an AI of choice
+→ user reviews/attaches the generated evidence to an AI of choice
 → AI proposes hypotheses
 → user decides what to test in Scanner
 ```
 
 The product never automatically edits or activates Scanner SQL.
+
+The pack is designed for external sharing, so **system-owned operational/session data is excluded by construction**. The exact Scanner SQL is user-authored content and is intentionally exported verbatim; the UI therefore reminds the user not to put secrets in Scanner SQL and to review the pack before external upload.
 
 ## 3. Anti-hindsight invariant
 
@@ -60,12 +62,12 @@ Every generated prompt instructs the AI to:
 6. never claim source `Price` proves a real fill/executable trade;
 7. treat one observation as insufficient to adopt a rule;
 8. recommend validation across multiple Demo Buy observations;
-9. state explicitly when context was truncated/omitted or the target was outside retained peer context;
+9. state explicitly when context was truncated/omitted/redacted or the target was outside retained peer context;
 10. treat `resultRank` as returned row position unless the exact SQL contains deterministic ordering logic that justifies a stronger ranking interpretation; if ordering is absent/ambiguous, say so explicitly and never call row 1 “the best”, “top-ranked” or equivalent.
 
 ## 4. Evidence sources
 
-The pack uses only local persisted/immutable evidence:
+The pack is derived only from local persisted/immutable evidence:
 
 - exact capture-level Scanner SQL/provenance;
 - original selected `resultRank` (returned row position);
@@ -76,24 +78,26 @@ The pack uses only local persisted/immutable evidence:
 - trusted Demo Buy evaluator output;
 - documented field semantics/uncertainties.
 
-No credentials, cookies, auth headers, account identifiers, browser-session data or raw authenticated HTTP dumps may enter the pack.
+The generated **shareable files use the safe projections defined below**. They do not dump literal DuckDB rows or the complete persisted Scanner-context object.
+
+No credentials, cookies, auth headers, account identifiers, producer/session identifiers, browser-session data or raw authenticated HTTP dumps may enter the generated pack.
 
 ## 5. Frozen Scanner comparison context
 
-Re-running Scanner SQL later is not equivalent to the original generation because market tables continue changing. Therefore capture freezes bounded original comparison provenance.
+Re-running Scanner SQL later is not equivalent to the original generation because market tables continue changing. Therefore capture freezes bounded original comparison provenance locally.
 
-Exact shaping/bounds are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`:
+Exact capture shaping/bounds are owned by `DEMO_BUY_PROTOCOL_LIMITS.md`:
 
 ```text
 source rows: first up to 50 in exact SQL-returned order
 retained columns: <=64 total
 canonical identity column: mandatory even if originally after column 64
 textual/serialized cell: <=128 UTF-8 bytes after deterministic clipping
-serialized context: <=256 KiB UTF-8
+serialized persisted context: <=256 KiB UTF-8
 exact SQL: <=1 MiB UTF-8
 ```
 
-Context preserves:
+Persisted context preserves:
 
 ```text
 source column names/indexes
@@ -103,9 +107,9 @@ omitted row/column counts
 cell encoding/truncation metadata
 ```
 
-Numeric/null/boolean values are preserved exactly. Strings and encoded non-scalars may be clipped only by the deterministic documented rule and are explicitly marked.
+Numeric/null/boolean values are preserved exactly. Strings and encoded non-scalars may be clipped only by the deterministic documented capture rule and are explicitly marked.
 
-Context is provenance, not market authority and never changes row selection/position semantics. Persisted row order is evidence of what Scanner returned; whether that order represents a meaningful ranking is determined only by analysis of the exact SQL ordering logic.
+Persisted context is provenance, not market authority and never changes row selection/position semantics. Persisted row order is evidence of what Scanner returned; whether that order represents a meaningful ranking is determined only by analysis of the exact SQL ordering logic.
 
 ## 6. Context integrity / target coverage
 
@@ -131,7 +135,87 @@ targetInScannerContext: boolean
 
 When false, the prompt forbids pretending that the exact target row or peer neighborhood was retained.
 
-## 7. Forensic windows
+## 7. Sharing-safe evidence projection
+
+The exporter must never copy operational/session columns merely because they exist in DuckDB or were returned by arbitrary Scanner SQL.
+
+### 7.1 Target history / baseline projection
+
+`TARGET_BEFORE.jsonl`, `BASELINE.json` and `TARGET_AFTER.jsonl` contain the market-safe evidence projection only:
+
+```text
+cycle_id
+security_id
+universe_revision
+collected_at_ms
+provider/source market fields from the documented U.S. projection
+raw_data (the preserved provider market record)
+```
+
+They **exclude** system-owned operational fields including:
+
+```text
+session_id
+producer_instance_id
+source_metadata_json
+session/config/error payloads
+transport/request metadata
+absolute local paths
+```
+
+Operational timing fields not needed to answer the forensic market question are omitted rather than shared by default. `cycle_id` and `collected_at_ms` remain because they are required for authority/time reasoning.
+
+The provider `raw_data` object is allowed because the data contract defines it as the preserved market-record payload, not browser authentication/session material. If that source contract ever changes, planning must reopen before AI export continues to include it.
+
+### 7.2 Scanner-context sharing projection
+
+`SCANNER_CONTEXT.json` is a deterministic **sharing-safe projection of the persisted context**, not a raw dump.
+
+Always preserve:
+
+- row position and structural omission/truncation metadata;
+- canonical identity;
+- `null`, boolean and finite numeric result values, including user-defined numeric scores/calculations;
+- safe market-text values whose output column name is one of:
+
+```text
+securityId
+security_id
+Symbol
+PaperNameEng
+PaperNameHeb
+ExchangeName
+TradeDateTime
+CountryName
+CountryNameEng
+```
+
+For any other string/array/object result value, export structural metadata only:
+
+```text
+source column name/index
+value type
+redactedForSharing: true
+captured/truncated length metadata when available
+```
+
+Do not export its content. This intentionally favors no accidental operational/session disclosure over preserving arbitrary textual computed output. The exact SQL remains available for the AI to understand how omitted computed text was produced.
+
+This rule does not attempt to protect a malicious user who deliberately places a secret into a market-safe-named output column or directly into the SQL text. The product owns prevention of **system-generated accidental disclosure** and provides an explicit pre-share warning for user-authored SQL/evidence.
+
+### 7.3 Sharing-safety manifest
+
+`MANIFEST.json` records bounded counts of:
+
+```text
+context values preserved
+context values redacted for sharing
+operational history fields omitted
+```
+
+No redacted value content is copied into the manifest, prompt, diagnostics or README.
+
+## 8. Forensic windows
 
 ### Prediction-time target history
 
@@ -157,7 +241,7 @@ The baseline is exported separately and may also appear in the prediction-time w
 
 No interpolation occurs.
 
-## 8. Partial / complete outcome evidence
+## 9. Partial / complete outcome evidence
 
 Define:
 
@@ -173,7 +257,7 @@ There is no special “the trading day ended, therefore complete” shortcut. An
 
 Completeness does not guarantee that the target security itself has a qualifying row at every horizon; horizon-level unavailable reasons remain separate.
 
-## 9. Required bundle
+## 10. Required bundle
 
 One pack contains:
 
@@ -214,30 +298,30 @@ postWindowEndMs
 latestIncludedPostObservationMs
 outcomeEvidenceStatus
 file names / record counts
-context omission/truncation summary
+context omission/truncation/redaction summary
 ```
 
 `resultRank` in the manifest is explicitly documented as the original returned row position, not a claim that SQL semantically ranked that row.
 
 ### `QUERY.sql`
 
-Exact immutable activated SQL. Never truncated.
+Exact immutable activated SQL. Never truncated in the pack. It is user-authored text and the UI/README explicitly remind the user to review it before external sharing.
 
 ### `SCANNER_CONTEXT.json`
 
-Exact persisted bounded context and metadata. No later SQL re-run.
+Deterministic sharing-safe projection from section 7.2. No later SQL re-run and no raw operational/session-value dump.
 
 ### `TARGET_BEFORE.jsonl`
 
-Every matching authoritative target row in the prediction-time window, oldest→newest, including typed fields and preserved `raw_data`.
+Every matching authoritative target row in the prediction-time window, oldest→newest, using the safe market projection from section 7.1.
 
 ### `BASELINE.json`
 
-The exact linked `(buy_cycle_id, security_id)` history row.
+The safe market projection of the exact linked `(buy_cycle_id, security_id)` history row.
 
 ### `TARGET_AFTER.jsonl`
 
-Every matching post-capture target row in the fixed ten-minute window, oldest→newest.
+Every matching post-capture target row in the fixed ten-minute window, oldest→newest, using the safe market projection from section 7.1.
 
 ### `OUTCOME.json`
 
@@ -245,9 +329,9 @@ The exact trusted Demo Buy evaluator output for all ten horizons. A second horiz
 
 ### `FIELD_GUIDE.md`
 
-Explains canonical identity; source-shaped/empirical field semantics; wall-clock diagnostics vs writer/cycle authority; null/zero/missing distinctions; the Phase-1 non-fillability boundary; and the critical distinction between **returned result position (`resultRank`)** and a semantic rank established by explicit deterministic SQL ordering.
+Explains canonical identity; source-shaped/empirical field semantics; wall-clock diagnostics vs writer/cycle authority; null/zero/missing distinctions; the Phase-1 non-fillability boundary; sharing-safety omissions/redactions; and the critical distinction between **returned result position (`resultRank`)** and a semantic rank established by explicit deterministic SQL ordering.
 
-## 10. Prompt investigation sequence
+## 11. Prompt investigation sequence
 
 `PROMPT.md` instructs the AI to work in this order.
 
@@ -257,9 +341,9 @@ Explains canonical identity; source-shaped/empirical field semantics; wall-clock
 - identify filters, computed values and ordering/tie-break logic;
 - first determine whether the SQL actually establishes a deterministic ranking/order. If not, call `resultRank` only “returned position” and explicitly state that row position does not prove strategy preference;
 - only when SQL ordering justifies it, explain why the target occupied that ranked position;
-- when `targetInScannerContext=true`, compare the target with retained nearby returned candidates without inventing unavailable fields;
+- when `targetInScannerContext=true`, compare the target with retained nearby returned candidates without inventing unavailable/redacted fields;
 - when false, state the missing peer context and do not fabricate it;
-- report any omitted/truncated inputs that limit analysis.
+- report any omitted/truncated/redacted inputs that limit analysis.
 
 ### B. Search prediction-time warning signals
 
@@ -294,13 +378,13 @@ Prefer the smallest useful change before larger rewrites.
 
 ### E. Counterfactual/peer check
 
-State whether the change would have altered this target using only pre-buy evidence. When retained context permits, assess neighboring returned candidates; otherwise mark the counterfactual unproven. Never infer semantic rank solely from source row position.
+State whether the change would have altered this target using only pre-buy evidence. When retained sharing-safe context permits, assess neighboring returned candidates; otherwise mark the counterfactual unproven. Never infer semantic rank solely from source row position.
 
 ### F. Validation plan
 
 End with measurable multi-observation validation criteria before replacing the current Scanner query.
 
-## 11. Local export publication
+## 12. Local export publication
 
 Exporter operation:
 
@@ -314,6 +398,7 @@ Node:
 
 ```text
 validate target/evidence
+→ derive sharing-safe projections
 → create internal temp directory under exports/ai-investigations/
 → write every required file
 → close/fsync using normal Node file APIs
@@ -333,13 +418,13 @@ The returned/displayed path is **relative to the product/export root**, never an
 
 `promptText` is capped at 256 KiB UTF-8; exceeding the cap is an export error, not silent truncation.
 
-## 12. Export concurrency / lost ACK
+## 13. Export concurrency / lost ACK
 
 At most one Generate/Regenerate AI-pack request is in flight per Viewer instance. Additional export actions are disabled/refused visibly rather than queued.
 
 Transport loss after successful local publication may leave an unacknowledged valid pack. Unlike Demo Buy capture, retry after reconnect is safe because export performs no DB mutation and generates a collision-safe new directory. The product does not need an export idempotency/recovery subsystem in Phase 1.
 
-## 13. Viewer workflow
+## 14. Viewer workflow
 
 Detailed UI behavior is owned by `DEMO_BUY_UX.md`.
 
@@ -356,17 +441,24 @@ Copy folder path
 relative generated path
 ```
 
-For Partial evidence, explain that later committed evidence may change outcome-dependent files. Immutable query/context/baseline evidence never changes.
+Before Generate/Regenerate, display a concise pre-share reminder:
+
+```text
+The pack contains your exact Scanner SQL and market evidence.
+Do not place secrets in Scanner SQL; review generated files before sharing them externally.
+```
+
+For Partial evidence, explain that later committed evidence may change outcome-dependent files. Immutable query/context/baseline authority does not change; the sharing-safe projection is regenerated deterministically from it.
 
 `Copy AI Prompt` and `Copy folder path` use clipboard fallback: if automatic copy is unavailable, reveal/focus selectable text. Clipboard failure is not pack-generation failure.
 
-## 14. Determinism / regeneration
+## 15. Determinism / regeneration
 
-For identical persisted evidence and `packFormatVersion`, semantic content is deterministic except generation metadata/directory name.
+For identical persisted evidence and `packFormatVersion`, semantic shareable content is deterministic except generation metadata/directory name.
 
-Regeneration may change only evidence legitimately added since the prior pack and derived fields depending on it. Query/context/baseline remain immutable.
+Regeneration may change only evidence legitimately added since the prior pack and derived fields depending on it. Query/context/baseline authority remain immutable; the sharing-safe projection rules remain versioned by `packFormatVersion`.
 
-## 15. Verification
+## 16. Verification
 
 `TEST_STRATEGY.md` must prove at least:
 
@@ -375,6 +467,9 @@ Regeneration may change only evidence legitimately added since the prior pack an
 - authority-watermark pre/post partition including misleading wall-clock cases;
 - `resultRank` is treated as returned position by default and AI ranking language is allowed only when deterministic SQL ordering justifies it, including an unordered-query regression case;
 - targetInScannerContext true/false/integrity paths;
+- safe target-history/baseline projection excludes session/operational fields while retaining required market authority and `raw_data`;
+- Scanner-context sharing projection preserves identity/numeric/boolean/null + allowlisted market text, redacts other string/array/object values, and records omission/redaction metadata without content leakage;
+- exact user-authored SQL export plus visible pre-share warning;
 - exact baseline and trusted evaluator reuse;
 - partial→complete progression with no terminal-day shortcut;
 - deterministic bundle/prompt semantics;
@@ -384,7 +479,7 @@ Regeneration may change only evidence legitimately added since the prior pack an
 - prompt/copy path clipboard fallback;
 - no DB mutation/cloud call/AI key/automatic SQL activation.
 
-## 16. Explicit non-goals
+## 17. Explicit non-goals
 
 Not included:
 
