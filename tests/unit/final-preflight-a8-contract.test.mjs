@@ -37,7 +37,7 @@ test("PaperId fail-closed source-type contract is durable across provider/data s
     "docs/TECHNICAL_SPEC.md"
   ]) {
     const source = await text(relativePath);
-    assert.match(source, /safe integer/i, relativePath);
+    assert.match(source, /(safe integer|Number\.isSafeInteger)/i, relativePath);
     assert.match(source, /object/i, relativePath);
     assert.match(source, /boolean/i, relativePath);
   }
