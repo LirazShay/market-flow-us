@@ -36,7 +36,7 @@ chats:
 
   "7":
     nodes:
-      "6.3": { state: in_progress, result: null }
+      "6.3": { state: done, result: "A shared configurable U.S. synthetic generator now drives Fake Market and workload tooling; bounded CI proves exact counts, latest/history, restart, Current/History, general and staged Scanner correctness, isolated approximately-4k persistence width sanity, and sanitized reports, while heavy 4096 x 180 plus day-bounded profiles remain exposed for final target-machine acceptance; Fast/Browser/Planning/Workload CI are green." }
       "7.1": { state: pending, result: null }
 
   "8":
