@@ -4,7 +4,7 @@
 
 This document owns the Phase-1 browser interaction and operability contract for Demo Buy and AI Investigation.
 
-While the comprehensive replan remains `active`, this document is the normative UX owner. `PRODUCT_REQUIREMENTS`, `PRODUCT_SPEC`, `DEMO_BUY_VALIDATION`, `AI_INVESTIGATION_PACK`, `TEST_STRATEGY` and TREE success evidence must be aligned to it before freeze.
+It is the normative UX owner for the reviewed Demo Buy plan. `PRODUCT_REQUIREMENTS`, `PRODUCT_SPEC`, `DEMO_BUY_VALIDATION`, `AI_INVESTIGATION_PACK`, `TEST_STRATEGY` and TREE success evidence must remain aligned to it.
 
 The UX goal is simple:
 
@@ -15,7 +15,7 @@ Scanner says candidate
 → user can investigate one observation with AI-quality evidence
 ```
 
-The UI must expose uncertainty honestly and must not make background capture, stale timing, missing evidence or transport ambiguity look like a confirmed trading fact.
+The UI must expose uncertainty honestly and must not make background capture, stale timing, missing evidence, transport ambiguity **or returned row position** look like a stronger trading fact than the evidence supports.
 
 ## 2. Top-level navigation and persistent state
 
@@ -86,6 +86,8 @@ Top X: [input]  Demo Buy Top X
 Auto: Off | All | Top X
 ```
 
+`Top X` means source row position, not an independent semantic-ranking engine. If the SQL defines deterministic ranking through `ORDER BY`, Top X naturally follows that returned order; otherwise it still means the first X rows actually returned by Scanner.
+
 The UI keeps the distinction between **source rows chosen** and **unique captured securities** visible when duplicates exist. For example:
 
 ```text
@@ -97,7 +99,7 @@ No confirmation modal is required merely because All/Top-X contains many virtual
 `All`/`Top X`/Auto preflight failures are actionable:
 
 - missing/ambiguous identity column → “Return exactly one securityId/security_id column.”
-- invalid identity in chosen range → identify the first invalid source rank and refuse the whole action;
+- invalid identity in chosen range → identify the first invalid source position and refuse the whole action;
 - exact SQL above Demo Buy provenance bound → Scanner remains usable but capture is disabled with a provenance-size explanation;
 - context cannot satisfy bounded shaping → refuse capture and advise narrowing SELECT/result width where practical;
 - All above the unique-item bound → advise Top X or narrower SQL;
@@ -188,8 +190,10 @@ Capture header
   timing anomaly indicator when present
   View provenance / SQL
 
-  item rows ordered by original resultRank
+  item rows ordered by original Scanner returned position
 ```
+
+The persisted/protocol field may remain named `resultRank`, but user-facing copy must call it **Scanner position** / **returned position** unless the product is merely quoting the exact SQL's explicitly established ranking semantics. The Viewer does not parse SQL to invent a stronger label.
 
 Do not repeat exact SQL or large capture provenance in every item row.
 
@@ -202,7 +206,7 @@ The outcome table must remain usable despite ten horizons.
 Sticky/frozen leading columns should cover at least:
 
 ```text
-resultRank
+Scanner position
 Symbol / display name
 securityId
 baseline Price
@@ -344,13 +348,15 @@ The action opens/expands an investigation panel for that observation rather than
 Before generation, the panel shows:
 
 ```text
-captureId / security identity / original resultRank
+captureId / security identity / original Scanner position
 target in retained Scanner context: Yes / No
 outcome evidence: Partial / Complete
 current horizon progress
 ```
 
-`targetInScannerContext=false` is explanatory, not an error. The panel states that exact peer/rank reconstruction is limited but SQL/history/outcome investigation still works.
+`targetInScannerContext=false` is explanatory, not an error. The panel states that exact target-row/peer-order reconstruction is limited but SQL/history/outcome investigation still works.
+
+The panel does not call a returned position “best”, “top-ranked” or equivalent merely because `resultRank=1`. The generated AI prompt inspects the exact SQL and may make a ranking claim only when deterministic ordering/tie-break logic supports it.
 
 The panel may use `demo.buy.observation.get` to refresh the target before generation so the visible outcome state and generated pack are based on current committed evidence without requiring a list reset.
 
@@ -478,7 +484,7 @@ Do not include SQL text, Scanner result rows, history rows, absolute filesystem 
 
 - all buttons/inputs have explicit labels;
 - status changes use bounded `aria-live` regions rather than producing endless announcements;
-- checkboxes include target rank/identity in their accessible name;
+- checkboxes include target Scanner position/identity in their accessible name;
 - busy controls are disabled rather than accepting duplicate clicks;
 - focus remains usable after errors;
 - details panels have explicit open/close controls;
@@ -518,13 +524,14 @@ Focused unit/Chromium proof must include at least:
 8. busy-auto skip increments bounded status without creating queued capture requests;
 9. capture confirmed/failed/acknowledgement-unknown states are distinct and actionable;
 10. Demo Buy renders grouped capture headers plus sticky identity columns and one compact cell per horizon;
-11. a capture split across page boundaries still has a visible repeated/continued capture header;
-12. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
-13. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
-14. `Refresh observation` updates an older open target in place while newer Auto captures continue to arrive;
-15. provenance-detail failure does not erase outcomes;
-16. AI investigation panel clearly shows context coverage and partial/complete status;
-17. one export slot prevents repeated Generate/Regenerate queueing;
-18. Copy AI Prompt and Copy folder path both have clipboard fallback and only a relative export path is exposed;
-19. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
-20. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
+11. user-facing position labels remain semantically neutral, and an unordered query with returned position 1 is never presented as “best/top-ranked” solely from that position;
+12. a capture split across page boundaries still has a visible repeated/continued capture header;
+13. `NO_FUTURE_OBSERVATION` appears as Pending while non-temporal unavailable reasons appear as warnings;
+14. `Refresh latest` resets to first page while `Load more` appends and continuation failure preserves prior rows;
+15. `Refresh observation` updates an older open target in place while newer Auto captures continue to arrive;
+16. provenance-detail failure does not erase outcomes;
+17. AI investigation panel clearly shows context coverage and partial/complete status;
+18. one export slot prevents repeated Generate/Regenerate queueing;
+19. Copy AI Prompt and Copy folder path both have clipboard fallback and only a relative export path is exposed;
+20. AI export lost-ack guidance permits safe regeneration but capture lost-ack guidance forbids blind capture replay;
+21. existing Current/Detail/Scanner navigation and recurring scheduling remain usable.
