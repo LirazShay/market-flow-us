@@ -166,6 +166,100 @@ current verified requirement
 
 Tests protect observable/public contracts. Reuse imported tests wherever behavior is unchanged; adapt tests only where the U.S. contract intentionally changes.
 
+### Automation performance is a first-class correctness contract
+
+Recurring automated execution cost is product-development infrastructure and must be optimized aggressively. A test or workflow being green does **not** make excessive runtime acceptable.
+
+This rule applies to every repeatedly executed automated path, including:
+
+- GitHub Actions workflows and job topology;
+- checkout/setup/dependency installation/cache restore;
+- build and packaging steps;
+- unit/service/browser tests;
+- fixtures, Fake Market/Fake Leumi and local acceptance harnesses;
+- temporary DuckDB/bootstrap/cleanup work;
+- report generation and verification scripts;
+- benchmark/workload preparation and small probes.
+
+Measure **wall-clock feedback end-to-end**, not only the test body. A three-second test inside a seventy-second workflow is a seventy-second feedback problem.
+
+Default priority when automation becomes materially slow or regresses:
+
+```text
+identify recurring cost
+→ remove duplicated/unnecessary work
+→ improve test/fixture/code architecture
+→ improve job topology/cache/setup
+→ parallelize only where it reduces real wall time safely
+→ remeasure end-to-end
+→ keep the proof
+```
+
+Rules:
+
+- prefer refactoring automation/test code over accepting repeated waiting;
+- treat an unexplained material slowdown as an engineering defect owned by the chat that discovers it;
+- do not hide slow tests by increasing timeouts, adding retries, splitting the same expensive setup across more jobs, or moving the cost outside the measured command;
+- investigate an individually slow test when it materially dominates feedback; do not chase harmless microseconds merely because a broad suite contains many tests;
+- when several valid implementations are possible, prefer the one that keeps recurring verification cheapest while preserving correctness and diagnosability;
+- optimize the highest recurring cost first because CI/test latency compounds across every future change;
+- remove valuable coverage only when it is genuinely redundant and the remaining proof protects the same observable contract;
+- hard ceilings are emergency failure bounds, never performance targets; normal repeated feedback should remain in seconds.
+
+A broad, high-value recurring suite that exercises many real integration boundaries may legitimately take up to roughly **30 seconds wall-clock**. That is an acceptance ceiling, not a target. Before accepting such a runtime, inspect the dominant costs for removable duplication, avoidable waiting/polling, oversized fixtures/bootstrap, unnecessary I/O or serialization, and other practical optimizations that preserve the same proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, record the measured result as the **best practical verified state** and stop micro-optimizing it. Reopen performance work when timing materially regresses or architecture/data shape changes.
+
+#### Hosted CI is correctness-first
+
+GitHub-hosted runners are not the release-performance authority for this product.
+
+Use them for:
+
+- extensive unit/service/browser correctness proof;
+- bounded performance sanity and catastrophic-regression detection;
+- approximately-full-universe width checks when they remain small;
+- diagnostic timing, not target-machine SLO claims.
+
+Do not repeatedly run large end-to-end workloads in hosted CI merely because they are available. Heavy performance PASS/FAIL belongs to the final target-machine acceptance defined by TREE/TEST_STRATEGY.
+
+When measuring one component, exercise the narrowest relevant layer: persistence tests need not pay for browser/HTTP; read/Scanner tests may seed valid day-bounded data directly; only end-to-end acceptance should pay for the complete Fake Market → browser → service → DuckDB path.
+
+For meaningful changes to automation-heavy areas, inspect whether the touched path introduced or preserves avoidable repeated work. If so, fix/refactor it in the same work unit rather than carrying known automation debt forward.
+
+### SQL static preflight gate
+
+Do not manually execute, benchmark, dispatch or introduce into a first execution any **new or materially changed SQL** until it has passed at least ten explicit static validation/optimization stages.
+
+This gate applies to product SQL, Scanner SQL, benchmark/workload SQL, migration SQL and ad-hoc diagnostic SQL proposed by the executor. Existing unchanged SQL that already passed this gate and is protected by committed regression tests may run normally; reopen the gate when the query, schema, cardinality/data shape or intended scale changes materially.
+
+Before first execution, document/reason through at least these ten stages:
+
+1. **Purpose and contract** — state exactly what observable result the query must produce and what it must not change.
+2. **Schema/data-source validation** — verify every table, column, type, nullability, identity key and timing field against the current schema contract.
+3. **Cardinality estimate** — estimate input rows, rows per key, expected output rows and worst-case growth at intended scale.
+4. **Access-path inventory** — count full scans, joins, correlated subqueries, lateral lookups, repeated table visits and other potentially multiplicative operations.
+5. **Predicate/selectivity review** — prove filters are applied as early as safely possible and identify predicates that cannot reduce work.
+6. **Join and row-explosion review** — verify join keys, uniqueness assumptions and worst-case intermediate cardinality; reject accidental many-to-many expansion.
+7. **Sort/group/window review** — identify every `ORDER BY`, aggregation, window, distinct/dedup and materialization-like operation and estimate its cost.
+8. **Repeated-work elimination** — look for equivalent set-based rewrites, one-pass aggregation, reuse of already-persisted authority, or removal of duplicate projection/copy work.
+9. **Boundedness and resource review** — prove result bounds, memory/disk implications, transaction scope and failure/rollback behavior are appropriate for the intended scale.
+10. **Architecture/schema/code alternative review** — explicitly ask whether the right fix is actually outside the SQL: change the calling code, persistence flow, schema/index/precomputation strategy, data model or feature behavior rather than forcing an expensive query.
+
+After those ten, perform any additional static checks needed for the specific query. Only then may execution begin, and the first execution must be the smallest deterministic fixture/probe that can falsify the reasoning quickly.
+
+Execution discipline after preflight:
+
+```text
+10+ static validation/optimization stages
+→ smallest deterministic execution
+→ measure
+→ if slow or surprising, stop early
+→ fix SQL OR code/schema/data flow at the root cause
+→ repeat static gate when materially changed
+→ only then scale up
+```
+
+Do not use a large workload to discover an obviously poor query shape. Do not wait through long SQL runs merely to obtain a number. If a query approaches ordinary CI time budgets, stop and optimize/rethink before scaling further.
+
 ### Diagnosability-by-design
 
 Preserve the proven diagnosability model:

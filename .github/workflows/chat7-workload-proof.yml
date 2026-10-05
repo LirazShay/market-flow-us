@@ -1,0 +1,11 @@
+name: Chat 7 Workload Proof
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  representative-workload:
+    uses: ./.github/workflows/workload-ci.yml

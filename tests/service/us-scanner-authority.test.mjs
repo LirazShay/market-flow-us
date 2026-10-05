@@ -155,8 +155,12 @@ test("Market Flow US Scanner profile contains bounded current, ranking and stage
 
   const staged = builtin("builtin:staged-candidate-ranking").sql;
   for (const ageMs of [10000, 20000, 30000, 45000, 60000, 90000, 120000]) {
-    assert.ok(staged.includes(`l.collected_at_ms - ${ageMs}`), `missing ${ageMs}ms stage`);
+    assert.ok(staged.includes(`(${ageMs})`), `missing ${ageMs}ms stage`);
   }
+  assert.match(staged, /ASOF LEFT JOIN recent_history/i);
+  assert.match(staged, /min_collected_at_ms - 150000/i);
+  assert.match(staged, /matched_cycle_id IS NULL/i);
+  assert.match(staged, /ORDER BY h\.collected_at_ms DESC, h\.cycle_id DESC/i);
   assert.match(staged, /security_id AS securityId/);
   assert.match(staged, /ORDER BY stage_reached DESC/);
 });
@@ -288,6 +292,77 @@ test("staged candidate ranking gives only contiguous credit, stops on missing hi
     const missing = rows.find((row) => row.securityId === "5001");
     assert.equal(missing.price_10s_ago, 90);
     assert.equal(missing.price_20s_ago, null);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+test("staged candidate ranking preserves exact old fallback and does not replace a recent NULL price", async () => {
+  const fixture = await createFixture();
+  const writer = fixture.database.writerConnection;
+
+  try {
+    await insertLatest(writer, {
+      cycleId: 700,
+      securityId: "6001",
+      symbol: "OLD",
+      price: 100,
+      changePercent: 2,
+      dailyVolume: 1000
+    });
+    await insertHistory(writer, {
+      cycleId: 601,
+      securityId: "6001",
+      collectedAtMs: 0,
+      price: 90
+    });
+
+    await insertLatest(writer, {
+      cycleId: 800,
+      securityId: "7001",
+      symbol: "NULL",
+      price: 100,
+      changePercent: 1,
+      dailyVolume: 500
+    });
+    await insertHistory(writer, {
+      cycleId: 701,
+      securityId: "7001",
+      collectedAtMs: 40000,
+      price: 80
+    });
+    await insertHistory(writer, {
+      cycleId: 702,
+      securityId: "7001",
+      collectedAtMs: CURRENT_AT_MS - 10000,
+      price: null
+    });
+
+    const result = await fixture.scanner.execute(
+      builtin("builtin:staged-candidate-ranking").sql
+    );
+    const rows = rowsAsObjects(result);
+
+    const oldGap = rows.find((row) => row.securityId === "6001");
+    assert.ok(oldGap);
+    assert.equal(oldGap.stage_reached, 7);
+    for (const field of [
+      "price_10s_ago",
+      "price_20s_ago",
+      "price_30s_ago",
+      "price_45s_ago",
+      "price_60s_ago",
+      "price_90s_ago",
+      "price_120s_ago"
+    ]) {
+      assert.equal(oldGap[field], 90, field);
+    }
+
+    const nullRecent = rows.find((row) => row.securityId === "7001");
+    assert.ok(nullRecent);
+    assert.equal(nullRecent.price_10s_ago, null);
+    assert.equal(nullRecent.price_20s_ago, 80);
+    assert.equal(nullRecent.stage_reached, 0);
   } finally {
     await fixture.cleanup();
   }

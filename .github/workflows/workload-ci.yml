@@ -1,17 +1,44 @@
 name: Market Flow US Workload
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "browser/**"
+      - "local-service/**"
+      - "shared/**"
+      - "tests/fake-market/**"
+      - "tests/workload/**"
+      - "scripts/run-workload-profile.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/workload-ci.yml"
+  pull_request:
+    paths:
+      - "browser/**"
+      - "local-service/**"
+      - "shared/**"
+      - "tests/fake-market/**"
+      - "tests/workload/**"
+      - "scripts/run-workload-profile.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/workload-ci.yml"
   workflow_dispatch:
   workflow_call:
+
+concurrency:
+  group: market-flow-us-workload-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  representative-workload:
-    name: 561 x 600 representative workload
+  bounded-end-to-end:
+    name: Bounded end-to-end and 4k-width sanity
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 4
 
     steps:
       - uses: actions/checkout@v4
@@ -24,26 +51,68 @@ jobs:
       - name: Install pinned dependencies
         run: npm ci
 
-      - name: Run representative workload
+      - name: Run bounded end-to-end profiles
         env:
-          MARKETSCOPE_WORKLOAD_REPORT: test-results/workload/representative-workload.json
-        run: npm run test:workload
+          MARKET_FLOW_US_WORKLOAD_PROFILE: ci
+          MARKET_FLOW_US_WORKLOAD_REPORT: test-results/workload/ci-end-to-end.json
+        run: node --test tests/workload/representative-workload.test.mjs
 
-      - name: Print sanitized benchmark report
+      - name: Print sanitized end-to-end report
         if: always()
         shell: bash
         run: |
-          if [[ -f test-results/workload/representative-workload.json ]]; then
-            cat test-results/workload/representative-workload.json
+          if [[ -f test-results/workload/ci-end-to-end.json ]]; then
+            cat test-results/workload/ci-end-to-end.json
           else
-            echo "Representative workload report was not produced."
+            echo "Bounded end-to-end workload report was not produced."
           fi
 
-      - name: Upload sanitized workload report
+      - name: Upload sanitized end-to-end report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: market-flow-us-workload-${{ github.run_id }}-${{ github.run_attempt }}
+          name: market-flow-us-workload-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 30
-          path: test-results/workload/representative-workload.json
+          path: test-results/workload/ci-end-to-end.json
+
+  isolated-probes:
+    name: Isolated persistence and read Scanner sanity
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Run isolated probes
+        env:
+          MARKET_FLOW_US_WORKLOAD_PROFILE: ci
+          MARKET_FLOW_US_ISOLATED_REPORT: test-results/workload/ci-isolated.json
+        run: node --test tests/workload/isolated-probes.test.mjs
+
+      - name: Print sanitized isolated report
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f test-results/workload/ci-isolated.json ]]; then
+            cat test-results/workload/ci-isolated.json
+          else
+            echo "Isolated workload report was not produced."
+          fi
+
+      - name: Upload sanitized isolated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-flow-us-workload-isolated-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: test-results/workload/ci-isolated.json

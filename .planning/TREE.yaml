@@ -5,7 +5,7 @@ nodes:
   "0":
     status: approved
     strategy: "Market Flow US is a complete, locally runnable and verifiable U.S.-market analysis product that preserves the proven MarketScope operating model while replacing only Israel-specific provider/data assumptions."
-    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and bounded live cutover/release closure."
+    tactic: "Complete seven necessary migration capabilities: U.S. acquisition, U.S. data authority, trusted U.S. reads/surfaces, Scanner strategy adaptation, deterministic offline proof, operational packaging/verification infrastructure, and staged local/target-machine release acceptance."
     parallel_assumptions:
       - "The exhaustive 124-file migration audit and reviewed U.S. contracts identify the material conversion boundaries."
       - "Preserving proven MarketScope mechanisms is lower-risk than reconstructing them."
@@ -18,8 +18,8 @@ nodes:
       - "Every implementation-ready leaf is completed with its stated evidence."
       - "The authoritative runtime no longer depends on MapHeat2/GetSecuritiesData or Israeli typed market fields."
       - "Current, Detail/History and Scanner operate over schema-v3 U.S. authority."
-      - "Fast CI, Browser CI and the representative U.S. workload are green on the final candidate."
-      - "The bounded authenticated U.S. provider gate is PASS."
+      - "Fast CI, Browser CI and bounded correctness/performance-smoke verification are green on the final candidate; GitHub-hosted CI is not the authority for heavy target-machine performance."
+      - "The local Fake Leumi acceptance tooling is proven and the final target-machine bundle passes daily-bounded mock/performance, static-provider and market-open authenticated checks."
       - "Final branding/docs/launchers describe Market Flow US and main is green with no blocking defect."
     depends_on: []
     children: ["1", "2", "3", "4", "5", "6", "7"]
@@ -79,7 +79,7 @@ nodes:
     tactic: "Introduce a fresh U.S. schema-v3 market projection, adapt universe/cycle persistence to the new fields and one-segment payload, and prove exact commit/rollback/session behavior with real DuckDB."
     parallel_assumptions:
       - "The existing six market-authority tables plus scanner_saved_queries remain sufficient; only their U.S. projection and compatibility policy need change."
-      - "Rejecting old MarketScope DB schemas is safer than semantically converting Israeli history into U.S. facts."
+      - "Rejecting old MarketScope v1/v2 DB schemas is safer than semantically converting Israeli history into U.S. facts."
     necessary_assumptions:
       - "Validated browser data is not trusted product authority until Node persists it atomically."
     sufficiency_assumptions:
@@ -272,7 +272,7 @@ nodes:
       - "Browser E2E and demo need a real HTTP provider boundary matching the new production adapter."
     sufficiency_assumptions: []
     success_evidence:
-      - "Fake Market tests cover complete response, reorder, add/remove, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay and advancing values."
+      - "Fake Market tests cover complete response, repeated-identical/static response, reorder, add/remove, duplicate/missing PaperId, recordCount mismatch, null/zero/missing, malformed shape, HTTP error, delay and advancing values."
       - "Fixtures contain only synthetic/sanitized data."
     depends_on: ["1.1"]
     children: []
@@ -303,24 +303,25 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - "Full Browser suite is green against U.S. Fake Market."
-      - "E2E proves Current, Detail/History, Scanner, saved-query behavior, refresh preservation, Viewer/producer independence, explicit recovery and add/remove membership."
+      - "E2E proves Current, Detail/History, Scanner, saved-query behavior, refresh preservation, Viewer/producer independence, explicit recovery, repeated-identical/static commits and add/remove membership."
     depends_on: ["3.2", "3.3", "4.2", "5.2"]
     children: []
 
   "6":
     status: approved
-    strategy: "Market Flow US is operationally packaged, diagnosable and measured at representative U.S. scale before any live release claim."
-    tactic: "Complete product branding/local launchers, adapt diagnostics/live-verification tooling, and replace the representative workload with U.S.-scale data plus staged SQL measurement."
+    strategy: "Market Flow US is operationally packaged, diagnosable and supplied with correctness-first scalable test tooling before any live release claim."
+    tactic: "Complete product branding/local launchers, adapt diagnostics/live-verification tooling, and replace the old workload with configurable U.S. synthetic generation plus bounded CI sanity and target-machine performance instrumentation."
     parallel_assumptions:
       - "The imported operational tooling is structurally reusable but contains MarketScope/provider/561-specific assumptions."
+      - "GitHub-hosted runners are useful for deterministic correctness and catastrophic performance regression detection, but are not representative of the user's stronger target machine."
     necessary_assumptions:
-      - "A working browser/runtime is not release-ready without correct packaging, diagnostics, scale evidence and a U.S.-aware live gate."
+      - "A working browser/runtime is not release-ready without correct packaging, diagnostics, scalable test tooling and a U.S.-aware live gate."
     sufficiency_assumptions:
-      - "Packaging/branding, diagnosability/live-gate tooling and representative workload jointly prepare a verifiable release candidate."
+      - "Packaging/branding, diagnosability/live-gate tooling and configurable correctness/performance harnesses jointly prepare a verifiable release candidate without turning CI into a hardware benchmark."
     success_evidence:
       - "User-facing package/artifact/DB/launcher names are Market Flow US."
       - "Diagnostics remain sanitized and localize U.S. provider/runtime failures."
-      - "4096 x 180 workload is correct and reports staged-query measurements."
+      - "Configurable U.S. workload tooling proves counts/reads/Scanner/restart correctness with bounded CI smoke and can generate the heavy target-machine profiles required by final acceptance."
     depends_on: []
     children: ["6.1", "6.2", "6.3"]
 
@@ -358,87 +359,127 @@ nodes:
 
   "6.3":
     status: approved
-    strategy: "Representative U.S. scale is measured for persistence, reads, restart and staged Scanner SQL before release."
-    tactic: "Replace the 561 x 600 Israeli workload with 4096 synthetic U.S. securities x 180 cycles, U.S. field generation and the required Scanner/staged query measurement/report."
+    strategy: "Scalable U.S. workload tooling proves correctness broadly and provides small CI performance sanity without treating weak hosted runners as the release-performance authority."
+    tactic: "Refactor the representative workload around deterministic configurable synthetic generation shared with Fake Market/test support; add isolated persistence/read/Scanner probes, bounded CI smoke profiles, and a user-runnable heavy profile including 4096 synthetic securities x 180 end-to-end cycles."
     parallel_assumptions:
-      - "4096 x 180 is large enough to expose approximately-4k scaling issues while remaining a practical manual/CI-dispatch workload."
+      - "Correctness should be exercised extensively in CI with small deterministic fixtures, while heavy timing conclusions belong on the intended target machine."
+      - "Component probes should avoid paying for browser/provider/runtime layers that are irrelevant to the metric being measured."
+      - "The active market-data database is intended to cover one trading day, not months or years of accumulated history."
       - "Measurement-first is preferable to adding unproven temporal precomputation."
     necessary_assumptions:
-      - "Small deterministic tests cannot establish whether direct history SQL is practical at intended U.S. scale."
+      - "Without configurable and isolated probes, large end-to-end workloads waste feedback time and obscure which component caused a slowdown."
     sufficiency_assumptions: []
     success_evidence:
-      - "Workload proves 180 completed cycles, 4096 latest rows, 737280 history rows, restart count preservation and zero failed cycles."
-      - "Report contains commit/Current/History/general Scanner/staged Scanner/restart/DB-size measurements."
-      - "If staged SQL is materially impractical, this node does not close; the smallest performance planning area is reopened."
+      - "Automated correctness proof validates generated U.S. rows, exact counts, latest/history authority, restart preservation, Current/History/general Scanner/staged Scanner behavior and report integrity using bounded fixtures."
+      - "CI includes only small deterministic performance sanity profiles, including at least one approximately-4k-width cycle sanity check, and records timing diagnostically without claiming target-machine performance PASS."
+      - "Synthetic generation is externally configurable for universe size, cycle/history shape, logical cadence/data pattern and deterministic failure/recovery needs; Fake Market and load tooling reuse the same generator rather than duplicating giant fixtures."
+      - "Scanner/read performance probes can seed a day-bounded synthetic history directly instead of replaying every end-to-end cycle when the browser/transport/persistence path is not under test."
+      - "The heavy 4096 x 180 end-to-end profile and day-bounded component profiles are exposed for final target-machine acceptance with sanitized measurements; they are not required to pass on GitHub-hosted CI."
     depends_on: ["2.3", "4.1"]
     children: []
 
   "7":
     status: approved
-    strategy: "The migrated product is proven offline, validated on the real authenticated U.S. provider boundary and released with no authoritative Israel-only runtime assumptions."
-    tactic: "Run final offline gates on one candidate, execute the bounded live-provider gate, then perform final migration/documentation/main-state closure."
+    strategy: "The migrated product is proven offline, packaged for deterministic local acceptance, cleaned for release, and finally accepted on the target machine against daily-bounded load plus both a static authenticated provider and an active real market."
+    tactic: "Run final correctness-first offline gates on one candidate, build a configurable one-command Fake Leumi/local-performance acceptance kit, perform final migration/documentation cleanup including daily-data lifecycle instructions, then execute all user-dependent target-machine acceptance checks as the last leaf."
     parallel_assumptions:
-      - "Deterministic offline proof should precede expensive/external live verification."
-      - "The live gate is needed only for provider/browser facts that cannot be proven offline."
+      - "Deterministic offline correctness and local-fake proof should precede user-dependent authenticated verification."
+      - "Heavy performance results are machine-dependent and should be authoritative only on the user's intended local machine."
+      - "A static/closed market can prove provider shape/transport/authority even when quote values legitimately repeat."
+      - "Observable real market movement can only be accepted honestly when the market is active, so that check belongs at the final boundary rather than blocking development."
     necessary_assumptions:
       - "Implementation is not complete merely because individual migration branches pass in isolation."
     sufficiency_assumptions:
-      - "Final offline proof, bounded real-provider PASS and release audit together establish end-to-end completion."
+      - "Final CI correctness/sanity proof, reusable configurable local Fake Leumi acceptance, release cleanup, target-machine daily-bounded mock/performance PASS, static-provider smoke PASS and market-open authenticated PASS together establish end-to-end completion."
     success_evidence:
-      - "Final candidate Fast CI, Browser CI and U.S. workload are green."
-      - "Real-provider gate reports overall PASS."
+      - "Final candidate Fast CI, Browser CI and bounded workload correctness/performance-smoke verification are green."
+      - "Local Fake Leumi acceptance tooling and isolated load probes are automatically proven before release cleanup."
+      - "Final target-machine bundle reports PASS for local daily-bounded mock/performance, closed/static authenticated smoke and market-open authenticated acceptance."
       - "Final repository audit finds no authoritative MapHeat2/GetSecuritiesData/Israeli-field runtime path and main is green."
     depends_on: []
-    children: ["7.1", "7.2", "7.3"]
+    children: ["7.1", "7.2", "7.3", "7.4"]
 
   "7.1":
     status: approved
-    strategy: "One release candidate passes every deterministic offline gate before live verification."
-    tactic: "Run full Fast, full Browser and representative U.S. workload on the integrated candidate; fix any migration regressions at their owning leaf before accepting the candidate."
+    strategy: "One release candidate passes every deterministic offline correctness gate plus bounded performance sanity before acceptance packaging and final external verification."
+    tactic: "Run full Fast, full Browser and the bounded CI workload correctness/sanity profiles on the integrated candidate; fix deterministic regressions at their owning leaf without using hosted-runner heavy timing as release-performance authority."
     parallel_assumptions:
       - "A single integrated candidate gate catches cross-branch drift that focused leaf tests may miss."
+      - "Hosted CI can detect catastrophic regressions with small probes while target-machine acceptance owns heavy timing conclusions."
     necessary_assumptions:
-      - "Live provider testing should not be used to discover deterministic product regressions."
+      - "Authenticated provider testing and heavy target-machine benchmarking should not be used to discover deterministic product regressions."
     sufficiency_assumptions: []
     success_evidence:
       - "Fast CI is green."
       - "Browser CI is green."
-      - "U.S. representative workload is green with a sanitized report."
+      - "Bounded U.S. workload correctness/performance-smoke profiles are green with sanitized diagnostic reports."
       - "No blocking deterministic defect remains."
-      - "Fast/Browser feedback remains within the imported test-feedback guidance or any measured regression has a documented irreducible cause; no avoidable focused+full duplication is added."
+      - "Fast/Browser feedback remains within the test-feedback guidance or any measured regression has a documented irreducible cause; no avoidable focused+full duplication is added."
     depends_on: ["5.3", "6.2", "6.3"]
     children: []
 
   "7.2":
     status: approved
-    strategy: "The release candidate works through the real authenticated Bank Leumi U.S. provider boundary without weakening security or authority semantics."
-    tactic: "Run the SHA-bound bounded live gate for at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence on the supported authenticated provider page, and treat any contract-changing failure as a planning/implementation blocker rather than bypassing it."
+    strategy: "Market Flow US provides a deterministic configurable local Fake Leumi acceptance package that proves static-market correctness, synthetic movement/failures, restart behavior and isolated/end-to-end load tooling without requiring market hours or authentication."
+    tactic: "Reuse the canonical U.S. Fake Market, normal runtime, real local service/DuckDB and the configurable generator/workload support to expose documented one-command acceptance profiles; add only the smallest orchestration/reporting needed for static identical responses, moving values, membership changes, failure/recovery, restart, isolated component probes and user-runnable heavy target-machine profiles."
     parallel_assumptions:
-      - "The live gate is the smallest safe way to prove provider shape, current one-request completeness and browser loopback compatibility."
+      - "The existing Fake Market/runtime/service/workload contain the required product boundaries, so sharing one configurable synthetic generator is lower-risk than creating a second simulator or giant fixture family."
+      - "Repeated identical complete responses are a legitimate closed/static-market condition and should still create durable history without false universe revisions."
+      - "Performance probes are more diagnostic when each profile exercises only the layers relevant to the metric."
     necessary_assumptions:
-      - "Provider/CSP/session behavior is external and cannot be honestly certified by Fake Market alone."
+      - "CI/E2E components alone do not give the user a simple target-machine acceptance flow or prove that static market values are intentionally supported."
     sufficiency_assumptions: []
     success_evidence:
-      - "Sanitized report is SHA-bound and overall PASS."
-      - "Report proves the bounded sustained U.S. run, revision handling, COMMIT ACK for every cycle, final Current, Security, History containing the live cycles, Scanner, ownership and clean stop."
-      - "No credential/session/private response material is committed."
+      - "A documented local acceptance command/launcher uses the normal runtime/service/DuckDB and synthetic ScreenerHulPaging3 boundary; no parallel product implementation is introduced."
+      - "Automated bounded proof covers repeated identical responses, moving values, add/remove membership, provider failure/recovery, restart and sanitized PASS/FAIL reporting."
+      - "The same generator/config mechanism drives small CI fixtures, isolated persistence/read/Scanner probes and the heavy target-machine 4096 x 180 profile without duplicated hard-coded market datasets."
+      - "Acceptance tooling can create a day-bounded synthetic history directly for read/Scanner performance tests without replaying irrelevant browser/transport work."
+      - "No credentials/authenticated response material are required or stored."
     depends_on: ["7.1"]
     children: []
 
   "7.3":
     status: approved
-    strategy: "Repository truth, local run instructions and final runtime contain only the intended Market Flow US product direction and are ready for normal use from main."
-    tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, update durable docs/status/handoff truth, merge through green CI and verify main."
+    strategy: "Repository truth, local run/acceptance instructions and final runtime contain only the intended Market Flow US product direction and are ready for target-machine acceptance."
+    tactic: "Perform final migration/branding audit, remove or rename superseded Israel-only authoritative runtime artifacts, document local Fake Leumi/final authenticated acceptance and the one-trading-day active-DB lifecycle, update durable docs/status/handoff truth, merge through green CI and verify main readiness."
     parallel_assumptions:
       - "Cleanup after replacement proof is safer than deleting donor behavior early."
+      - "Target-machine acceptance is most useful after the exact candidate and user instructions are stable."
+      - "The active market-data DB is operational working state for one trading day; prior-day data may be archived before starting a fresh daily authority set rather than accumulated indefinitely."
     necessary_assumptions:
-      - "A technically passing candidate can still be operationally misleading if old provider paths/names remain authoritative."
+      - "A technically passing candidate can still be operationally misleading if old provider paths/names remain authoritative, acceptance instructions do not match reality, or daily storage lifecycle is undefined."
     sufficiency_assumptions: []
     success_evidence:
       - "Audit proves no authoritative MapHeat2/GetSecuritiesData or Israeli typed-field runtime dependency remains."
-      - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior."
+      - "START_HERE/USER_GUIDE/README/Scanner guide and launchers match actual U.S. behavior and document local/static/market-open acceptance clearly."
+      - "User documentation defines the active DB as one trading day, with a safe stop/archive/new-day procedure that does not silently accumulate unbounded market history and preserves the saved-query library across a new-day reset."
       - "No unexpected pre-existing/open PR conflicts with the release work unit."
       - "The release branch is internally consistent and ready for the normal PR/CI/squash-merge workflow defined by AGENTS.md."
-      - "STATUS/handoff changes on the release branch point to the completion transition that becomes authoritative only after merge."
+      - "STATUS/handoff changes on the release branch point to final target-machine acceptance rather than claiming completion before user-dependent checks."
     depends_on: ["7.2", "6.1"]
+    children: []
+
+  "7.4":
+    status: approved
+    strategy: "The exact final Market Flow US candidate is accepted on the user's target machine through daily-bounded local Fake Leumi/load proof, authenticated static-market compatibility and authenticated market-open movement."
+    tactic: "Run the documented final acceptance bundle only after release cleanup: first target-machine local Fake Leumi modes, isolated day-bounded read/Scanner/persistence probes and the 4096 x 180 end-to-end profile, then a lightweight authenticated closed/static-market smoke that permits repeated equal values, and finally the SHA-bound market-open gate with at least 20 complete cycles spanning at least 60 seconds and observable provider market/freshness change."
+    parallel_assumptions:
+      - "Deferring all user-dependent checks to one final leaf lets deterministic development finish without pretending external evidence already exists."
+      - "Performance is authoritative on the intended stronger target machine rather than the weaker hosted CI runner."
+      - "The production active DB is bounded to one trading day, so target performance must be evaluated against realistic daily data shapes rather than artificial multi-month/year growth."
+      - "Static-provider compatibility and moving-market evidence prove different facts and neither should be substituted for the other."
+      - "The final market-open run is bounded enough to be practical while still proving repeated real acquisition/commit/read behavior with actual changing provider data."
+    necessary_assumptions:
+      - "Automated Fake Market proof cannot establish the user's actual machine/browser/provider compatibility, target-machine performance or real market movement."
+    sufficiency_assumptions: []
+    success_evidence:
+      - "User-run local Fake Leumi acceptance reports PASS for static, moving, failure/recovery and restart modes on the target machine."
+      - "User-run 4096 x 180 end-to-end mock workload reports correct counts/measurements and completes within the target-machine acceptance ceiling."
+      - "User-run isolated persistence/read/Scanner profiles exercise configurable one-trading-day-sized synthetic data without irrelevant full-system layers and emit sanitized measurements."
+      - "New-day lifecycle proof shows prior-day data can be archived/reset safely, the fresh active market tables start clean, and saved queries remain available."
+      - "Authenticated closed/static-market smoke records at least 5 consecutive complete committed responses, accepts repeated equal values, and proves Current/Security/History/bounded Scanner/ownership/clean stop with a sanitized SHA-bound report."
+      - "Authenticated market-open report is SHA-bound and PASS after at least 20 consecutive complete cycles spanning at least 60 seconds, with at least one observable provider market/freshness value change reflected in committed Current/History plus bounded Scanner/ownership/clean stop."
+      - "No credential/session/private response material is committed or copied into reports."
+      - "If an active-market run observes no change, the movement-specific result remains inconclusive/pending rather than fabricating or weakening evidence."
+    depends_on: ["7.3"]
     children: []

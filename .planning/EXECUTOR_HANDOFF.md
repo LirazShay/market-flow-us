@@ -43,15 +43,62 @@ Do not ask the user to restate the plan.
 | `2.*` schema/authority | DATA_CONTRACT, TECHNICAL_SPEC schema/persistence/protocol, TEST_STRATEGY service/schema sections |
 | `3.*` trusted reads/Viewer | PRODUCT_REQUIREMENTS Current/History, PRODUCT_SPEC Current/Detail, TECHNICAL_SPEC trusted reads, TEST_STRATEGY Viewer/E2E |
 | `4.*` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY Scanner |
-| `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
+| `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser E2E + configurable synthetic generator, DATA_CONTRACT, relevant PRODUCT_SPEC runtime flows |
 | `6.1` packaging/branding | TECHNICAL_SPEC artifact/file naming, PRODUCT_SPEC branding, package/build/launcher/docs tests |
-| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY live gate |
-| `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC workload, Scanner staged-query contract |
-| `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/workload final gates + all affected leaf evidence |
-| `7.2` real provider | DATA_CONTRACT external facts, PRODUCT_SPEC live verification, TEST_STRATEGY real-provider gate |
-| `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, US_MIGRATION_FILE_MAP and TREE success evidence |
+| `6.2` diagnostics/live harness | AGENTS diagnosability, PRODUCT_REQUIREMENTS diagnostics, TECHNICAL_SPEC diagnostics/live boundary, TEST_STRATEGY authenticated gates |
+| `6.3` workload/tooling | TEST_STRATEGY workload correctness/performance-smoke + isolated probes, TECHNICAL_SPEC workload/generator/daily DB sections, Scanner staged-query contract, AGENTS SQL static preflight |
+| `7.1` final offline candidate | TEST_STRATEGY Fast/Browser/bounded-workload correctness/sanity gates + all affected leaf evidence |
+| `7.2` local acceptance kit | TEST_STRATEGY Local Fake Leumi acceptance kit, configurable generator, Fake Market/runtime/service/workload reuse, target-machine launcher/report contract |
+| `7.3` release closure | GOAL, root STATUS, AGENTS, README/user docs, TECHNICAL_SPEC daily DB lifecycle, US_MIGRATION_FILE_MAP and TREE success evidence |
+| `7.4` final target-machine acceptance | TEST_STRATEGY final target-machine bundle: local Fake Leumi + isolated day-bounded probes + 4096x180 end-to-end performance + new-day reset/archive + authenticated static-market smoke + authenticated market-open gate |
 
 For every node, TREE `success_evidence` is the definition of done.
+
+## Automation-performance responsibility
+
+Every executor owns the speed of the automated paths it touches or discovers to be materially slow.
+
+Do not treat CI/test runtime as somebody else's infrastructure problem. The recurring cost of setup, build, fixtures, service/database startup, tests, browser harnesses, cleanup and reports is part of the engineering outcome.
+
+If a focused or full verification path is unexpectedly slow:
+
+```text
+localize the dominant recurring cost
+→ refactor/remove duplicate work
+→ preserve the same proof
+→ remeasure wall-clock end-to-end
+→ only then continue
+```
+
+Do not respond to avoidable slowness by increasing timeouts/retries or by accepting a green-but-slow test. Follow the AGENTS automation-performance contract and TEST_STRATEGY time budgets.
+
+A broad, high-value recurring suite that exercises many real integration boundaries may legitimately take up to roughly 30 seconds wall-clock. That is an acceptance ceiling, not a target. Before accepting such a runtime, inspect the dominant costs and verify there is no material removable duplication, avoidable waiting/polling, oversized fixture/bootstrap cost, unnecessary I/O or serialization, or other practical optimization that preserves the same proof. If no meaningful improvement remains without weakening evidence or adding disproportionate complexity, record that result as the **best practical verified state** and stop micro-optimizing it.
+
+### Hosted CI vs target-machine performance
+
+Hosted CI is correctness-first. Use extensive deterministic correctness tests and only small bounded performance sanity probes there.
+
+Do **not** promote GitHub-runner timing into release-performance authority and do not repeatedly run heavy `4096 × 45`/`4096 × 180` workloads there merely because the workflow can be dispatched.
+
+For performance questions:
+
+```text
+use smallest relevant component probe
+→ isolate the layer being measured
+→ use configurable synthetic generation
+→ record CI timing diagnostically
+→ reserve heavy PASS/FAIL for TREE 7.4 on the user's target machine
+```
+
+The full `4096 × 180` end-to-end profile and one-trading-day-sized read/Scanner/persistence profiles are final target-machine evidence.
+
+## Daily DB lifecycle invariant
+
+The active production market-data DB represents one trading day, not indefinite multi-day history.
+
+Executors must not optimize around artificial months/years of active history unless a future contract explicitly introduces that capability.
+
+Release/acceptance work must preserve saved queries while allowing prior-day market authority to be archived/reset safely before the next trading day.
 
 ## Diagnosability rule
 
@@ -122,8 +169,16 @@ Follow `FRAMEWORK.md` execution-reopen rules:
 - preserve valid done work;
 - re-freeze and repair allocation before resuming.
 
+## Final user-dependent acceptance rule
+
+All checks that require the user's authenticated browser, target Windows machine, heavy target-machine performance or active market are intentionally allocated only to TREE `7.4` / Chat 10.
+
+Earlier chats must build and automatically prove the acceptance tooling with bounded deterministic fixtures without asking the user to perform those checks early.
+
+`7.4` remains pending until the user supplies/runs the required target-machine checks. Do not reinterpret a static market as failure: the closed/static smoke explicitly allows repeated equal values. Do not reinterpret a static smoke as moving-market proof: the market-open check must observe real provider market/freshness change.
+
 ## Completion discipline
 
 A chat/node result is not product completion.
 
-Overall product completion additionally requires TREE 7.1, 7.2 and 7.3 outcomes plus the normal PR/merge/main-green closure in AGENTS.
+Overall product completion additionally requires TREE 7.1, 7.2, 7.3 and 7.4 outcomes plus the normal PR/merge/main-green closure in AGENTS.

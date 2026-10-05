@@ -117,7 +117,7 @@ The U.S. migration should prefer adapting payload validation over creating a sec
 
 ## 7. DuckDB authority
 
-Keep one Node-owned DuckDB with:
+Keep one Node-owned **active-day** DuckDB with:
 
 ```text
 schema_info
@@ -136,8 +136,10 @@ Keep:
 - separate Scanner connection;
 - external-access/extension/secret hardening;
 - transactional complete-cycle authority;
-- append-only successful history;
+- append-only successful history **within the active trading day**;
 - full-table `latest` replacement inside the same transaction.
+
+The active database is not intended to accumulate intraday history across months/years. Daily rollover is defined in section 23.
 
 ## 8. Schema version policy
 
@@ -254,19 +256,20 @@ No temporal predecessor-link columns are added.
 
 ## 12. Persistence transaction
 
-Successful commit:
+Successful commit preserves the existing authority semantics:
 
 ```text
 validate session/revision/exact membership
 → BEGIN
 → allocate cycle_id
 → insert cycle
-→ insert every history row
-→ DELETE FROM latest
-→ insert every latest row
+→ persist every history row
+→ replace latest from that committed cycle
 → update session success state
 → COMMIT
 ```
+
+The implementation may use bulk/set-wise writer optimizations as long as the observable transaction and fault semantics stay identical.
 
 Fault at any point rolls back all authority changes.
 
@@ -311,16 +314,7 @@ No Strategy Engine is added.
 
 ## 15. Staged candidate built-in
 
-The built-in is ordinary SQL over `latest` and `history`.
-
-For each age it uses a correlated/lateral latest-prior lookup by:
-
-```text
-history.security_id = latest.security_id
-history.collected_at_ms <= latest.collected_at_ms - age_ms
-ORDER BY collected_at_ms DESC, cycle_id DESC
-LIMIT 1
-```
+The built-in remains ordinary SQL over `latest` and `history` and preserves exact nearest-prior semantics for each security/anchor.
 
 Initial ages:
 
@@ -334,9 +328,18 @@ Initial stage predicate:
 latest.Price > prior.Price
 ```
 
+The implementation uses a bounded recent-history hot path with nearest-prior/ASOF-style matching plus exact fallback for missing recent matches, preserving:
+
+```text
+same security_id
+prior collected_at_ms <= target anchor
+highest collected_at_ms
+then highest cycle_id tie-break
+```
+
 The SQL computes contiguous `stage_reached`, exposes `security_id AS securityId`, and orders by stage plus explicit tie-breakers.
 
-This query is mechanically tested against the actual schema and included in workload measurement.
+New/materially changed Scanner SQL must pass the static preflight contract before execution. Correctness is mechanically tested against the actual schema. Heavy timing authority is measured on day-bounded target-machine profiles rather than weak hosted CI.
 
 ## 16. Diagnostics
 
@@ -359,7 +362,7 @@ live verification
 
 Support Snapshot remains sanitized and bounded.
 
-## 17. Fake Market
+## 17. Fake Market and synthetic generator
 
 Replace provider paths/fixtures, not the overall fake architecture.
 
@@ -370,6 +373,20 @@ Fake Market serves:
 - deterministic stateful U.S. rows.
 
 It must not require Playwright interception for normal scenarios.
+
+Fake Market and workload/performance tooling share one deterministic synthetic generator/profile boundary. The profile must support at least:
+
+```text
+universe size
+cycle/history count or logical day shape
+logical cadence/timestamps
+static or moving value pattern
+membership-change schedule
+failure/recovery schedule
+reproducible seed
+```
+
+The generator can be used directly by component tests so a persistence probe does not need a browser, and a read/Scanner probe can seed a day-bounded DB without replaying every end-to-end cycle.
 
 ## 18. Build and artifact naming
 
@@ -387,17 +404,32 @@ Global runtime/live-result keys should be renamed coherently to `MARKET_FLOW_US`
 ## 19. Local file naming
 
 ```text
-production DB: data/market-flow-us.duckdb
+production active DB: data/market-flow-us.duckdb
 demo DB: .demo/market-flow-us.duckdb
 live DB: data/live-verification.duckdb
 Windows launcher: START_MARKET_FLOW_US.cmd
 ```
 
+Prior-day archive naming/location must be deterministic and documented by the new-day tooling, but does not require a new storage subsystem.
+
 Keep SETUP/START_DEMO/RESET_DEMO/RUN_TESTS/PREPARE_LIVE_VERIFICATION names unless a user-facing reason requires additional rename.
 
-## 20. Workload
+## 20. Workload and performance profiles
 
-U.S. representative workload:
+Workload tooling is profile-driven rather than one monolithic benchmark.
+
+### Hosted CI
+
+CI is correctness-first and uses bounded profiles:
+
+- extensive unit/service/browser correctness;
+- small multi-cycle history/Scanner profile;
+- at least one approximately-4096-security width sanity cycle/few cycles;
+- timing recorded diagnostically only.
+
+Do not require the full heavy workload to pass on GitHub-hosted hardware.
+
+### Target-machine end-to-end profile
 
 ```text
 4096 synthetic securities
@@ -405,11 +437,21 @@ U.S. representative workload:
 737280 history rows
 ```
 
-It is a manually triggered proof layer, not Fast CI.
+This profile measures the real pipeline end to end and retains the 5-minute target-machine acceptance ceiling unless later evidence explicitly reopens it.
 
-Measure distributions, do not invent latency SLOs.
+### Isolated profiles
 
-If staged SQL is materially impractical at this scale, reopen only Scanner/history performance before release.
+Use the narrowest layer that can answer the performance question:
+
+```text
+persistence → generated validated cycles → writer/DuckDB
+reads/Scanner → efficiently seed day-bounded history → read/Scanner connections
+end-to-end → Fake Market → browser → WebSocket/service → DuckDB
+```
+
+Read/Scanner profiles may seed the configured one-trading-day history directly. They must preserve schema/cardinality/timestamp/null/tie-break invariants but need not pay for irrelevant browser/transport/commit work.
+
+Measure distributions; do not invent hosted-runner latency SLOs.
 
 ## 21. Security
 
@@ -427,4 +469,27 @@ Preserve:
 
 Live verification uses the production U.S. adapter/protocol for a bounded sustained run of at least 20 consecutive complete cycles spanning at least 60 seconds at the candidate cadence. Every cycle must validate and receive COMMIT ACK; final Current/History/Scanner authority is then checked before clean stop.
 
-This proves short-run continuous provider/browser operation and product authority end-to-end but never substitutes for deterministic offline tests or claims a long-duration provider SLA.
+This proves short-run continuous provider/browser operation and product authority end-to-end but never substitutes for deterministic offline tests, target-machine load/performance acceptance, or claims a long-duration provider SLA.
+
+## 23. Daily active-DB lifecycle
+
+The active market-data authority covers one trading day.
+
+The release must provide the smallest safe documented new-day operation:
+
+```text
+stop producer/service cleanly
+→ optionally archive prior-day market DB/data
+→ create/reset fresh schema-v3 active market authority
+→ preserve scanner saved-query library
+→ start the new trading day
+```
+
+Requirements:
+
+- no automatic indefinite accumulation of prior-day `cycles/history/latest/universe/sessions` in the active DB;
+- prior-day archive is optional operational retention, not an always-open analytics database;
+- saved queries survive the new-day operation;
+- archive/reset never occurs while the active writer owns the DB;
+- failure leaves either the prior active DB or a valid fresh DB recoverable; do not silently destroy the only copy;
+- performance tests model at most one configured trading day's active history unless a separate future feature explicitly introduces multi-day analytics.

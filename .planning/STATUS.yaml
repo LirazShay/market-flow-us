@@ -1,7 +1,7 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "6.3"
+current_node: "7.1"
 blockers: []
-next_action: "Chat 7 executes TREE node 6.3 next; Chat 6 nodes 6.1-6.2 are done with required Fast/Browser/Planning verification green."
-last_review: "R-US-EXEC-REOPEN-001"
+next_action: "Chat 7 next executes TREE node 7.1: run the integrated deterministic offline release-candidate gate now that 6.3 workload tooling is closed and ready to land on main."
+last_review: "R-US-EXEC-REOPEN-004"

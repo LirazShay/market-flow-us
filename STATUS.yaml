@@ -1,12 +1,12 @@
 schema_version: 2
 phase: implementation
-overall_status: ready
+overall_status: in_progress
 
 current:
   chat: 7
-  node: "6.3"
-  title: "Representative U.S. scale workload"
-  status: ready
+  node: "7.1"
+  title: "Integrated offline release candidate gate"
+  status: pending
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -27,7 +27,7 @@ planning_completion:
   implementation_authorization: pass
 
 execution:
-  chats_total: 9
-  implementation_leaves_total: 19
+  chats_total: 10
+  implementation_leaves_total: 20
   current_chat: 7
-  current_node: "6.3"
+  current_node: "7.1"
