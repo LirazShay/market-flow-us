@@ -6,7 +6,7 @@ current:
   chat: 6
   node: "6.2"
   title: "U.S. diagnostics and live-verification harness"
-  status: ready
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
