@@ -21,14 +21,16 @@ selected unique items            <= 5000
 securityId UTF-16 code units     <= 128
 source SQL UTF-8 bytes           <= 1 MiB
 Scanner context source rows      <= 50
-Scanner context retained columns <= 128 total, including the canonical identity column
-one textual/serialized cell      <= 256 UTF-8 bytes after deterministic clipping
-serialized context JSON          <= 2 MiB UTF-8
+Scanner context retained columns <= 64 total, including the canonical identity column
+one textual/serialized cell      <= 128 UTF-8 bytes after deterministic clipping
+serialized context JSON          <= 256 KiB UTF-8
 ```
 
 The browser performs the same preflight before submission and Node validates independently.
 
 The complete encoded request must still fit the existing 16 MiB WebSocket boundary.
+
+These limits deliberately bound **daily persistence cost**, not only transport size. Automatic capture may execute repeatedly through a trading day, so a multi-megabyte provenance blob per generation is not acceptable even when it technically fits the WebSocket. The 50-row comparison depth is retained because peer ranking is valuable; width/value size is bounded instead.
 
 ## 3. Scanner-context shaping
 
@@ -40,15 +42,15 @@ Deterministic shaping order:
 
 1. take source rows 1..50 in exact Scanner order;
 2. retain the recognized canonical identity column unconditionally;
-3. fill the remaining retained-column budget with the earliest source columns in exact Scanner order, skipping the identity column if already encountered, for at most 128 retained columns total;
+3. fill the remaining retained-column budget with the earliest source columns in exact Scanner order, skipping the identity column if already encountered, for at most 64 retained columns total;
 4. preserve original source-column indexes/names and record every omitted source column so the AI can distinguish retained evidence from missing evidence;
 5. preserve JSON-safe `null`, boolean and finite numeric values exactly;
-6. preserve strings exactly while their UTF-8 representation is <= 256 bytes;
+6. preserve strings exactly while their UTF-8 representation is <= 128 bytes;
 7. deterministically UTF-8 clip longer strings at a valid code-point boundary and mark that cell truncated;
-8. for JSON-safe non-scalar values, serialize deterministically, clip the serialized representation to the same 256-byte limit and mark its encoded/truncated form explicitly;
+8. for JSON-safe arrays/objects, encode canonical JSON with array order preserved and object keys sorted lexicographically; clip the serialized representation to the same 128-byte limit and mark its encoded/truncated form explicitly;
 9. preserve each context row's original 1-based `resultRank`;
 10. record omitted-row/omitted-column counts and all cell-truncation metadata;
-11. serialize the complete context object and require its UTF-8 size <= 2 MiB.
+11. serialize the complete context object deterministically and require its UTF-8 size <= 256 KiB.
 
 If deterministic shaping cannot produce a valid context within these limits, the capture fails visibly before commit. It must not silently drop additional rows/columns beyond the specified shaping rules.
 
@@ -108,20 +110,22 @@ Consequences:
 - Demo Buy/AI-pack operations must remain bounded so they do not create an unbounded same-connection queue;
 - automatic capture never queues behind another in-flight capture; it is visibly skipped according to the Demo Buy contract.
 
-AI-pack generation may delay later requests on that Viewer socket while its bounded request is being serviced, but it must not mutate or stop Scanner scheduling state. No second transport or global server-concurrency rewrite is introduced solely for export.
+AI-pack generation may delay the next Scanner request on that Viewer socket while its bounded request is being serviced, but the existing Scanner scheduler must remain non-overlapping so this cannot grow an unbounded request backlog. No second transport or global server-concurrency rewrite is introduced solely for export.
 
-### Timing invariants
+### Timing diagnostics are not authority
 
-Capture provenance must satisfy:
+Scanner `startedAtMs`/`completedAtMs`, market `collectedAtMs` and Demo Buy `capturedAtMs` are wall-clock diagnostics. Writer/cycle ordering is the authority boundary.
+
+Validate `sourceResultStartedAtMs <= sourceResultCompletedAtMs` because both values come from one Scanner execution. Do **not** fail a valid capture merely because wall-clock adjustment makes `sourceResultCompletedAtMs > capturedAtMs` or `baselineCollectedAtMs > capturedAtMs`.
+
+Instead:
 
 ```text
-sourceResultStartedAtMs <= sourceResultCompletedAtMs <= capturedAtMs
-baselineCollectedAtMs <= capturedAtMs
+captureLatencyMs = capturedAtMs - sourceResultCompletedAtMs when non-negative, else null + timingAnomaly
+baselineAgeMs    = capturedAtMs - baselineCollectedAtMs when non-negative, else null + timingAnomaly
 ```
 
-The first inequality is validated from the submitted Scanner-generation provenance; capture time is server-owned. The baseline timestamp invariant is validated after resolving the exact `buy_cycle_id` row. Violations are integrity/provenance errors, not negative latency values to be clamped away.
-
-`captureLatencyMs` and `baselineAgeMs` therefore remain non-negative derived diagnostics. The product never treats browser click time as authoritative timing.
+The raw persisted timestamps remain unchanged. A timing anomaly is diagnostic and must not be clamped to zero or used to reorder authority.
 
 ## 7. Capture-time authority watermark
 
@@ -190,7 +194,7 @@ The exact baseline is exported separately and may also appear in the prediction-
 Define:
 
 ```text
-evidenceWatermarkMs = MAX(history.collected_at_ms) in the currently opened DB
+evidenceWatermarkMs = MAX(history.collected_at_ms) from committed cycles after the capture watermark in the currently opened DB
 postWindowEndMs     = captured_at_ms + 10 minutes
 ```
 
@@ -242,6 +246,8 @@ If any write or final rename fails:
 - an already-existing successful pack is never overwritten;
 - no DuckDB authority is mutated.
 
+Transport loss after a completed export may leave a valid local pack whose path was not acknowledged to the Viewer. Retrying pack generation after explicit reconnect is safe because it performs no DB mutation; it may create another valid pack rather than trying to discover/reuse the unacknowledged one. This is intentionally different from Demo Buy capture, which must never be blindly replayed.
+
 ## 11. New-day source-version boundary
 
 After schema v4 ships, `NEW_TRADING_DAY` must accept either:
@@ -268,4 +274,4 @@ Demo Buy/context rows are never copied into the new active day. A v4 archive rem
 
 ## 12. Verification ownership
 
-Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-128 retention, context↔item rank/identity mismatch rejection, UTF-8 multi-byte clipping, request-size preflight, source-result timing inversions, baseline timestamp inversions, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
+Focused unit/service tests must cover every numeric bound and boundary transition above, including exact-limit and limit+1 cases, identity-column-beyond-64 retention, context↔item rank/identity mismatch rejection, canonical object-key ordering, UTF-8 multi-byte clipping, request-size preflight, Scanner started/completed inversion rejection, wall-clock anomaly nullable diagnostics, acknowledgement-unknown behavior, authority-watermark anti-hindsight cases, horizon `cycle_id > buy_cycle_id`, partial/complete evidence watermark behavior, AI-pack lost-ACK safe-regeneration behavior, export cleanup/collision behavior and v3/v4 new-day rollover.
