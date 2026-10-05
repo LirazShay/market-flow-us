@@ -166,6 +166,41 @@ current verified requirement
 
 Tests protect observable/public contracts. Reuse imported tests wherever behavior is unchanged; adapt tests only where the U.S. contract intentionally changes.
 
+### SQL static preflight gate
+
+Do not manually execute, benchmark, dispatch or introduce into a first execution any **new or materially changed SQL** until it has passed at least ten explicit static validation/optimization stages.
+
+This gate applies to product SQL, Scanner SQL, benchmark/workload SQL, migration SQL and ad-hoc diagnostic SQL proposed by the executor. Existing unchanged SQL that already passed this gate and is protected by committed regression tests may run normally; reopen the gate when the query, schema, cardinality/data shape or intended scale changes materially.
+
+Before first execution, document/reason through at least these ten stages:
+
+1. **Purpose and contract** — state exactly what observable result the query must produce and what it must not change.
+2. **Schema/data-source validation** — verify every table, column, type, nullability, identity key and timing field against the current schema contract.
+3. **Cardinality estimate** — estimate input rows, rows per key, expected output rows and worst-case growth at intended scale.
+4. **Access-path inventory** — count full scans, joins, correlated subqueries, lateral lookups, repeated table visits and other potentially multiplicative operations.
+5. **Predicate/selectivity review** — prove filters are applied as early as safely possible and identify predicates that cannot reduce work.
+6. **Join and row-explosion review** — verify join keys, uniqueness assumptions and worst-case intermediate cardinality; reject accidental many-to-many expansion.
+7. **Sort/group/window review** — identify every `ORDER BY`, aggregation, window, distinct/dedup and materialization-like operation and estimate its cost.
+8. **Repeated-work elimination** — look for equivalent set-based rewrites, one-pass aggregation, reuse of already-persisted authority, or removal of duplicate projection/copy work.
+9. **Boundedness and resource review** — prove result bounds, memory/disk implications, transaction scope and failure/rollback behavior are appropriate for the intended scale.
+10. **Architecture/schema/code alternative review** — explicitly ask whether the right fix is actually outside the SQL: change the calling code, persistence flow, schema/index/precomputation strategy, data model or feature behavior rather than forcing an expensive query.
+
+After those ten, perform any additional static checks needed for the specific query. Only then may execution begin, and the first execution must be the smallest deterministic fixture/probe that can falsify the reasoning quickly.
+
+Execution discipline after preflight:
+
+```text
+10+ static validation/optimization stages
+→ smallest deterministic execution
+→ measure
+→ if slow or surprising, stop early
+→ fix SQL OR code/schema/data flow at the root cause
+→ repeat static gate when materially changed
+→ only then scale up
+```
+
+Do not use a large workload to discover an obviously poor query shape. Do not wait through long SQL runs merely to obtain a number. If a query approaches ordinary CI time budgets, stop and optimize/rethink before scaling further.
+
 ### Diagnosability-by-design
 
 Preserve the proven diagnosability model:
