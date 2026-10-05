@@ -174,6 +174,8 @@ Cross-check:
 
 ### A6 — Test-suite and CI adversarial review
 
+Status: **done**
+
 Review all:
 
 - `tests/unit/`
@@ -193,6 +195,8 @@ Look specifically for:
 - workflow path filters that can let a code change skip required CI;
 - duplicated or missing gates versus `TEST_STRATEGY`;
 - green-but-materially-slow recurring setup/work.
+
+A6 additionally prioritized release-critical data correctness before lower-value CI noise: every typed U.S. provider projection was round-tripped through the real service/DuckDB authority, and all `10/20/30/45/60/90/120` second staged anchors were proven independently with distinct expected values and after-target decoys.
 
 ### A7 — Cross-cutting defect sweep
 
@@ -280,9 +284,12 @@ No heavy target-machine acceptance is run here; that remains TREE `7.4` / FR-9+.
 | A5-003 | A5 | HIGH | `scripts/run-workload-profile.mjs` | Authoritative target profiles inherited ambient custom shape/pattern/failure variables, allowing an FR-9 target label to describe a reduced experiment. | Non-custom profiles scrub shape overrides; explicit `custom` remains configurable. | `tests/unit/final-preflight-a5.test.mjs` | fixed; A5 CI green |
 | A5-004 | A5 | MEDIUM | `scripts/new-trading-day.mjs` | In no-archive mode, failure after fresh DB installation could return FAIL while leaving fresh authority active and prior authority at a temporary path. | Post-install failure restores the exact prior active DB and removes the failed fresh candidate. | `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
 | A5-005 | A5 | MEDIUM | `scripts/new-trading-day.mjs` CLI | Missing path-option values could be consumed as empty/flag values and resolve to unintended paths. | Require explicit non-flag values and reject empty `archiveDir`. | `tests/unit/final-preflight-a5.test.mjs`, `tests/service/final-preflight-a5.test.mjs` | fixed; A5 CI green |
+| A6-001 | A6 | HIGH | `.github/workflows/fast-ci.yml` | Fast CI could skip tests that directly enforce root Windows launchers plus first-run/Scanner docs because those consumed files were absent from path filters. | Added `*.cmd`, `START_HERE.md`, `docs/FIRST_RUN_ACCEPTANCE.md` and `docs/SCANNER_SQL_GUIDE.md` to push/PR filters. | `tests/unit/final-preflight-a6-ci.test.mjs` | fixed; A6 CI green |
+| A6-002 | A6 | MEDIUM | `.github/workflows/browser-ci.yml` | Browser E2E consumes `tests/service/helpers/**`, but changes there could skip Browser CI. | Added the shared helper path to both push/PR filters. | `tests/unit/final-preflight-a6-ci.test.mjs` | fixed; A6 CI green |
+| A6-003 | A6 | HIGH | critical U.S. data/calculation proof | No single systematic proof caught every public typed-field mapping or an accidental swap among all seven staged anchor output columns. | Added full-path all-field sentinels and distinct exact anchor sentinels with after-target decoys through real DuckDB/service/Scanner. | `tests/service/final-preflight-a6-data-integrity.test.mjs` | proof gap closed; A6 CI green |
 
 Detailed review notes, candidate SHAs and non-findings are maintained in `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`.
 
 ## Current pointer
 
-`A0` through `A5` are complete. Next stage is **A6 — Test-suite and CI adversarial review**.
+`A0` through `A6` are complete. Next stage is **A7 — Cross-cutting defect sweep**.
