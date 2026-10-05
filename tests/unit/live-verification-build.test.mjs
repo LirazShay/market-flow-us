@@ -11,7 +11,7 @@ import { buildLiveVerification } from "../../scripts/build-live-verification.mjs
 const execFileAsync = promisify(execFile);
 
 test("live-verification build emits a separate self-contained bookmarklet with the candidate commit embedded", async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-live-build-"));
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-live-build-"));
   const candidateCommit = "abcdef1234567890";
 
   try {
@@ -24,14 +24,19 @@ test("live-verification build emits a separate self-contained bookmarklet with t
 
     assert.equal(result.candidateCommit, candidateCommit);
     assert.match(result.entryPoint, /browser[\\/]live-verification[\\/]index\.js$/);
+    assert.equal(path.basename(result.runtimePath), "market-flow-us-live-verification.js");
+    assert.equal(
+      path.basename(result.bookmarkletPath),
+      "market-flow-us-live-verification.bookmarklet.txt"
+    );
     assert.ok(runtime.includes(candidateCommit));
-    assert.ok(runtime.includes("__MARKET_SCOPE_LIVE_VERIFICATION_RESULT_V1__"));
-    assert.equal(runtime.includes("__MARKET_SCOPE_RUNTIME_V1__"), false);
+    assert.ok(runtime.includes("__MARKET_FLOW_US_LIVE_VERIFICATION_RESULT_V1__"));
+    assert.equal(runtime.includes("__MARKET_FLOW_US_RUNTIME_V1__"), false);
 
     assert.ok(bookmarklet.startsWith("javascript:"));
     assert.ok(bookmarklet.includes(candidateCommit));
-    assert.ok(bookmarklet.includes("__MARKET_SCOPE_LIVE_VERIFICATION_RESULT_V1__"));
-    assert.equal(bookmarklet.includes("__MARKET_SCOPE_RUNTIME_V1__"), false);
+    assert.ok(bookmarklet.includes("__MARKET_FLOW_US_LIVE_VERIFICATION_RESULT_V1__"));
+    assert.equal(bookmarklet.includes("__MARKET_FLOW_US_RUNTIME_V1__"), false);
     assert.equal(bookmarklet.includes("\n"), false);
     assert.equal(bookmarklet.includes("\r"), false);
   } finally {
@@ -47,7 +52,7 @@ test("live-verification build rejects a non-commit candidate instead of creating
 });
 
 test("live-verification default build embeds the exact clean checkout HEAD", async () => {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-live-head-"));
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-live-head-"));
 
   try {
     const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"]);
