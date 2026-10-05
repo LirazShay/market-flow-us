@@ -1,9 +1,8 @@
 version: 2
 plan_state: frozen
-current_stage: "demo_buy_external_review_complete_waiting_merge_gate"
-current_node: "demo-buy-validation"
-blockers:
-  - "PR #17 must be Planning-Docs-CI green, reviewed/squash-merged, and main Planning Docs CI/open-PR state must be verified before implementation authorization."
-next_action: "External-user-from-zero review is complete and recorded as R-US-DEMO-BUY-EXTERNAL. It found and repaired two material defects: resultRank is returned position unless SQL ordering proves semantic ranking, and AI Investigation export must derive a sharing-safe projection that excludes system/session operational data and redacts arbitrary non-market text/object values. Keep production implementation unauthorized until PR #17 is green/reviewed/squash-merged and main Planning Docs CI/open-PR state is green; then deliberately advance to phase: implementation / Chat 10 / TREE 4.3.1."
+current_stage: "implementation"
+current_node: "4.3.1"
+blockers: []
+next_action: "Chat 10 / TREE 4.3.1 is authorized to begin from fresh main. Follow AGENTS.md → TREE → contracts → success_evidence; implement schema-v4 Demo Buy persistence/migration first, then 4.3.2 only after 4.3.1 is done/merged/green as required by allocation."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
-implementation_authorized: false
+implementation_authorized: true
