@@ -105,80 +105,62 @@ Live-safe cadence remains empirical and can change as configuration without sche
 
 Keep protocol version `1` unless implementation proves a concrete incompatibility.
 
-Existing operations remain:
-
-```text
-client.hello
-producer.session.start
-producer.heartbeat
-producer.universe.replace
-producer.cycle.commit
-producer.cycle.failed
-producer.session.stop
-
-viewer.current.get
-viewer.status.get
-viewer.security.get
-viewer.history.page
-viewer.support.snapshot
-
-scanner.execute
-scanner.queries.*
-```
-
-Add Viewer-role operations:
+Existing operations remain unchanged. Add Viewer-role operations:
 
 ```text
 demo.buy.capture
 demo.buy.page
+demo.buy.capture.get
 ```
 
 Do not create a second protocol or HTTP API for Demo Buy.
 
 ### `demo.buy.capture`
 
-Payload shape:
+Payload:
 
 ```text
-securityIds: ordered array of canonical strings
+items: [
+  { securityId: string, resultRank: positive integer }
+]
 sourceQuery:
   queryId: string | null
   name: string | null
   sql: string
+  intervalMs: positive safe integer
+sourceResult:
+  startedAtMs: non-negative safe integer
+  completedAtMs: non-negative safe integer
+  rowCount: non-negative safe integer
 selectionMode: manual | all | top_x
 isAutomatic: boolean
 topX: integer | null
-resultRowCount: non-negative safe integer
 ```
 
 Validation rules:
 
-- the browser must dedupe selected IDs by first occurrence before sending;
-- raw `securityIds` input must contain 1..5000 entries;
-- every identity is a non-empty bounded string;
-- Node independently validates identities and defensively reduces duplicate IDs to first occurrence while preserving request order;
-- after Node dedupe, 1..5000 unique IDs are required;
+- exact payload/object keys are enforced;
+- `items.length` is `1..5000`;
+- every identity is a non-empty bounded canonical string;
+- `securityId` values are unique; duplicate payload IDs are rejected, never repaired;
+- `resultRank` values are positive, unique, strictly increasing and `<= sourceResult.rowCount`;
+- for `top_x`, every `resultRank <= topX`;
 - `topX` is present only for `top_x`, with `1 <= topX <= 5000`;
 - `isAutomatic=true` is valid only for `all` or `top_x`;
-- source SQL is required and bounded by the existing inbound-message limit;
-- query ID/name are provenance only and may be null.
+- `sourceQuery.intervalMs > 0`;
+- source SQL is exact activated SQL and remains bounded by the existing inbound-message boundary;
+- query ID/name are provenance only and may be null;
+- no price field exists in the contract.
 
-Browser selection semantics are fail-closed:
+The browser is responsible for choosing source rows first, then reducing duplicate canonical IDs to first occurrence while retaining each remaining row's original 1-based `resultRank`. Node validates the already-canonical request and does not silently change its meaning.
 
-- a manually selected row with an invalid canonical identity cannot be submitted;
-- `All`, `Top X` or automatic capture is refused if its chosen range contains an invalid recognized identity cell;
-- `All`/auto-All are never silently truncated when more than 5000 unique IDs would be captured;
-- zero selected IDs never create an empty capture.
-
-Response returns at least:
+Response returns only capture authority facts:
 
 ```text
 captureId
 capturedAtMs
 capturedItemCount
 ```
-
-It does not echo market prices.
 
 ### `demo.buy.page`
 
@@ -188,9 +170,38 @@ Payload:
 cursor: string | null
 ```
 
-Response returns a bounded page of evaluated Demo Buy item read models plus continuation metadata. The cursor is opaque to the browser and binds deterministic ordering.
+The server owns a fixed Phase-1 page size of 50 evaluated items. The cursor is opaque and binds the last `(capture_id, result_rank)` in ordering:
 
-Stable protocol errors distinguish at least invalid Demo Buy input, Demo Buy integrity violation and generic DB/read failure. Absence of a future horizon is normal data, not an error.
+```text
+capture_id DESC
+result_rank ASC
+```
+
+One page response contains compact capture metadata, baseline data and all ten derived horizons, but does not repeat source SQL per item.
+
+### `demo.buy.capture.get`
+
+Payload:
+
+```text
+captureId: positive safe integer
+```
+
+Returns one immutable capture header/provenance record including exact source SQL, source query identity/label, Scanner interval/result times/count, selection mode, automatic marker, Top-X value and committed item count.
+
+This powers the Viewer details affordance without bloating every page row.
+
+### Errors
+
+Stable protocol semantics distinguish at least:
+
+```text
+invalid Demo Buy request
+Demo Buy integrity violation
+generic DB/read failure
+```
+
+Exact error-code names must follow the repository's existing constant style. Missing future horizons are normal data, not errors.
 
 ## 7. DuckDB authority
 
@@ -234,24 +245,31 @@ Market Flow US v4   v3 authority + Demo Buy analytical persistence
 
 Policy:
 
-- new default DB filename remains `data/market-flow-us.duckdb`;
 - fresh Market Flow US DB bootstraps directly as v4;
 - v1/v2 remain unsupported and are rejected without mutation;
-- v3 is upgraded transactionally to v4;
+- valid v3 is upgraded transactionally to v4;
+- valid v3 must contain neither Demo Buy table before migration;
+- if a DB claims v3 while either Demo Buy table already exists, startup fails closed as suspicious partial/corrupt state;
 - v3→v4 migration preserves all market authority and `scanner_saved_queries`;
-- migration failure leaves the original v3 DB semantically usable as v3 and must not leave a partial v4 marker.
+- migration failure leaves the original v3 DB semantically usable as v3 and must not leave a partial accepted v4 marker;
+- valid v4 requires both Demo Buy tables plus all existing U.S. required tables.
 
-The additive migration is:
+Migration:
 
 ```text
-BEGIN
+validate v3 prerequisites
+→ BEGIN
 → create demo_buy_captures
 → create demo_buy_items
-→ update schema_info to 4
+→ update schema_info schema_version=4 and product_version
 → COMMIT
 ```
 
-Implementation may use the smallest equivalent transactional DDL sequence supported by DuckDB, but observable all-or-nothing behavior is required.
+Do not use `CREATE TABLE IF NOT EXISTS` to normalize an unexpected partial migration silently.
+
+Add the smallest construction-only migration fault seam needed to prove rollback at multiple phases, mirroring the repository's existing persistence/migration fault-test style.
+
+No new history index is required initially. The existing authority schema remains unchanged until representative Demo Buy workload proves a concrete bottleneck and a focused replan justifies a schema optimization.
 
 ## 9. Universe table
 
@@ -287,58 +305,14 @@ Failed cycles continue to record bounded counters/phase/error metadata without c
 
 ## 11. `history` / `latest`
 
-Common columns remain the proven U.S. projection:
-
-```text
-cycle_id BIGINT
-session_id VARCHAR
-universe_revision BIGINT
-security_id VARCHAR
-chunk_index INTEGER
-cycle_started_at_ms BIGINT
-chunk_received_at_ms BIGINT
-collected_at_ms BIGINT
-source_metadata_json JSON NULL
-
-Symbol VARCHAR NULL
-PaperNameEng VARCHAR NULL
-PaperNameHeb VARCHAR NULL
-ExchangeName VARCHAR NULL
-TradeDateTime VARCHAR NULL
-CountryName VARCHAR NULL
-CountryNameEng VARCHAR NULL
-
-Price DOUBLE NULL
-ChangePercent DOUBLE NULL
-DailyHigh DOUBLE NULL
-DailyLow DOUBLE NULL
-YearHigh DOUBLE NULL
-YearLow DOUBLE NULL
-DailyVolume DOUBLE NULL
-BeginYearChangePercent DOUBLE NULL
-Month12ChangePercent DOUBLE NULL
-Month36ChangePercent DOUBLE NULL
-AskRate DOUBLE NULL
-BidRate DOUBLE NULL
-YesterdayRate DOUBLE NULL
-PaperMarketCap DOUBLE NULL
-PaperIdYatab DOUBLE NULL
-CountryId DOUBLE NULL
-PaperType DOUBLE NULL
-ESGRatingId DOUBLE NULL
-ESGScope DOUBLE NULL
-
-raw_data JSON NOT NULL
-```
-
-Keys:
+Common columns remain the proven U.S. projection documented in DATA_CONTRACT, with keys:
 
 ```text
 history PRIMARY KEY (cycle_id, security_id)
 latest PRIMARY KEY (security_id)
 ```
 
-No temporal predecessor-link columns are added.
+No predecessor-link, materialized horizon or Demo Buy result columns are added.
 
 ## 12. Market persistence transaction
 
@@ -394,6 +368,22 @@ No hidden rank/filter/sort/limit is added by Demo Buy.
 
 A Scanner result generation is Demo-Buy-capable only if its columns contain exactly one recognized canonical identity column named `securityId` or `security_id`.
 
+Each successful generation already carries Node result timing. Browser generation state freezes:
+
+```text
+queryId
+name
+exact SQL
+active intervalMs
+startedAtMs
+completedAtMs
+rowCount
+columns
+rows
+```
+
+This generation snapshot is immutable even if the draft/library selection changes later.
+
 ## 15. Staged candidate built-in
 
 The built-in remains ordinary SQL over `latest` and `history` with exact nearest-prior semantics.
@@ -421,7 +411,7 @@ then highest cycle_id tie-break
 
 The SQL computes contiguous `stage_reached`, exposes `security_id AS securityId`, and orders by explicit SQL tie-breakers.
 
-New/materially changed SQL must pass the mandatory static SQL preflight before first execution.
+New/materially changed SQL must pass mandatory static SQL preflight before first execution.
 
 ## 16. `demo_buy_captures`
 
@@ -433,19 +423,28 @@ captured_at_ms BIGINT NOT NULL
 source_query_id VARCHAR NULL
 source_query_name VARCHAR NULL
 source_query_sql VARCHAR NOT NULL
+source_interval_ms BIGINT NOT NULL
+source_result_started_at_ms BIGINT NOT NULL
+source_result_completed_at_ms BIGINT NOT NULL
+source_result_row_count BIGINT NOT NULL
 selection_mode VARCHAR NOT NULL
 is_automatic BOOLEAN NOT NULL
 top_x BIGINT NULL
-result_row_count BIGINT NOT NULL
 ```
 
 Rules:
 
+- committed `capture_id > 0`;
+- time/count values are non-negative at the application boundary;
+- `source_interval_ms > 0`;
 - `selection_mode ∈ {manual, all, top_x}`;
-- `top_x` is non-null only for `top_x`;
-- automatic mode is allowed only for `all`/`top_x`;
-- source query fields are immutable provenance snapshots;
-- no market `Price` or future-horizon values are stored here.
+- `top_x` is non-null only for `top_x` and is `1..5000`;
+- automatic mode is valid only for `all`/`top_x`;
+- source fields are immutable generation provenance;
+- source SQL is stored once per capture;
+- no market Price or derived future-horizon value is stored here.
+
+Use simple DuckDB CHECK constraints for straightforward row-shape/mode invariants where they add safety without complex schema machinery. Service validation remains authoritative for cross-field/request semantics.
 
 ## 17. `demo_buy_items`
 
@@ -453,46 +452,63 @@ Logical schema:
 
 ```text
 capture_id BIGINT NOT NULL
-selection_rank BIGINT NOT NULL
+result_rank BIGINT NOT NULL
 security_id VARCHAR NOT NULL
 buy_cycle_id BIGINT NOT NULL
 PRIMARY KEY (capture_id, security_id)
-UNIQUE (capture_id, selection_rank)
+UNIQUE (capture_id, result_rank)
 ```
 
-`selection_rank` preserves first-occurrence Scanner result ordering inside the capture.
+`result_rank` is the original 1-based row position from the Scanner generation. Manual selections may therefore retain gaps.
 
-The semantic baseline reference is:
+Baseline relation:
 
 ```text
 (buy_cycle_id, security_id)
 → history(cycle_id, security_id)
 ```
 
-A physical foreign key is not required unless implementation evidence shows it improves safety without harming the proven bulk-write path; semantic resolution and tests are mandatory.
+A physical foreign key is not required in Phase 1. Capture resolves every baseline before insertion and trusted reads treat a missing semantic link as corruption. Do not introduce foreign-key/index complexity without evidence.
 
-A missing semantic baseline link after successful capture is a data-integrity failure and must surface as such; it is not an ordinary unavailable future horizon.
-
-No copied baseline market columns and no future-horizon columns are stored.
+No copied baseline columns and no future-horizon columns are stored.
 
 ## 18. Demo Buy capture authority
 
-Create a dedicated small Node persistence component using the existing serialized writer.
+Create one small Node persistence component using the existing serialized writer.
+
+The browser chooses rows before dedupe:
+
+```text
+manual → checked source rows
+all    → every source row
+top_x  → exactly first X source rows
+```
+
+Every chosen row must have a valid identity. The browser reduces duplicate canonical IDs to first chosen occurrence, preserving each remaining row's original `resultRank`. `Top X` never backfills beyond X after a duplicate.
+
+Node receives already-deduped items and validates without silently rewriting them:
+
+```text
+1..5000 items
+unique securityId
+unique strictly increasing resultRank
+resultRank <= sourceResult.rowCount
+for top_x: resultRank <= topX
+valid mode/automatic/topX/provenance
+```
 
 Capture execution:
 
 ```text
-validate bounded raw request
-→ dedupe IDs preserving first occurrence/rank
-→ require 1..5000 valid unique canonical IDs
+validate request
 → enqueue on serialized writer
 → BEGIN
-→ allocate monotonic capture_id
 → captured_at_ms = Node clock inside serialized operation
 → resolve every ID from authoritative latest
 → require all to resolve
-→ insert capture
-→ insert ordered items using latest.cycle_id as buy_cycle_id
+→ allocate positive monotonic committed capture_id
+→ insert one capture
+→ insert items using latest.cycle_id as buy_cycle_id
 → COMMIT
 ```
 
@@ -505,26 +521,35 @@ capture commits first      → capture references the prior latest cycle
 
 If any ID is absent from `latest`, any invariant fails, or persistence fails, rollback the complete Demo Buy capture.
 
-Demo Buy failure does not poison the writer tail, Scanner scheduler or future captures.
+Demo Buy failure must not poison the writer tail, Scanner scheduler or later captures.
 
 ## 19. Demo Buy evaluation/read model
 
-Create a trusted Node read component; do not calculate business results in the browser.
+Create a trusted Node read component; do not calculate analytical results in the browser.
 
 Read ordering:
 
 ```text
 capture_id DESC
-selection_rank ASC
+result_rank ASC
 ```
 
-Use bounded keyset pagination; default page size reuses the established 500-item Viewer convention unless measured evidence requires a smaller bound.
+Phase-1 page size is fixed at **50 items** because each item carries ten horizon result objects and is materially wider than a normal History row.
+
+The opaque cursor binds `(capture_id, result_rank)`. Continuation excludes later newly inserted captures, so an existing pagination walk has no duplicate/gap caused by automatic captures arriving between requests. Refresh from page one is what reveals newer captures.
+
+### Snapshot consistency
+
+One `demo.buy.page` must obtain its 50 items, baseline rows and all ten horizons from **one transactionally consistent DuckDB read snapshot**.
+
+Prefer one set-wise `runAndReadAll` SQL statement/CTE on the existing Viewer read connection. Do not implement this as N×10 separate timed reads. Do not open a multi-statement `BEGIN` transaction on the shared Viewer read connection merely to obtain consistency, because other Viewer requests may use that connection; a single statement is the safe default boundary.
 
 For each item:
 
-1. join the exact baseline `history` row by `(buy_cycle_id, security_id)` and fail with stable Demo Buy integrity error if it is missing;
+1. join the exact baseline `history` row by `(buy_cycle_id, security_id)`; missing baseline -> stable Demo Buy integrity error;
 2. for each fixed horizon find the first same-security history row at or after `captured_at_ms + horizon`;
-3. return the baseline and derived horizon model.
+3. use that first qualifying row even if its Price is NULL; never skip it for a later non-null value;
+4. return baseline/timing/provenance summary plus derived horizon model.
 
 Fixed horizons in milliseconds:
 
@@ -550,16 +575,17 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-Derived fields:
+Derived horizon fields:
 
 ```text
-baselineCollectedAtMs
-baselinePrice
+horizonMs
+targetAtMs
 observedAtMs
-actualElapsedMs = observedAtMs - capturedAtMs
+actualElapsedMs
 price
-changePercent = ((price / baselinePrice) - 1) * 100
+changePercent
 outcome
+unavailableReason
 ```
 
 Outcome:
@@ -571,27 +597,26 @@ FLAT         changePercent = 0
 UNAVAILABLE  changePercent is null
 ```
 
-`changePercent` is null when no future row exists, baseline `Price` is null/zero, or future `Price` is null.
+Unavailable reason precedence:
 
-The read model recomputes from persisted `history` on each refresh/page request. It never writes derived values back to Demo Buy tables.
+```text
+NO_FUTURE_OBSERVATION
+BASELINE_PRICE_UNAVAILABLE
+BASELINE_PRICE_ZERO
+FUTURE_PRICE_UNAVAILABLE
+```
 
-The implementation should use set-wise/lateral/ASOF-capable SQL appropriate to DuckDB rather than N×10 independent browser calls. Exact query shape remains an implementation choice after mandatory static preflight and tiny-fixture correctness proof.
+A missing baseline row is an integrity error and never an unavailable reason.
+
+Compact item metadata includes source query ID/name and Scanner timing but **not source SQL**. Exact SQL is returned only through `demo.buy.capture.get`.
+
+The read model recomputes from persisted `history` on every refresh/page request and never writes derived values back to Demo Buy tables.
 
 ## 20. Browser Demo Buy workflow
 
 ### Scanner-side capture state
 
-Each successful Scanner generation has immutable provenance:
-
-```text
-queryId
-name
-sql
-result columns
-result rows
-```
-
-Editing/selecting/saving another draft does not rewrite provenance of an already-produced generation.
+Each successful Scanner generation freezes exact query/result provenance before later draft changes.
 
 Manual controls:
 
@@ -610,52 +635,54 @@ auto all
 auto Top X
 ```
 
-Identity/capacity rules are applied before the client sends a capture request:
+Selection semantics:
 
 - invalid recognized identity rows are visibly non-selectable;
-- Selected/All/Top-X preserve exact visible Scanner order after first-occurrence dedupe;
+- Selected/All/Top-X choose source rows first;
+- Top-X means exactly first X source rows;
+- chosen rows containing an invalid identity make All/Top-X/auto fail visibly rather than silently changing meaning;
+- duplicate canonical IDs reduce only after selection, preserving first occurrence and original result rank;
 - All/auto-All with more than 5000 unique IDs is refused visibly, never truncated;
-- Top X is limited to 1..5000;
-- an All/Top-X/auto chosen range containing an invalid identity is refused rather than silently altered;
-- zero selected IDs are a no-op/disabled action.
+- zero selected IDs do not create an empty capture.
 
-Automatic capture uses one bounded in-flight slot:
+Use one Viewer-session Demo Buy capture slot shared by manual and automatic actions:
 
 ```text
-successful Scanner generation
-→ if auto off: no capture
-→ if auto on and slot free: issue exactly one capture attempt for that generation
-→ if auto on and slot busy: visibly mark that generation skipped; do not enqueue it
-→ on success/failure: release slot for later generations
+slot free + manual action → submit once, disable capture actions until response
+slot free + auto generation → submit once
+slot busy + auto generation → visibly skip, never enqueue/replay
+slot busy + manual action → controls remain disabled/busy
+success/failure → release slot
 ```
 
-This keeps Scanner scheduling independent, prevents unbounded Promise/request queues and makes any missed auto generation explicit. Phase 1 does not add replay of skipped generations.
-
-Selection state belongs to the exact visible generation and is cleared/rebuilt when a new result generation replaces it.
+This prevents accidental manual double-submit and unbounded auto queues while leaving Scanner scheduling independent.
 
 ### Demo Buy surface
 
 Add a third top-level Viewer destination beside Current and Scanner.
 
-Visible data includes:
+Visible compact data includes:
 
 ```text
 source label
 capture time
+signal/result-completed timing or latency indicator
+manual/automatic marker
+original result rank
 Symbol / display name
 securityId
-baseline collection time
+baseline collection time / age
 baseline Price
 10s..10m Price / % / outcome
 ```
 
-Direction is conveyed by text/symbol as well as any optional styling; color alone is insufficient.
+Unavailable outcomes may expose their reason compactly via text/tooltip/details; the UI must not imply every unavailable state simply means “wait longer”.
 
-Unavailable horizons use the existing missing-value convention plus `UNAVAILABLE` state.
+Direction is conveyed textually/symbolically in addition to optional styling. Color alone is insufficient.
 
-The table may scroll horizontally. It supports refresh and bounded Load more/keyset paging. Source SQL can be displayed on demand rather than duplicated in every visible row.
+The table may scroll horizontally. It supports Refresh and bounded Load more/keyset paging. Source SQL/details are fetched on demand with `demo.buy.capture.get`.
 
-The current Viewer architecture keeps the Scanner surface mounted while switching top-level views, so navigating away from Scanner does not implicitly stop its scheduler or automatic Demo Buy mode. Viewer disposal still stops the Scanner scheduler as today.
+The current Viewer architecture keeps Scanner mounted while switching top-level views, so navigating to Demo Buy does not stop its scheduler/automatic mode. Viewer disposal still stops Scanner scheduling as today.
 
 ## 21. Diagnostics
 
@@ -664,44 +691,20 @@ Keep the existing tracker/checkpoint architecture.
 Stable concepts include:
 
 ```text
-browser runtime
-service hello
-provider snapshot
-producer universe
-cycle commit/ACK
-database readiness
-viewer reads
-scanner execution
 demo_buy.capture
+demo_buy.evaluate
 demo_buy.read
+demo_buy.provenance_read
 demo_buy.viewer
-demo
-live verification
 ```
 
 Support Snapshot remains sanitized and bounded. It may expose Demo Buy operational counts/checkpoint/busy-skip status but must not dump stored query SQL or raw authenticated provider material.
 
 ## 22. Fake Market and synthetic generator
 
-Fake Market serves:
+Fake Market serves the normal built runtime and the U.S. screener endpoint using deterministic stateful U.S. rows.
 
-- normal built Market Flow US runtime;
-- `ScreenerHulPaging3`;
-- deterministic stateful U.S. rows.
-
-Fake Market and workload tooling share one deterministic synthetic generator/profile boundary supporting at least:
-
-```text
-universe size
-cycle/history count or logical day shape
-logical cadence/timestamps
-static or moving value pattern
-membership-change schedule
-failure/recovery schedule
-reproducible seed
-```
-
-For Demo Buy, deterministic profiles must also be able to create future price paths that produce:
+For Demo Buy deterministic profiles must create future paths producing:
 
 ```text
 UP
@@ -710,7 +713,7 @@ FLAT
 UNAVAILABLE
 ```
 
-and delayed observations whose actual elapsed time is greater than the nominal horizon.
+plus at least one delayed observation whose actual elapsed time exceeds the nominal horizon.
 
 ## 23. Build and local files
 
@@ -723,7 +726,7 @@ dist/live-verification/market-flow-us-live-verification.js
 dist/live-verification/market-flow-us-live-verification.bookmarklet.txt
 ```
 
-Local files:
+Local files remain:
 
 ```text
 production active DB: data/market-flow-us.duckdb
@@ -734,12 +737,7 @@ Windows launcher: START_MARKET_FLOW_US.cmd
 
 ## 24. Workload and performance profiles
 
-Hosted CI is correctness-first and uses bounded profiles:
-
-- extensive unit/service/browser correctness;
-- small multi-cycle history/Scanner/Demo Buy profile;
-- at least one approximately-4096-security width sanity cycle/few cycles;
-- timing recorded diagnostically only.
+Hosted CI is correctness-first and uses bounded profiles.
 
 Heavy target-machine profile remains:
 
@@ -749,17 +747,15 @@ Heavy target-machine profile remains:
 737280 history rows
 ```
 
-Isolated profiles use the narrowest useful layer:
+Use narrow isolated profiles:
 
 ```text
-persistence → generated validated cycles → writer/DuckDB
-reads/Scanner/Demo Buy → directly seeded day-bounded DB → trusted reads/Scanner
+persistence → validated generated cycles → writer/DuckDB
+reads/Scanner/Demo Buy → directly seeded day-bounded DB → trusted reads/Scanner/evaluator
 end-to-end → Fake Market → browser → WebSocket/service → DuckDB
 ```
 
-Demo Buy performance proof uses a bounded realistic capture/item count over day-bounded history. Do not generate a giant cross-product merely to benchmark ten horizons.
-
-No temporal precompute/materialized horizon schema is added unless measured intended-use evidence proves the direct read model materially insufficient.
+Demo Buy measurement includes bounded realistic captures/items over day-bounded history and coexistence with recurring Scanner use. Do not add a history index, precompute or materialized horizon schema unless measurement proves the direct 50-item set-wise read materially insufficient.
 
 ## 25. Security
 
@@ -773,36 +769,13 @@ Preserve:
 - no raw authenticated dumps in diagnostics/tests;
 - synthetic/sanitized fixtures only.
 
-Demo Buy provenance contains locally authored Scanner SQL, never provider credentials/session data.
+Demo Buy provenance contains locally authored Scanner SQL, never provider credentials/session data. Support/diagnostic snapshots must not dump that SQL.
 
 ## 26. Live verification boundary
 
-Live verification keeps two external facts separate:
+Live verification keeps authenticated provider compatibility and real market movement as separate facts exactly as already documented.
 
-### Base authenticated boundary
-
-At least 20 consecutive complete cycles spanning at least 60 seconds at candidate cadence. Every cycle validates and receives COMMIT ACK; final Current/History/Scanner authority is checked before clean stop. Static values are valid for this compatibility fact.
-
-### Market-open movement evidence
-
-After base PASS, bounded analysis considers only persisted provider market/freshness fields:
-
-```text
-Price
-ChangePercent
-BidRate
-AskRate
-DailyVolume
-TradeDateTime
-```
-
-Local `collected_at_ms` and Demo Buy outcomes are not substitutes for provider movement evidence.
-
-No observed provider change → movement `PENDING`.
-Observed change reflected through trusted Current/History → movement `PASS`.
-Detected change without reflection proof → movement `FAIL`.
-
-The final target-machine bundle separately proves one deterministic local Demo Buy journey on the same final SHA.
+The final target-machine bundle additionally proves one deterministic local Demo Buy journey on the same final SHA. Demo Buy outcomes never substitute for real-provider movement evidence.
 
 ## 27. Daily active-DB lifecycle
 
@@ -822,11 +795,11 @@ stop producer/service cleanly
 Requirements:
 
 - no indefinite prior-day market/Demo-Buy accumulation in active DB;
-- an archived prior-day DB remains self-contained with its history and Demo Buy references;
+- archived prior-day DB remains self-contained with history and Demo Buy references;
 - saved queries survive reset;
 - archive/reset never occurs while active writer owns the DB;
-- failure leaves either prior DB or a valid fresh DB recoverable;
-- Demo Buy horizons do not bridge across the new active-day DB boundary; a horizon not observed before rollover remains unavailable in that prior day's self-contained evidence;
+- failure leaves either prior DB or valid fresh DB recoverable;
+- Demo Buy horizons do not bridge across the new active-day DB boundary;
 - no cross-day Demo Buy warehouse is introduced in Phase 1.
 
 ## 28. Phase-1 non-goals
