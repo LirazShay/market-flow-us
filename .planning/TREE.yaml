@@ -320,6 +320,7 @@ nodes:
     success_evidence:
       - "All materially new evaluation SQL passes the repository's mandatory static SQL preflight before first execution."
       - "Real-DuckDB fixtures prove first-at-or-after matching with collected_at_ms ASC/cycle_id ASC tie-break, including delayed collection gaps."
+      - "A missing linked baseline history row is treated as an integrity error, not as an unavailable market horizon."
       - "Baseline/future NULL and zero-denominator edge cases return NULL percentage and `unavailable`; positive/negative/zero changes return `up`/`down`/`flat` exactly."
       - "Read model includes baseline identity/display/Price, captured/provenance fields, all ten horizons, target/observed/elapsed timestamps, Price, percent and direction."
       - "Results order capture_id DESC then selection_rank ASC with cursor-bound 500-row keyset pagination and stable continuation."
@@ -347,19 +348,22 @@ nodes:
   "4.4.1":
     status: approved
     strategy: "The exact current Scanner result generation can be converted into manual or automatic Demo Buy capture requests without changing SQL ranking or losing source-query meaning."
-    tactic: "Extend Scanner model/surface/client with exact recognized-ID gating, generation-stable query provenance, per-row selection, Selected/All/Top-X actions and Viewer-session Auto Off/All/Top-X with serialized/bounded capture requests and visible success/failure feedback."
+    tactic: "Extend Scanner model/surface/client with exact recognized-ID gating, generation-stable query provenance, per-row selection, Selected/All/Top-X actions and Viewer-session Auto Off/All/Top-X with one bounded auto-capture request in flight at a time and visible busy/failure feedback."
     parallel_assumptions:
       - "The Scanner result table already owns row order and the scheduler already owns successful result generations."
       - "Session-only auto configuration is sufficient for Phase 1 and avoids a new durable strategy-settings model."
+      - "Skipping an automatic generation visibly when a previous automatic capture is still in flight is safer and simpler than an unbounded queue or stalling Scanner execution."
     necessary_assumptions:
       - "Without capture controls, the user cannot practically create the virtual-buy observations whose outcomes are being tested."
     sufficiency_assumptions: []
     success_evidence:
       - "Controls are available only when exactly one recognized securityId/security_id result column exists; Symbol or ambiguous columns are never guessed as identity."
+      - "Rows whose recognized identity value is not a non-blank canonical string cannot be silently included; manual invalid rows are not selectable and All/Top-X/auto selections that would include an invalid row are refused visibly rather than skipping it."
       - "Selected/All/Top-X preserve exact rendered SQL row order and stale checkbox selections do not migrate to a later result generation."
+      - "All and auto-All never silently truncate: after first-occurrence dedupe, more than 5000 unique IDs is visibly refused; Top-X is bounded to 1..5000."
       - "Active-generation query ID/name/exact SQL snapshot stays stable even if draft/library selection changes while that generation runs."
-      - "Auto Off/All/Top-X issues at most one bounded capture request per successful Scanner generation, recovers after capture failure and does not stop Scanner scheduling."
-      - "Successful/failed captures are visibly acknowledged with no manual price input."
+      - "Auto Off/All/Top-X attempts at most one capture request per successful Scanner generation, keeps at most one automatic capture request in flight, visibly skips a generation if that bounded slot is still busy, recovers after capture failure, and never stops Scanner scheduling."
+      - "Successful/failed/busy-skipped captures are visibly acknowledged with no manual price input."
     depends_on: ["4.3.2", "4.2", "5.2"]
     children: []
 
@@ -615,7 +619,7 @@ nodes:
       - "Bounded workload/local Fake Leumi automation exercises Demo Buy capture/evaluation/read/UI correctness without adding an unnecessarily huge full-day matrix."
       - "No blocking defect or unexpected open PR remains; the feature/reclosure PR is reviewed and squash-merged and main CI is green."
       - "STATUS.yaml, .planning/STATUS.yaml, EXECUTION and handoff truth point to final target-machine leaf 7.4 and identify the exact accepted-candidate SHA rather than the older pre-Demo-Buy release SHA."
-    depends_on: ["4.4.2", "7.3"]
+    depends_on: ["4.4.1", "4.4.2", "7.3"]
     children: []
 
   "7.4":
