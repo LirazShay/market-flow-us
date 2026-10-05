@@ -1,8 +1,7 @@
 name: Chat 7 Workload Proof
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
