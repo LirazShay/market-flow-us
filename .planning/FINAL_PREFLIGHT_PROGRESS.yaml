@@ -2,7 +2,7 @@ version: 1
 baseline_main_sha: "80d3bb7028051ced74e87088d8eb0cd716a4ed91"
 branch: "audit/final-preflight"
 draft_pr: 16
-current_stage: "A7"
+current_stage: "A8"
 fr0_blocked_until_audit_closes: true
 
 stages:
@@ -13,7 +13,7 @@ stages:
   A4: done
   A5: done
   A6: done
-  A7: pending
+  A7: done
   A8: pending
   A9: pending
   A10: pending
@@ -171,6 +171,38 @@ findings:
     regression: "tests/service/final-preflight-a6-data-integrity.test.mjs proves exact history/latest mapping and exact latest-at-or-before resolution for each anchor independently."
     state: "proof gap closed; A6 CI green"
 
+  - id: "A7-001"
+    severity: HIGH
+    area: "browser/provider/us-screener.js"
+    finding: "Provider PaperId validation canonicalized arbitrary JSON values with String(...). Malformed object/array/boolean identities or an unsafe numeric identity could therefore be converted into a plausible securityId instead of failing closed."
+    fix: "Provider identity now accepts only a non-empty string or a non-negative safe integer PaperId and rejects every other type before canonicalization."
+    regression: "tests/unit/final-preflight-a7.test.mjs proves object, array, boolean and unsafe numeric PaperId values are rejected."
+    state: "fixed; A7 CI green"
+
+  - id: "A7-002"
+    severity: HIGH
+    area: "local-service/persistence/producer-authority.js"
+    finding: "Producer exclusivity was primarily guarded by the active WebSocket. If disconnect cleanup released in-memory ownership but interruption persistence failed, a second producer could start while a durable session was still status=running."
+    fix: "producer.session.start now performs a serialized DuckDB authority check and refuses to insert any new session while any durable running session exists. The new SELECT was documented through the mandatory 10-stage static SQL preflight before execution."
+    regression: "tests/service/final-preflight-a7.test.mjs creates a real durable orphan-running session, proves a second producer is rejected, resolves the orphan and then proves a new producer can start."
+    state: "fixed; A7 CI green"
+
+  - id: "A7-003"
+    severity: MEDIUM
+    area: "browser/runtime/producer-bridge.js + browser/viewer/refresh-controller.js"
+    finding: "The release commit-hint BroadcastChannel still used the donor namespace market-scope:v1. Market Flow US and an older MarketScope runtime on the same origin could therefore consume each other's refresh hints."
+    fix: "Renamed both release channel endpoints together to market-flow-us:v1; commit hints remain metadata-only and non-authoritative."
+    regression: "tests/unit/final-preflight-a7.test.mjs proves the release producer/viewer channel uses only the Market Flow US namespace."
+    state: "fixed; A7 CI green"
+
+  - id: "A7-004"
+    severity: HIGH
+    area: "local-service/persistence/producer-authority.js U.S. universe boundary"
+    finding: "Even after Browser PaperId hardening, direct WebSocket U.S. universe payloads could still pass rawSource.PaperId or membership values through String(...) canonicalization at the Node authority boundary. A buggy producer could therefore persist a fabricated identity such as [object Object] or accept boolean membership."
+    fix: "The U.S. persistence adapter now uses the same strict string-or-safe-integer identity rule for rawSource.PaperId and requires membership entries to already be non-empty bounded strings; malformed identity fails before any universe mutation."
+    regression: "tests/service/final-preflight-a7.test.mjs sends malformed rawSource.PaperId and boolean membership through the real DuckDB authority and proves both are rejected with the universe remaining empty."
+    state: "fixed; A7 CI green"
+
 reviewed_non_findings:
   - id: "A2-REVIEW-001"
     area: "schema-v3 bootstrap/reopen/rejection"
@@ -220,11 +252,20 @@ reviewed_non_findings:
   - id: "A6-REVIEW-004"
     area: "workload/acceptance assertions"
     note: "Workload and acceptance coverage already asserts authority counts, latest/history integrity, restart preservation and Scanner/read behavior rather than process exit alone; target-machine heavy performance authority remains correctly deferred to TREE 7.4."
+  - id: "A7-REVIEW-001"
+    area: "legacy donor Fake Market"
+    note: "tests/fake-market/server.mjs still contains MapHeat/GetSecuritiesData and market-scope runtime names, but repository routing shows it is a historical regression fixture only. The active U.S. local-acceptance/release route uses tests/fake-market-us and ScreenerHulPaging3; donor fixture text is intentionally retained as provenance and is not reachable from the release graph."
+  - id: "A7-REVIEW-002"
+    area: "shutdown/resource lifecycle"
+    note: "The active service clears producer heartbeat timers, closes all WebSockets, waits tracked connection tasks, closes the WebSocket server, drains the serialized writer and then closes DuckDB. Viewer closes its BroadcastChannel/client/scheduler, and acceptance subprocesses have bounded tree cleanup. No additional lifecycle defect was found."
+  - id: "A7-REVIEW-003"
+    area: "destructive filesystem boundaries"
+    note: "Demo reset resolves and checks containment under .demo before recursive deletion; new-day authority movement/rollback was already mechanically covered in A5. No release path was found that recursively deletes an arbitrary user-supplied path."
+  - id: "A7-REVIEW-004"
+    area: "background Viewer refresh promises"
+    note: "The void commit-hint/manual UI paths initially looked like possible unhandled rejection sites, but the invoked Current/Detail operational reads absorb expected service failures into explicit surface state and requestRefresh releases state in finally. Adding a blanket catch would hide programmer defects, so no change was justified."
 
 cross_stage_observations:
-  - id: "A7-CANDIDATE-001"
-    area: "tests/fake-market/server.mjs"
-    note: "A legacy donor Fake Market file still contains MapHeat/GetSecuritiesData and market-scope.runtime.js naming. It is not part of the reviewed U.S. local acceptance route; classify/remove or retain-with-evidence during the repository-wide A7 stale-path sweep."
   - id: "A8-CANDIDATE-001"
     area: "docs/LIVE_VERIFICATION.md / TREE 7.4"
     note: "Current live harness intentionally proves static authenticated authority but not movement-specific PASS. This is explicitly documented as a separate 7.4 acceptance fact; verify the final FR-13 evidence path during A8 rather than misclassifying the existing static gate as a runtime bug."
@@ -236,6 +277,7 @@ verification:
   a4_code_candidate_sha: "85290a17b58896b21bf12d73965a71f31dae8d13"
   a5_code_candidate_sha: "57eb228605ded88190bf5d0b7ebd37f246c0b4ae"
   a6_code_candidate_sha: "d863bed337611f6b27a1f611e5dee975a9408395"
+  a7_code_candidate_sha: "06ad9e074957137800f6155e6b372303a65ec0f2"
   focused_tests_added: true
   fast_ci: green
   browser_ci: green
@@ -243,4 +285,4 @@ verification:
   planning_docs_ci: green
   integrated_a9: pending
 
-next: "A7 — Cross-cutting defect sweep"
+next: "A8 — Contract/docs/runtime drift reconciliation"
