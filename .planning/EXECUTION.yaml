@@ -49,4 +49,4 @@ chats:
 
   "10":
     nodes:
-      "7.4": { state: in_progress, result: null }
+      "7.4": { state: blocked, result: "Deferred because the user added Demo Buy strategy-validation scope before target-machine acceptance. The final external acceptance must run only after the revised plan is frozen, the new feature is implemented/verified, and a new final candidate SHA exists." }
