@@ -49,7 +49,7 @@ chats:
 
   "10":
     nodes:
-      "4.3.1": { state: blocked, result: "Demo Buy + AI Investigation planning passed the five formal reviews plus the final external-user-from-zero review after correcting returned-position semantics and sharing-safe AI export. Implementation remains blocked until PR #17 is Planning-Docs-CI green, reviewed/squash-merged, main Planning Docs CI is green, open-PR state is clean, and root STATUS deliberately authorizes implementation." }
+      "4.3.1": { state: pending, result: null }
       "4.3.2": { state: pending, result: null }
 
   "11":
