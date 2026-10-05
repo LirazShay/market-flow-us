@@ -77,7 +77,7 @@ producer hello/session
 → clean producer stop
 ```
 
-The cadence comes from the U.S. Recorder configuration. The gate does not use legacy `MapHeat`, `GetSecuritiesData`, `chunkSize` or `chunkDelayMs` acquisition semantics.
+The cadence comes from the U.S. Recorder configuration. The gate does not use the superseded Israeli multi-request acquisition semantics.
 
 A sanitized JSON report is shown for copying and is also available at:
 
