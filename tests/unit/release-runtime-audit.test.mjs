@@ -75,3 +75,23 @@ test("Scanner authoring guide exposes only the active U.S. schema-v3 contract", 
     /LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyDealsQuantity|DailyNISRevenue/
   );
 });
+
+test("first-run acceptance is complete and routed from START_HERE", async () => {
+  const [startHere, runbook] = await Promise.all([
+    rootFile("START_HERE.md"),
+    rootFile("docs/FIRST_RUN_ACCEPTANCE.md")
+  ]);
+
+  assert.match(startHere, /docs\/FIRST_RUN_ACCEPTANCE\.md/);
+
+  for (let checkpoint = 0; checkpoint <= 14; checkpoint += 1) {
+    assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
+  }
+
+  assert.match(runbook, /SETUP\.cmd/);
+  assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd provider-recovery/);
+  assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd target/);
+  assert.match(runbook, /NEW_TRADING_DAY\.cmd/);
+  assert.match(runbook, /PREPARE_LIVE_VERIFICATION\.cmd/);
+  assert.match(runbook, /pending\/inconclusive/);
+});
