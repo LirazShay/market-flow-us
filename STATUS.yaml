@@ -5,7 +5,7 @@ overall_status: blocked
 current:
   chat: 10
   node: "4.3.1"
-  title: "Demo Buy + AI Investigation planning frozen; final external review pending"
+  title: "Demo Buy + AI Investigation minimal planning repair from external review"
   status: blocked
 
 authority:
@@ -17,15 +17,15 @@ authority:
 
 planning_completion:
   file_audit_and_change_summary: pass
-  durable_us_contracts_and_decisions: pass
+  durable_us_contracts_and_decisions: reopening_rank_semantics
   new_st_tree: pass
   st_tree_review: pass
   second_pass_adversarial_review: pass
-  final_planning_review: pass
-  plan_freeze: pass
+  final_planning_review: superseded_by_external_review_repair
+  plan_freeze: reopened
   execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: blocked_final_external_review_and_merge
+  handoff_verification: pending_repair_recheck
+  implementation_authorization: blocked_planning
 
 execution:
   chats_total: 17
@@ -34,6 +34,4 @@ execution:
   current_node: "4.3.1"
 
 blockers:
-  - "Requested final external-user-from-zero adversarial review must pass without a material planning defect."
-  - "After that review, PR #17 must be reviewed and squash-merged."
-  - "Main Planning Docs CI and open-PR state must be verified green/clean before phase advances to implementation."
+  - "External-user review found a material ambiguity: Scanner resultRank is source row position, not proof of semantic ranking. AI prompt/field-guide/test truth must be repaired and re-frozen before implementation."
