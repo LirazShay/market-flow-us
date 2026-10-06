@@ -50,7 +50,7 @@ async function itemCount(service) {
   return Number((await service.rows("SELECT COUNT(*) AS count FROM demo_buy_items"))[0].count);
 }
 
-test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remains resumable", async ({ page, context }) => {
+test("Scanner Demo Buy manual/Auto capture stays generation-bound, keeps running behind Demo Buy, and Stop remains resumable", async ({ page, context }) => {
   const fake = await startFake();
   const service = await startService(fake);
 
@@ -59,6 +59,8 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     await page.goto(fake.baseUrl);
     const viewer = await popupPromise;
     await waitForRunning(page);
+
+    await expect(viewer.getByRole("button", { name: "Demo Buy", exact: true })).toBeVisible();
 
     await viewer.getByRole("button", { name: "Scanner" }).click();
     await viewer.getByLabel("SQL").fill(
@@ -100,6 +102,15 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     await viewer.getByRole("button", { name: "הפעל" }).click();
     await expect.poll(() => captureCount(service), { timeout: 5000 }).toBeGreaterThanOrEqual(2);
 
+    const beforeDemoBuySurface = await captureCount(service);
+    await viewer.getByRole("button", { name: "Demo Buy", exact: true }).click();
+    await expect(viewer.getByRole("heading", { name: "Demo Buy" })).toBeVisible();
+    await expect(viewer.getByRole("table", { name: /Demo Buy capture/ }).first()).toBeVisible();
+    await expect(viewer.getByText("Auto Demo Buy: All", { exact: true })).toBeVisible();
+    await expect.poll(() => captureCount(service), { timeout: 5000 }).toBeGreaterThan(beforeDemoBuySurface);
+
+    await viewer.getByRole("button", { name: "Scanner" }).click();
+    await expect(scannerTable).toBeVisible();
     await viewer.getByRole("button", { name: "עצור סריקה חוזרת" }).click();
     await expect(viewer.getByText(/הסריקה החוזרת נעצרה/)).toBeVisible();
     const stoppedCount = await captureCount(service);
@@ -110,7 +121,8 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     await viewer.getByRole("button", { name: "הפעל" }).click();
     await expect.poll(() => captureCount(service), { timeout: 5000 }).toBeGreaterThan(stoppedCount);
 
-    await viewer.getByRole("button", { name: "Current" }).click();
+    await viewer.getByRole("button", { name: "Demo Buy", exact: true }).click();
+    await expect(viewer.getByText("Auto Demo Buy: All", { exact: true })).toBeVisible();
     await viewer.getByRole("button", { name: "Turn off" }).click();
     await expect(viewer.getByText("Auto Demo Buy: All", { exact: true })).toHaveCount(0);
 
