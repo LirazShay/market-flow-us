@@ -6,7 +6,7 @@ current:
   chat: 21
   node: "9.2"
   title: "Market Replay portable recording format and file-backed source"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
