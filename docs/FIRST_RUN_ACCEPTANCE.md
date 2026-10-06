@@ -94,7 +94,9 @@ START_DEMO.cmd
 - Detail/History נפתח משורה;
 - Scanner מריץ built-in בטוח;
 - Demo Buy זמין מה־Scanner ומסך Demo Buy נפתח;
+- progressive outcomes מוצגים ו־targeted `Refresh observation` עובד;
 - `Investigate with AI` זמין עבור observation קיים ואינו שולח דבר אוטומטית החוצה;
+- Generate/Regenerate מציגים נתיב pack יחסי בלבד וה־clipboard כולל fallback ידני;
 - Support Snapshot זמין;
 - `Ctrl+C` עוצר נקי;
 - restart לא משחית את `.demo/market-flow-us.duckdb`.
@@ -225,19 +227,38 @@ PASS של ה־base gate מחמיר יותר מהמינימום של TREE: הוא
 overall = "PASS"
 ```
 
-אין דרישת movement בשלב הזה. בשוק סטטי צפוי שהדוח יכול להציג במקביל:
+אין דרישת movement בשלב הזה. בשוק סטטי/לפני המסחר התוצאה הצפויה והתקינה יכולה להיות:
 
 ```text
+overall = "PASS"
 movement.status = "PENDING"
+movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
 ```
 
-וזה אינו מוריד את ה־base/static PASS.
+זה **FR-12 PASS**: החיבור האמיתי וה־authority path הוכחו, ורק הוכחת תנועה אמיתית נשארה ל־FR-13.
+
+כדי להבדיל שוק סטטי מ־collector תקוע, חייבים לראות cycles חדשים: כל response מלאה, COMMIT ACK חדש לכל cycle, History גדל, ו־Current נשאר זהה רק משום שערכי המקור זהים.
+
+### PRE-MARKET READINESS checkpoint
+
+אם FR-0..FR-12 ירוקים, רשום:
+
+```text
+PRE-MARKET READINESS = PASS
+FR-13 = PENDING MARKET MOVEMENT
+```
+
+שמור את ה־sanitized FR-12 report ואת ה־accepted candidate SHA.
+
+אם לאחר מכן רק נפתח המסחר, ובינתיים **לא** השתנו candidate SHA, code/runtime, dependencies או machine configuration רלוונטי, אין צורך לחזור על FR-0..FR-12. ממשיכים ישירות ל־FR-13 על אותו candidate.
+
+אם התגלה defect ותוקן, חוזרים ל־checkpoint הירוק האחרון שה־fix לא ביטל. שינוי candidate או שינוי runtime שמערער evidence קודם מחייב חזרה לנקודה המוקדמת ביותר שהושפעה.
 
 ## FR-13 — Authenticated market-open acceptance
 
 על אותו accepted candidate, בזמן שוק פעיל, הפעל שוב את אותו SHA-bound gate.
 
-ה־gate עצמו מפיק כעת evidence מכני נפרד לתנועה מתוך טווח ה־cycles שהריצה עצמה commit-תה. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
+ה־gate מפיק evidence מכני נפרד לתנועה מתוך **טווח ה־cycles של הריצה הנוכחית בלבד**. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
 
 PASS של FR-13 דורש יחד:
 
@@ -283,6 +304,7 @@ movement.status = "FAIL"
 
 - accepted SHA;
 - סטטוס FR-0..FR-13, כולל FR-8A..FR-8H;
+- אם נעשה two-pass run: FR-12 pre-market report + FR-13 market-open report על אותו accepted SHA;
 - שמות/מיקומי sanitized reports שנשמרו מקומית;
 - active DB path: `data/market-flow-us.duckdb`;
 - daily stop/archive/new-day procedure עבר בפועל ויצר fresh schema v4;
