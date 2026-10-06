@@ -1,11 +1,11 @@
 schema_version: 2
-phase: planning
+phase: implementation
 overall_status: in_progress
 
 current:
   chat: 17
   node: "8.1"
-  title: "Standalone IBKR order-service implementation pending authorization"
+  title: "Standalone IBKR order-service local authority"
   status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -27,9 +27,9 @@ planning_completion:
   external_user_from_zero_review: pass
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: pending_ci
-  implementation_authorization: pending_main_planning_gate
-  ibkr_order_extension: planned
+  handoff_verification: pass
+  implementation_authorization: pass
+  ibkr_order_extension: implementation
   ibkr_order_durable_contract: pass
   ibkr_order_tree_freeze: pass
 
