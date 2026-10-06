@@ -588,6 +588,7 @@ export function createMarketScopeRuntime({
       operation: "provider.cycle.collect",
       operationId: "provider-cycle",
       checkpoint: "provider.cycle.collected",
+      lastSuccessfulCheckpoint: diagnosticTracker.snapshot().lastSuccessfulCheckpoint,
       error: {
         code: ERROR_CODES.CYCLE_INVALID,
         name: "CycleCollectionError",
@@ -613,74 +614,74 @@ export function createMarketScopeRuntime({
       }
     });
 
-  const callbacks = bridge.getRecorderCallbacks();
-  const baseRecorderOptions = {
-    acceptUniverse: callbacks.acceptUniverse,
-    onCycle: callbacks.onCycle,
-    onFailure: callbacks.onFailure,
-    now
-  };
+    const callbacks = bridge.getRecorderCallbacks();
+    const baseRecorderOptions = {
+      acceptUniverse: callbacks.acceptUniverse,
+      onCycle: callbacks.onCycle,
+      onFailure: callbacks.onFailure,
+      now
+    };
 
-  if (usesLegacyCollection) {
+    if (usesLegacyCollection) {
+      recorder = recorderFactory({
+        ...baseRecorderOptions,
+        loadUniverse: async () => {
+          try {
+            const universe = await loadUniverse();
+            diagnosticTracker.recordSuccess({
+              component: "provider",
+              operation: "provider.universe.collect",
+              operationId: "provider-universe",
+              checkpoint: "provider.universe.collected",
+              context: {
+                requested: universe.recordCount,
+                received: universe.securities.length,
+                unique: universe.securities.length
+              }
+            });
+            return universe;
+          } catch (error) {
+            diagnosticTracker.recordError({
+              component: "provider",
+              operation: "provider.universe.collect",
+              operationId: "provider-universe",
+              checkpoint: "provider.universe.collected",
+              error: {
+                code: ERROR_CODES.UNIVERSE_INVALID,
+                name: "UniverseCollectionError",
+                message: "Provider universe acquisition or validation failed.",
+                retryable: false
+              }
+            });
+            throw error;
+          }
+        },
+        collectCycle: async ({ universe, config }) => {
+          try {
+            const cycle = await collectCycle({ universe, config });
+            recordCollectedCycle(cycle);
+            return cycle;
+          } catch (error) {
+            return recordCollectionFailure(error);
+          }
+        }
+      });
+      return;
+    }
+
     recorder = recorderFactory({
       ...baseRecorderOptions,
-      loadUniverse: async () => {
+      collectCandidate: async ({ config }) => {
         try {
-          const universe = await loadUniverse();
-          diagnosticTracker.recordSuccess({
-            component: "provider",
-            operation: "provider.universe.collect",
-            operationId: "provider-universe",
-            checkpoint: "provider.universe.collected",
-            context: {
-              requested: universe.recordCount,
-              received: universe.securities.length,
-              unique: universe.securities.length
-            }
-          });
-          return universe;
-        } catch (error) {
-          diagnosticTracker.recordError({
-            component: "provider",
-            operation: "provider.universe.collect",
-            operationId: "provider-universe",
-            checkpoint: "provider.universe.collected",
-            error: {
-              code: ERROR_CODES.UNIVERSE_INVALID,
-              name: "UniverseCollectionError",
-              message: "Provider universe acquisition or validation failed.",
-              retryable: false
-            }
-          });
-          throw error;
-        }
-      },
-      collectCycle: async ({ universe, config }) => {
-        try {
-          const cycle = await collectCycle({ universe, config });
-          recordCollectedCycle(cycle);
-          return cycle;
+          const candidate = await resolvedCollectCandidate({ config });
+          recordCollectedCycle(candidate.cycle);
+          return candidate;
         } catch (error) {
           return recordCollectionFailure(error);
         }
       }
     });
-    return;
   }
-
-  recorder = recorderFactory({
-    ...baseRecorderOptions,
-    collectCandidate: async ({ config }) => {
-      try {
-        const candidate = await resolvedCollectCandidate({ config });
-        recordCollectedCycle(candidate.cycle);
-        return candidate;
-      } catch (error) {
-        return recordCollectionFailure(error);
-      }
-    }
-  });
-}
 
   async function launch() {
     if (launchPromise) return await launchPromise;
@@ -691,51 +692,51 @@ export function createMarketScopeRuntime({
       return snapshot();
     }
 
-  launchPromise = (async () => {
-    const rebuildViewer = state === "error";
-    state = "starting";
-    lastError = null;
-    publishState();
-    createProducerGeneration();
-
-    try {
-      const activeRecorderConfig = usesLegacyCollection
-        ? recorderConfig
-        : createUsRecorderConfig(recorderConfig);
-      await bridge.startSession(activeRecorderConfig);
-      recorder.start(activeRecorderConfig);
-      state = "running";
+    launchPromise = (async () => {
+      const rebuildViewer = state === "error";
+      state = "starting";
       lastError = null;
-      openViewer({ rebuild: rebuildViewer });
       publishState();
-      return snapshot();
-    } catch (error) {
-      const launchError = normalizeError(error, "Market Flow US launch failed.");
-      const activeRecorder = recorder;
-      const activeBridge = bridge;
+      createProducerGeneration();
 
-      activeRecorder?.stop("launch_failed");
-      await waitForRecorderIdle(activeRecorder);
-
-      if (activeBridge?.getState?.().sessionId) {
-        try {
-          await activeBridge.stopSession("launch_failed");
-        } catch {
-          // stopSession fails closed and tears down its transport before rethrowing.
-        }
-      }
-
-      state = "error";
-      lastError = launchError;
       try {
-        openViewer({ rebuild: true });
-      } catch {
-        // Preserve the original launch failure when the Viewer itself cannot be rebuilt.
+        const activeRecorderConfig = usesLegacyCollection
+          ? recorderConfig
+          : createUsRecorderConfig(recorderConfig);
+        await bridge.startSession(activeRecorderConfig);
+        recorder.start(activeRecorderConfig);
+        state = "running";
+        lastError = null;
+        openViewer({ rebuild: rebuildViewer });
+        publishState();
+        return snapshot();
+      } catch (error) {
+        const launchError = normalizeError(error, "Market Flow US launch failed.");
+        const activeRecorder = recorder;
+        const activeBridge = bridge;
+
+        activeRecorder?.stop("launch_failed");
+        await waitForRecorderIdle(activeRecorder);
+
+        if (activeBridge?.getState?.().sessionId) {
+          try {
+            await activeBridge.stopSession("launch_failed");
+          } catch {
+            // stopSession fails closed and tears down its transport before rethrowing.
+          }
+        }
+
+        state = "error";
+        lastError = launchError;
+        try {
+          openViewer({ rebuild: true });
+        } catch {
+          // Preserve the original launch failure when the Viewer itself cannot be rebuilt.
+        }
+        publishState();
+        throw lastError;
       }
-      publishState();
-      throw lastError;
-    }
-  })();
+    })();
 
     try {
       return await launchPromise;
@@ -744,11 +745,11 @@ export function createMarketScopeRuntime({
     }
   }
 
-async function waitForRecorderIdle(activeRecorder) {
-  while (activeRecorder?.getState?.().cycleInFlight === true) {
-    await delay(target, 25);
+  async function waitForRecorderIdle(activeRecorder) {
+    while (activeRecorder?.getState?.().cycleInFlight === true) {
+      await delay(target, 25);
+    }
   }
-}
 
   async function stop(reason = "manual") {
     if (stopPromise) return await stopPromise;
@@ -765,30 +766,30 @@ async function waitForRecorderIdle(activeRecorder) {
       return snapshot();
     }
 
-  stopPromise = (async () => {
-    const activeRecorder = recorder;
-    const activeBridge = bridge;
-    state = "stopping";
-    publishState();
+    stopPromise = (async () => {
+      const activeRecorder = recorder;
+      const activeBridge = bridge;
+      state = "stopping";
+      publishState();
 
-    activeRecorder?.stop(reason);
-    await waitForRecorderIdle(activeRecorder);
+      activeRecorder?.stop(reason);
+      await waitForRecorderIdle(activeRecorder);
 
-    try {
-      if (activeBridge?.getState?.().sessionId) {
-        await activeBridge.stopSession(reason);
+      try {
+        if (activeBridge?.getState?.().sessionId) {
+          await activeBridge.stopSession(reason);
+        }
+        state = "stopped";
+        lastError = null;
+        publishState();
+        return snapshot();
+      } catch (error) {
+        state = "error";
+        lastError = normalizeError(error, "Market Flow US producer stop failed.");
+        publishState();
+        throw lastError;
       }
-      state = "stopped";
-      lastError = null;
-      publishState();
-      return snapshot();
-    } catch (error) {
-      state = "error";
-      lastError = normalizeError(error, "Market Flow US producer stop failed.");
-      publishState();
-      throw lastError;
-    }
-  })();
+    })();
 
     try {
       return await stopPromise;
