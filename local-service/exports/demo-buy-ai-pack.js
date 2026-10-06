@@ -10,6 +10,10 @@ import path from "node:path";
 
 import { validateDemoBuyScannerContext } from "../../shared/demo-buy/context.js";
 import {
+  DEMO_BUY_POST_WINDOW_MS,
+  deriveDemoBuyOutcomeEvidenceStatus
+} from "../../shared/demo-buy/outcome-evidence.js";
+import {
   ERROR_CODES,
   ProtocolValidationError
 } from "../../shared/protocol/index.js";
@@ -31,7 +35,6 @@ export const AI_PACK_FILE_NAMES = Object.freeze([
 ]);
 
 const PRE_WINDOW_MS = 30 * 60 * 1000;
-const POST_WINDOW_MS = 10 * 60 * 1000;
 const UTF8 = new TextEncoder();
 const SAFE_MARKET_TEXT_COLUMNS = new Set([
   "securityId",
@@ -428,12 +431,6 @@ async function pathExists(candidate) {
   }
 }
 
-function outcomeStatus(evidenceWatermarkMs, postWindowEndMs) {
-  return evidenceWatermarkMs !== null && evidenceWatermarkMs >= postWindowEndMs
-    ? "COMPLETE_OUTCOME"
-    : "PARTIAL_OUTCOME";
-}
-
 function buildManifest({
   productVersion,
   generatedAtMs,
@@ -549,7 +546,7 @@ export function createDemoBuyAiPackExporter({
     }
 
     const preWindowStartMs = Math.max(0, authority.capturedAtMs - PRE_WINDOW_MS);
-    const postWindowEndMs = authority.capturedAtMs + POST_WINDOW_MS;
+    const postWindowEndMs = authority.capturedAtMs + DEMO_BUY_POST_WINDOW_MS;
     if (!Number.isSafeInteger(postWindowEndMs)) {
       fail(ERROR_CODES.DEMO_BUY_AI_PACK_INTEGRITY);
     }
@@ -579,7 +576,7 @@ export function createDemoBuyAiPackExporter({
       "evidenceWatermarkMs",
       { nullable: true }
     );
-    const status = outcomeStatus(evidenceWatermarkMs, postWindowEndMs);
+    const status = deriveDemoBuyOutcomeEvidenceStatus(evidenceWatermarkMs, postWindowEndMs);
     const outcome = await demoBuyReads.observationGet(captureId, securityId);
 
     const generatedAtMs = asSafeInteger(now(), "generatedAtMs");
@@ -664,6 +661,9 @@ export function createDemoBuyAiPackExporter({
       fail(ERROR_CODES.DEMO_BUY_AI_PACK_EXPORT_ERROR);
     }
 
+    const latestIncludedPostObservationMs = after.length === 0
+      ? null
+      : after.at(-1).collected_at_ms;
     const exportPathRelative = `${AI_PACK_RELATIVE_ROOT}/${finalName}`;
     return Object.freeze({
       exportPathRelative,
@@ -671,6 +671,7 @@ export function createDemoBuyAiPackExporter({
       outcomeEvidenceStatus: status,
       targetInScannerContext,
       generatedAtMs,
+      latestIncludedPostObservationMs,
       promptText,
       fileCount: AI_PACK_FILE_NAMES.length,
       fileNames: AI_PACK_FILE_NAMES,
