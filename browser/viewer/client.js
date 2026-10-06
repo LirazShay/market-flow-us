@@ -15,6 +15,11 @@ export const DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT = Object.freeze({
   UNKNOWN: "ACKNOWLEDGEMENT_UNKNOWN"
 });
 
+export const DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT = Object.freeze({
+  CREATED: "CONFIRMED_CREATED",
+  UNKNOWN: "ACKNOWLEDGEMENT_UNKNOWN"
+});
+
 export class ViewerClientError extends Error {
   constructor(message, { code = null, retryable = false } = {}) {
     super(message);
@@ -147,6 +152,14 @@ export function createViewerClient({
         checkpoint: "demo_buy.provenance_read",
         name: "DemoBuyProvenanceReadError",
         message: "Demo Buy provenance read failed."
+      };
+    }
+    if (type === "demo.buy.ai-pack.create") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.ai_pack_export",
+        name: "DemoBuyAiPackExportError",
+        message: "AI Investigation pack generation failed."
       };
     }
     return null;
@@ -512,6 +525,75 @@ export function createViewerClient({
     }
   }
 
+  async function createDemoBuyAiPack(captureId, securityId) {
+    assertPositiveSafeInteger(captureId, "captureId");
+    assertNonEmptyString(securityId, "securityId", 128);
+
+    await connect();
+    const requestId = nextRequestId();
+    const spec = diagnosticSpec("demo.buy.ai-pack.create");
+    let dispatched = false;
+
+    try {
+      const result = await sendRequest(
+        "demo.buy.ai-pack.create",
+        { captureId, securityId },
+        requestId,
+        { onDispatched: () => { dispatched = true; } }
+      );
+      diagnosticTracker.recordSuccess({
+        component: spec.component,
+        operation: "demo.buy.ai-pack.create",
+        operationId: requestId,
+        checkpoint: spec.checkpoint,
+        context: {
+          captureId,
+          securityId,
+          fileCount: result.fileCount,
+          targetInScannerContext: result.targetInScannerContext,
+          outcomeEvidenceStatus: result.outcomeEvidenceStatus
+        }
+      });
+      return Object.freeze({
+        status: DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.CREATED,
+        ...result
+      });
+    } catch (error) {
+      if (error instanceof ViewerUnavailableError) {
+        if (!dispatched) throw error;
+        diagnosticTracker.recordError({
+          component: spec.component,
+          operation: "demo.buy.ai-pack.create",
+          operationId: requestId,
+          checkpoint: spec.checkpoint,
+          error: {
+            code: DIAGNOSTIC_CODES.SERVICE_DISCONNECTED,
+            name: "DemoBuyAiPackAcknowledgementUnknown",
+            message: "AI Investigation pack acknowledgement is unknown after transport loss.",
+            retryable: true
+          }
+        });
+        return Object.freeze({
+          status: DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.UNKNOWN
+        });
+      }
+
+      diagnosticTracker.recordError({
+        component: spec.component,
+        operation: "demo.buy.ai-pack.create",
+        operationId: requestId,
+        checkpoint: spec.checkpoint,
+        error: {
+          code: typeof error?.code === "string" ? error.code : ERROR_CODES.DB_ERROR,
+          name: spec.name,
+          message: spec.message,
+          retryable: error?.retryable === true
+        }
+      });
+      throw error;
+    }
+  }
+
   async function getCurrent() {
     return await request("viewer.current.get", {});
   }
@@ -602,6 +684,7 @@ export function createViewerClient({
     getDemoBuyPage,
     getDemoBuyObservation,
     getDemoBuyCapture,
+    createDemoBuyAiPack,
     getSupportSnapshot,
     executeScanner,
     listScannerQueries,
