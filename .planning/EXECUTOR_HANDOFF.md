@@ -198,6 +198,8 @@ choose source rows
 
 Exact bounds live in `DEMO_BUY_PROTOCOL_LIMITS.md`: 5000 items, 1 MiB SQL, first 50 context rows, <=64 retained columns with canonical identity mandatory, 128-byte clipped textual/serialized cells, <=256 KiB context.
 
+Node rejects malformed duplicates/order/context and cross-checks every selected returned position <=50 against retained context identity.
+
 ### Authority
 
 No browser-supplied price.
@@ -209,6 +211,8 @@ post-capture authority:    cycle_id > buy_cycle_id
 ```
 
 Horizon match must also satisfy `cycle_id > buy_cycle_id` and `collected_at_ms >= captured_at_ms + H`.
+
+Wall-clock timestamps are diagnostics only. Preserve raw values; negative derived durations/latencies/ages become null + timing anomaly, never authority reordering.
 
 ### Capture acknowledgement
 
@@ -224,15 +228,41 @@ Never blindly replay acknowledgement-unknown capture.
 
 One Viewer-wide capture slot. Busy Auto generations are visibly skipped, not queued. One Viewer-wide AI-export slot; extra Generate/Regenerate actions do not queue.
 
+## Scanner/Viewer UX invariants preserved
+
+- Scanner result capture always refers to the exact rendered active generation, not edited draft text.
+- Capture freezes generation + row selection synchronously before async submit.
+- Checkbox/control interaction must not trigger row-to-Detail navigation.
+- Auto is Viewer-session state, visible across surfaces and directly switchable Off.
+- Auto changes apply only to future generations; Off does not cancel an already in-flight capture.
+- Scanner has a **resumable** Stop recurring scan distinct from terminal Viewer destroy; later Activate works.
+- Demo Buy page uses capture groups, sticky identity/baseline columns and one compact cell per horizon.
+- `NO_FUTURE_OBSERVATION` is shown as Pending; other unavailable reasons remain warnings.
+- `Refresh latest` resets page one; `Load more` continues keyset walk; `Refresh observation` uses `demo.buy.observation.get` and does not reset pagination.
+
 ## AI Investigation invariants preserved
 
-AI Investigation is local evidence packaging only. No AI credential/cloud call/web enrichment/automatic Scanner mutation and no broker-order authority.
+AI Investigation is local evidence packaging only:
 
-Prediction-time and outcome evidence obey the `buy_cycle_id` watermark. AI export uses its sharing-safe projection and exact user SQL remains verbatim with pre-share warning.
+```text
+Demo Buy observation
+→ deterministic local pack
+→ user copies/uploads to AI of choice
+```
+
+No AI credential/cloud call/web enrichment/automatic Scanner mutation and no broker-order authority.
+
+Prediction-time and outcome evidence obey the same `buy_cycle_id` watermark. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
+
+Exporter accepts no browser path, publishes temp-dir→atomic-rename under `exports/ai-investigations/`, returns a product-relative path, never overwrites a successful pack and mutates no DB.
+
+A lost export ACK may be regenerated after reconnect because export is non-mutating/collision-safe. Clipboard operations require manual-copy fallback.
 
 ## Schema/new-day invariants preserved
 
-Valid v3 migrates transactionally to market schema v4; suspicious partial-v3 Demo structures fail closed. Fresh market DB boots v4. New Trading Day preserves saved queries only and does not own the separate IBKR execution store.
+Valid v3 migrates transactionally to market schema v4; suspicious partial-v3 Demo structures fail closed. Fresh market DB boots v4. No speculative history index is added without evidence.
+
+New Trading Day accepts valid v3 or v4 source, rejects v1/v2/corrupt/running states, preserves saved queries only, optionally archives source unchanged and installs fresh v4 with empty Demo Buy state. It does not own the separate IBKR execution store.
 
 ## Performance / KISS
 
@@ -240,11 +270,24 @@ Do not add Strategy Engine, automatic Scanner-to-order subsystem, portfolio engi
 
 The separate order-service HTTP API and minimal execution DuckDB are explicitly approved branch-8 boundaries; keep both narrow.
 
+If recurring verification is materially slow:
+
+```text
+localize dominant cost
+→ remove duplication/waste
+→ preserve proof
+→ remeasure
+```
+
+Hosted CI is correctness-first; heavy 4096×180/day-bounded performance remains target-machine evidence.
+
 ## Diagnostics/security
 
-Preserve the existing checkpoint/support pattern. Order diagnostics may use an `ibkr_order.*` component namespace but must expose only stable checkpoint/code, product-owned local IDs, bounded lifecycle state and sanitized cause.
+Preserve the existing checkpoint/support architecture; do not add parallel logging.
 
-Never include credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored Scanner SQL/history evidence or AI prompt contents in support diagnostics.
+Order diagnostics may use an `ibkr_order.*` component namespace but must expose only stable checkpoint/code, product-owned local IDs, bounded lifecycle state and sanitized cause.
+
+Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence or AI prompt contents.
 
 ## Work-unit lifecycle
 
@@ -269,7 +312,7 @@ set in_progress
 
 A blocking defect stays with the discovering chat: root cause → fix → regression/proof → affected verification → green.
 
-If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area, repair/review/freeze, then continue.
+If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area per FRAMEWORK, repair/review/freeze, then continue.
 
 If required GitHub Actions/CI is unavailable, do not merge unverified work or start the next implementation unit.
 
