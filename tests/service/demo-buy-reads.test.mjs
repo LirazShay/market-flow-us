@@ -218,7 +218,11 @@ test("trusted Demo Buy page and targeted observation share exact watermark, targ
       securityId: "202"
     });
     assert.equal(targetedResponse.type, "response.ok");
-    assert.deepEqual(targetedResponse.payload.data, item);
+    const targeted = targetedResponse.payload.data;
+    assert.equal(targeted.outcomeEvidenceStatus, "PARTIAL_OUTCOME");
+    const { outcomeEvidenceStatus, ...targetedObservation } = targeted;
+    assert.equal(outcomeEvidenceStatus, "PARTIAL_OUTCOME");
+    assert.deepEqual(targetedObservation, item);
 
     const captureResponse = await viewer.request("demo.buy.capture.get", { captureId: 1 });
     assert.equal(captureResponse.type, "response.ok");
