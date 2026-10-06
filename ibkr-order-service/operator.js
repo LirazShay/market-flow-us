@@ -17,11 +17,13 @@ export function createOperatorAdapter(config) {
 }
 
 export async function startOperatorOrderService(config, options = {}) {
+  if (!config || typeof config !== "object") {
+    throw new TypeError("operator config is required");
+  }
   const adapter = options.adapter ?? createOperatorAdapter(config);
   return startOrderService({
     adapter,
     dbPath: config.dbPath,
-    processLiveEnabled: config.processLiveEnabled === true,
-    ...(options.port === undefined ? {} : { port: options.port })
+    processLiveEnabled: config.processLiveEnabled === true
   });
 }
