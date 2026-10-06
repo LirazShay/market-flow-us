@@ -4,6 +4,6 @@ replan_mode: execution_reopen
 current_stage: "planning"
 current_node: "7.4"
 blockers: []
-next_action: "Reopen the smallest pre-final-acceptance planning area. Preserve all completed work, block 7.4 temporarily, convert B-US-005 Replay hardening and B-US-006 basic in-product BUY into reviewed TREE leaves/contracts, repair allocation/dependencies, freeze again, and only then resume implementation."
-last_review: "R-US-MARKET-REPLAY-EXTERNAL"
+next_action: "Contracts, TREE, decisions and the execution-reopen extension review are complete. Repair EXECUTION allocation so 9.6 runs before 8.5 and 7.4 remains last; update handoff/status/test-strategy/planning-CI structural truth; validate; then freeze and proceed through planning PR/main gates before implementation authorization."
+last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
 implementation_authorized: false
