@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "9.4"
+current_node: "9.5"
 blockers: []
-next_action: "TREE 9.3 implementation and success_evidence are complete on Chat 22 PR #50. After PR #50 squash-merge, verify main Fast/Browser/Planning/Workload CI and clean open-PR state, then start Chat 23 / TREE 9.4 from fresh main. Preserve Replay Host orchestration-only scope, exact Origin plus ephemeral control credential, replay-only DB/process ownership, unchanged Market Flow US service/protocol and absolute isolation from the normal live DB/process."
+next_action: "TREE 9.4 implementation and success_evidence are complete on Chat 23 PR #52. After PR #52 squash-merge, verify main Fast/Browser/Planning/Workload CI and clean open-PR state, then start Chat 24 / TREE 9.5 from fresh main for deterministic branch-9 reclosure. Audit MARKET_REPLAY and affected product/data/technical/test contracts against the implemented isolated Replay Host/operator flow, run focused Replay acceptance plus materially affected broad gates, and pin the exact post-branch-9 candidate for final 7.4 acceptance."
 last_review: "R-US-MARKET-REPLAY-EXTERNAL"
 implementation_authorized: true

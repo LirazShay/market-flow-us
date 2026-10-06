@@ -133,12 +133,15 @@ export function createReplayPlayerSurface({
   function render(state) {
     const hasSource = state.sourceReady === true;
     const hasPlayer = state.playerAvailable === true;
+    const canProvisionRun = state.runCoordinatorAvailable === true;
     const active = state.status === "playing";
     const pausable = active;
     const stoppable = ["playing", "paused"].includes(state.status);
-    const canPlay = hasPlayer
-      && !state.requiresFreshRun
-      && !["playing", "stopping", "stopped", "seek_pending", "completed", "error", "empty"].includes(state.status);
+    const playBlockedByStatus = ["playing", "stopping", "completed", "error", "empty"].includes(state.status);
+    const canPlay = hasSource
+      && (hasPlayer || canProvisionRun)
+      && (!state.requiresFreshRun || canProvisionRun)
+      && !playBlockedByStatus;
 
     elements.sourceName.textContent = hasSource ? state.sourceName : "לא נבחר מקור";
     elements.sourceKind.textContent = hasSource ? `מקור: ${sourceKindLabel(state.sourceKind)}` : "";
@@ -165,8 +168,12 @@ export function createReplayPlayerSurface({
     elements.service.textContent = state.serviceReady ? "מחובר" : "לא מחובר";
     elements.service.className = `value service ${state.serviceReady ? "ok" : "muted"}`;
 
-    if (state.requiresFreshRun) {
+    if (state.requiresFreshRun && canProvisionRun) {
+      elements.notice.textContent = "ה־run הקודם נסגר. Play יקים Replay run מבודד חדש לפני שיישלח frame נוסף.";
+    } else if (state.requiresFreshRun) {
       elements.notice.textContent = "ה־Stop/Seek סגר את ה־run הנוכחי. נדרש Replay run חדש לפני Play נוסף.";
+    } else if (hasSource && !hasPlayer && canProvisionRun) {
+      elements.notice.textContent = "המקור מוכן. Play יקים Replay Host run מבודד ויחבר את ה־Viewer לפני הניגון.";
     } else if (hasSource && !hasPlayer) {
       elements.notice.textContent = "המקור מוכן. Replay Host/producer מבודד עדיין לא מוכן; Play נשאר חסום כדי לא לגעת ב־DB הרגיל.";
     } else {

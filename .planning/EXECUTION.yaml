@@ -103,7 +103,7 @@ chats:
 
   "23":
     nodes:
-      "9.4": { state: pending, result: null }
+      "9.4": { state: done, result: "Replay Host is implemented as loopback lifecycle orchestration only: exact Origin, ephemeral in-memory one-run pairing credential, replay-owned per-run DuckDB/service child, foreign-port fail-closed behavior, and stop-only-owned-child semantics. The dedicated Replay UI/client/coordinator composes the unchanged ProducerBridge and existing Viewer; initial Play provisions an isolated run, Pause/Resume stays on the same run, while Seek and Play-after-Stop create fresh DB/service runs before any frame emission. START_MARKET_REPLAY.cmd and npm replay-host provide the opt-in operator path. PR #52 head 37f346dcd3949ad27918e20d43fd56799036b01a passed Fast #451, Browser #410, Planning Docs #583 and Workload #238 after correcting one overbroad launcher assertion; focused Host/service proof confirms live-DB canary preservation and no foreign-process termination." }
 
   "24":
     nodes:
