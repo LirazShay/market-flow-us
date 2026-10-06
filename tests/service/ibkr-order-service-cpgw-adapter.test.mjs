@@ -160,9 +160,10 @@ test("session/account/contract/snapshot/what-if provider sequence is exact and s
     }
   ]);
 
+  const sleeps = [];
   const adapter = new CpgwAdapter({
     requestJson: transport.requestJson,
-    sleep: async () => {}
+    sleep: async (ms) => sleeps.push(ms)
   });
 
   assert.deepEqual(await adapter.getSessionStatus(), {
@@ -175,6 +176,7 @@ test("session/account/contract/snapshot/what-if provider sequence is exact and s
     brokerageSession: true,
     connected: true
   });
+  assert.deepEqual(sleeps, [2_000]);
 
   const accounts = await adapter.getTradableAccounts();
   assert.deepEqual(accounts, [syntheticAccount()]);
@@ -417,12 +419,14 @@ test("reply, order/trade observation, cancel and keepalive expose sanitized fact
       conid: 265598
     }
   );
-  assert.deepEqual(await adapter.keepalive(), {
+  const keepalive = await adapter.keepalive();
+  assert.deepEqual(keepalive, {
     authenticated: true,
     connected: true,
     ssoExpiresMs: 300000
   });
-  assert.equal(JSON.stringify(await adapter.keepalive).includes("PRIVATE-SYNTH-SESSION"), false);
+  assert.equal(JSON.stringify(keepalive).includes("PRIVATE-SYNTH-SESSION"), false);
+  transport.done();
 });
 
 test("transport accepts only HTTPS loopback and never changes process-global TLS policy", () => {
