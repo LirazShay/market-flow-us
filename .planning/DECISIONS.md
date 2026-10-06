@@ -188,11 +188,11 @@ No background horizon updater/materialized result schema/new market DB/new marke
 
 ## D-US-025 — Demo Buy + AI Investigation precede final target-machine acceptance
 
-**Status:** resolved; sequence extended by D-US-039 and D-US-040
+**Status:** resolved; sequence extended by D-US-039, D-US-040 and D-US-048
 
 Completed migration leaves through `7.3` remain historical evidence. The prior sequence implemented Demo Buy/AI, then `7.5`, then began `7.4`.
 
-Branch `8` was later requested before `7.4` completed, and branch `9` Market Recording + Replay was requested before `7.4` resumed. D-US-040 owns the current continuation order.
+Branch `8` was later requested before `7.4` completed, branch `9` Market Recording + Replay was requested before `7.4` resumed, and the later hardening/basic-BUY extension is now owned by D-US-048.
 
 ## D-US-026 — Capture preserves original Scanner meaning under bounded provenance
 
@@ -324,9 +324,9 @@ This is an export-projection rule, not a second database or sanitization subsyst
 
 Branch `8` introduces one separate Node 24 process on `127.0.0.1:8770` using the first-party Interactive Brokers Client Portal Web API through Client Portal Gateway.
 
-Scanner, Demo Buy, AI Investigation and Current do not automatically submit orders in this mini-project. A future integration must consume the sidecar's stable local API instead of bypassing it to call IBKR directly.
+Scanner, Demo Buy, AI Investigation and Current do not automatically submit orders. The later basic Detail BUY integration consumes the sidecar's stable local API through a trusted Node-owned seam instead of bypassing it to call IBKR directly.
 
-The existing market-data WebSocket/service/schema-v4 authority stays unchanged.
+The existing market-data database remains authoritative for market analysis.
 
 ## D-US-035 — DRY_RUN is default; LIVE requires independent local and provider gates
 
@@ -403,29 +403,27 @@ Short selling, options/futures/FX, bracket/OCA/algo orders and leverage optimiza
 
 ## D-US-039 — Branch 8 reclosure precedes resuming final 7.4 acceptance
 
-**Status:** resolved; superseded for sequencing by D-US-040
+**Status:** resolved; superseded for sequencing by D-US-040 and D-US-048
 
 The user requested the standalone IBKR mini-project after `7.5` was done and while `7.4` final acceptance was still unfinished.
 
-Branch `8` completed and produced a reclosed candidate. Before `7.4` resumed, the user requested branch `9` Market Recording + Replay. D-US-040 owns the current continuation order; all branch-8 implementation evidence remains valid for what it proved.
+Branch `8` completed and produced a reclosed candidate. Before `7.4` resumed, the user requested branch `9` Market Recording + Replay. The later hardening/basic-BUY extension is now owned by D-US-048; all branch-8 implementation evidence remains valid for what it proved.
 
 ## D-US-040 — Branch 9 Replay reclosure precedes resuming final 7.4 acceptance
 
-**Status:** resolved
+**Status:** resolved; superseded for current sequencing by D-US-048
 
-Current continuation order is:
+The completed sequence was:
 
 ```text
 preserve completed branch 1–8 implementation/evidence
 → keep 7.4 blocked/not-done
-→ plan/freeze branch 9 Market Recording + Replay
 → implement 9.1–9.4
 → implement 9.5 deterministic Replay reclosure
-→ pin the exact complete-product candidate
-→ resume 7.4 final target-machine/provider acceptance
+→ pin exact post-branch-9 product candidate
 ```
 
-`7.4` must depend on branch `9.5`; it cannot use the older post-branch-8 candidate as final product truth.
+That post-branch-9 candidate remains valid historical evidence, but final `7.4` now waits for the later `9.6` hardening and `8.5` basic BUY extension defined by D-US-048.
 
 ## D-US-041 — Replay records validated browser snapshots, not DB state
 
@@ -474,3 +472,65 @@ The Host uses exact allowed Origin plus an ephemeral per-run control credential 
 Replay uses a dedicated browser entry/artifact, operator launcher and focused deterministic proof. Existing `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` keep their current semantics.
 
 Timing is proved primarily with deterministic/fake clocks plus a short real-wall-clock integration smoke. Multi-hour real-time playback is not a CI/local prerequisite. Existing Fast/Browser/Planning/Workload evidence remains required where materially affected, but Replay-specific waiting must not silently inflate ordinary local verification.
+
+## D-US-046 — Replay hardening is an adversarial re-audit, not a new Replay feature
+
+**Status:** resolved
+
+After `9.5` completed, the user requested a pre-user-run audit intended to find likely defects before relying on manual testing. This work belongs to new leaf `9.6` and is governed by `docs/REPLAY_HARDENING.md`.
+
+Hardening must combine static review and executable proof across recording, IndexedDB, portable parsing/file source, Player scheduling/rebase/generation cancellation, ProducerBridge ACK flow, Replay Host ownership/security/lifecycle, unchanged service seams, replay DB isolation, product surfaces and operator/diagnostic paths.
+
+A green pre-existing suite is not enough when static review finds an unproved material risk. Any such risk receives the smallest deterministic proof. Any discovered blocking defect stays in `9.6` through root cause → fix → regression proof → affected verification → green.
+
+The audit does not justify new Replay capability. Shared server/protocol remains replay-unaware and ordinary launch/test semantics stay unchanged.
+
+## D-US-047 — Basic in-product BUY uses immutable preparation plus trusted local confirmation
+
+**Status:** resolved
+
+The first integrated order feature is intentionally narrow and belongs to `8.5` under `docs/BASIC_BUY_INTEGRATION.md`:
+
+```text
+current Detail only
+BUY only
+run-configured positive quantity
+STK / USD / SMART
+MKT / DAY
+DRY_RUN by default; LIVE only by explicit operator opt-in
+```
+
+The authenticated provider page is not an execution trust boundary. It never receives the `ibkr-order-service` caller token, cannot call the sidecar through CORS, and cannot submit arbitrary normalized order JSON through a generic Viewer proxy.
+
+Viewer/WebSocket may only prepare an immutable short-lived ticket from `securityId`. Node resolves authoritative current `Symbol`, owns quantity/mode/fixed order dimensions and performs zero sidecar/provider mutation during preparation.
+
+Actual mutation requires a separate product-owned loopback confirmation page with explicit human confirmation, short-lived immutable ticket, anti-CSRF nonce/custom header, same local Origin and bounded JSON-only mutation. The market process may call the existing sidecar only with the caller token it received from the child it actually spawned through the existing IPC ready seam.
+
+One server-generated `requestId` is bound to the prepared immutable intent. Double-click/response retry reuses that exact ID; acknowledgement-unknown never creates a fresh automatic submit. Existing Branch-8 DRY_RUN/LIVE/provider/reply/idempotency/reconciliation authority remains unchanged.
+
+Normal launch, Replay, Scanner, Demo Buy, AI Investigation and Current remain execution-disabled.
+
+## D-US-048 — Current continuation is Replay hardening → basic BUY → final 7.4, with allocation order distinct from dependency truth
+
+**Status:** resolved
+
+The user explicitly requested Replay hardening before the first basic BUY integration and both before final target-machine acceptance.
+
+Current process order is:
+
+```text
+completed historical leaves through 9.5
+→ 9.6 Replay hardening
+→ 8.5 basic in-product BUY integration
+→ 7.4 final target-machine/provider acceptance on the resulting exact candidate
+```
+
+This serial order is an execution-allocation decision, not a claim that `8.5` technically requires `9.6`. Therefore:
+
+```text
+9.6 depends_on: 9.5
+8.5 depends_on: 3.3 + 8.4
+7.4 depends_on: 7.5 + 8.5 + 9.6
+```
+
+This preserves truthful S&T dependencies while ensuring the user-requested hardening-first sequence. The historical post-Branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369` remains the baseline entering the extension but cannot be the final `7.4` candidate after product code changes.
