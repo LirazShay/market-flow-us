@@ -21,7 +21,7 @@ Otherwise do not code.
 
 For `אני צאט N תתחיל`:
 
-1. fetch current `main`;
+1. fetch fresh `main`;
 2. read `AGENTS.md`;
 3. read `STATUS.yaml`;
 4. read `.planning/STATUS.yaml`;
