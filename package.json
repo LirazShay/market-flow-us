@@ -19,6 +19,7 @@
     "test:acceptance:local:membership": "node scripts/run-local-acceptance.mjs membership",
     "test:acceptance:local:provider-recovery": "node scripts/run-local-acceptance.mjs provider-recovery",
     "test:acceptance:local:restart": "node scripts/run-local-acceptance.mjs restart",
+    "test:acceptance:local:feature": "node scripts/run-local-acceptance.mjs feature",
     "test:acceptance:local:isolated": "node scripts/run-local-acceptance.mjs isolated",
     "test:acceptance:local:target": "node scripts/run-local-acceptance.mjs target",
     "test:workload": "node scripts/run-workload-profile.mjs ci",

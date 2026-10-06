@@ -76,17 +76,17 @@ jobs:
       - name: Run full Chromium E2E
         run: npm run test:e2e
 
-      - name: Prove local acceptance entry point
-        run: npm run test:acceptance:local:static
+      - name: Prove bounded Local Fake acceptance
+        run: npm run test:acceptance:local
 
       - name: Print sanitized local acceptance report
         if: always()
         shell: bash
         run: |
-          if [[ -f test-results/acceptance/static.json ]]; then
-            cat test-results/acceptance/static.json
+          if [[ -f test-results/acceptance/all.json ]]; then
+            cat test-results/acceptance/all.json
           else
-            echo "Local acceptance report was not produced."
+            echo "Local acceptance report was not produced: test-results/acceptance/all.json"
           fi
 
       - name: Upload sanitized Browser failure evidence

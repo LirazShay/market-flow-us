@@ -93,6 +93,8 @@ START_DEMO.cmd
 - Current מציג synthetic U.S. rows;
 - Detail/History נפתח משורה;
 - Scanner מריץ built-in בטוח;
+- Demo Buy זמין מה־Scanner ומסך Demo Buy נפתח;
+- `Investigate with AI` זמין עבור observation קיים ואינו שולח דבר אוטומטית החוצה;
 - Support Snapshot זמין;
 - `Ctrl+C` עוצר נקי;
 - restart לא משחית את `.demo/market-flow-us.duckdb`.
@@ -107,7 +109,7 @@ PASS: כמה responses זהים מושלמים מקבלים durable ACK; History
 
 אין דרישת movement בשלב הזה.
 
-## FR-8 — Local Fake Leumi dynamic/recovery/restart
+## FR-8 — Local Fake Leumi dynamic/recovery/restart + post-feature closure
 
 הרץ כל תת־שלב בנפרד:
 
@@ -116,15 +118,36 @@ RUN_LOCAL_ACCEPTANCE.cmd moving
 RUN_LOCAL_ACCEPTANCE.cmd membership
 RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
 RUN_LOCAL_ACCEPTANCE.cmd restart
+RUN_LOCAL_ACCEPTANCE.cmd demo-buy-runtime
+RUN_LOCAL_ACCEPTANCE.cmd demo-buy-outcomes
+RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
+RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
+```
+
+אפשר להריץ רק את ארבעת תתי־השלבים החדשים יחד:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd feature
+```
+
+או את כל FR-7/FR-8 הדטרמיניסטי יחד:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd all
 ```
 
 PASS כולל:
 
-- moving values מגיעים ל־Current ונשמרים ב־History;
-- add/remove membership מקבל revision ACK לפני commit של אותה response;
-- provider failure נכשל fail-closed ואז recovery חוזר ל־commit תקין;
-- restart משמר authority שנשמרה;
-- Scanner רואה את התנועה הדטרמיניסטית.
+- `FR-8A` moving values מגיעים ל־Current ונשמרים ב־History;
+- `FR-8B` add/remove membership מקבל revision ACK לפני commit של אותה response;
+- `FR-8C` provider failure נכשל fail-closed ואז recovery חוזר ל־commit תקין, ו־Scanner רואה את התנועה הדטרמיניסטית;
+- `FR-8D` restart משמר authority שנשמרה;
+- `FR-8E` Scanner generation יוצר Demo Buy capture אמיתי דרך Browser → Service → DuckDB עם provenance/baseline תקינים;
+- `FR-8F` Demo Buy מציג progressive outcomes, `Refresh latest` ו־targeted `Refresh observation` בלי לאבד paging/state;
+- `FR-8G` Investigate with AI מוכיח position/context semantics, generate/regenerate ו־clipboard/fallback דרך ה־UI;
+- `FR-8H` AI Investigation Pack נוצר דרך השירות האמיתי, מתקדם מ־`PARTIAL_OUTCOME` ל־`COMPLETE_OUTCOME` לאחר evidence נוסף, regeneration אינו דורס pack קודם, ואין leakage של operational/session canaries לקבצים/תגובה/diagnostics.
+
+ה־`feature` וה־`all` אינם כוללים את workload הכבד של FR-9.
 
 ## FR-9 — Target-machine load acceptance
 
@@ -147,7 +170,7 @@ RUN_LOCAL_ACCEPTANCE.cmd target
 
 ## FR-10 — Daily DB lifecycle
 
-עם active-day data ו־saved Scanner query קיימים:
+עם active-day data, Demo Buy captures ו־saved Scanner query קיימים:
 
 1. עצור producer/service עם `Ctrl+C`.
 2. ודא שאין process שמחזיק את ה־DB.
@@ -159,8 +182,11 @@ NEW_TRADING_DAY.cmd
 
 PASS:
 
-- prior-day DB archived תחת `data/archive/`;
+- source DB תקין ב־schema v3 או v4 מתקבל לפי חוזה ה־migration/rollover;
+- prior-day DB archived ללא שינוי תחת `data/archive/`;
+- fresh active DB נוצר כ־schema v4;
 - active market tables מתחילים נקיים;
+- Demo Buy capture/item tables מתחילות נקיות ליום החדש;
 - saved Scanner queries נשמרים;
 - אין rollover בזמן session פעילה.
 
@@ -256,11 +282,12 @@ movement.status = "FAIL"
 רשום בקיצור:
 
 - accepted SHA;
-- סטטוס FR-0..FR-13;
+- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H;
 - שמות/מיקומי sanitized reports שנשמרו מקומית;
 - active DB path: `data/market-flow-us.duckdb`;
-- daily stop/archive/new-day procedure עבר בפועל;
+- daily stop/archive/new-day procedure עבר בפועל ויצר fresh schema v4;
 - normal start/stop commands ידועים;
+- Demo Buy/AI Investigation recovery path ידוע;
 - Support Snapshot recovery path ידוע;
 - אין blocking defect פתוח;
 - `main` CI ירוק אחרי כל fix שנדרש במהלך acceptance.
@@ -273,7 +300,7 @@ movement.status = "FAIL"
 
 מסמכים משלימים:
 
-- `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload;
+- `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload, כולל Demo Buy/AI;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound gate;
 - `docs/USER_GUIDE.md` — שימוש שוטף במוצר;
 - `START_HERE.md` — כניסה קצרה להפעלה היומיומית.

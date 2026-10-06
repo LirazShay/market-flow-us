@@ -59,10 +59,11 @@ NEW_TRADING_DAY.cmd
 הפעולה:
 
 ```text
-prior active DB
+prior active DB (schema v3 or v4)
 → archive under data/archive/
-→ fresh schema-v3 active DB
+→ fresh schema-v4 active DB
 → saved Scanner queries preserved
+→ Demo Buy capture/item state starts clean for the new day
 ```
 
 אם קיימת session שמסומנת `running`, הפעולה נכשלת במקום להחליף מסד תוך כדי עבודה. אין למחוק ידנית את המסד כדרך רגילה להתחיל יום חדש.
@@ -111,7 +112,15 @@ npm run test:workload
 RUN_LOCAL_ACCEPTANCE.cmd
 ```
 
-זו בדיקה דטרמיניסטית ללא authentication. היא מוכיחה static responses, moving values, membership changes, provider failure/recovery ו־restart דרך ה־runtime/service/DuckDB הרגילים.
+זו בדיקה דטרמיניסטית ללא authentication. ברירת המחדל מוכיחה static responses, moving values, membership changes, provider failure/recovery, restart, וגם את מסלול Demo Buy + AI Investigation דרך ה־runtime/service/DuckDB הרגילים.
+
+אם רוצים להריץ רק את ה־post-feature closure של Demo Buy/AI:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd feature
+```
+
+הפרופיל הזה מכסה capture אמיתי מתוך Scanner, progressive outcomes ו־targeted refresh, AI Investigation UI, ו־AI Pack generation/regeneration עם בדיקת sharing-safe evidence.
 
 לפרופילי מחשב היעד:
 
@@ -157,11 +166,22 @@ movement.status = "PASS"
 
 ## מה רואים בתוך Market Flow US?
 
-החלון הראשי כולל שלושה אזורים עיקריים:
+החלון הראשי כולל ארבעה אזורים עיקריים:
 
 - **Current** — המצב העדכני של ניירות הערך.
 - **Detail / History** — לחיצה על נייר פותחת את הפרטים וההיסטוריה שלו.
-- **Scanner** — הרצת SQL מחזורי, כולל ספריית שאילתות שמורות.
+- **Scanner** — הרצת SQL מחזורי, כולל ספריית שאילתות שמורות ובקרי Demo Buy.
+- **Demo Buy** — captures מקובצים, outcomes מתקדמים ו־Investigate with AI.
+
+Demo Buy אינו שולח פקודת מסחר. הוא שומר capture מקומי של מועמדי Scanner ומחשב outcomes מה־History. schema v4 שומר את `demo_buy_captures` ו־`demo_buy_items`; אין טבלת outcomes persisted נפרדת.
+
+`Investigate with AI` מייצר pack מקומי תחת:
+
+```text
+exports/ai-investigations/
+```
+
+ה־pack לא פונה בעצמו לשירות AI חיצוני. לפני שיתוף חיצוני יש לעבור על הקבצים, ובפרט על `QUERY.sql`, שנשמר verbatim מה־SQL של המשתמש.
 
 יש גם **Copy Support Snapshot**. אם משהו נכשל, זו בדרך כלל הדרך הטובה ביותר להעתיק אבחון בטוח לצורך תיקון.
 

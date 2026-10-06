@@ -6,7 +6,7 @@ current:
   chat: 16
   node: "7.5"
   title: "Post-feature deterministic reclosure"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"

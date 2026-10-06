@@ -26,8 +26,8 @@ Fake Market
 → Market Flow US browser runtime
 → loopback WebSocket
 → local Node.js service
-→ DuckDB
-→ Current / Detail / Scanner
+→ DuckDB schema v4
+→ Current / Detail / Scanner / Demo Buy / AI Investigation
 ```
 
 הדפדפן אמור להיפתח אוטומטית. אם לא, פתח ידנית:
@@ -105,14 +105,61 @@ Market Flow US יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפ�
 - כפתור **הפעל**.
 - ספריית שאילתות.
 - פעולות חדש / שמור בשם חדש / שמור / שנה שם / מחק.
+- בקרי Demo Buy עבור התוצאה המוצגת.
 
 שאילתה פעילה רצה במחזוריות לפי המרווח שהוגדר. שינוי טיוטה או בחירה בספרייה אינו משנה אוטומטית generation שכבר פעיל; הפעלה היא פעולה מפורשת.
 
-אם תוצאת SQL מחזירה עמודת זהות מוכרת בשם `securityId` או `security_id`, שורת התוצאה יכולה לפתוח את אותו Detail/History של Current.
+אם תוצאת SQL מחזירה עמודת זהות מוכרת בשם `securityId` או `security_id`, שורת התוצאה יכולה לפתוח את אותו Detail/History של Current וגם להשתתף ב־Demo Buy.
 
 לכתיבת SQL ראה `docs/SCANNER_SQL_GUIDE.md`.
 
-## 7. איפה הנתונים נשמרים?
+## 7. Demo Buy
+
+Demo Buy אינו שולח פקודת מסחר. הוא שומר תצפית מקומית על מועמדי Scanner כדי לבדוק מה קרה להם לאחר נקודת הבחירה.
+
+מתוך generation מוצג של Scanner אפשר לבצע:
+
+- **Selected** — רק השורות שסומנו;
+- **All** — כל השורות התקינות של אותה תוצאה;
+- **Top X** — X השורות הראשונות של אותה תוצאה;
+- **Auto** — יצירת Demo Buy רק מ־generations עתידיים לפי All או Top X.
+
+המיקום שנשמר הוא `Scanner returned position` המקורי. מיקום `1` אינו אומר אוטומטית “הכי טוב”; משמעות דירוג חזקה קיימת רק אם ה־SQL עצמו מגדיר `ORDER BY` דטרמיניסטי מתאים.
+
+הכפתור **Demo Buy** פותח מסך תוצאות מקובצות לפי capture. לכל פריט מוצגים baseline וה־horizons הקבועים:
+
+```text
+10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m, 10m
+```
+
+תוצאות יכולות להתקדם בהדרגה מ־Pending ל־UP / DOWN / FLAT או למצב unavailable מוסבר. **Refresh latest** טוען מחדש את ראש הרשימה; **Load more** ממשיך paging; וב־Observation details אפשר לבצע **Refresh observation** לפריט ישן בלי לאפס את הרשימה.
+
+`Auto Demo Buy` ממשיך לפעול גם אם עוברים למסך אחר כל עוד Scanner החוזר פעיל. **Turn off** מכבה captures אוטומטיים עתידיים. עצירת הסריקה החוזרת עוצרת generations עתידיים אך אינה מוחקת את הגדרת Auto.
+
+## 8. Investigate with AI
+
+במסך Demo Buy ניתן לפתוח **Investigate with AI** עבור observation.
+
+לפני יצירת pack המוצר מרענן את observation הספציפי מול authority המקומי. לאחר מכן **Generate AI Investigation Pack** יוצר תיקייה מקומית, דטרמיניסטית ו־collision-safe תחת:
+
+```text
+exports/ai-investigations/
+```
+
+ה־pack מכיל בדיוק את ה־SQL המקורי, baseline, prediction-time evidence, post-capture evidence, outcome, Scanner context sharing-safe, manifest, field guide, README ו־prompt. הוא אינו מתקשר אוטומטית לשירות AI חיצוני ואינו מפעיל SQL חדש.
+
+המצב יכול להיות:
+
+```text
+PARTIAL_OUTCOME
+COMPLETE_OUTCOME
+```
+
+כאשר מצטבר evidence נוסף אפשר להשתמש ב־**Regenerate**; pack קיים אינו נדרס אלא נוצרת תיקייה חדשה. **Copy AI Prompt** ו־**Copy folder path** מעתיקים ל־Clipboard, ובדפדפן שחוסם Clipboard מופיע fallback ידני לבחירה/העתקה.
+
+חשוב: `QUERY.sql` הוא SQL שכתב המשתמש ונשמר verbatim. ה־export מסנן operational/session metadata ומצמצם Scanner text שאינו שדה שוק בטוח, אבל לפני העלאה חיצונית יש לעבור על כל הקבצים שנוצרו.
+
+## 9. איפה הנתונים נשמרים?
 
 בשימוש הרגיל ברירת המחדל היא:
 
@@ -120,7 +167,7 @@ Market Flow US יפתח Viewer נפרד. אם הדפדפן חוסם Popup, אפ�
 data/market-flow-us.duckdb
 ```
 
-זהו **active DB של יום מסחר אחד**. הטבלאות `sessions`, `universe`, `cycles`, `history` ו־`latest` מיועדות לסמכות של יום העבודה הפעיל, לא לצבירה אוטומטית של חודשים או שנים.
+זהו **active DB של יום מסחר אחד**. הטבלאות `sessions`, `universe`, `cycles`, `history` ו־`latest` מיועדות לסמכות של יום העבודה הפעיל, לא לצבירה אוטומטית של חודשים או שנים. schema v4 מוסיף את `demo_buy_captures` ו־`demo_buy_items`; outcomes של horizons אינם נשמרים כטבלת authority אלא מחושבים מה־History בעת קריאה.
 
 ב־Demo:
 
@@ -134,7 +181,7 @@ data/market-flow-us.duckdb
 data/live-verification.duckdb
 ```
 
-קבצי `data/`, `.demo/`, `dist/` ומסדי DuckDB מוחרגים מ־Git.
+קבצי `data/`, `.demo/`, `dist/`, `exports/` ומסדי DuckDB מוחרגים מ־Git.
 
 ### מעבר ליום מסחר חדש
 
@@ -158,11 +205,12 @@ npm run db:new-day
 
 ```text
 stop service
-→ validate old DB is not marked running
+→ validate source DB is a valid stopped Market Flow US v3 or v4 DB
 → preserve scanner_saved_queries
 → move prior DB to data/archive/
-→ create fresh schema-v3 data/market-flow-us.duckdb
+→ create fresh schema-v4 data/market-flow-us.duckdb
 → restore saved queries into the fresh DB
+→ start with empty Demo Buy tables
 ```
 
 ה־archive הוא retention אופציונלי של היום הקודם; הוא אינו מסד analytics פתוח שהמוצר ממשיך לצבור אליו.
@@ -171,7 +219,7 @@ stop service
 
 אין למחוק ידנית את `data/market-flow-us.duckdb` כחלק מה־rollover הרגיל, משום שמחיקה ידנית גם עוקפת את שימור ספריית השאילתות.
 
-## 8. בדיקות ו־Local Fake Leumi acceptance
+## 10. בדיקות ו־Local Fake Leumi acceptance
 
 לבדיקה הרגילה ב־Windows:
 
@@ -187,7 +235,7 @@ RUN_TESTS.cmd
 npm run test:workload
 ```
 
-ל־Local Fake Leumi acceptance:
+ל־Local Fake Leumi acceptance המלא והתחום:
 
 ```text
 RUN_LOCAL_ACCEPTANCE.cmd
@@ -199,7 +247,18 @@ RUN_LOCAL_ACCEPTANCE.cmd
 - moving values;
 - add/remove membership;
 - provider failure/recovery;
-- service restart.
+- service restart;
+- Demo Buy capture דרך ה־runtime הרגיל;
+- progressive outcomes + targeted observation refresh;
+- ordered/unordered Scanner returned-position semantics ב־AI Investigation;
+- PARTIAL → COMPLETE generation/regeneration;
+- sharing-safe AI pack ללא operational/session canary leakage.
+
+כדי להריץ רק את ארבעת ה־post-feature checks:
+
+```text
+RUN_LOCAL_ACCEPTANCE.cmd feature
+```
 
 לפרופילי target-machine:
 
@@ -208,11 +267,11 @@ RUN_LOCAL_ACCEPTANCE.cmd isolated
 RUN_LOCAL_ACCEPTANCE.cmd target
 ```
 
-`isolated` מפעיל פרופילי persistence/read/Scanner יום־מסחר תחומים. `target` הוא פרופיל end-to-end של `4096 × 180`. מדידות target-machine אינן מוחלפות על ידי timing של GitHub-hosted CI.
+`isolated` מפעיל פרופילי persistence/read/Scanner/Demo Buy/AI יום־מסחר תחומים. `target` הוא פרופיל end-to-end של `4096 × 180`. מדידות target-machine אינן מוחלפות על ידי timing של GitHub-hosted CI.
 
 לפרטים ראה `docs/LOCAL_FAKE_ACCEPTANCE.md`.
 
-## 9. Authenticated provider verification
+## 11. Authenticated provider verification
 
 הפעל `PREPARE_LIVE_VERIFICATION.cmd` או פעל ישירות לפי `docs/LIVE_VERIFICATION.md`.
 
@@ -277,7 +336,7 @@ movement.historyReflected = true
 
 רק ה־gate רשאי להחזיר את classifications לגבי הגבולות שהוא באמת בודק.
 
-## 10. אם משהו לא עובד
+## 12. אם משהו לא עובד
 
 בדוק לפי הסדר:
 
@@ -298,7 +357,7 @@ movement.historyReflected = true
 
 אם השירות בכלל לא עולה, חלון ה־CLI מציג component/checkpoint/error code שמיועדים לאיתור הגבול שנכשל.
 
-## 11. מה לא למחוק
+## 13. מה לא למחוק
 
 - אל תמחק ידנית את `data/market-flow-us.duckdb` כדי להתחיל יום חדש; השתמש ב־`NEW_TRADING_DAY.cmd` כדי לשמר saved queries ולבצע rollover בטוח.
 - אל תמחק archive של יום קודם אם אתה עדיין רוצה לשמור אותו לצורכי retention ידני.

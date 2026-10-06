@@ -19,6 +19,11 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
     "membership",
     "provider-recovery",
     "restart",
+    "demo-buy-runtime",
+    "demo-buy-outcomes",
+    "ai-investigation-ui",
+    "ai-pack-safety",
+    "feature",
     "all",
     "isolated",
     "target"
@@ -54,6 +59,40 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
     testFile: "tests/e2e/us-runtime-membership-recovery.spec.mjs",
     grep: "preserves committed authority across service restart"
   });
+  assert.deepEqual(resolveLocalAcceptanceProfile("demo-buy-runtime"), {
+    checkpoint: "FR-8E",
+    kind: "playwright",
+    testFile: "tests/e2e/demo-buy-scanner-capture.spec.mjs",
+    grep: "Scanner Demo Buy manual/Auto capture stays generation-bound, keeps running behind Demo Buy, and Stop remains resumable"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("demo-buy-outcomes"), {
+    checkpoint: "FR-8F",
+    kind: "playwright",
+    testFile: "tests/e2e/demo-buy-outcome-surface.spec.mjs",
+    grep: "Demo Buy outcome surface renders grouped progressive evidence and isolates provenance failure"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("ai-investigation-ui"), {
+    checkpoint: "FR-8G",
+    kind: "playwright",
+    testFile: "tests/e2e/demo-buy-ai-investigation.spec.mjs",
+    grep: "AI Investigation uses authoritative refresh, neutral returned-position wording, one Viewer export slot and partial-to-complete regeneration"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("ai-pack-safety"), {
+    checkpoint: "FR-8H",
+    kind: "node-test",
+    testFiles: ["tests/service/demo-buy-ai-pack.test.mjs"],
+    testNamePattern: "AI pack exports immutable evidence with watermark partition, sharing-safe redaction and partial-to-complete regeneration"
+  });
+  assert.deepEqual(resolveLocalAcceptanceProfile("feature"), {
+    checkpoint: "FR-8E+FR-8H",
+    kind: "composite",
+    profiles: [
+      "demo-buy-runtime",
+      "demo-buy-outcomes",
+      "ai-investigation-ui",
+      "ai-pack-safety"
+    ]
+  });
   assert.deepEqual(resolveLocalAcceptanceProfile("all"), {
     checkpoint: "FR-7+FR-8",
     kind: "composite",
@@ -62,7 +101,11 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
       "moving",
       "membership",
       "provider-recovery",
-      "restart"
+      "restart",
+      "demo-buy-runtime",
+      "demo-buy-outcomes",
+      "ai-investigation-ui",
+      "ai-pack-safety"
     ]
   });
   assert.deepEqual(resolveLocalAcceptanceProfile("isolated"), {
@@ -80,6 +123,33 @@ test("local acceptance profiles route to the intended first-run checkpoints and 
     detailEnv: "MARKET_FLOW_US_WORKLOAD_REPORT"
   });
   assert.equal(resolveLocalAcceptanceProfile("unknown"), null);
+});
+
+test("default all includes every bounded post-feature acceptance checkpoint exactly once", () => {
+  const all = resolveLocalAcceptanceProfile("all");
+  assert.deepEqual(all.profiles, [
+    "static",
+    "moving",
+    "membership",
+    "provider-recovery",
+    "restart",
+    "demo-buy-runtime",
+    "demo-buy-outcomes",
+    "ai-investigation-ui",
+    "ai-pack-safety"
+  ]);
+  assert.equal(new Set(all.profiles).size, all.profiles.length);
+});
+
+test("feature composite stays bounded to focused existing Demo Buy and AI proofs", () => {
+  const feature = resolveLocalAcceptanceProfile("feature");
+  assert.deepEqual(feature.profiles, [
+    "demo-buy-runtime",
+    "demo-buy-outcomes",
+    "ai-investigation-ui",
+    "ai-pack-safety"
+  ]);
+  assert.equal(feature.profiles.some((name) => resolveLocalAcceptanceProfile(name)?.kind === "workload"), false);
 });
 
 test("composite local acceptance stops at the first failing checkpoint", async () => {

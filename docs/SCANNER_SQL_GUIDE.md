@@ -9,15 +9,18 @@ Use it when:
 - writing or reviewing a Scanner query;
 - asking an AI assistant to create or modify Scanner SQL;
 - checking the public DuckDB schema that Scanner may read;
-- understanding the built-in U.S. examples, including staged candidate ranking.
+- understanding the built-in U.S. examples, including staged candidate ranking;
+- inspecting persisted Demo Buy capture/provenance facts.
 
-The active Market Flow US contract is **schema v3**. The normal runtime, persisted schema, built-in queries and examples in this guide all describe the same released U.S. profile.
+The active Market Flow US contract is **schema v4**. The normal runtime, persisted schema, built-in queries and examples in this guide describe the released U.S. profile.
+
+Schema v4 keeps the seven schema-v3 market/configuration tables and adds exactly two persisted Demo Buy tables: `demo_buy_captures` and `demo_buy_items`. Demo Buy horizon outcomes are **not** persisted as a separate authority table; they are derived from committed `history` when the product reads/evaluates an observation.
 
 This guide must stay synchronized with:
 
 - `docs/DATA_CONTRACT.md`;
 - `docs/TECHNICAL_SPEC.md`;
-- the real schema-v3 DuckDB bootstrap;
+- the real schema-v4 DuckDB bootstrap/migration;
 - `MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES`;
 - Scanner admission and schema-drift tests.
 
@@ -25,14 +28,14 @@ This guide must stay synchronized with:
 
 ## 1. Scanner rules in one page
 
-Scanner is a trusted local **read-only analytical SQL** surface.
+Scanner is a trusted local **read-only analytical SQL** surface over the active DuckDB.
 
 Use exactly one `SELECT` statement.
 
 Supported analytical constructs include:
 
 - `SELECT`;
-- `JOIN` and `LEFT JOIN LATERAL`;
+- `JOIN`, `ASOF JOIN` and `LEFT JOIN LATERAL`;
 - `WHERE`;
 - `GROUP BY` / `HAVING`;
 - `ORDER BY` / `LIMIT`;
@@ -77,9 +80,17 @@ For history:
 - use an explicit `ORDER BY` whenever order matters;
 - use `LIMIT` when only a sample/top-N is required.
 
+For Demo Buy persistence:
+
+- `demo_buy_captures` owns immutable capture/query/result provenance;
+- `demo_buy_items` owns capture membership, returned position and exact baseline `buy_cycle_id`;
+- join items to captures by `capture_id`;
+- join a Demo Buy item to its exact market baseline by `(buy_cycle_id, security_id)` against `history`;
+- do not invent a persisted outcome table — horizon outcomes are derived from `history` by the product read model.
+
 The Scanner UI does not add hidden ranking, filtering, sorting or limits.
 
-If a result row should open the normal Security Detail / History surface, return the canonical ID exactly as:
+If a result row should open the normal Security Detail / History surface and be eligible for Demo Buy, return the canonical ID exactly as:
 
 ```sql
 security_id AS securityId
@@ -98,6 +109,7 @@ ScreenerHulPaging3 record.PaperId
 → String(PaperId)
 → universe.security_id
 → history.security_id / latest.security_id
+→ demo_buy_items.security_id
 ```
 
 `Symbol` is useful display/query metadata but is not the primary key.
@@ -142,6 +154,35 @@ ORDER BY collected_at_ms DESC, cycle_id DESC
 LIMIT 100;
 ```
 
+### Recent Demo Buy captures and exact baselines
+
+<!-- scanner-us-executable:demo-buy-captures -->
+```sql
+SELECT
+  i.capture_id,
+  i.result_rank,
+  i.security_id AS securityId,
+  i.buy_cycle_id,
+  c.captured_at_ms,
+  c.source_query_name,
+  c.selection_mode,
+  c.is_automatic,
+  b.Symbol,
+  b.Price AS baseline_price,
+  b.collected_at_ms AS baseline_collected_at_ms
+FROM demo_buy_items AS i
+JOIN demo_buy_captures AS c
+  ON c.capture_id = i.capture_id
+LEFT JOIN history AS b
+  ON b.cycle_id = i.buy_cycle_id
+ AND b.security_id = i.security_id
+ORDER BY i.capture_id DESC,
+         i.result_rank ASC
+LIMIT 100;
+```
+
+A missing baseline row is an integrity problem for product evaluation; the `LEFT JOIN` is useful for inspection because it keeps the persisted item visible instead of silently dropping it.
+
 ---
 
 ## 4. Time and value semantics
@@ -151,6 +192,8 @@ LIMIT 100;
 `*_at_ms` columns are local runtime/database timing facts in milliseconds. They are not exchange timestamps unless another durable contract explicitly says so.
 
 For staged history comparisons, `latest.collected_at_ms` is the current row's local collection time and `history.collected_at_ms` is the corresponding historical collection time.
+
+`demo_buy_captures.captured_at_ms` is the local immutable capture time. `demo_buy_items.buy_cycle_id` is the stronger baseline authority link; do not replace it with a timestamp-only guess.
 
 `TradeDateTime` is preserved as a provider string. Do not invent timezone or exchange-time semantics beyond verified provider evidence.
 
@@ -183,9 +226,9 @@ Scanner SQL can mechanically compare values without claiming that the comparison
 
 ---
 
-## 5. Public Scanner schema — schema v3
+## 5. Public Scanner schema — schema v4
 
-Scanner reads the same seven public tables owned by the local service:
+Scanner can read the same nine persisted tables owned by the local service:
 
 ```text
 schema_info
@@ -195,17 +238,19 @@ cycles
 history
 latest
 scanner_saved_queries
+demo_buy_captures
+demo_buy_items
 ```
 
-There is no hidden analytical database.
+There is no hidden analytical database and no persisted Demo Buy outcome table.
 
 ### 5.1 `schema_info`
 
 | Column | Type | Null | Meaning |
 |---|---|---|---|
-| `schema_version` | INTEGER | NO | Market Flow US schema version; target is `3`. |
+| `schema_version` | INTEGER | NO | Market Flow US schema version; target is `4`. |
 | `created_at_ms` | BIGINT | NO | Local DB creation time. |
-| `product_version` | VARCHAR | NO | Product/service version recorded at bootstrap. |
+| `product_version` | VARCHAR | NO | Product/service version recorded at bootstrap/migration. |
 
 ### 5.2 `sessions`
 
@@ -321,6 +366,41 @@ Both tables have the same columns. `history` is append-only successful authority
 | `updated_at_ms` | BIGINT | NO | Local update time. |
 
 Built-ins are source-defined and are not persisted as rows in `scanner_saved_queries`.
+
+### 5.7 `demo_buy_captures`
+
+One immutable row per Demo Buy capture.
+
+| Column | Type | Null | Meaning |
+|---|---|---|---|
+| `capture_id` | BIGINT | NO | Positive capture identity. |
+| `captured_at_ms` | BIGINT | NO | Local immutable capture time. |
+| `source_query_id` | VARCHAR | YES | Saved/built-in query ID when available. |
+| `source_query_name` | VARCHAR | YES | Query name when available. |
+| `source_query_sql` | VARCHAR | NO | Exact source SQL. |
+| `source_interval_ms` | BIGINT | NO | Positive Scanner interval. |
+| `source_result_started_at_ms` | BIGINT | NO | Source generation start. |
+| `source_result_completed_at_ms` | BIGINT | NO | Source generation completion. |
+| `source_result_row_count` | BIGINT | NO | Full source-result row count. |
+| `source_result_context_json` | JSON | NO | Bounded frozen Scanner context. |
+| `selection_mode` | VARCHAR | NO | `manual`, `all` or `top_x`. |
+| `is_automatic` | BOOLEAN | NO | Whether Auto created the capture. |
+| `top_x` | BIGINT | YES | Required only for `top_x`; otherwise NULL. |
+
+### 5.8 `demo_buy_items`
+
+One immutable membership row per captured canonical security.
+
+| Column | Type | Null | Meaning |
+|---|---|---|---|
+| `capture_id` | BIGINT | NO | Owning capture. |
+| `result_rank` | BIGINT | NO | Original 1-based returned Scanner position. |
+| `security_id` | VARCHAR | NO | Canonical security identity. |
+| `buy_cycle_id` | BIGINT | NO | Exact committed baseline cycle. |
+
+Primary key is `(capture_id, security_id)` and `(capture_id, result_rank)` is unique.
+
+The fixed Demo Buy horizons (`10s` through `10m`) are evaluated from `history` and are not additional persisted columns/tables.
 
 ---
 
@@ -627,10 +707,13 @@ Use product CRUD controls/protocol to mutate saved queries. Scanner SQL remains 
 
 - Do not join by `Symbol` or name when canonical `security_id` is available.
 - Do not reconstruct Current from `universe.is_current`; Current authority is `latest` from the last committed complete cycle.
+- Do not infer Demo Buy baseline by timestamp when `buy_cycle_id` exists.
+- Do not treat `result_rank` as “best” unless the source SQL itself defined deterministic ranking semantics.
+- Do not invent a persisted outcomes table; use the product Demo Buy read model for the canonical horizon evaluation semantics.
 - Do not collapse `NULL` into zero unless that is explicitly the intended analysis.
 - Do not assume a provider field name proves units, venue coverage, timestamp semantics or market freshness.
 - Do not send multiple SQL statements.
-- Do not mutate market/config tables through Scanner.
+- Do not mutate market/config/Demo Buy tables through Scanner.
 - Do not turn the staged example into a hidden application ranking engine; strategy remains editable SQL.
 
 ---
@@ -638,7 +721,7 @@ Use product CRUD controls/protocol to mutate saved queries. Scanner SQL remains 
 ## 9. Prompt template for an AI assistant
 
 ```text
-I am writing one Market Flow US Scanner query.
+I am writing one Market Flow US Scanner query against schema v4.
 
 Use only docs/SCANNER_SQL_GUIDE.md and the durable Market Flow US contracts.
 
@@ -646,18 +729,19 @@ Requirements:
 - Return exactly one read-only SELECT statement.
 - Do not use DML/DDL, multiple statements, parameters, query(...), query_table(...), or side-effecting functions.
 - Use security_id as canonical identity.
-- If result rows should open Security Detail, return security_id AS securityId.
+- If result rows should open Security Detail / be Demo Buy eligible, return security_id AS securityId.
 - Preserve NULL semantics deliberately.
 - Add deterministic ORDER BY when ranking/order matters.
 - Bound potentially large results unless I explicitly request an unbounded analytical result.
 - Prefer latest for current committed rows and history for time-series/prior-cycle analysis.
-- Do not invent undocumented provider semantics or trading guarantees.
+- For Demo Buy persistence, use demo_buy_captures + demo_buy_items and exact buy_cycle_id baseline authority.
+- Do not invent a persisted outcome table or undocumented provider/trading semantics.
 
 My goal:
 <describe the analysis>
 
 Optional constraints:
-<security IDs, time range, top N, fields, grouping, interval, etc.>
+<security IDs, time range, top N, fields, grouping, interval, capture IDs, etc.>
 ```
 
 ---
@@ -685,12 +769,13 @@ A change to any of these requires guide review in the same work unit:
 - public Scanner tables/columns/types;
 - canonical identity/join semantics;
 - typed/raw projection rules;
+- Demo Buy persistence/baseline authority;
 - Scanner admission restrictions;
 - U.S. built-in query ID/name/SQL/interval;
 - saved-query fields/semantics;
 - `securityId` navigation alias rules.
 
-Fast verification mechanically compares a fresh schema-v3 `information_schema.columns` inventory with the v3 manifest below and compares the U.S. source-defined built-ins with the documented built-in manifest/SQL.
+Fast verification mechanically compares a fresh schema-v4 `information_schema.columns` inventory with the v4 manifest below and compares the U.S. source-defined built-ins with the documented built-in manifest/SQL. The executable examples are also run through the real Scanner authority.
 
 ---
 
@@ -698,7 +783,7 @@ Fast verification mechanically compares a fresh schema-v3 `information_schema.co
 
 For conflicts:
 
-1. `docs/DATA_CONTRACT.md` owns provider identity/raw-value facts.
+1. `docs/DATA_CONTRACT.md` owns provider identity/raw-value and Demo Buy persisted-fact authority.
 2. `docs/TECHNICAL_SPEC.md` owns database/protocol/admission contracts.
 3. This guide owns the user/AI Scanner-authoring presentation of those facts.
 
@@ -709,7 +794,7 @@ Do not silently change this guide to disagree with an owning durable contract.
 ## Appendix A. Market Flow US drift-check manifest
 
 ```text
-SCANNER_US_SCHEMA_MANIFEST_V3
+SCANNER_US_SCHEMA_MANIFEST_V4
 schema_info: schema_version,created_at_ms,product_version
 sessions: session_id,producer_instance_id,status,started_at_ms,stopped_at_ms,stop_reason,last_heartbeat_at_ms,completed_cycles,failed_cycles,last_completed_cycle_id,last_completed_at_ms,config_json,last_error_json
 universe: security_id,is_current,universe_revision,first_seen_at_ms,last_seen_at_ms,Symbol,PaperNameEng,PaperNameHeb,ExchangeName,raw_source
@@ -717,11 +802,13 @@ cycles: cycle_id,session_id,universe_revision,status,started_at_ms,completed_at_
 history: cycle_id,session_id,universe_revision,security_id,chunk_index,cycle_started_at_ms,chunk_received_at_ms,collected_at_ms,source_metadata_json,Symbol,PaperNameEng,PaperNameHeb,ExchangeName,TradeDateTime,CountryName,CountryNameEng,Price,ChangePercent,DailyHigh,DailyLow,YearHigh,YearLow,DailyVolume,BeginYearChangePercent,Month12ChangePercent,Month36ChangePercent,AskRate,BidRate,YesterdayRate,PaperMarketCap,PaperIdYatab,CountryId,PaperType,ESGRatingId,ESGScope,raw_data
 latest: cycle_id,session_id,universe_revision,security_id,chunk_index,cycle_started_at_ms,chunk_received_at_ms,collected_at_ms,source_metadata_json,Symbol,PaperNameEng,PaperNameHeb,ExchangeName,TradeDateTime,CountryName,CountryNameEng,Price,ChangePercent,DailyHigh,DailyLow,YearHigh,YearLow,DailyVolume,BeginYearChangePercent,Month12ChangePercent,Month36ChangePercent,AskRate,BidRate,YesterdayRate,PaperMarketCap,PaperIdYatab,CountryId,PaperType,ESGRatingId,ESGScope,raw_data
 scanner_saved_queries: query_id,name,name_key,sql_text,interval_ms,created_at_ms,updated_at_ms
-END_SCANNER_US_SCHEMA_MANIFEST_V3
+demo_buy_captures: capture_id,captured_at_ms,source_query_id,source_query_name,source_query_sql,source_interval_ms,source_result_started_at_ms,source_result_completed_at_ms,source_result_row_count,source_result_context_json,selection_mode,is_automatic,top_x
+demo_buy_items: capture_id,result_rank,security_id,buy_cycle_id
+END_SCANNER_US_SCHEMA_MANIFEST_V4
 ```
 
 ```text
-SCANNER_US_SCHEMA_TYPES_V3
+SCANNER_US_SCHEMA_TYPES_V4
 schema_info.schema_version|INTEGER|NO
 schema_info.created_at_ms|BIGINT|NO
 schema_info.product_version|VARCHAR|NO
@@ -845,7 +932,24 @@ scanner_saved_queries.sql_text|VARCHAR|NO
 scanner_saved_queries.interval_ms|BIGINT|NO
 scanner_saved_queries.created_at_ms|BIGINT|NO
 scanner_saved_queries.updated_at_ms|BIGINT|NO
-END_SCANNER_US_SCHEMA_TYPES_V3
+demo_buy_captures.capture_id|BIGINT|NO
+demo_buy_captures.captured_at_ms|BIGINT|NO
+demo_buy_captures.source_query_id|VARCHAR|YES
+demo_buy_captures.source_query_name|VARCHAR|YES
+demo_buy_captures.source_query_sql|VARCHAR|NO
+demo_buy_captures.source_interval_ms|BIGINT|NO
+demo_buy_captures.source_result_started_at_ms|BIGINT|NO
+demo_buy_captures.source_result_completed_at_ms|BIGINT|NO
+demo_buy_captures.source_result_row_count|BIGINT|NO
+demo_buy_captures.source_result_context_json|JSON|NO
+demo_buy_captures.selection_mode|VARCHAR|NO
+demo_buy_captures.is_automatic|BOOLEAN|NO
+demo_buy_captures.top_x|BIGINT|YES
+demo_buy_items.capture_id|BIGINT|NO
+demo_buy_items.result_rank|BIGINT|NO
+demo_buy_items.security_id|VARCHAR|NO
+demo_buy_items.buy_cycle_id|BIGINT|NO
+END_SCANNER_US_SCHEMA_TYPES_V4
 ```
 
 ```text

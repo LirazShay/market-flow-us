@@ -18,7 +18,7 @@ if not exist "node_modules" (
 set "PROFILE=%~1"
 if not defined PROFILE set "PROFILE=all"
 
-if /I not "%PROFILE%"=="all" if /I not "%PROFILE%"=="static" if /I not "%PROFILE%"=="moving" if /I not "%PROFILE%"=="membership" if /I not "%PROFILE%"=="provider-recovery" if /I not "%PROFILE%"=="restart" if /I not "%PROFILE%"=="isolated" if /I not "%PROFILE%"=="target" goto :usage
+if /I not "%PROFILE%"=="all" if /I not "%PROFILE%"=="static" if /I not "%PROFILE%"=="moving" if /I not "%PROFILE%"=="membership" if /I not "%PROFILE%"=="provider-recovery" if /I not "%PROFILE%"=="restart" if /I not "%PROFILE%"=="demo-buy-runtime" if /I not "%PROFILE%"=="demo-buy-outcomes" if /I not "%PROFILE%"=="ai-investigation-ui" if /I not "%PROFILE%"=="ai-pack-safety" if /I not "%PROFILE%"=="feature" if /I not "%PROFILE%"=="isolated" if /I not "%PROFILE%"=="target" goto :usage
 
 echo ========================================
 echo Market Flow US - Local Acceptance
@@ -30,8 +30,16 @@ if /I "%PROFILE%"=="moving" echo Checkpoint: FR-8A moving values.
 if /I "%PROFILE%"=="membership" echo Checkpoint: FR-8B add/remove membership.
 if /I "%PROFILE%"=="provider-recovery" echo Checkpoint: FR-8C provider failure/recovery.
 if /I "%PROFILE%"=="restart" echo Checkpoint: FR-8D service restart/recovery.
+if /I "%PROFILE%"=="demo-buy-runtime" echo Checkpoint: FR-8E composed Demo Buy capture/runtime.
+if /I "%PROFILE%"=="demo-buy-outcomes" echo Checkpoint: FR-8F progressive Demo Buy outcomes/targeted refresh.
+if /I "%PROFILE%"=="ai-investigation-ui" echo Checkpoint: FR-8G ordered/unordered AI Investigation UI/regeneration.
+if /I "%PROFILE%"=="ai-pack-safety" echo Checkpoint: FR-8H real-service AI pack safety/regeneration.
+if /I "%PROFILE%"=="feature" (
+  echo This runs the bounded post-feature Demo Buy + AI Investigation acceptance only.
+  echo.
+)
 if /I "%PROFILE%"=="isolated" (
-  echo This runs the target-machine day-bounded isolated persistence/read/Scanner profile.
+  echo This runs the target-machine day-bounded isolated persistence/read/Scanner/Demo Buy/AI profile.
   echo It can be materially heavier than FR-7/FR-8 acceptance.
   echo.
 )
@@ -80,12 +88,17 @@ echo   RUN_LOCAL_ACCEPTANCE.cmd moving
 echo   RUN_LOCAL_ACCEPTANCE.cmd membership
 echo   RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
 echo   RUN_LOCAL_ACCEPTANCE.cmd restart
+echo   RUN_LOCAL_ACCEPTANCE.cmd demo-buy-runtime
+echo   RUN_LOCAL_ACCEPTANCE.cmd demo-buy-outcomes
+echo   RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
+echo   RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
+echo   RUN_LOCAL_ACCEPTANCE.cmd feature
 echo   RUN_LOCAL_ACCEPTANCE.cmd isolated
 echo   RUN_LOCAL_ACCEPTANCE.cmd target
 echo   RUN_LOCAL_ACCEPTANCE.cmd all
 echo.
-echo Default all runs FR-7 plus FR-8A/B/C/D and reports each sub-checkpoint separately.
-echo Heavy FR-9 profiles must be selected explicitly.
+echo Default all runs FR-7 plus FR-8A-H and reports each sub-checkpoint separately.
+echo Feature runs only FR-8E-H. Heavy FR-9 profiles must be selected explicitly.
 echo.
 pause
 popd

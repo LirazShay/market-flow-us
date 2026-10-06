@@ -1,8 +1,8 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "4.5.2"
+current_node: "7.5"
 blockers: []
-next_action: "Chat 15 / TREE 4.5.2 is next after Chat 14 / 4.5.1 merged and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement the Demo Buy AI Investigation UI workflow without advancing to 7.5."
+next_action: "Chat 16 / TREE 7.5 is in progress after Chat 15 / 4.5.2 merged and main deterministic CI is green. Reclose the post-feature candidate: align canonical/user/Scanner/AI docs, extend bounded local/workload acceptance for Demo Buy + AI Investigation, run full deterministic gates, merge, then point Chat 17 / 7.4 at the exact accepted SHA."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
