@@ -107,7 +107,7 @@ chats:
 
   "24":
     nodes:
-      "9.5": { state: in_progress, result: null }
+      "9.5": { state: done, result: "Branch-9 deterministic Replay reclosure is complete. PR #53 squash-merged as exact post-branch-9 candidate 243f4f2e78e434378ff2202ba95af7b8626a0369 after integrated arbitrary-start/next-day Replay proof, focused Replay acceptance, contract/release-truth repairs and final diff review. Fast #469, Browser #428 including bounded Local Fake, Planning Docs #601 and Workload #256 were green on main, and the open-PR audit was clean." }
 
   "25":
     nodes:
