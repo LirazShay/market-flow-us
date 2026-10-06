@@ -148,7 +148,6 @@ test("browser UI exposes recording metrics, quota estimate, library and explicit
         const callback = scheduled.shift();
         if (!callback) throw new Error("Expected a scheduled Replay capture.");
         callback();
-        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     };
   });
@@ -176,7 +175,7 @@ test("browser UI exposes recording metrics, quota estimate, library and explicit
 test("write failure keeps prior committed IndexedDB frames readable and recording incomplete", async ({ page }) => {
   await openProviderOrigin(page);
 
-  const result = await page.evaluate(async () => {
+  await page.evaluate(async () => {
     const dbName = `replay-quota-${crypto.randomUUID()}`;
     const { openReplayRecordingStore, createMarketReplayRecorder, buildValidatedSnapshot } = globalThis.__ReplayTest;
     const realStore = await openReplayRecordingStore({ dbName });
@@ -215,18 +214,33 @@ test("write failure keeps prior committed IndexedDB frames readable and recordin
     });
 
     await recorder.start({ name: "Quota recording" });
-    for (let index = 0; index < 4 && recorder.getState().frameCount !== 1; index += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-    const callback = scheduled.shift();
-    if (!callback) throw new Error("Expected a scheduled Replay capture.");
-    callback();
-    for (let index = 0; index < 4 && recorder.getState().status !== "storage_error"; index += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
+    globalThis.__quotaReplay = {
+      dbName,
+      realStore,
+      recorder,
+      scheduled,
+      fireNext() {
+        const callback = scheduled.shift();
+        if (!callback) throw new Error("Expected a scheduled Replay capture.");
+        callback();
+      }
+    };
+  });
+
+  await expect.poll(() => page.evaluate(() => ({
+    frameCount: globalThis.__quotaReplay.recorder.getState().frameCount,
+    scheduled: globalThis.__quotaReplay.scheduled.length
+  }))).toEqual({ frameCount: 1, scheduled: 1 });
+
+  await page.evaluate(() => globalThis.__quotaReplay.fireNext());
+  await expect.poll(() => page.evaluate(() => globalThis.__quotaReplay.recorder.getState().status)).toBe("storage_error");
+
+  const result = await page.evaluate(async () => {
+    const { dbName, realStore, recorder } = globalThis.__quotaReplay;
     const failedState = recorder.getState();
     realStore.close();
 
+    const { openReplayRecordingStore } = globalThis.__ReplayTest;
     const reopened = await openReplayRecordingStore({ dbName });
     const library = await reopened.listRecordings();
     const frames = await reopened.readFrames("quota-recording");
