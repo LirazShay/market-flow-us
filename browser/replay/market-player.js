@@ -348,23 +348,44 @@ export function createMarketReplayPlayer({
     invalidateGeneration();
     status = "stopping";
     notify();
+
+    let stopError = null;
     if (sessionStarted) {
-      await producerBridge.stopSession(String(reason));
-      sessionStarted = false;
+      try {
+        await producerBridge.stopSession(String(reason));
+      } catch (error) {
+        stopError = error;
+        latestError = Object.freeze({
+          name: error instanceof Error ? error.name : "Error",
+          message: error instanceof Error ? error.message : String(error)
+        });
+      } finally {
+        sessionStarted = false;
+      }
     }
+
     status = "stopped";
     requiresFreshRun = true;
     notify();
+    if (stopError) throw stopError;
     return snapshotState();
   }
 
   async function seek(sequence) {
     assertSequence(sequence, summary.frameCount, "seek sequence");
     invalidateGeneration();
+
+    let stopError = null;
     if (sessionStarted) {
-      await producerBridge.stopSession("replay-seek");
-      sessionStarted = false;
+      try {
+        await producerBridge.stopSession("replay-seek");
+      } catch (error) {
+        stopError = error;
+      } finally {
+        sessionStarted = false;
+      }
     }
+
     selectedSequence = sequence;
     nextSequence = sequence;
     committedSequence = null;
@@ -374,6 +395,12 @@ export function createMarketReplayPlayer({
     pausedOriginalPositionMs = originalAt(sequence);
     status = "seek_pending";
     requiresFreshRun = true;
+    latestError = stopError === null
+      ? null
+      : Object.freeze({
+          name: stopError instanceof Error ? stopError.name : "Error",
+          message: stopError instanceof Error ? stopError.message : String(stopError)
+        });
     notify();
     return snapshotState();
   }
