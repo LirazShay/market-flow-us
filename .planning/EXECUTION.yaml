@@ -78,4 +78,4 @@ chats:
 
   "17":
     nodes:
-      "7.4": { state: in_progress, result: null }
+      "7.4": { state: blocked, result: "Paused by the user-requested standalone IBKR order-service replan. Existing target-machine/provider acceptance is not complete and must not be marked done; resume only after the new scope is planned/frozen and the current execution truth points back to 7.4." }
