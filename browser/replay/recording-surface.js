@@ -83,7 +83,6 @@ export function createReplayRecordingSurface({
     </div>`;
 
   const elements = {
-    panel: shadow.querySelector(".panel"),
     close: shadow.querySelector(".close"),
     name: shadow.querySelector(".name"),
     record: shadow.querySelector(".record"),
@@ -100,6 +99,13 @@ export function createReplayRecordingSurface({
   };
 
   let busy = false;
+  let operationError = "";
+  let operationNotice = "";
+
+  function clearOperationMessages() {
+    operationError = "";
+    operationNotice = "";
+  }
 
   function setBusy(value) {
     busy = value;
@@ -149,13 +155,12 @@ export function createReplayRecordingSurface({
       renameButton.addEventListener("click", async () => {
         const nextName = renameInput.value.trim();
         if (!nextName) return;
-        elements.notice.textContent = "";
+        clearOperationMessages();
         setBusy(true);
         try {
           await recorder.renameRecording(item.id, nextName);
-          elements.error.textContent = "";
         } catch {
-          elements.error.textContent = "שינוי השם נכשל.";
+          operationError = "שינוי השם נכשל.";
         } finally {
           setBusy(false);
         }
@@ -166,19 +171,18 @@ export function createReplayRecordingSurface({
       exportButton.disabled = busy || item.status !== "complete" || exportRecording === null;
       exportButton.addEventListener("click", async () => {
         if (!exportRecording) return;
-        elements.notice.textContent = "";
+        clearOperationMessages();
         setBusy(true);
         try {
           await exportRecording({ id: item.id, name: item.name });
-          elements.error.textContent = "";
-          elements.notice.textContent = "הייצוא הושלם ונבדק. עותק הדפדפן נשאר ולא נמחק.";
+          operationNotice = "הייצוא הושלם ונבדק. עותק הדפדפן נשאר ולא נמחק.";
         } catch (error) {
           if (error?.name === "AbortError") {
-            elements.notice.textContent = "הייצוא בוטל.";
+            operationNotice = "הייצוא בוטל.";
           } else if (error?.code === "REPLAY_EXPORT_STREAMING_REQUIRED") {
-            elements.error.textContent = "ההקלטה גדולה מדי לייצוא בזיכרון. נדרש דפדפן עם שמירה ישירה לקובץ.";
+            operationError = "ההקלטה גדולה מדי לייצוא בזיכרון. נדרש דפדפן עם שמירה ישירה לקובץ.";
           } else {
-            elements.error.textContent = "ייצוא ההקלטה נכשל. עותק הדפדפן נשאר ללא שינוי.";
+            operationError = "ייצוא ההקלטה נכשל. עותק הדפדפן נשאר ללא שינוי.";
           }
         } finally {
           setBusy(false);
@@ -190,13 +194,12 @@ export function createReplayRecordingSurface({
       deleteButton.disabled = busy || (item.id === activeRecordingId && ["recording", "stopping"].includes(activeStatus));
       deleteButton.addEventListener("click", async () => {
         if (!globalThis.confirm?.(`למחוק את ההקלטה “${item.name}”?`)) return;
-        elements.notice.textContent = "";
+        clearOperationMessages();
         setBusy(true);
         try {
           await recorder.deleteRecording(item.id);
-          elements.error.textContent = "";
         } catch {
-          elements.error.textContent = "מחיקת ההקלטה נכשלה.";
+          operationError = "מחיקת ההקלטה נכשלה.";
         } finally {
           setBusy(false);
         }
@@ -217,11 +220,14 @@ export function createReplayRecordingSurface({
     elements.duration.textContent = formatDuration(state.durationMs);
     elements.frames.textContent = String(state.frameCount);
     elements.bytes.textContent = formatBytes(state.approximateBytes);
-    elements.error.textContent = state.latestErrorCode === "PROVIDER_SNAPSHOT_FAILED"
+
+    const recorderError = state.latestErrorCode === "PROVIDER_SNAPSHOT_FAILED"
       ? `ה־provider לא החזיר snapshot מלא. לא נוצר frame. ניסיונות שנכשלו: ${state.providerFailureCount}`
       : state.latestErrorCode === "STORAGE_WRITE_FAILED"
         ? "ההקלטה נעצרה בגלל כשל כתיבה/מכסה. frames שכבר נשמרו לא נמחקו."
         : "";
+    elements.error.textContent = operationError || recorderError;
+    elements.notice.textContent = operationNotice;
 
     const estimate = state.storageEstimate;
     elements.storage.textContent = estimate.available
@@ -232,29 +238,31 @@ export function createReplayRecordingSurface({
   }
 
   elements.record.addEventListener("click", async () => {
-    elements.notice.textContent = "";
+    clearOperationMessages();
     setBusy(true);
     try {
       await recorder.start({ name: elements.name.value });
-      elements.error.textContent = "";
     } catch {
-      elements.error.textContent = "לא ניתן להתחיל הקלטה.";
+      operationError = "לא ניתן להתחיל הקלטה.";
     } finally {
       setBusy(false);
     }
   });
 
   elements.stop.addEventListener("click", async () => {
-    elements.notice.textContent = "";
+    clearOperationMessages();
     setBusy(true);
     try {
       await recorder.stop();
+    } catch {
+      operationError = "לא ניתן לעצור את ההקלטה בצורה נקייה.";
     } finally {
       setBusy(false);
     }
   });
 
   elements.refresh.addEventListener("click", async () => {
+    clearOperationMessages();
     setBusy(true);
     try {
       await Promise.allSettled([recorder.refreshLibrary(), recorder.refreshStorageEstimate()]);
