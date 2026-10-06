@@ -1,4 +1,6 @@
 import { createMarketReplayRecorder } from "./market-recorder.js";
+import { exportReplayRecordingToDisk } from "./portable-export.js";
+import { openPortableReplayFile } from "./portable-format.js";
 import { openReplayRecordingStore } from "./recording-store.js";
 import { createReplayRecordingSurface } from "./recording-surface.js";
 
@@ -44,8 +46,15 @@ export async function startReplayRecordingRuntime({
 
   const store = await openReplayRecordingStore({ indexedDb });
   const recorder = createMarketReplayRecorder({ store, storageManager });
-  const surface = createReplayRecordingSurface({ recorder, documentRef });
-  const runtime = Object.freeze({ store, recorder, surface });
+  const exportRecording = (recordingId) => exportReplayRecordingToDisk({ store, recordingId, documentRef });
+  const surface = createReplayRecordingSurface({ recorder, documentRef, exportRecording });
+  const runtime = Object.freeze({
+    store,
+    recorder,
+    surface,
+    exportRecording,
+    openPortableFile: (file, options) => openPortableReplayFile(file, options)
+  });
   globalThis[REPLAY_RUNTIME_KEY] = runtime;
 
   await Promise.allSettled([
