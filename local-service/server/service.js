@@ -367,6 +367,7 @@ export async function startMarketScopeService({
     let acknowledgedUniverseRevision = null;
     let sessionStartedEver = false;
     let heartbeatDeadline = null;
+    let heartbeatDeadlineGeneration = 0;
     let messageTail = Promise.resolve();
 
     function releaseProducerOwnership() {
@@ -376,6 +377,7 @@ export async function startMarketScopeService({
     }
 
     function clearHeartbeatDeadline() {
+      heartbeatDeadlineGeneration += 1;
       if (heartbeatDeadline === null) return;
       clearTimeout(heartbeatDeadline);
       heartbeatDeadline = null;
@@ -411,10 +413,11 @@ export async function startMarketScopeService({
       clearHeartbeatDeadline();
       if (!sessionId) return;
 
+      const deadlineGeneration = heartbeatDeadlineGeneration;
       heartbeatDeadline = setTimeout(() => {
         heartbeatDeadline = null;
         queueConnectionTask(async () => {
-          if (!sessionId) return;
+          if (!sessionId || deadlineGeneration !== heartbeatDeadlineGeneration) return;
           await interruptRunningSession("heartbeat_stale");
           if (socket.readyState === WebSocket.OPEN) {
             socket.close(1008, "Producer heartbeat stale");
