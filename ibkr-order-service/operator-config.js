@@ -28,6 +28,9 @@ function parseLoopbackHttpsUrl(value) {
   if (url.username || url.password) {
     fail("--cpgw-url must not contain credentials");
   }
+  if (url.search || url.hash) {
+    fail("--cpgw-url must not contain query or fragment data");
+  }
   return url.href.replace(/\/$/u, "");
 }
 
