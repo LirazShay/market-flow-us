@@ -7,6 +7,7 @@ import { createProducerPersistence } from "../persistence/producer-authority.js"
 import { createCycleAuthorityPersistence } from "../persistence/cycle-authority.js";
 import { createDemoBuyCapturePersistence } from "../persistence/demo-buy-capture.js";
 import { createViewerReads } from "../reads/viewer-reads.js";
+import { createDemoBuyReads } from "../reads/demo-buy-reads.js";
 import { createScannerAuthority } from "../scanner/scanner.js";
 import { createSavedQueryLibrary } from "../scanner/query-library.js";
 import {
@@ -128,6 +129,9 @@ export async function startMarketScopeService({
     staleAfterMs: config.producerStaleAfterMs,
     historyPageSize: config.historyPageSize
   });
+  const demoBuyReads = createDemoBuyReads({
+    connection: database.viewerReadConnection
+  });
 
   let scannerAuthority;
   try {
@@ -244,7 +248,32 @@ export async function startMarketScopeService({
       return {
         component: "demo_buy",
         checkpoint: "demo_buy.capture",
+        name: "DemoBuyCaptureError",
         message: "Demo Buy capture failed safely."
+      };
+    }
+    if (type === "demo.buy.page") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.read",
+        name: "DemoBuyReadError",
+        message: "Demo Buy page read failed safely."
+      };
+    }
+    if (type === "demo.buy.observation.get") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.observation_read",
+        name: "DemoBuyObservationReadError",
+        message: "Demo Buy observation read failed safely."
+      };
+    }
+    if (type === "demo.buy.capture.get") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.provenance_read",
+        name: "DemoBuyProvenanceReadError",
+        message: "Demo Buy provenance read failed safely."
       };
     }
     return null;
@@ -499,6 +528,27 @@ export async function startMarketScopeService({
               capturedItemCount: captured.capturedItemCount,
               timingAnomaly: captured.timingAnomaly
             };
+          } else if (parsed.type === "demo.buy.page") {
+            result = await demoBuyReads.page(parsed.payload.cursor);
+            diagnosticContext = {
+              itemCount: result.items.length,
+              hasMore: result.hasMore
+            };
+          } else if (parsed.type === "demo.buy.observation.get") {
+            result = await demoBuyReads.observationGet(
+              parsed.payload.captureId,
+              parsed.payload.securityId
+            );
+            diagnosticContext = {
+              captureId: result.capture.captureId,
+              securityId: result.securityId
+            };
+          } else if (parsed.type === "demo.buy.capture.get") {
+            result = await demoBuyReads.captureGet(parsed.payload.captureId);
+            diagnosticContext = {
+              captureId: result.captureId,
+              capturedItemCount: result.capturedItemCount
+            };
           } else {
             throw operationError(ERROR_CODES.SERVICE_NOT_READY);
           }
@@ -524,13 +574,11 @@ export async function startMarketScopeService({
               operation: parsed.type,
               operationId: parsed.requestId,
               error,
-              name: parsed.type.startsWith("scanner.queries.")
+              name: diagnosticSpec.name ?? (parsed.type.startsWith("scanner.queries.")
                 ? "ScannerQueryLibraryError"
                 : diagnosticSpec.component === "scanner"
                   ? "ScannerExecutionError"
-                  : diagnosticSpec.component === "demo_buy"
-                    ? "DemoBuyCaptureError"
-                    : "ViewerReadError"
+                  : "ViewerReadError")
             });
           }
           sendJson(socket, errorResponseFrom(error, safeRequestContext(parsed)));
