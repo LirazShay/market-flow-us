@@ -102,13 +102,24 @@ Synthetic success is never represented as real IBKR order evidence.
 
 ## Reclosure defect discovered
 
-The order-service implementation and deterministic test matrix are coherent, but release/first-run truth drifted after branch 8:
+The order-service implementation and deterministic test matrix were coherent, but release/first-run truth had drifted after branch 8:
 
-1. `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` still assigns TREE `7.4` execution to Chat 17 rather than current Chat 21.
-2. `docs/FIRST_RUN_ACCEPTANCE.md` still pins historical pre-branch-8 candidate `f2789a4...`.
-3. The first-run/final-acceptance sequence does not yet include the required target-machine IBKR order-service startup/session/dry-run/restart gate and exact external-permission outcome.
+1. `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` assigned TREE `7.4` execution to Chat 17 instead of current Chat 21.
+2. `docs/FIRST_RUN_ACCEPTANCE.md` pinned historical pre-branch-8 candidate `f2789a4...`.
+3. The first-run/final-acceptance sequence lacked the required target-machine IBKR order-service / CPGW gate and exact external-permission outcome.
 
-TREE `8.4` must correct this release-truth drift before it can close.
+## Reclosure defect repair
+
+TREE `8.4` repaired the smallest affected release-truth surface without changing runtime code:
+
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` now assigns final acceptance to Chat 21 and explicitly routes branch-8 order-service evidence into TREE `7.4`.
+- `docs/FIRST_RUN_ACCEPTANCE.md` now pins candidate `28e950afc1c4bfe4322d0593f483d05d92553e2d` instead of the historical pre-branch-8 candidate.
+- Existing FR numbering is preserved; `FR-11A` owns market-data provider startup and `FR-11B` owns deterministic order acceptance plus real CPGW session compatibility.
+- FR-4 now includes `npm run test:acceptance:order` so permission-independent order proof is explicit on the target candidate.
+- Final evidence records real-order status as `PASS` only when explicitly executed with permission; otherwise exactly `PENDING_EXTERNAL_PERMISSION`.
+- New Trading Day remains market-DB-only and does not absorb the separate IBKR execution store.
+
+A branch consistency pass found no remaining `Chat 17` or `f2789...` reference in the authoritative first-run plan/user runbook.
 
 ## Final-acceptance order-service rule
 
@@ -129,3 +140,18 @@ PENDING_EXTERNAL_PERMISSION
 ```
 
 No synthetic result substitutes for that external status.
+
+## Closure gate still pending
+
+Do not mark TREE `8.4` done merely because the documentation drift is repaired. Closure still requires:
+
+```text
+review branch diff
+→ PR CI / Planning validation green
+→ confirm exact candidate evidence remains 28e950af...
+→ mark 8.4 done and pin candidate in STATUS/handoff/final-acceptance truth
+→ squash merge
+→ main required CI green
+→ open-PR audit clean
+→ advance to Chat 21 / TREE 7.4
+```
