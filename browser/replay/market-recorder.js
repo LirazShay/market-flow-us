@@ -1,5 +1,5 @@
 import { fetchValidatedSnapshot } from "../provider/us-screener.js";
-import { createRecordingFrame, createRecordingId } from "./recording-model.js";
+import { createRecordingId, createReplayFrame } from "./recording-model.js";
 
 export const DEFAULT_REPLAY_RECORDING_CADENCE_MS = 3_000;
 
@@ -127,7 +127,7 @@ export function createMarketReplayRecorder({
     try {
       const snapshot = await fetchSnapshot();
       if (activeToken !== token || state.status !== "recording") return;
-      frame = createRecordingFrame({
+      frame = createReplayFrame({
         recordingId: state.recordingId,
         sequence: state.frameCount,
         snapshot
