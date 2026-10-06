@@ -6,7 +6,7 @@ current:
   chat: 15
   node: "4.5.2"
   title: "AI Investigation Pack UI workflow"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
