@@ -41,6 +41,19 @@ function assertClient(client) {
   }
 }
 
+function assertDemoBuyController(controller) {
+  if (
+    !controller
+    || typeof controller.subscribe !== "function"
+    || typeof controller.getState !== "function"
+    || typeof controller.createAiPack !== "function"
+  ) {
+    throw new TypeError(
+      "demoBuyController must expose subscribe(), getState() and createAiPack()."
+    );
+  }
+}
+
 function text(document, tagName, value, className = "") {
   const element = document.createElement(tagName);
   element.textContent = value;
@@ -72,11 +85,11 @@ function observedDetails(horizon) {
   return parts.join("\n");
 }
 
-function currentEvidenceStatus(observation) {
-  const tenMinute = observation.horizons.find((horizon) => horizon.horizonMs === 600000);
-  return tenMinute?.observedAtMs !== null && tenMinute?.observedAtMs !== undefined
-    ? "COMPLETE_OUTCOME"
-    : "PARTIAL_OUTCOME";
+function authoritativeEvidenceStatus(observation) {
+  return observation.outcomeEvidenceStatus === "PARTIAL_OUTCOME"
+    || observation.outcomeEvidenceStatus === "COMPLETE_OUTCOME"
+    ? observation.outcomeEvidenceStatus
+    : null;
 }
 
 function expectedTargetInScannerContext(observation) {
@@ -93,9 +106,10 @@ function makeSticky(cell, index) {
   cell.style.background = cell.tagName === "TH" ? "#eef1f4" : "#fff";
 }
 
-export function createDemoBuySurface({ root, client } = {}) {
+export function createDemoBuySurface({ root, client, demoBuyController } = {}) {
   assertElement(root);
   assertClient(client);
+  assertDemoBuyController(demoBuyController);
 
   const document = root.ownerDocument;
   let model = createInitialDemoBuyModel();
@@ -103,8 +117,8 @@ export function createDemoBuySurface({ root, client } = {}) {
   let destroyed = false;
   let refreshBusy = false;
   let continuationBusy = false;
-  let aiExportBusy = false;
-  let aiExportTargetKey = null;
+  let controllerState = demoBuyController.getState();
+  let unsubscribeDemoBuyController = null;
   const observationBusy = new Set();
   const openObservationDetails = new Set();
   const openProvenance = new Set();
@@ -391,7 +405,11 @@ export function createDemoBuySurface({ root, client } = {}) {
       : null;
     const targetInContext = generated?.targetInScannerContext
       ?? expectedTargetInScannerContext(item);
-    const evidenceStatus = generated?.outcomeEvidenceStatus ?? currentEvidenceStatus(item);
+    const evidenceStatus = generated?.outcomeEvidenceStatus
+      ?? authoritativeEvidenceStatus(item);
+    const evidenceReady = evidenceStatus !== null;
+    const aiExportBusy = controllerState.aiExportBusy === true;
+    const aiExportTargetKey = controllerState.aiExportTargetKey;
 
     panel.append(text(
       document,
@@ -403,7 +421,11 @@ export function createDemoBuySurface({ root, client } = {}) {
     summary.className = "market-flow-us-demo-buy-ai-fields";
     summary.append(
       field(document, "Target in retained Scanner context", targetInContext ? "Yes" : "No"),
-      field(document, "Outcome evidence", evidenceStatus),
+      field(
+        document,
+        "Outcome evidence",
+        evidenceStatus ?? (observationBusy.has(key) ? "Refreshing authoritative evidence…" : "Refresh required")
+      ),
       field(document, "Horizon progress", `${progress.observed} / ${progress.total}`)
     );
     panel.append(summary);
@@ -435,11 +457,12 @@ export function createDemoBuySurface({ root, client } = {}) {
     });
     panel.append(refreshBeforeGenerate);
 
-    if (typeof client.createDemoBuyAiPack !== "function") {
-      const unavailable = text(document, "p", "AI Investigation pack generation is unavailable in this Viewer build.");
-      unavailable.setAttribute("role", "alert");
-      panel.append(unavailable);
-      return panel;
+    if (!evidenceReady && !observationBusy.has(key)) {
+      panel.append(text(
+        document,
+        "p",
+        "Refresh this observation to determine PARTIAL_OUTCOME / COMPLETE_OUTCOME from committed writer/cycle authority before generation."
+      ));
     }
 
     const generate = document.createElement("button");
@@ -449,7 +472,7 @@ export function createDemoBuySurface({ root, client } = {}) {
       : generated
         ? "Regenerate"
         : "Generate AI Investigation Pack";
-    generate.disabled = aiExportBusy;
+    generate.disabled = aiExportBusy || observationBusy.has(key) || !evidenceReady;
     generate.addEventListener("click", () => {
       void generateInvestigationPack(item.capture.captureId, item.securityId);
     });
@@ -480,6 +503,17 @@ export function createDemoBuySurface({ root, client } = {}) {
         field(document, "Relative folder", generated.exportPathRelative),
         field(document, "Pack files", String(generated.fileCount))
       );
+      if (
+        generated.outcomeEvidenceStatus === "PARTIAL_OUTCOME"
+        && generated.latestIncludedPostObservationMs !== null
+        && generated.latestIncludedPostObservationMs !== undefined
+      ) {
+        resultFields.append(field(
+          document,
+          "Latest included post-observation",
+          formatDemoBuyTimestamp(generated.latestIncludedPostObservationMs)
+        ));
+      }
       panel.append(resultFields);
 
       if (generated.outcomeEvidenceStatus === "PARTIAL_OUTCOME") {
@@ -638,8 +672,14 @@ export function createDemoBuySurface({ root, client } = {}) {
       const investigation = document.createElement("details");
       investigation.open = openInvestigations.has(key);
       investigation.addEventListener("toggle", () => {
-        if (investigation.open) openInvestigations.add(key);
-        else openInvestigations.delete(key);
+        if (investigation.open) {
+          openInvestigations.add(key);
+          if (authoritativeEvidenceStatus(item) === null && !observationBusy.has(key)) {
+            void refreshObservation(item.capture.captureId, item.securityId);
+          }
+        } else {
+          openInvestigations.delete(key);
+        }
       });
       const investigationSummary = text(document, "summary", "Investigate with AI");
       investigation.append(investigationSummary, renderInvestigationPanel(item));
@@ -662,7 +702,7 @@ export function createDemoBuySurface({ root, client } = {}) {
     refreshButton.textContent = refreshBusy ? "Refreshing latest…" : "Refresh latest";
     globalStatus.textContent = continuationBusy
       ? "Loading more…"
-      : aiExportBusy
+      : controllerState.aiExportBusy
         ? "Generating AI Investigation Pack…"
         : "";
 
@@ -805,31 +845,60 @@ export function createDemoBuySurface({ root, client } = {}) {
   }
 
   async function generateInvestigationPack(captureId, securityId) {
-    if (destroyed || aiExportBusy || typeof client.createDemoBuyAiPack !== "function") return;
+    if (destroyed || controllerState.aiExportBusy) return;
     const key = demoBuyObservationKey(captureId, securityId);
-    aiExportBusy = true;
-    aiExportTargetKey = key;
     updateInvestigation(key, { error: null, copyStatus: null, fallback: null });
     render();
 
-    try {
-      await refreshObservation(captureId, securityId);
-      if (destroyed) return;
-      const result = await client.createDemoBuyAiPack(captureId, securityId);
-      if (destroyed) return;
-      updateInvestigation(key, { result, error: null, copyStatus: null, fallback: null });
-    } catch (error) {
-      if (destroyed) return;
+    const refreshed = await refreshObservation(captureId, securityId);
+    if (destroyed) return;
+    if (!refreshed) {
       updateInvestigation(key, {
-        error: error instanceof Error ? error.message : "AI Investigation pack generation failed.",
+        error: "Observation refresh failed; the AI Investigation pack was not generated."
+      });
+      render();
+      return;
+    }
+
+    const refreshedObservation = findObservation(captureId, securityId);
+    if (!refreshedObservation || authoritativeEvidenceStatus(refreshedObservation) === null) {
+      updateInvestigation(key, {
+        error: "Authoritative outcome evidence status is unavailable; the pack was not generated."
+      });
+      render();
+      return;
+    }
+
+    const submission = await demoBuyController.createAiPack(captureId, securityId);
+    if (destroyed) return;
+    if (!submission.started) {
+      updateInvestigation(key, {
+        error: submission.reason === "AI_EXPORT_BUSY"
+          ? "Another AI Investigation export is already in progress."
+          : "AI Investigation pack generation is unavailable in this Viewer build."
+      });
+      render();
+      return;
+    }
+    if (submission.error) {
+      updateInvestigation(key, {
+        error: submission.error instanceof Error
+          ? submission.error.message
+          : "AI Investigation pack generation failed.",
         copyStatus: null,
         fallback: null
       });
-    } finally {
-      aiExportBusy = false;
-      aiExportTargetKey = null;
       render();
+      return;
     }
+
+    updateInvestigation(key, {
+      result: submission.result,
+      error: null,
+      copyStatus: null,
+      fallback: null
+    });
+    render();
   }
 
   async function copyInvestigationText(item, kind, value) {
@@ -869,6 +938,8 @@ export function createDemoBuySurface({ root, client } = {}) {
 
   function destroy() {
     destroyed = true;
+    unsubscribeDemoBuyController?.();
+    unsubscribeDemoBuyController = null;
     openObservationDetails.clear();
     openProvenance.clear();
     openInvestigations.clear();
@@ -877,6 +948,10 @@ export function createDemoBuySurface({ root, client } = {}) {
   }
 
   refreshButton.addEventListener("click", () => void refreshLatest());
+  unsubscribeDemoBuyController = demoBuyController.subscribe((state) => {
+    controllerState = state;
+    render();
+  });
   render();
 
   return Object.freeze({
@@ -887,8 +962,8 @@ export function createDemoBuySurface({ root, client } = {}) {
     destroy,
     getState: () => model,
     getAiState: () => Object.freeze({
-      busy: aiExportBusy,
-      targetKey: aiExportTargetKey,
+      busy: controllerState.aiExportBusy === true,
+      targetKey: controllerState.aiExportTargetKey,
       investigations: investigations.size
     })
   });
