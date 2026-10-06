@@ -6,8 +6,7 @@ current:
   chat: 14
   node: "4.5.1"
   title: "AI Investigation Pack exporter"
-  status: pending
-
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
