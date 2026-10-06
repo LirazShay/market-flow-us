@@ -289,8 +289,8 @@ start the existing Market Flow US service entrypoint
 pass existing --db / --port / --allowed-origin configuration
 select a replay-only DB path
 report readiness/failure
-stop the replay-owned service child
-reset only replay-owned DB artifacts after child exit
+stop only the service child process that this Host instance started
+reset only replay-owned DB artifacts after that child has exited
 ```
 
 The Host MUST NOT:
@@ -301,10 +301,13 @@ write DuckDB market tables
 translate producer messages
 execute Scanner SQL
 modify shared producer protocol
+attach to or stop a pre-existing/unrelated service process
 open/reset/delete the normal live DB
 ```
 
-Control authorization is scoped to this replay feature. The Host must reject browser origins other than the exact configured provider Origin and use a per-run unguessable control nonce/credential where practical. The credential is ephemeral and must not be committed, persisted or logged.
+The Host owns only child/process resources created by the current Host run. If the intended Market Flow US data port or another required runtime resource is already occupied by a process the Host did not start, startup/seek reset fails closed with a diagnosable conflict. It must never kill/reuse an unknown process to make Replay work.
+
+Control authorization is mandatory. The Host must reject browser origins other than the exact configured provider Origin and every state-changing control request must require a high-entropy per-run unguessable credential/nonce. The credential is ephemeral and must not be committed, persisted or logged.
 
 The normal data service may continue to use its existing loopback port/configuration when run under the Host. The Host control endpoint uses a distinct loopback port/protocol and does not alter the service itself.
 
@@ -399,6 +402,7 @@ Prove:
 - no market history from the prior play position survives;
 - selected frame is the first committed frame;
 - service/shared producer protocol receive no replay-specific messages;
+- Host refuses to stop/reuse unrelated processes when the replay data port is occupied;
 - the normal live DB path and bytes remain untouched.
 
 ### Mid-recording start
@@ -437,4 +441,4 @@ Initial replay scope does not include:
 
 ## Completion
 
-Branch `9` is complete when a user can record validated market frames with the service off, manage/export them, later select an IndexedDB recording or portable file, start isolated replay, Play/Pause/Seek through the normal producer/service path at original `1x` spacing, run the normal product surfaces, start from an arbitrary middle frame with no warm-up, and replay on another day with coherent local timing—while the existing service/protocol remain replay-unaware, the normal live DB stays untouched, dedicated acceptance is green, ordinary local test behavior remains bounded, and a new exact complete-product candidate is deterministically reclosed before final `7.4` target-machine/provider acceptance resumes.
+Branch `9` is complete when a user can record validated market frames with the service off, manage/export them, later select an IndexedDB recording or portable file, start isolated replay, Play/Pause/Seek through the normal producer/service path at original `1x` spacing, run the normal product surfaces, start from an arbitrary middle frame with no warm-up, and replay on another day with coherent local timing—while the existing service/protocol remain replay-unaware, Replay Host owns only its own child/DB resources, the normal live DB stays untouched, dedicated acceptance is green, ordinary local test behavior remains bounded, and a new exact complete-product candidate is deterministically reclosed before final `7.4` target-machine/provider acceptance resumes.
