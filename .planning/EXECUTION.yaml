@@ -94,7 +94,7 @@ chats:
 
   "21":
     nodes:
-      "9.1": { state: pending, result: null }
+      "9.1": { state: in_progress, result: null }
       "9.2": { state: pending, result: null }
 
   "22":
