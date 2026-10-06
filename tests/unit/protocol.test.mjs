@@ -115,11 +115,12 @@ const validCases = [
   ["demo.buy.capture", demoBuyPayload(), "viewer"],
   ["demo.buy.page", { cursor: null }, "viewer"],
   ["demo.buy.observation.get", { captureId: 1, securityId: "42" }, "viewer"],
-  ["demo.buy.capture.get", { captureId: 1 }, "viewer"]
+  ["demo.buy.capture.get", { captureId: 1 }, "viewer"],
+  ["demo.buy.ai-pack.create", { captureId: 1, securityId: "42" }, "viewer"]
 ];
 
 test("every protocol-v1 operation has an explicit valid payload boundary", () => {
-  assert.equal(REQUEST_TYPES.length, 21);
+  assert.equal(REQUEST_TYPES.length, 22);
   for (const [type, payload, role] of validCases) {
     assert.equal(validateRequest(request(type, payload), { role, helloComplete: true }).type, type);
   }
@@ -151,7 +152,10 @@ test("operation validators reject wrong or extra fields", () => {
     ["demo.buy.page", { cursor: null, extra: true }, "viewer"],
     ["demo.buy.observation.get", { captureId: 0, securityId: "42" }, "viewer"],
     ["demo.buy.observation.get", { captureId: 1, securityId: "" }, "viewer"],
-    ["demo.buy.capture.get", { captureId: 0 }, "viewer"]
+    ["demo.buy.capture.get", { captureId: 0 }, "viewer"],
+    ["demo.buy.ai-pack.create", { captureId: 0, securityId: "42" }, "viewer"],
+    ["demo.buy.ai-pack.create", { captureId: 1, securityId: "" }, "viewer"],
+    ["demo.buy.ai-pack.create", { captureId: 1, securityId: "42", path: "C:/private" }, "viewer"]
   ];
 
   for (const [type, payload, role] of badCases) {
@@ -170,6 +174,7 @@ test("role permissions are closed and exact", () => {
   assert.equal(isOperationAllowed("viewer", "demo.buy.page"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.observation.get"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.capture.get"), true);
+  assert.equal(isOperationAllowed("viewer", "demo.buy.ai-pack.create"), true);
   assert.equal(isOperationAllowed("viewer", "producer.cycle.commit"), false);
 
   assertCode(
@@ -215,4 +220,12 @@ test("success and error responses preserve correlation while errors cannot leak 
   assert.equal(explicit.payload.code, ERROR_CODES.ROLE_VIOLATION);
   assert.equal(explicit.payload.retryable, true);
   assert.equal(explicit.payload.details, null);
+
+  const exportFailure = createErrorResponse({
+    requestId: "r-10",
+    requestType: "demo.buy.ai-pack.create",
+    code: ERROR_CODES.DEMO_BUY_AI_PACK_EXPORT_ERROR
+  });
+  assert.equal(exportFailure.payload.message, "AI Investigation pack export failed safely.");
+  assert.equal(exportFailure.payload.details, null);
 });
