@@ -235,11 +235,13 @@ Resume begins a new timing segment at the current wall clock. The remaining dela
 
 Because replay-local timestamps are rebased to current wall time on resume, the service may observe a real gap corresponding to how long playback was paused. This is intentional and keeps Node-owned current timestamps such as Demo Buy `captured_at_ms` coherent without introducing a server virtual clock.
 
-## Stop
+## Stop and later Play
 
-Stop ends the current producer session and player generation. It does not delete the source recording.
+Stop ends the current producer session and closes the current replay run. It does not delete the source recording and the current replay DB may remain readable for inspection after Stop.
 
-A later Play from the chosen start position establishes a fresh player timing segment.
+A later Play after Stop is **not** an append into that closed replay DB. Before any selected frame is emitted again, Replay Host starts a fresh replay-owned service/DB run at the selected frame boundary. This prevents duplicate or contradictory history when the user restarts from an already-emitted position.
+
+Use Pause/Resume when the user wants to continue the same replay run and retain its accumulated replay authority. Use Stop when the current run is finished; the next Play is a new run.
 
 ## Seek
 
@@ -278,7 +280,7 @@ If a normal surface/query crashes solely because earlier history is absent, clas
 
 ## Replay Host
 
-A small local Replay Host may be added because browser seek requires process/DB lifecycle orchestration without changing the Market Flow US service.
+A small local Replay Host may be added because browser seek/restart requires process/DB lifecycle orchestration without changing the Market Flow US service.
 
 The Host is not a market-data server. Its responsibilities are limited to:
 
@@ -305,9 +307,11 @@ attach to or stop a pre-existing/unrelated service process
 open/reset/delete the normal live DB
 ```
 
-The Host owns only child/process resources created by the current Host run. If the intended Market Flow US data port or another required runtime resource is already occupied by a process the Host did not start, startup/seek reset fails closed with a diagnosable conflict. It must never kill/reuse an unknown process to make Replay work.
+The Host owns only child/process resources created by the current Host run. If the intended Market Flow US data port or another required runtime resource is already occupied by a process the Host did not start, startup/seek/reset fails closed with a diagnosable conflict. It must never kill/reuse an unknown process to make Replay work.
 
 Control authorization is mandatory. The Host must reject browser origins other than the exact configured provider Origin and every state-changing control request must require a high-entropy per-run unguessable credential/nonce. The credential is ephemeral and must not be committed, persisted or logged.
+
+The operator path must make that credential usable from a fresh start without weakening it: the dedicated Replay launcher/browser artifact must provide a bounded one-run bootstrap/pairing flow so the authorized Replay UI can obtain/use the credential without storing it in repository files, browser persistence, diagnostics or durable local configuration. The implementation may reuse an existing ephemeral-local-credential pattern; it must not require the user to edit source/config files with the secret. Focused acceptance must prove both successful pairing and rejection before/after the credential is valid.
 
 The normal data service may continue to use its existing loopback port/configuration when run under the Host. The Host control endpoint uses a distinct loopback port/protocol and does not alter the service itself.
 
@@ -394,14 +398,17 @@ Prove:
 - stale scheduled frames cannot emit after pause/seek/stop generation change;
 - commit ordering remains ACK-gated.
 
-### Seek/isolation
+### Stop / restart / seek isolation
 
 Prove:
 
+- Pause/Resume continues the same replay DB/run;
+- Stop closes the current replay run and a later Play starts a fresh replay DB before any frame can be re-emitted;
 - seek starts from a fresh replay DB;
-- no market history from the prior play position survives;
-- selected frame is the first committed frame;
+- no market history from the prior closed/seeked run survives into the new run;
+- selected frame is the first committed frame in a new run;
 - service/shared producer protocol receive no replay-specific messages;
+- Host bootstrap/pairing makes the ephemeral control credential usable without persistence/logging and rejects unauthorized/stale control attempts;
 - Host refuses to stop/reuse unrelated processes when the replay data port is occupied;
 - the normal live DB path and bytes remain untouched.
 
@@ -441,4 +448,4 @@ Initial replay scope does not include:
 
 ## Completion
 
-Branch `9` is complete when a user can record validated market frames with the service off, manage/export them, later select an IndexedDB recording or portable file, start isolated replay, Play/Pause/Seek through the normal producer/service path at original `1x` spacing, run the normal product surfaces, start from an arbitrary middle frame with no warm-up, and replay on another day with coherent local timing—while the existing service/protocol remain replay-unaware, Replay Host owns only its own child/DB resources, the normal live DB stays untouched, dedicated acceptance is green, ordinary local test behavior remains bounded, and a new exact complete-product candidate is deterministically reclosed before final `7.4` target-machine/provider acceptance resumes.
+Branch `9` is complete when a user can record validated market frames with the service off, manage/export them, later select an IndexedDB recording or portable file, start isolated replay, Play/Pause/Stop/Seek through the normal producer/service path at original `1x` spacing, run the normal product surfaces, start from an arbitrary middle frame with no warm-up, replay on another day with coherent local timing, and safely begin a new replay run after Stop without inheriting prior run history—while the existing service/protocol remain replay-unaware, Replay Host owns only its own child/DB resources, the normal live DB stays untouched, the Host control credential is usable through a non-persistent one-run bootstrap, dedicated acceptance is green, ordinary local test behavior remains bounded, and a new exact complete-product candidate is deterministically reclosed before final `7.4` target-machine/provider acceptance resumes.
