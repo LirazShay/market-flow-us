@@ -1,10 +1,10 @@
 version: 2
 plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "freeze"
+current_stage: "planning_pr"
 current_node: "9.6"
 blockers:
   - "Implementation authorization waits for planning PR review/merge, green main Planning Docs CI and clean open-PR audit."
-next_action: "Validate the frozen 52-node/39-leaf plan and repaired Chats 25-27 allocation, then complete planning PR/main gates. After explicit implementation authorization, Chat 25 executes TREE 9.6."
+next_action: "Open the planning PR for the frozen 52-node/39-leaf extension, require Planning Docs CI green, review the diff, squash-merge, verify main Planning Docs CI and open-PR state, then explicitly authorize implementation and hand off Chat 25 / TREE 9.6."
 last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
 implementation_authorized: false
