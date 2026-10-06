@@ -183,10 +183,11 @@ export class FakeLiveIbkrAdapter {
     };
   }
 
-  #createReply() {
+  #createReply(intent) {
     this.#pendingReply = {
       replyId: "SYNTH-REPLY-1",
-      messageIds: [...this.#config.replyMessageIds]
+      messageIds: [...this.#config.replyMessageIds],
+      intent: Object.freeze({ ...intent })
     };
     return {
       status: "REPLY_REQUIRED",
@@ -201,7 +202,7 @@ export class FakeLiveIbkrAdapter {
       case "SUBMITTED":
         return this.#createSubmittedOrder(intent);
       case "REPLY_REQUIRED":
-        return this.#createReply();
+        return this.#createReply(intent);
       case "PROVIDER_REJECTED":
         return {
           status: "PROVIDER_REJECTED",
@@ -224,21 +225,20 @@ export class FakeLiveIbkrAdapter {
     if (!this.#pendingReply || replyId !== this.#pendingReply.replyId) {
       submitFailure("SYNTHETIC_REPLY_NOT_FOUND", "order-reply");
     }
+    const pendingIntent = this.#pendingReply.intent;
     this.#pendingReply = null;
     switch (this.#config.confirmMode) {
       case "SUBMITTED":
-        return this.#createSubmittedOrder({
-          requestId: "reply-confirmed-request",
-          quantity: 1
-        });
+        return this.#createSubmittedOrder(pendingIntent);
       case "REPLY_REQUIRED":
-        return this.#createReply();
+        return this.#createReply(pendingIntent);
       case "PROVIDER_REJECTED":
         return {
           status: "PROVIDER_REJECTED",
           code: "SYNTHETIC_PROVIDER_REJECTED"
         };
       case "ACKNOWLEDGEMENT_UNKNOWN":
+        this.#createSubmittedOrder(pendingIntent);
         submitFailure("ACKNOWLEDGEMENT_UNKNOWN", "order-reply");
         break;
       default:
