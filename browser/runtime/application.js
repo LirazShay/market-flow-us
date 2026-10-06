@@ -73,6 +73,7 @@ function createShellDocument(viewerWindow) {
     .market-flow-us-demo-buy-controls,
     .market-flow-us-demo-buy-capture-fields,
     .market-flow-us-demo-buy-provenance-fields,
+    .market-flow-us-demo-buy-ai-fields,
     .market-flow-us-demo-buy-observation-details dl {
       display: flex;
       gap: 12px;
@@ -100,7 +101,8 @@ function createShellDocument(viewerWindow) {
     .market-flow-us-demo-buy-down { background: #fdecec; }
     .market-flow-us-demo-buy-flat { background: #eef1f4; }
     .market-flow-us-demo-buy-provenance,
-    .market-flow-us-demo-buy-observation-details {
+    .market-flow-us-demo-buy-observation-details,
+    .market-flow-us-demo-buy-ai-investigation {
       margin-block: 8px;
       padding: 8px;
       border: 1px solid #d7dce2;
@@ -286,7 +288,8 @@ function createViewerShell({
 
   const demoBuySurface = createDemoBuySurface({
     root: elements.demoBuyRoot,
-    client
+    client,
+    demoBuyController
   });
 
   function renderAutoDemoBuyIndicator(state) {
@@ -354,7 +357,9 @@ function createViewerShell({
       autoDemoBuyBusySkippedCount: demoBuyState.autoBusySkippedCount,
       demoBuyCaptureBusy: demoBuyState.captureBusy,
       demoBuyCaptureLocked: demoBuyState.captureLocked,
-      demoBuyLastCaptureStatus: demoBuyState.lastCapture?.status ?? null
+      demoBuyLastCaptureStatus: demoBuyState.lastCapture?.status ?? null,
+      demoBuyAiExportBusy: demoBuyState.aiExportBusy,
+      demoBuyLastAiExportStatus: demoBuyState.lastAiExport?.status ?? null
     };
   }
 

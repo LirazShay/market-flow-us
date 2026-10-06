@@ -217,10 +217,25 @@ async function mount(page, { empty = false } = {}) {
       }
     };
 
+    const controllerState = Object.freeze({ aiExportBusy: false, aiExportTargetKey: null });
+    const demoBuyController = {
+      getState() {
+        return controllerState;
+      },
+      subscribe(listener) {
+        listener(controllerState);
+        return () => {};
+      },
+      async createAiPack() {
+        return Object.freeze({ started: false, reason: "AI_EXPORT_UNAVAILABLE" });
+      }
+    };
+
     globalThis.__demoBuyCalls = calls;
     globalThis.__surface = globalThis.__createDemoBuySurface({
       root: document.querySelector("#root"),
-      client
+      client,
+      demoBuyController
     });
     globalThis.__surface.start();
   }, {
@@ -254,7 +269,8 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
   await expect(page.getByText("UNAVAILABLE ⚠", { exact: true })).toBeVisible();
   await expect(page.getByText("future Price unavailable", { exact: true })).toBeVisible();
   await expect(page.getByText("Pending / ממתין", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("4 / 10", { exact: true })).toBeVisible();
+  const mixedRow = page.locator('tr[data-security-id="1003"]');
+  await expect(mixedRow.getByText("4 / 10", { exact: true }).first()).toBeVisible();
 
   const firstSticky = page.getByRole("table", { name: "Demo Buy capture 10" }).locator("tbody td").first();
   await expect(firstSticky).toHaveCSS("position", "sticky");
@@ -265,7 +281,7 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
 
   await page.getByRole("button", { name: "Hide provenance / SQL" }).first().click();
   await page.getByRole("button", { name: "View provenance / SQL" }).first().click();
-  await expect(page.getByText("Exact Scanner SQL")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Exact Scanner SQL", exact: true })).toBeVisible();
   await expect(page.getByText("SELECT security_id FROM latest ORDER BY security_id", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Load more" }).click();
