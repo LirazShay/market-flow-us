@@ -12,10 +12,11 @@ fast unit tests
 → Chromium composition
 → bounded correctness-first workload in hosted CI
 → deterministic local Fake Leumi acceptance
+→ deterministic standalone IBKR fake/loopback acceptance
 → final target-machine/authenticated acceptance
 ```
 
-No credentialed provider access or external AI provider belongs in CI.
+No credentialed market-provider or credentialed IBKR live access belongs in CI. No external AI provider belongs in CI.
 
 Recurring automation speed is an engineering requirement. Remove duplicated work before increasing timeouts. Heavy performance authority belongs to the intended target machine.
 
@@ -23,9 +24,9 @@ Every new/materially changed SQL statement must pass the AGENTS static SQL prefl
 
 ## 2. Preserve existing U.S. proof
 
-Do not weaken already-green proof for ScreenerHulPaging3 acquisition/completeness, canonical PaperId identity, Recorder non-overlap/universe revisions, schema-v3 market authority, cycle rollback, Current/Security/History reads, Scanner security/saved-query CRUD, Current/Detail/Scanner Chromium behavior, diagnostics, shared synthetic generator, local Fake Leumi tooling and packaging/live boundaries.
+Do not weaken already-green proof for ScreenerHulPaging3 acquisition/completeness, canonical PaperId identity, Recorder non-overlap/universe revisions, schema-v3/v4 market authority, cycle rollback, Current/Security/History reads, Scanner security/saved-query CRUD, Demo Buy/AI Investigation, Current/Detail/Scanner Chromium behavior, diagnostics, shared synthetic generator, local Fake Leumi tooling and packaging/live boundaries.
 
-Demo Buy/schema-v4 tests extend these rather than replacing them.
+The standalone IBKR order-service tests extend these rather than replacing them. Scanner/Demo Buy/AI remain disconnected from order submission in branch `8`.
 
 ## 3. Unit — Demo Buy selection/provenance
 
@@ -273,44 +274,224 @@ Also run isolated one-day persistence/read/Scanner/Demo Buy/AI probes using dire
 
 On exact post-feature candidate prove deterministic static/moving/membership/failure/restart behavior, schema-v4 Demo Buy capture/evaluation, progressive + targeted observation refresh, AI pack generation/copy/regeneration, sharing-safe no-operational/session-leak export, v3/v4→fresh-v4 new-day lifecycle and bounded workload reports through the normal runtime/service/DuckDB.
 
-## 22. Authenticated static smoke
+## 22. Authenticated market-data static smoke
 
 No credentials in repository/CI. Closed/static market may repeat values while still proving provider shape/transport/authority/reads/Scanner/clean stop. It never substitutes for movement proof.
 
-## 23. Authenticated market-open gate
+## 23. Authenticated market-data market-open gate
 
 Require **at least 20 consecutive complete ScreenerHulPaging3 responses** spanning at least 60 seconds on the exact candidate SHA, durable ACK/commit for every cycle, observable provider-side market/freshness movement, final Current/Security/History/Scanner/ownership/clean-stop proof and sanitized SHA-bound report.
 
-## 24. Planning / release gates
+## 24. Unit — IBKR normalized intent / payload shaping
 
-Before implementation authorization:
+Prove exact branch-8 input contract:
+
+```text
+STK / USD / SMART
+BUY | SELL
+LMT | MKT
+DAY | GTC
+positive finite quantity
+mandatory requestId
+DRY_RUN | LIVE
+```
+
+Cover exact object keys, missing/extra fields, invalid enum/casing, NaN/Infinity/zero/negative quantity, LMT requiring positive finite `limitPrice`, MKT forbidding `limitPrice`, bounded symbol/requestId/local IDs, unsupported security/order combinations, and deterministic intent fingerprinting.
+
+Prove exact provider payload translation for representative BUY/SELL LMT/MKT requests without real account data.
+
+## 25. Unit/service — localhost order-service security
+
+Prove:
+
+1. bind target is exactly `127.0.0.1:8770`, never `0.0.0.0`;
+2. protected endpoint without caller token is rejected before adapter/provider call;
+3. wrong token is rejected before adapter/provider call;
+4. valid ephemeral token permits ordinary DRY_RUN flow;
+5. `Origin: https://attacker.example` is rejected even when token/body are otherwise valid;
+6. wildcard/credentialed CORS is absent;
+7. protected read endpoints require caller authorization;
+8. state-changing form/text content types are rejected; only bounded JSON is accepted;
+9. unauthorized/security-rejected requests mutate no execution state;
+10. token value never appears in diagnostics/report/persistence;
+11. process restart invalidates a generated token;
+12. caller authorization cannot bypass DRY_RUN/LIVE, provider permission, what-if, SELL guard, reply confirmation or idempotency gates.
+
+`GET /health` may remain unauthenticated only if canary tests prove it contains no provider/account/order/session/private state.
+
+## 26. Unit — live gate / no-short-opening guard
+
+Prove actual provider submit is impossible unless **all** independent gates pass:
+
+```text
+valid local caller
+process LIVE-enabled
+request executionMode=LIVE
+authenticated brokerage session
+tradable runtime account available
+provider permission available
+unambiguous instrument
+snapshot preflight
+what-if success
+local validation
+SELL long-position coverage when side=SELL
+```
+
+Each missing gate has a separate fail-closed fixture and stable error code/checkpoint.
+
+For SELL prove known-long quantity `< requested` rejects; exact/equal coverage passes the local guard; unavailable/ambiguous position authority rejects. No short-opening fallback exists.
+
+## 27. Fake IBKR provider matrix
+
+Build one deterministic configurable fake adapter/gateway covering:
+
+```text
+disconnected
+not authenticated
+authenticated
+empty accounts
+tradable account
+missing/ambiguous/exact instrument
+snapshot required/success/failure
+what-if success/rejection
+BUY/SELL payloads
+immediate submit success
+reply-required then confirm success
+reply-required then confirm rejection
+unknown reply message fail-closed
+provider failure before submit
+transport loss after submit
+open-order reconciliation
+cancel success/failure
+partial fill
+full fill
+session timeout
+keepalive
+SELL long-position guard
+```
+
+All identifiers are unmistakably synthetic. No real account/cookie/session material enters fixtures.
+
+## 28. Real standalone service — dry-run / idempotency / restart
+
+Using the real local HTTP service plus fake adapter and a temporary execution DuckDB prove:
+
+- `/health` is non-sensitive;
+- caller auth/origin/body boundaries are enforced;
+- DRY_RUN never reaches provider order-submit endpoint;
+- optional provider what-if preview may execute after session/account/instrument/snapshot prerequisites;
+- same `requestId` + same normalized intent returns/reconciles one local order record;
+- same `requestId` + different intent is rejected;
+- product-owned `localOrderId` is stable and contains no account identity;
+- restart preserves required idempotency/reconciliation facts but not caller token/provider session material;
+- real provider account identifier is never persisted;
+- diagnostics are sanitized and stable.
+
+## 29. Real standalone service — submit/reply/cancel/reconciliation
+
+With fake provider and LIVE explicitly armed, prove:
+
+1. successful what-if precedes every actual submit;
+2. submit success transitions to submitted/open state;
+3. provider `REPLY_REQUIRED` is surfaced and no answer is auto-sent;
+4. explicit confirm continues the provider reply flow;
+5. unknown reply fails closed;
+6. cancellation reconciles state and cannot claim already-filled quantity was cancelled;
+7. partial/full fills are observed distinctly;
+8. provider failure before submit is conclusively rejected without remote uncertainty;
+9. transport loss after submit becomes `ACKNOWLEDGEMENT_UNKNOWN`;
+10. acknowledgement-unknown performs no blind resubmit;
+11. provider open-order/trade reconciliation can resolve the uncertain state;
+12. only a later explicit, proven-safe decision may create another submit.
+
+## 30. Provider-session / CPGW adapter proof
+
+Using deterministic HTTP fixtures or a local fake gateway prove the documented adapter sequence and stable errors for `/iserver/auth/status`, session init/reinit, `/iserver/accounts`, instrument resolution, market-data snapshot prerequisite, what-if, submit/reply, order/trade reads, cancellation and `/tickle` keepalive.
+
+If the implementation relaxes localhost CPGW certificate verification, prove the exception is scoped only to the configured loopback CPGW connection and that process-global TLS verification remains enabled.
+
+No automated gateway credential login is tested or implemented.
+
+## 31. Windows/operator packaging
+
+Prove the standalone launcher:
+
+- starts in DRY_RUN by default;
+- requires deliberate operator action/configuration for LIVE enablement;
+- never embeds account identity/credentials/session material;
+- exposes enough local information for the approved caller to obtain/use the ephemeral token without logging/persisting it;
+- can start/stop independently of the existing Market Flow US runtime;
+- restart produces a new generated caller token while preserving safe execution facts.
+
+## 32. Branch-8 deterministic acceptance
+
+One command or a minimal small set of commands must prove the complete permission-independent standalone journey:
+
+```text
+start service in DRY_RUN
+→ caller auth negative/positive cases
+→ resolve synthetic STK
+→ BUY preview
+→ SELL preview
+→ requestId replay
+→ restart + idempotency proof
+→ explicit fake-LIVE submit
+→ reply-required confirmation
+→ acknowledgement-unknown reconciliation
+→ cancellation
+→ partial/full fill observation
+→ no-short-opening rejection
+→ sanitized report
+→ clean stop
+```
+
+This acceptance uses only synthetic provider/account data and never requires IBKR trading permission.
+
+## 33. Planning / release gates
+
+Before branch-8 implementation authorization:
 
 ```text
 plan frozen
 TREE structurally valid
-28 implementation leaves allocated exactly once
-R-US-DEMO-BUY-FINAL recorded
-final external-user review recorded
+32 implementation leaves allocated exactly once
+R-US-IBKR-ORDER-FINAL recorded
+R-US-IBKR-ORDER-EXTERNAL recorded
 Planning Docs CI green
 planning PR reviewed and merged
 main Planning CI green
+open-PR audit clean
 ```
 
 Before final `7.4` acceptance:
 
 ```text
-4.3.* / 4.4.* / 4.5.* done
-7.5 deterministic re-closure done
+8.1 / 8.2 / 8.3 / 8.4 done
 Fast green
 Browser green
 Planning green
+required service/order acceptance green
 bounded Workload green
 local Fake Leumi feature proof green
-feature/reclosure PR merged
+branch-8 reclosure PR merged
 main green
 exact accepted candidate SHA recorded
 ```
 
-## 25. Completion rule
+## 34. External IBKR permission gate
 
-Unit/service correctness, browser composition, deterministic local target-machine behavior, authenticated provider compatibility and market-open movement are separate evidence families; none substitutes for another.
+On the user's target machine, after branch-8 deterministic acceptance is green, real Client Portal Gateway session compatibility may be checked without placing an order.
+
+If IBKR trading permission is unavailable, actual order placement is recorded exactly:
+
+```text
+PENDING_EXTERNAL_PERMISSION
+```
+
+This does not substitute for deterministic submit/reply/cancel/reconciliation proof using the fake provider, and deterministic proof does not masquerade as real-money success.
+
+When permission later exists, any real-order verification must remain explicitly user-initiated, bounded, SHA-bound and provider-compliant; credentials/account/session data remain outside repository/reports.
+
+## 35. Completion rule
+
+Unit/service correctness, browser composition, deterministic local target-machine behavior, authenticated market-provider compatibility, market-open movement, standalone order-service correctness and optional real IBKR permission-dependent execution are separate evidence families; none substitutes for another.
