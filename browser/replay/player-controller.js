@@ -21,6 +21,7 @@ function clamp(value, min, max) {
 export function createReplayPlayerController({
   store,
   producerBridge = null,
+  runCoordinator = null,
   openIndexedDbSource = ({ store: sourceStore, recordingId }) => createIndexedDbRecordingSource({
     store: sourceStore,
     recordingId
@@ -41,6 +42,9 @@ export function createReplayPlayerController({
     clearTimer
   })) {
     assertFunction(value, name);
+  }
+  if (runCoordinator !== null) {
+    assertFunction(runCoordinator?.startFreshRun, "runCoordinator.startFreshRun");
   }
 
   let source = null;
@@ -69,6 +73,7 @@ export function createReplayPlayerController({
       durationMs: summary?.durationMs ?? 0,
       playerAvailable: player !== null,
       producerAvailable: bridge !== null,
+      runCoordinatorAvailable: runCoordinator !== null,
       status: state.status ?? (source ? "source_ready" : "idle"),
       selectedSequence: state.selectedSequence ?? selectedSequence,
       nextSequence: state.nextSequence ?? selectedSequence,
@@ -117,6 +122,29 @@ export function createReplayPlayerController({
     }
     playerState = player.getState();
     notify();
+  }
+
+  async function provisionFreshRun(reason) {
+    if (!source || !summary) throw new Error("Replay source is not selected.");
+    if (runCoordinator === null) {
+      const error = new Error("Replay service is not ready. Start an isolated replay run first.");
+      error.code = "REPLAY_SERVICE_NOT_READY";
+      throw error;
+    }
+
+    const nextBridge = await runCoordinator.startFreshRun({
+      reason,
+      selectedSequence,
+      sourceKind: source.kind,
+      sourceId: summary.id
+    });
+    if (!nextBridge) throw new Error("Replay run coordinator did not provide a producer bridge.");
+
+    bridge = nextBridge;
+    latestError = null;
+    rebuildPlayer();
+    if (!player) throw new Error("Replay Player could not attach to the fresh replay run.");
+    return player;
   }
 
   function setSource(nextSource) {
@@ -197,8 +225,20 @@ export function createReplayPlayerController({
     try {
       if (player.getState().status === "ready") {
         refreshPlayerState(player.select(selectedSequence));
+        return snapshotState();
+      }
+
+      const seekState = await player.seek(selectedSequence);
+      playerState = seekState;
+      selectedSequence = seekState.selectedSequence;
+      notify();
+
+      if (runCoordinator !== null) {
+        bridge = null;
+        player = null;
+        await provisionFreshRun("seek");
       } else {
-        refreshPlayerState(await player.seek(selectedSequence));
+        refreshPlayerState(seekState);
       }
       return snapshotState();
     } catch (error) {
@@ -209,14 +249,28 @@ export function createReplayPlayerController({
   }
 
   async function play() {
-    if (!player) {
-      const error = new Error("Replay service is not ready. Start an isolated replay run first.");
-      error.code = "REPLAY_SERVICE_NOT_READY";
-      latestError = normalizeError(error);
-      notify();
-      throw error;
-    }
     try {
+      if (!source || !summary) throw new Error("Replay source is not selected.");
+
+      if (!player) {
+        await provisionFreshRun("initial-play");
+      } else {
+        const current = player.getState();
+        if (current.requiresFreshRun === true) {
+          if (runCoordinator === null) {
+            return await player.play();
+          }
+          if (Number.isSafeInteger(current.committedSequence)) {
+            selectedSequence = current.committedSequence;
+          }
+          const reason = current.status === "stopped" ? "play-after-stop" : "fresh-run-required";
+          bridge = null;
+          player = null;
+          playerState = current;
+          await provisionFreshRun(reason);
+        }
+      }
+
       latestError = null;
       refreshPlayerState(await player.play());
       return snapshotState();
@@ -238,7 +292,8 @@ export function createReplayPlayerController({
     if (!player) return snapshotState();
     try {
       latestError = null;
-      refreshPlayerState(await player.stop());
+      const state = await player.stop();
+      refreshPlayerState(state);
       return snapshotState();
     } catch (error) {
       latestError = normalizeError(error);
