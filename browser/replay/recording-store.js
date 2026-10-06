@@ -208,6 +208,16 @@ export async function openReplayRecordingStore({
         .map(cloneSummary);
     },
 
+    async readFrame(recordingId, sequence) {
+      assertNonEmptyString(recordingId, "recordingId");
+      assertNonNegativeSafeInteger(sequence, "sequence");
+      const transaction = database.transaction(FRAMES_STORE, "readonly");
+      const done = transactionDone(transaction);
+      const frame = await requestResult(transaction.objectStore(FRAMES_STORE).get([recordingId, sequence]));
+      await done;
+      return frame ?? null;
+    },
+
     async readFrames(recordingId) {
       assertNonEmptyString(recordingId, "recordingId");
       const transaction = database.transaction(FRAMES_STORE, "readonly");
