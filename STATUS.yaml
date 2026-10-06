@@ -6,7 +6,7 @@ current:
   chat: 17
   node: "8.1"
   title: "Standalone IBKR order-service local authority"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
