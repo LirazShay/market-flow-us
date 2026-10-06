@@ -2,7 +2,7 @@ version: 2
 root: "0"
 nodes:
   "0":
-    status: draft
+    status: approved
     strategy: Market Flow US is a complete local U.S.-market product that preserves the proven analysis/validation model, keeps the isolated permission-gated IBKR order sidecar, and adds an isolated record/export/replay lane that exercises the unchanged market producer/service path without giving replay-specific authority to the server.
     tactic: Complete nine necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, release/target-machine acceptance, standalone IBKR execution, and Market Recording + Replay.
     parallel_assumptions:
@@ -392,7 +392,7 @@ nodes:
       - Panel shows target identity/returned position, horizon progress, targetInScannerContext and PARTIAL_OUTCOME/COMPLETE_OUTCOME before/after generation.
       - Position 1 is never presented as best/top-ranked unless the exact SQL ordering justifies that statement.
       - Before Generate/Regenerate the UI warns that exact Scanner SQL and market evidence will be shareable and should be reviewed; no automatic upload occurs.
-      - At most one Generate/Regenerate request is in flight per Viewer; additional actions are visibly disabled/refused rather than queued.
+      - At most one Generate/Regenerate request is in flight per Viewer; additional export actions are visibly disabled/refused rather than queued.
       - Generate returns relative local folder + file count; Copy AI Prompt and Copy folder path use clipboard with selectable fallback text.
       - PARTIAL pack can be safely regenerated after later evidence; export lost-ACK guidance permits safe regeneration, unlike capture lost-ACK behavior.
       - Chromium E2E proves ordered and unordered returned-position-1 investigations, sharing-safe file/content boundaries, prompt copy, targeted refresh and regeneration plus a position>50 reduced-context case.
@@ -501,7 +501,7 @@ nodes:
     children: []
 
   "7":
-    status: draft
+    status: approved
     strategy: The product is deterministically re-closed after every requested capability extension and then accepted on the exact final target-machine/provider candidate.
     tactic: Preserve completed U.S. migration/Demo Buy/AI and branch-8 evidence, require branch-9 Replay reclosure, then resume the final user-dependent acceptance leaf.
     parallel_assumptions:
@@ -569,7 +569,7 @@ nodes:
     children: []
 
   "7.4":
-    status: draft
+    status: approved
     strategy: The exact final post-branch-9 candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
     tactic: Run final target-machine local market/order/replay acceptance first, then authenticated market-data static smoke and market-open SHA-bound gate; run real IBKR live-order proof only when external permission exists.
     parallel_assumptions: []
@@ -579,7 +579,7 @@ nodes:
     success_evidence:
       - Local Fake Leumi static/moving/failure/restart PASS.
       - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful sharing-safe AI Investigation generation/copy/regeneration on the final SHA.
-      - Market Replay records/exports/imports or directly opens a portable recording, plays at 1x with contemporary local timing, pauses/resumes, seeks to a fresh replay DB without preroll, and leaves the normal live DB untouched on the final SHA.
+      - Market Replay records/exports/imports or directly opens a portable recording, plays at 1x with contemporary local timing, pauses/resumes, stops/restarts into a fresh replay run, seeks to a fresh replay DB without preroll, and leaves the normal live DB untouched on the final SHA.
       - Standalone IBKR service starts independently, protects localhost caller access, proves DRY_RUN/provider-session diagnostics/restart-safe idempotency on the final SHA, and does not expose credentials/account/session material.
       - 4096x180 and isolated one-day probes pass target-machine criteria.
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
@@ -682,7 +682,7 @@ nodes:
     children: []
 
   "9":
-    status: draft
+    status: approved
     strategy: Market Flow US can capture validated real-market snapshots into portable recordings and later replay them interactively through the unchanged normal producer/service path so the complete analytical product can be exercised when the real market is unavailable.
     tactic: Add browser recording authority and IndexedDB library, portable streaming file interoperability, a media-style Player using the normal producer contract with external time rebasing, an isolated Replay Host/service lifecycle, then deterministically re-close the repository before final acceptance resumes.
     parallel_assumptions:
@@ -691,7 +691,7 @@ nodes:
       - Replay artifacts/tests remain opt-in and do not silently lengthen ordinary local verification.
     necessary_assumptions:
       - The user needs realistic market behavior available outside live market hours and needs long recordings movable off browser storage.
-      - Interactive seek cannot leave future/past authority from a previous playback position in the same DB.
+      - Interactive seek or a new run after Stop cannot leave future/past authority from a previous playback run in the same DB.
     sufficiency_assumptions:
       - 9.1–9.5 cover capture/storage, portability, media playback/time semantics, isolated process/DB lifecycle and deterministic product-level reclosure.
     success_evidence:
@@ -703,7 +703,7 @@ nodes:
     children: ["9.1", "9.2", "9.3", "9.4", "9.5"]
 
   "9.1":
-    status: draft
+    status: approved
     strategy: The browser can create trustworthy immutable market recordings from the exact validated U.S. snapshot boundary even when the local Market Flow service is not running.
     tactic: Add a dedicated Replay browser entry/build that reuses ScreenerHulPaging3 validation, writes only complete validated frames plus bounded metadata to IndexedDB, and exposes Record/Stop/library/delete/quota state with fail-safe storage behavior.
     parallel_assumptions:
@@ -721,7 +721,7 @@ nodes:
     children: []
 
   "9.2":
-    status: draft
+    status: approved
     strategy: Recordings can move safely between IndexedDB and disk and large portable files can be validated/searched/replayed without whole-recording memory or browser-storage duplication.
     tactic: Implement the versioned line-oriented manifest/frame/footer format, streaming IndexedDB export, fail-closed import/file validation, direct File-backed source with lightweight seek index, and one common recording-source abstraction used by the Player.
     parallel_assumptions:
@@ -739,7 +739,7 @@ nodes:
     children: []
 
   "9.3":
-    status: draft
+    status: approved
     strategy: A media-style Market Player can emit any valid recording at 1x through the existing ProducerBridge while making locally-owned timestamps contemporary and preserving original market cadence/source facts.
     tactic: Build Play/Pause/Stop/progress/seek-position state, deterministic scheduler/generation cancellation, segment-based local-time rebasing and candidate projection into the existing normal producer session/universe/cycle/ACK flow.
     parallel_assumptions:
@@ -758,19 +758,21 @@ nodes:
     children: []
 
   "9.4":
-    status: draft
-    strategy: Interactive seek and full-product replay operate over an isolated fresh replay-owned service/DB without granting reset/seek authority to the normal server or risking the normal live process/data.
-    tactic: Add a small loopback Replay Host with exact Origin + ephemeral control credential that only spawns/stops its own unchanged Market Flow service child using existing --db/--port/--allowed-origin seams, resets only owned replay DB artifacts, and composes the existing Viewer against that service.
+    status: approved
+    strategy: Interactive seek, post-Stop restart and full-product replay operate over an isolated fresh replay-owned service/DB without granting reset/seek authority to the normal server or risking the normal live process/data.
+    tactic: Add a small loopback Replay Host with exact Origin + ephemeral control credential that only spawns/stops its own unchanged Market Flow service child using existing --db/--port/--allowed-origin seams, resets only owned replay DB artifacts, exposes a bounded one-run bootstrap/pairing flow to the dedicated Replay UI, and composes the existing Viewer against that service.
     parallel_assumptions:
       - The Host is lifecycle orchestration only, not a market-data transport or persistence layer.
     necessary_assumptions:
-      - Seek to an earlier/later recording point requires removal of authority already committed by the previous playback position.
+      - Seek or replaying an already-emitted position after Stop requires removal of authority committed by the previous replay run.
       - Browser code alone cannot safely spawn/reset the local service process and DB.
     sufficiency_assumptions: []
     success_evidence:
       - Host binds loopback, requires exact allowed Origin plus an ephemeral per-run control credential for control actions and emits only bounded public-safe lifecycle diagnostics.
+      - Dedicated launcher/UI bootstrap makes the ephemeral Host credential usable from a fresh start without repository/browser/durable-config persistence or secret logging; unauthorized and stale credentials reject.
       - Host controls only the child process it spawned and replay-only DB artifacts it explicitly owns; occupied/ambiguous port/path fails closed and no unrelated process is killed/opened/reset/deleted.
       - Explicit Seek cleanly stops producer/owned child, installs a fresh replay DB/session, snaps to a real frame boundary and emits that selected frame first with zero hidden preroll/fast-forward.
+      - Stop closes the current replay run; a later Play resets to a fresh replay DB/session before any selected frame can be emitted again, while Pause/Resume keeps the same DB/run.
       - The normal live DB path remains untouched and ordinary START_MARKET_FLOW_US/RUN_LOCAL_ACCEPTANCE semantics remain unchanged.
       - Reused Current/Detail-History/Scanner/Demo Buy/AI surfaces operate on the replay DB without `isReplay` parameters or replay-specific server queries.
       - Mid-recording first frame is valid with no prior history; missing staged anchors remain absent until later replay frames naturally supply them.
@@ -778,7 +780,7 @@ nodes:
     children: []
 
   "9.5":
-    status: draft
+    status: approved
     strategy: One exact post-Replay candidate has coherent contracts/docs and deterministic proof that recording/replay behaves like live startup where intended without contaminating normal verification or final-candidate truth.
     tactic: Complete focused recording/file/player/Host/browser acceptance, next-day and arbitrary-start proof, classify/fix any generic live-start defects, run only the materially affected broad gates, review/merge, require green main and pin the new exact candidate before 7.4 resumes.
     parallel_assumptions:
@@ -788,6 +790,7 @@ nodes:
     sufficiency_assumptions: []
     success_evidence:
       - Recording/format/IndexedDB/file-source/Player/Host focused unit/service/browser proof is green with sanitized synthetic fixtures.
+      - Stop→Play fresh-run isolation, Host one-run credential bootstrap/rejection, explicit Seek reset and Pause/Resume same-run behavior are deterministically proven.
       - Mid-recording replay with a fresh DB proves Current after first commit, History only from emitted frames, staged Scanner missing-history tolerance/progressive anchors, and Demo Buy future evidence only from later replay cycles.
       - Day-A recording replayed on day B proves contemporary local collected/cycle timing, unchanged provider/source values, working Scanner time-delta queries and coherent Demo Buy captured_at_ms/future horizons.
       - Any missing-history crash is fixed only as a generic normal-live-start defect with regression proof; no replay-specific server behavior is introduced.
