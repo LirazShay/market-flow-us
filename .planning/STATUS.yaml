@@ -3,6 +3,6 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 17 / TREE 7.4 is ready. Run final target-machine/local Fake Leumi/Demo Buy/AI/new-day/authenticated acceptance against the exact accepted product candidate e0af9d105004f175a44ec33fa481fba0631773bf from PR #27. Handoff-only metadata commits after that SHA do not replace the accepted product candidate."
+next_action: "Chat 17 / TREE 7.4 is in progress. Static target-acceptance preflight found and fixed stale NEW_TRADING_DAY.cmd schema-v3 wording; rollover behavior itself was already correct schema v4. Regression coverage now guards schema-v4/Demo Buy new-day wording. PR #29 affected verification is green (Fast + Planning Docs; Browser/Workload runtime paths are unchanged and were not triggered by path filters). Review/squash-merge PR #29, verify main CI and open-PR truth, then record the merge SHA as the new exact accepted product candidate and restart target-machine FR-0 serially on that SHA. Do not resume acceptance against e0af9d105004f175a44ec33fa481fba0631773bf."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true

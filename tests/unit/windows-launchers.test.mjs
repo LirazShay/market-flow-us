@@ -50,6 +50,9 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(newDay, /npm run db:new-day/);
   assert.match(newDay, /data\\archive\\/);
   assert.match(newDay, /Saved Scanner queries/);
+  assert.match(newDay, /fresh schema-v4 active DB/);
+  assert.match(newDay, /Demo Buy capture\/item state will start clean/);
+  assert.doesNotMatch(newDay, /schema-v3 active DB/);
   assert.doesNotMatch(newDay, /\b(?:del|erase|rd|rmdir)\b/i);
 
   for (const content of [setup, demo, reset, tests, real, live, newDay]) {
