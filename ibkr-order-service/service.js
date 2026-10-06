@@ -6,12 +6,17 @@ import {
   fingerprintOrderIntent,
   normalizeOrderIntent
 } from "./intent.js";
+import { createDryRunOrderAuthority } from "./order-authority.js";
 import {
   LocalSecurityError,
   assertAuthorizedCaller,
   assertNoBrowserOrigin,
   generateCallerToken
 } from "./security.js";
+import {
+  DEFAULT_ORDER_STORE_PATH,
+  openOrderExecutionStore
+} from "./store.js";
 
 export const ORDER_SERVICE_HOST = "127.0.0.1";
 export const ORDER_SERVICE_PORT = 8770;
@@ -133,30 +138,20 @@ async function handlePreview(body, adapter) {
   };
 }
 
-async function handleDryRunOrder(body, adapter) {
+async function handleDryRunOrder(body, orderAuthority) {
   const intent = normalizeOrderIntent(body);
-  if (intent.executionMode !== "DRY_RUN") {
-    const error = new Error("live execution is not enabled in TREE 8.1");
-    error.code = "LIVE_EXECUTION_NOT_ENABLED";
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const preview = await adapter.previewOrder(intent);
-  return {
-    requestId: intent.requestId,
-    intentFingerprint: fingerprintOrderIntent(intent),
-    executionMode: "DRY_RUN",
-    preview
-  };
+  return orderAuthority.create(intent);
 }
 
-export function createOrderRequestHandler({ callerToken, adapter }) {
+export function createOrderRequestHandler({ callerToken, adapter, orderAuthority }) {
   if (typeof callerToken !== "string" || callerToken.length === 0) {
     throw new TypeError("callerToken is required");
   }
   if (!adapter || typeof adapter.previewOrder !== "function") {
     throw new TypeError("adapter with previewOrder() is required");
+  }
+  if (!orderAuthority || typeof orderAuthority.create !== "function") {
+    throw new TypeError("orderAuthority with create() is required");
   }
 
   return async function orderRequestHandler(request, response) {
@@ -185,7 +180,7 @@ export function createOrderRequestHandler({ callerToken, adapter }) {
           return;
         }
         if (pathname === "/orders") {
-          writeJson(response, 200, await handleDryRunOrder(body, adapter));
+          writeJson(response, 200, await handleDryRunOrder(body, orderAuthority));
           return;
         }
         if (isKnownProtectedMutation(pathname)) {
@@ -209,36 +204,61 @@ export function createOrderRequestHandler({ callerToken, adapter }) {
   };
 }
 
-export function createOrderServiceRuntime({ adapter = new FakeIbkrAdapter() } = {}) {
+export function createOrderServiceRuntime({
+  adapter = new FakeIbkrAdapter(),
+  store
+} = {}) {
   const callerToken = generateCallerToken();
-  const handler = createOrderRequestHandler({ callerToken, adapter });
+  const orderAuthority = createDryRunOrderAuthority({ adapter, store });
+  const handler = createOrderRequestHandler({ callerToken, adapter, orderAuthority });
   return Object.freeze({ callerToken, handler });
 }
 
-export async function startOrderService({ adapter = new FakeIbkrAdapter() } = {}) {
-  const runtime = createOrderServiceRuntime({ adapter });
+export async function startOrderService({
+  adapter = new FakeIbkrAdapter(),
+  dbPath = DEFAULT_ORDER_STORE_PATH
+} = {}) {
+  const store = await openOrderExecutionStore({ dbPath });
+  const runtime = createOrderServiceRuntime({ adapter, store });
   const server = createServer(runtime.handler);
 
-  await new Promise((resolve, reject) => {
-    const onError = (error) => {
-      server.off("listening", onListening);
-      reject(error);
-    };
-    const onListening = () => {
-      server.off("error", onError);
-      resolve();
-    };
-    server.once("error", onError);
-    server.once("listening", onListening);
-    server.listen({
-      host: ORDER_SERVICE_HOST,
-      port: ORDER_SERVICE_PORT,
-      exclusive: true
+  try {
+    await new Promise((resolve, reject) => {
+      const onError = (error) => {
+        server.off("listening", onListening);
+        reject(error);
+      };
+      const onListening = () => {
+        server.off("error", onError);
+        resolve();
+      };
+      server.once("error", onError);
+      server.once("listening", onListening);
+      server.listen({
+        host: ORDER_SERVICE_HOST,
+        port: ORDER_SERVICE_PORT,
+        exclusive: true
+      });
     });
-  });
+  } catch (error) {
+    await store.close();
+    throw error;
+  }
 
+  let closed = false;
   return Object.freeze({
     server,
-    callerToken: runtime.callerToken
+    callerToken: runtime.callerToken,
+    async close() {
+      if (closed) return;
+      closed = true;
+      await new Promise((resolve, reject) => {
+        server.close((error) => {
+          if (error) reject(error);
+          else resolve();
+        });
+      });
+      await store.close();
+    }
   });
 }
