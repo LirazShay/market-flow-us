@@ -1,9 +1,9 @@
 version: 2
-plan_state: frozen
+plan_state: active
 replan_mode: execution_reopen
-current_stage: "implementation"
-current_node: "7.4"
+current_stage: "planning"
+current_node: "9"
 blockers: []
-next_action: "Chat 20 / TREE 8.4 branch-8 deterministic reclosure is complete: exact post-order-service product candidate 28e950afc1c4bfe4322d0593f483d05d92553e2d retains green Fast/Browser/Planning/Workload evidence; PR #41 repaired first-run release-truth drift, added explicit FR-11B IBKR CPGW/order-service target-machine acceptance, and passed reclosure Fast/Planning validation. After PR #41 is squash-merged and main required CI/open-PR truth is green, Chat 21 / TREE 7.4 is the only next executable leaf. Run the first-run acceptance serially on the exact pinned candidate; real-order evidence is PASS only when external permission exists and the user explicitly initiates the bounded check, otherwise record exactly PENDING_EXTERNAL_PERMISSION."
+next_action: "User requested a new Market Recording + Replay mini-project before completing TREE 7.4 target-machine/provider acceptance. Planning is reopened at the smallest new scope: add branch 9 for a browser-side validated market recorder with IndexedDB library, streaming portable export/direct-file playback, an MP3-like 1x Player with exact original frame spacing and local timestamp rebasing, plus an external Replay Host that only restarts the unchanged existing Market Flow US service on an isolated replay DB for seek. The existing service/shared producer protocol must remain replay-unaware; no preroll/fast-forward is allowed, and starting from a mid-recording frame must behave like a normal live start with no previous history. .planning/MARKET_REPLAY_MINI_PROJECT.md contains the user journeys, storage/file/time/seek/isolation contracts, acceptance scenarios and proposed 9.1->9.5 decomposition. Preserve existing completed execution truth and do not mark 7.4 done. Next: align GOAL and durable product/technical/test contracts, record material decisions, build/review TREE branch 9, run whole-goal/final/external-user review, freeze, allocate new leaves and repair executor handoff before production implementation."
 last_review: "R-US-IBKR-ORDER-EXTERNAL"
-implementation_authorized: true
+implementation_authorized: false

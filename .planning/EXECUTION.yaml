@@ -94,4 +94,4 @@ chats:
 
   "21":
     nodes:
-      "7.4": { state: pending, result: null }
+      "7.4": { state: blocked, result: "Paused by the user-requested Market Recording + Replay replan. Existing final target-machine/provider acceptance is not complete and must not be marked done; resume only after branch 9 is planned, frozen, implemented and deterministically reclosed, the complete product candidate is re-pinned, and current execution truth points back to 7.4." }
