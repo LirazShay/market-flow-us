@@ -128,7 +128,7 @@ jobs:
           require_text 'cycle_id > buy_cycle_id' docs/DATA_CONTRACT.md
           require_text 'Replay time projection' docs/DATA_CONTRACT.md
           require_text 'server is replay-unaware' .planning/MARKET_REPLAY_MINI_PROJECT.md
-          require_text 'No replay mode' docs/MARKET_REPLAY.md
+          require_text 'remain replay-unaware' docs/MARKET_REPLAY.md
           require_text '256 KiB' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text 'retained columns <= 64' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text 'Refresh observation' docs/DEMO_BUY_UX.md
