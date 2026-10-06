@@ -2,9 +2,18 @@ import {
   createDiagnosticTracker,
   DIAGNOSTIC_CODES
 } from "../../shared/diagnostics/index.js";
+import { validateDemoBuyCapturePayload } from "../../shared/demo-buy/capture.js";
+import { DEMO_BUY_MAX_ENCODED_REQUEST_BYTES } from "../../shared/demo-buy/limits.js";
 import { ERROR_CODES, PROTOCOL_VERSION } from "../../shared/protocol/index.js";
 
 const SOCKET_OPEN = 1;
+const UTF8 = new TextEncoder();
+
+export const DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT = Object.freeze({
+  COMMITTED: "CONFIRMED_COMMITTED",
+  REJECTED: "CONFIRMED_REJECTED",
+  UNKNOWN: "ACKNOWLEDGEMENT_UNKNOWN"
+});
 
 export class ViewerClientError extends Error {
   constructor(message, { code = null, retryable = false } = {}) {
@@ -38,6 +47,15 @@ function defaultCreateSocket(url) {
   return new globalThis.WebSocket(url);
 }
 
+function encodedRequestBytes(type, requestId, payload) {
+  return UTF8.encode(JSON.stringify({
+    v: PROTOCOL_VERSION,
+    type,
+    requestId,
+    payload
+  })).byteLength;
+}
+
 export function createViewerClient({
   url = "ws://127.0.0.1:8765",
   productVersion = "0.1.0",
@@ -57,6 +75,7 @@ export function createViewerClient({
   let connectPromise = null;
   let requestSequence = 0;
   let explicitClose = false;
+  let captureAcknowledgementLocked = false;
   const pending = new Map();
 
   function diagnosticSpec(type) {
@@ -92,6 +111,14 @@ export function createViewerClient({
         message: "Saved-query library operation failed."
       };
     }
+    if (type === "demo.buy.capture") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.capture",
+        name: "DemoBuyCaptureError",
+        message: "Demo Buy capture did not receive a confirmed commit."
+      };
+    }
     return null;
   }
 
@@ -114,7 +141,8 @@ export function createViewerClient({
   function snapshotState() {
     return Object.freeze({
       state,
-      pendingRequests: pending.size
+      pendingRequests: pending.size,
+      captureAcknowledgementLocked
     });
   }
 
@@ -250,7 +278,7 @@ export function createViewerClient({
     return `viewer-${requestSequence}`;
   }
 
-  function sendRequest(type, payload, requestId = nextRequestId()) {
+  function sendRequest(type, payload, requestId = nextRequestId(), { onDispatched = null } = {}) {
     if (!socket || socket.readyState !== SOCKET_OPEN) {
       return Promise.reject(new ViewerUnavailableError("Market Flow US service is unavailable."));
     }
@@ -265,6 +293,7 @@ export function createViewerClient({
           requestId,
           payload
         }));
+        onDispatched?.();
       } catch {
         pending.delete(requestId);
         reject(failTransport("Market Flow US service connection was lost."));
@@ -373,6 +402,86 @@ export function createViewerClient({
     }
   }
 
+  async function captureDemoBuy(payload) {
+    validateDemoBuyCapturePayload(payload);
+    if (captureAcknowledgementLocked) {
+      throw new ViewerUnavailableError(
+        "Demo Buy capture requires an explicit Viewer relaunch after acknowledgement became unknown."
+      );
+    }
+
+    await connect();
+    const requestId = nextRequestId();
+    if (encodedRequestBytes("demo.buy.capture", requestId, payload) > DEMO_BUY_MAX_ENCODED_REQUEST_BYTES) {
+      throw new TypeError("Demo Buy capture request exceeds the 16 MiB transport limit.");
+    }
+
+    let dispatched = false;
+    const spec = diagnosticSpec("demo.buy.capture");
+    try {
+      const result = await sendRequest(
+        "demo.buy.capture",
+        payload,
+        requestId,
+        { onDispatched: () => { dispatched = true; } }
+      );
+      diagnosticTracker.recordSuccess({
+        component: spec.component,
+        operation: "demo.buy.capture",
+        operationId: requestId,
+        checkpoint: spec.checkpoint,
+        context: {
+          captureId: result.captureId,
+          capturedItemCount: result.capturedItemCount
+        }
+      });
+      return Object.freeze({
+        status: DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT.COMMITTED,
+        captureId: result.captureId,
+        capturedAtMs: result.capturedAtMs,
+        capturedItemCount: result.capturedItemCount
+      });
+    } catch (error) {
+      if (error instanceof ViewerUnavailableError) {
+        if (!dispatched) throw error;
+        captureAcknowledgementLocked = true;
+        diagnosticTracker.recordError({
+          component: spec.component,
+          operation: "demo.buy.capture",
+          operationId: requestId,
+          checkpoint: spec.checkpoint,
+          error: {
+            code: DIAGNOSTIC_CODES.SERVICE_DISCONNECTED,
+            name: "DemoBuyAcknowledgementUnknown",
+            message: "Demo Buy acknowledgement is unknown after transport loss.",
+            retryable: false
+          }
+        });
+        return Object.freeze({
+          status: DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT.UNKNOWN
+        });
+      }
+
+      diagnosticTracker.recordError({
+        component: spec.component,
+        operation: "demo.buy.capture",
+        operationId: requestId,
+        checkpoint: spec.checkpoint,
+        error: {
+          code: typeof error?.code === "string" ? error.code : ERROR_CODES.DB_ERROR,
+          name: spec.name,
+          message: spec.message,
+          retryable: false
+        }
+      });
+      return Object.freeze({
+        status: DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT.REJECTED,
+        code: typeof error?.code === "string" ? error.code : ERROR_CODES.DB_ERROR,
+        message: error instanceof Error ? error.message : spec.message
+      });
+    }
+  }
+
   async function getCurrent() {
     return await request("viewer.current.get", {});
   }
@@ -450,6 +559,7 @@ export function createViewerClient({
     createScannerQuery,
     updateScannerQuery,
     deleteScannerQuery,
+    captureDemoBuy,
     close,
     getState: snapshotState
   });
