@@ -190,6 +190,17 @@ export function createMarketReplayPlayer({
     sessionStarted = false;
   }
 
+  async function closeErroredSession() {
+    if (!sessionStarted) return;
+    try {
+      await producerBridge.stopSession("replay-error");
+    } catch {
+      // Preserve the original Replay failure. ProducerBridge itself fails closed on stop transport loss.
+    } finally {
+      sessionStarted = false;
+    }
+  }
+
   function scheduleNext(expectedGeneration) {
     if (status !== "playing" || nextSequence >= summary.frameCount || expectedGeneration !== generation) {
       return;
@@ -247,10 +258,13 @@ export function createMarketReplayPlayer({
       if (expectedGeneration !== generation) return;
       invalidateGeneration();
       status = "error";
+      requiresFreshRun = true;
       latestError = Object.freeze({
         name: error instanceof Error ? error.name : "Error",
         message: error instanceof Error ? error.message : String(error)
       });
+      notify();
+      await closeErroredSession();
       notify();
     }
   }
