@@ -5,8 +5,11 @@ import {
   CpgwAdapter,
   CpgwAdapterError,
   CpgwTransportError,
+  buildProviderCorrelationId,
   createCpgwTransport
 } from "../../ibkr-order-service/cpgw-adapter.js";
+
+const CORRELATION_ID = buildProviderCorrelationId("req-cpgw-1");
 
 function liveIntent(overrides = {}) {
   return {
@@ -151,7 +154,7 @@ test("session/accounts/permission/contract/snapshot/what-if sequence is exact an
               quantity: 2,
               tif: "DAY",
               price: 123.45,
-              cOID: "mfu-8f92fc81895e7434496e"
+              cOID: CORRELATION_ID
             }
           ]
         });
@@ -384,7 +387,7 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
             filledQuantity: 1,
             remainingQuantity: 1,
             totalSize: 2,
-            order_ref: "mfu-8f92fc81895e7434496e"
+            order_ref: CORRELATION_ID
           }
         ],
         snapshot: true
@@ -399,7 +402,7 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
           conid: 265598,
           size: 1,
           price: "123.40",
-          order_ref: "mfu-8f92fc81895e7434496e"
+          order_ref: CORRELATION_ID
         }
       ]
     },
@@ -447,7 +450,7 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
       filledQuantity: 1,
       remainingQuantity: 1,
       totalQuantity: 2,
-      correlationId: "mfu-8f92fc81895e7434496e"
+      correlationId: CORRELATION_ID
     }
   ]);
   assert.equal(JSON.stringify(orders).includes("SYNTH-ACCOUNT-1"), false);
@@ -459,7 +462,7 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
       conid: 265598,
       quantity: 1,
       price: "123.40",
-      correlationId: "mfu-8f92fc81895e7434496e"
+      correlationId: CORRELATION_ID
     }
   ]);
   assert.equal(JSON.stringify(trades).includes("SYNTH-ACCOUNT-1"), false);
