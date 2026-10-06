@@ -64,7 +64,7 @@ function typeMap(rows) {
   return Object.fromEntries(rows.map((row) => [row.column_name, row.data_type]));
 }
 
-test("fresh Market Flow US DuckDB boots as schema v3 with exact U.S. authority columns and hardened connections", async () => {
+test("fresh Market Flow US DuckDB boots as schema v4 with exact U.S. authority columns and hardened connections", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-db-"));
   const dbPath = path.join(tempDir, "fresh.duckdb");
   const database = await openMarketFlowUsDatabase({
@@ -93,7 +93,7 @@ test("fresh Market Flow US DuckDB boots as schema v3 with exact U.S. authority c
       "SELECT schema_version, created_at_ms, product_version FROM schema_info"
     );
     assert.deepEqual(schema, [{
-      schema_version: 3,
+      schema_version: 4,
       created_at_ms: "123456789",
       product_version: "test-us"
     }]);
@@ -204,7 +204,7 @@ test("fresh Market Flow US DuckDB boots as schema v3 with exact U.S. authority c
   }
 });
 
-test("schema v3 reopens with saved queries and stale-session recovery intact", async () => {
+test("schema v4 reopens with saved queries and stale-session recovery intact", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-reopen-"));
   const dbPath = path.join(tempDir, "reopen.duckdb");
 
