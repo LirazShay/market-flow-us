@@ -12,6 +12,7 @@ machine prerequisites
 → deterministic dependency installation
 → local correctness
 → browser/runtime proof
+→ focused Market Replay deterministic proof
 → Local Fake Leumi static/dynamic/recovery proof
 → Demo Buy + AI Investigation proof
 → target-machine workload proof
@@ -30,17 +31,19 @@ Every user-dependent checkpoint has one bounded action, one explicit observable 
 This is execution refinement of the existing frozen release path, not a new capability branch and not a new subsystem.
 
 ```text
-7.2  reusable Local Fake Leumi acceptance tooling
-7.3  release/docs/deployment + first-run + daily lifecycle
-7.5  post-feature Demo Buy/AI deterministic reclosure
+7.2       reusable Local Fake Leumi acceptance tooling
+7.3       release/docs/deployment + first-run + daily lifecycle
+7.5       post-feature Demo Buy/AI deterministic reclosure
 8.1..8.3  standalone IBKR order-service implementation
-8.4  branch-8 deterministic reclosure + exact candidate pin
-7.4  final target-machine/provider acceptance
+8.4       branch-8 deterministic reclosure
+9.1..9.4  Market Recording + Replay implementation
+9.5       branch-9 deterministic reclosure + exact candidate pin
+7.4       final target-machine/provider acceptance
 ```
 
-TREE `7.4` remains incomplete until all required target-machine and authenticated evidence is green. The exact post-order-service product candidate remains the candidate pinned by completed TREE `8.4` in `.planning/EXECUTOR_HANDOFF.md`; later planning/docs-only commits do not silently replace it.
+TREE `7.4` remains incomplete until all required target-machine and authenticated evidence is green. It must run only on the exact post-branch-9 candidate pinned by completed TREE `9.5` in `.planning/EXECUTOR_HANDOFF.md`; the historical post-branch-8 candidate is no longer eligible for final acceptance.
 
-### What 7.2 / 7.5 / branch 8 already provide
+### What 7.2 / 7.5 / branches 8–9 already provide
 
 Existing tooling must be reused rather than replaced:
 
@@ -57,13 +60,15 @@ Existing tooling must be reused rather than replaced:
 - representative target-machine `4096 × 180` profile;
 - deterministic standalone IBKR order-service acceptance;
 - safe real CPGW session compatibility check;
+- deterministic Replay recorder/file/player/Host/mid-start/next-day acceptance;
 - sanitized SHA-bound PASS/FAIL reports.
 
 ### What 7.4 owns
 
-Chat 21 executes this runbook with the user on the target Windows machine, one checkpoint at a time:
+Chat 25 executes this runbook with the user on the target Windows machine, one checkpoint at a time:
 
 - host/toolchain acceptance;
+- deterministic final-candidate Replay acceptance on the target machine;
 - heavy target-machine performance;
 - daily DB lifecycle on the final product shape;
 - authenticated real-provider market-data compatibility;
@@ -77,11 +82,11 @@ Chat 21 executes this runbook with the user on the target Windows machine, one c
 
 1. **One checkpoint at a time.** Give only the current user-dependent action and the result needed back.
 2. **Stop on first FAIL.** Do not continue downstream to collect unrelated failures.
-3. **Root cause before retry.** A discovered blocking defect stays with Chat 21 until fix + regression proof + affected verification are green.
+3. **Root cause before retry.** A discovered blocking defect stays with Chat 25 until fix + regression proof + affected verification are green.
 4. **Resume from last valid green checkpoint.** Do not restart the whole sequence unless a fix invalidates earlier evidence.
-5. **Exact SHA matters.** FR-0 is a release-level checkpoint, not a local-checkout checkpoint. It freezes the exact post-order-service product SHA from fresh GitHub truth; FR-2 proves the target machine is actually checked out to that exact SHA. Heavy/authenticated evidence is valid only for that candidate.
+5. **Exact SHA matters.** FR-0 is a release-level checkpoint, not a local-checkout checkpoint. It freezes the exact post-branch-9 product SHA from fresh GitHub truth; FR-2 proves the target machine is actually checked out to that exact SHA. Heavy/authenticated evidence is valid only for that candidate.
 6. **No secret evidence.** Never store credentials, cookies, tokens, auth/session data, account identifiers, raw authenticated dumps or private browser state.
-7. **Existing launchers first.** Prefer `SETUP.cmd`, `RUN_TESTS.cmd`, `START_DEMO.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `NEW_TRADING_DAY.cmd`, `START_MARKET_FLOW_US.cmd`, `PREPARE_LIVE_VERIFICATION.cmd`, `RUN_IBKR_ORDER_ACCEPTANCE.cmd`, and `CHECK_IBKR_SESSION.cmd`.
+7. **Existing launchers first.** Prefer `SETUP.cmd`, `RUN_TESTS.cmd`, `START_DEMO.cmd`, `START_MARKET_REPLAY.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `NEW_TRADING_DAY.cmd`, `START_MARKET_FLOW_US.cmd`, `PREPARE_LIVE_VERIFICATION.cmd`, `RUN_IBKR_ORDER_ACCEPTANCE.cmd`, and `CHECK_IBKR_SESSION.cmd`.
 8. **No silent assumptions.** Check prerequisites before the stage that depends on them.
 9. **Static is valid.** Equal provider values are not a failure in Local Fake static or authenticated pre-market/static acceptance when new complete cycles keep committing.
 10. **Movement is a separate fact.** Only FR-13 can satisfy real market-open movement.
@@ -91,7 +96,7 @@ Chat 21 executes this runbook with the user on the target Windows machine, one c
 ## First-run tree
 
 ```text
-FR-0  Freeze exact candidate
+FR-0  Freeze exact post-branch-9 candidate
  |
 FR-1  Host prerequisite preflight
  |
@@ -99,9 +104,9 @@ FR-2  Acquire/update repository
  |
 FR-3  Install deterministic dependencies
  |
-FR-4  Fast local correctness + deterministic order-service acceptance
+FR-4  Fast correctness + Replay/order deterministic acceptance
  |
-FR-5  Browser build + Chromium E2E
+FR-5  Normal + Replay browser build and Chromium E2E
  |
 FR-6  Local demo/UI smoke incl. Demo Buy + AI Investigation
  |
@@ -132,18 +137,19 @@ A later checkpoint never excuses an earlier failure.
 
 ## FR-0 — Freeze exact candidate
 
-**Goal:** freeze the exact product candidate from fresh GitHub release truth before asking the target machine to install or test anything. FR-0 is a release-level checkpoint, not a local-checkout checkpoint.
+**Goal:** freeze the exact post-branch-9 product candidate from fresh GitHub release truth before asking the target machine to install or test anything. FR-0 is a release-level checkpoint, not a local-checkout checkpoint.
 
-**Required state:** fresh `main` shows TREE `8.4` deterministic reclosure complete and TREE `7.4` current; the accepted post-order-service candidate SHA is recorded in `.planning/EXECUTOR_HANDOFF.md`; no unexpected release PR or unmerged product work replaces it.
+**Required state:** fresh `main` shows TREE `9.5` deterministic reclosure complete and TREE `7.4` current; `.planning/EXECUTOR_HANDOFF.md` records the exact accepted post-branch-9 product SHA; no unexpected release PR or unmerged product work replaces it.
 
 **PASS evidence:**
 
-- exact accepted product SHA captured from the handoff;
+- exact accepted product SHA captured from the completed `9.5` handoff;
 - current `main`/status still authorizes TREE `7.4`;
+- the SHA is post-branch-9, not the historical post-branch-8 candidate;
 - later planning/docs-only commits, if any, are explicitly not substituted for the accepted product SHA;
 - no unexpected open PR or unmerged product work replaces the candidate.
 
-**FAIL:** candidate identity is ambiguous/missing, TREE `8.4` is not closed, current GitHub truth no longer authorizes `7.4`, or unexpected product/release work supersedes the candidate. Stop before target-machine preflight.
+**FAIL:** candidate identity is ambiguous/missing, `9.5` is not closed, current GitHub truth no longer authorizes `7.4`, the handoff still points at the historical branch-8 candidate, or unexpected product/release work supersedes the candidate. Stop before target-machine preflight.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -156,8 +162,8 @@ Verify before dependency installation:
 - PowerShell;
 - writable local disk for dependencies/Chromium/DuckDB/reports;
 - loopback networking;
-- ports `8765` and `8770` not occupied by a competing process;
-- Chromium-family browser for the authenticated market-data bookmarklet path;
+- ports `8765`, `8766` and `8770` not occupied by competing processes when their respective product paths are exercised;
+- Chromium-family browser for browser and Replay proof;
 - Client Portal Gateway available later for FR-11B when IBKR compatibility is tested.
 
 PASS is a concise sanitized version/capability report. Do not run `npm ci` before FR-1 is green.
@@ -172,7 +178,7 @@ PASS:
 
 - repository path known;
 - working tree was clean before switching candidate and remains clean before generated outputs/tests;
-- `HEAD` equals the exact FR-0 candidate;
+- `HEAD` equals the exact FR-0 candidate from `.planning/EXECUTOR_HANDOFF.md`;
 - the checkout is not silently using a later metadata-only `main` SHA;
 - lockfile, launchers and runtime files required by that candidate are present.
 
@@ -197,17 +203,22 @@ Node 24 preflight
 
 No global DuckDB installation is required.
 
-## FR-4 — Fast local correctness
+## FR-4 — Fast local correctness + focused deterministic acceptance
 
 Run separately for diagnosability:
 
 ```text
 npm run test:unit
 npm run test:service
+npm run test:acceptance:replay
 npm run test:acceptance:order
 ```
 
-PASS: all three green. Unit failures stay in logic/contract; service failures stay in Node/WebSocket/DuckDB/persistence/read boundaries. `test:acceptance:order` is synthetic/public-safe proof of the permission-independent standalone IBKR order-service journey and is not real-order evidence.
+PASS: all four are green. Unit failures stay in logic/contract; service failures stay in Node/WebSocket/DuckDB/persistence/read boundaries.
+
+`test:acceptance:replay` is synthetic/public-safe focused proof of the Replay recorder/file/player/Host/browser journey, including mid-recording no-preroll and next-day timing semantics. It does not prove current provider availability or movement.
+
+`test:acceptance:order` is synthetic/public-safe proof of the permission-independent standalone IBKR order-service journey and is not real-order evidence.
 
 ## FR-5 — Browser build + Chromium E2E
 
@@ -215,14 +226,15 @@ Run:
 
 ```text
 npm run build:browser
+npm run build:replay
 npm run test:e2e
 ```
 
 PASS:
 
-- browser artifacts generated under documented `dist` paths;
-- full Chromium E2E green;
-- no retry/timeout hiding a deterministic failure.
+- normal browser artifacts and dedicated Replay artifacts are generated under documented `dist` paths;
+- full Chromium E2E is green;
+- no retry/timeout hides a deterministic failure.
 
 ## FR-6 — Local demo/UI smoke
 
@@ -246,7 +258,7 @@ Manual observable checks:
 10. `Ctrl+C` stops cleanly;
 11. restart does not corrupt `.demo/market-flow-us.duckdb`.
 
-This is human-visible usability smoke, not a substitute for FR-7/FR-8 formal acceptance.
+This is human-visible usability smoke, not a substitute for FR-4 Replay acceptance or FR-7/FR-8 formal acceptance.
 
 ## FR-7 — Local Fake Leumi static acceptance
 
@@ -349,7 +361,7 @@ PASS:
 - saved Scanner queries are preserved;
 - running session prevents rollover rather than replacing an in-use DB.
 
-The separate IBKR execution DuckDB is not owned by New Trading Day.
+The separate IBKR execution DuckDB and replay-owned DuckDBs are not owned by New Trading Day.
 
 ## FR-11A — Real-provider market-data deployment smoke
 
@@ -502,17 +514,19 @@ If a change is observed but Current/History reflection cannot be proven, `moveme
 
 Record a compact final closure containing:
 
-- exact accepted product SHA;
+- exact accepted post-branch-9 product SHA;
 - FR-0..FR-13 statuses, including FR-8A..FR-8H and FR-11A/FR-11B;
+- focused deterministic Replay acceptance status;
 - deterministic standalone IBKR order-service acceptance status;
 - real CPGW session compatibility status;
 - real-order evidence `PASS` only if actually executed with permission and explicit user initiation, otherwise exactly `PENDING_EXTERNAL_PERMISSION`;
 - if two-pass: FR-12 pre-market report and FR-13 market-open report on the same accepted SHA;
 - sanitized local report names/paths;
 - normal active DB path `data/market-flow-us.duckdb`;
+- Replay is isolated to replay-owned DBs and the normal active DB was not reused/reset by Replay;
 - separate order execution DB per `docs/IBKR_ORDER_SERVICE_OPERATOR.md`;
 - proven daily stop/archive/new-day procedure;
-- normal start/stop commands;
+- normal and Replay start/stop commands;
 - Demo Buy / AI Investigation recovery path;
 - Support Snapshot path;
 - no blocking defect;
@@ -541,8 +555,8 @@ Return only the current checkpoint plus its sanitized error/report.
 ```text
 FR-0..FR-2  repository/release state
 FR-3        toolchain/install
-FR-4        unit/service/DuckDB/order deterministic proof
-FR-5        build/Chromium E2E
+FR-4        unit/service/DuckDB/Replay/order deterministic proof
+FR-5        normal + Replay build/Chromium E2E
 FR-6        local UI/runtime
 FR-7..FR-8 Local Fake / Demo Buy / AI feature acceptance
 FR-9        target-machine persistence/read/full-load performance
@@ -558,6 +572,7 @@ FR-14       evidence/operational closure
 
 - `docs/FIRST_RUN_ACCEPTANCE.md` — authoritative user execution runbook;
 - `START_HERE.md` — short operational entry point;
+- `docs/MARKET_REPLAY.md` — Market Recording + Replay operator/contract truth;
 - `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — standalone order-service startup/CPGW/acceptance;
 - `docs/LOCAL_FAKE_ACCEPTANCE.md` — Local Fake/workload profiles;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound static + movement gate;
