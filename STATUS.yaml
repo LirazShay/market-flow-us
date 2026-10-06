@@ -6,7 +6,7 @@ current:
   chat: 17
   node: "7.4"
   title: "Final target-machine/provider acceptance"
-  status: ready
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
