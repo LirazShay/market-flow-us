@@ -116,10 +116,28 @@ TREE `8.4` repaired the smallest affected release-truth surface without changing
 - `docs/FIRST_RUN_ACCEPTANCE.md` now pins candidate `28e950afc1c4bfe4322d0593f483d05d92553e2d` instead of the historical pre-branch-8 candidate.
 - Existing FR numbering is preserved; `FR-11A` owns market-data provider startup and `FR-11B` owns deterministic order acceptance plus real CPGW session compatibility.
 - FR-4 now includes `npm run test:acceptance:order` so permission-independent order proof is explicit on the target candidate.
+- FR-8A..FR-8H remain explicit mechanical sub-checkpoints in the user runbook.
+- FR-13 preserves explicit `PENDING`, `PASS` and `FAIL` movement evidence states.
 - Final evidence records real-order status as `PASS` only when explicitly executed with permission; otherwise exactly `PENDING_EXTERNAL_PERMISSION`.
 - New Trading Day remains market-DB-only and does not absorb the separate IBKR execution store.
 
-A branch consistency pass found no remaining `Chat 17` or `f2789...` reference in the authoritative first-run plan/user runbook.
+A branch consistency pass found no remaining `Chat 17` or historical-candidate instruction in the authoritative first-run plan/user runbook.
+
+## Reclosure validation
+
+PR #41 first exposed two documentation-contract regressions instead of hiding them:
+
+1. FR-13 no longer contained the mechanically asserted `movement.status = "FAIL"` form.
+2. The updated runbook initially dropped explicit FR-8A..FR-8H labels while preserving their commands.
+
+Both were root-caused to the release-truth rewrite, repaired in the runbook/regression contract, and revalidated. Before status closure, PR #41 passed:
+
+```text
+Market Flow US Fast CI          run 37491347255 (#394) success
+Market Flow US Planning Docs CI run 37491347258 (#507) success
+```
+
+No runtime/order-service code changed in TREE `8.4`.
 
 ## Final-acceptance order-service rule
 
@@ -141,17 +159,17 @@ PENDING_EXTERNAL_PERMISSION
 
 No synthetic result substitutes for that external status.
 
-## Closure gate still pending
+## Closure state
 
-Do not mark TREE `8.4` done merely because the documentation drift is repaired. Closure still requires:
+TREE `8.4` is marked `done` in the closure patch and the exact product candidate is pinned in root/planning STATUS, EXECUTION, handoff and first-run acceptance truth.
+
+Chat 20 itself is not complete until the remaining process gates are satisfied:
 
 ```text
-review branch diff
-→ PR CI / Planning validation green
-→ confirm exact candidate evidence remains 28e950af...
-→ mark 8.4 done and pin candidate in STATUS/handoff/final-acceptance truth
+final PR #41 CI green on the closure patch
+→ final diff review
 → squash merge
 → main required CI green
 → open-PR audit clean
-→ advance to Chat 21 / TREE 7.4
+→ only then hand off to Chat 21 / TREE 7.4
 ```
