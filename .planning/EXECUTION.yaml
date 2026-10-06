@@ -54,7 +54,7 @@ chats:
 
   "11":
     nodes:
-      "4.3.3": { state: in_progress, result: null }
+      "4.3.3": { state: done, result: "Trusted Demo Buy reads now evaluate exact baseline plus ten post-watermark horizons set-wise, preserve null/zero/unavailable/timing/integrity semantics, expose fixed 50-item stable keyset paging, targeted observation refresh and on-demand capture SQL/provenance, and keep diagnostics bounded. PR #21 candidate 3798fae54b4481f34456e2e265eee21fc66fa05c passed Fast, Browser, Planning and both bounded Workload jobs; a 64 x 240 bounded active-day probe measured 50-item page median 47.147 ms (max 59.553 ms) and targeted observation median 6.213 ms (max 7.921 ms), so no index, precompute or background updater was added." }
 
   "12":
     nodes:
