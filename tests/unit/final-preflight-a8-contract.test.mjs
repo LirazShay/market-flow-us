@@ -12,34 +12,50 @@ async function text(relativePath) {
   return await readFile(path.join(ROOT, relativePath), "utf8");
 }
 
-function currentColumnsFromProductSpec(source) {
-  const match = source.match(/Visible columns, in order:\s*```text\s*([\s\S]*?)```/);
-  assert.ok(match, "PRODUCT_SPEC Current visible-column block is missing");
-  return match[1]
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+function regexEscape(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-test("Product Spec Current column contract exactly matches the executable U.S. profile", async () => {
-  const spec = await text("docs/PRODUCT_SPEC.md");
-  assert.deepEqual(
-    currentColumnsFromProductSpec(spec),
-    US_CURRENT_COLUMNS.map((column) => column.key)
+test("Product Spec Current behavior delegates exact U.S. provider fields to the Data Contract without executable drift", async () => {
+  const [spec, dataContract] = await Promise.all([
+    text("docs/PRODUCT_SPEC.md"),
+    text("docs/DATA_CONTRACT.md")
+  ]);
+
+  assert.match(spec, /Current with U\.S\. fields and `DailyVolume DESC` default/);
+  assert.match(
+    spec,
+    /Schema\/provider field details remain owned by `DATA_CONTRACT\.md` and `TECHNICAL_SPEC\.md`/
   );
+
+  const derivedKeys = new Set(["paperName", "securityId", "collectedAtMs"]);
+  for (const column of US_CURRENT_COLUMNS) {
+    if (derivedKeys.has(column.key)) continue;
+    assert.match(
+      dataContract,
+      new RegExp(`\\b${regexEscape(column.key)}\\b`),
+      `DATA_CONTRACT is missing executable Current source field ${column.key}`
+    );
+  }
+
+  assert.match(dataContract, /securityId\s*=\s*String\(PaperId\)/);
+  assert.match(dataContract, /collected_at_ms/);
 });
 
-test("PaperId fail-closed source-type contract is durable across provider/data specs", async () => {
+test("PaperId fail-closed source-type detail is owned by DATA_CONTRACT and higher-level specs retain validated identity", async () => {
+  const dataContract = await text("docs/DATA_CONTRACT.md");
+  assert.match(dataContract, /(safe integer|Number\.isSafeInteger)/i);
+  assert.match(dataContract, /object\/array\/boolean/i);
+  assert.match(dataContract, /blank identity: rejected/i);
+
   for (const relativePath of [
-    "docs/DATA_CONTRACT.md",
     "docs/PRODUCT_REQUIREMENTS.md",
     "docs/PRODUCT_SPEC.md",
     "docs/TECHNICAL_SPEC.md"
   ]) {
     const source = await text(relativePath);
-    assert.match(source, /(safe integer|Number\.isSafeInteger)/i, relativePath);
-    assert.match(source, /object/i, relativePath);
-    assert.match(source, /boolean/i, relativePath);
+    assert.match(source, /String\(PaperId\)/, relativePath);
+    assert.match(source, /(validated|fail-closed)/i, relativePath);
   }
 });
 

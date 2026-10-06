@@ -1,6 +1,7 @@
 export const LEGACY_SCHEMA_VERSION = 1;
 export const SCHEMA_VERSION = 2;
-export const MARKET_FLOW_US_SCHEMA_VERSION = 3;
+export const MARKET_FLOW_US_V3_SCHEMA_VERSION = 3;
+export const MARKET_FLOW_US_SCHEMA_VERSION = 4;
 
 export const MARKET_AUTHORITY_TABLES = Object.freeze([
   "schema_info",
@@ -12,13 +13,23 @@ export const MARKET_AUTHORITY_TABLES = Object.freeze([
 ]);
 
 export const SAVED_QUERIES_TABLE = "scanner_saved_queries";
+export const DEMO_BUY_CAPTURES_TABLE = "demo_buy_captures";
+export const DEMO_BUY_ITEMS_TABLE = "demo_buy_items";
+export const DEMO_BUY_TABLES = Object.freeze([
+  DEMO_BUY_CAPTURES_TABLE,
+  DEMO_BUY_ITEMS_TABLE
+]);
 
 export const LEGACY_V1_REQUIRED_TABLES = MARKET_AUTHORITY_TABLES;
 export const REQUIRED_TABLES = Object.freeze([
   ...MARKET_AUTHORITY_TABLES,
   SAVED_QUERIES_TABLE
 ]);
-export const MARKET_FLOW_US_REQUIRED_TABLES = REQUIRED_TABLES;
+export const MARKET_FLOW_US_V3_REQUIRED_TABLES = REQUIRED_TABLES;
+export const MARKET_FLOW_US_REQUIRED_TABLES = Object.freeze([
+  ...MARKET_FLOW_US_V3_REQUIRED_TABLES,
+  ...DEMO_BUY_TABLES
+]);
 
 const CREATE_SCHEMA_INFO_TABLE = `CREATE TABLE schema_info (
   schema_version INTEGER NOT NULL,
@@ -143,6 +154,36 @@ export const CREATE_SAVED_QUERIES_TABLE = `CREATE TABLE scanner_saved_queries (
   updated_at_ms BIGINT NOT NULL
 )`;
 
+export const CREATE_DEMO_BUY_CAPTURES_TABLE = `CREATE TABLE demo_buy_captures (
+  capture_id BIGINT PRIMARY KEY CHECK (capture_id > 0),
+  captured_at_ms BIGINT NOT NULL CHECK (captured_at_ms >= 0),
+  source_query_id VARCHAR NULL,
+  source_query_name VARCHAR NULL,
+  source_query_sql VARCHAR NOT NULL,
+  source_interval_ms BIGINT NOT NULL CHECK (source_interval_ms > 0),
+  source_result_started_at_ms BIGINT NOT NULL CHECK (source_result_started_at_ms >= 0),
+  source_result_completed_at_ms BIGINT NOT NULL CHECK (source_result_completed_at_ms >= 0),
+  source_result_row_count BIGINT NOT NULL CHECK (source_result_row_count >= 0),
+  source_result_context_json JSON NOT NULL,
+  selection_mode VARCHAR NOT NULL CHECK (selection_mode IN ('manual', 'all', 'top_x')),
+  is_automatic BOOLEAN NOT NULL,
+  top_x BIGINT NULL,
+  CHECK (
+    (selection_mode = 'top_x' AND top_x BETWEEN 1 AND 5000)
+    OR (selection_mode IN ('manual', 'all') AND top_x IS NULL)
+  ),
+  CHECK (NOT is_automatic OR selection_mode IN ('all', 'top_x'))
+)`;
+
+export const CREATE_DEMO_BUY_ITEMS_TABLE = `CREATE TABLE demo_buy_items (
+  capture_id BIGINT NOT NULL CHECK (capture_id > 0),
+  result_rank BIGINT NOT NULL CHECK (result_rank > 0),
+  security_id VARCHAR NOT NULL CHECK (length(security_id) > 0),
+  buy_cycle_id BIGINT NOT NULL CHECK (buy_cycle_id > 0),
+  PRIMARY KEY (capture_id, security_id),
+  UNIQUE (capture_id, result_rank)
+)`;
+
 export const LEGACY_V1_SCHEMA_STATEMENTS = Object.freeze([
   CREATE_SCHEMA_INFO_TABLE,
   CREATE_SESSIONS_TABLE,
@@ -172,7 +213,7 @@ export const CREATE_SCHEMA_STATEMENTS = Object.freeze([
   CREATE_SAVED_QUERIES_TABLE
 ]);
 
-export const MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS = Object.freeze([
+export const MARKET_FLOW_US_V3_CREATE_SCHEMA_STATEMENTS = Object.freeze([
   CREATE_SCHEMA_INFO_TABLE,
   CREATE_SESSIONS_TABLE,
   `CREATE TABLE universe (
@@ -197,4 +238,10 @@ export const MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS = Object.freeze([
     PRIMARY KEY (security_id)
   )`,
   CREATE_SAVED_QUERIES_TABLE
+]);
+
+export const MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS = Object.freeze([
+  ...MARKET_FLOW_US_V3_CREATE_SCHEMA_STATEMENTS,
+  CREATE_DEMO_BUY_CAPTURES_TABLE,
+  CREATE_DEMO_BUY_ITEMS_TABLE
 ]);

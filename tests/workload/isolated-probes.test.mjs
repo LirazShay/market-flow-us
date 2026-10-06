@@ -474,7 +474,7 @@ async function runReadScannerProbe(profile, tempDir) {
 
     const viewer = createViewerReads({
       connection: database.viewerReadConnection,
-      schemaVersion: 3,
+      schemaVersion: database.schemaVersion,
       historyPageSize: 500
     });
     const scanner = await createScannerAuthority({

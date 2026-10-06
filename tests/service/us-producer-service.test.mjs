@@ -289,7 +289,7 @@ test("real service accepts U.S. session/universe/cycles/failure/heartbeat with d
   }
 });
 
-test("real service startup recovers a stale U.S. producer session and preserves schema-v3 authority", async () => {
+test("real service startup recovers a stale U.S. producer session and preserves schema-v4 authority", async () => {
   const clock = { value: 20000 };
   const fixture = await createServiceFixture({
     now: () => clock.value,
@@ -352,7 +352,7 @@ test("real service startup recovers a stale U.S. producer session and preserves 
       openDatabase: openMarketFlowUsDatabase
     });
 
-    assert.equal(restarted.database.schemaVersion, 3);
+    assert.equal(restarted.database.schemaVersion, 4);
     const recovered = await databaseRows(
       restarted.database.viewerReadConnection,
       `SELECT status, stopped_at_ms, stop_reason

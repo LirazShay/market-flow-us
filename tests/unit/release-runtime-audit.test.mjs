@@ -47,7 +47,7 @@ test("normal browser artifact and default composition use only the U.S. acquisit
   }
 });
 
-test("normal service command boots the Market Flow US schema-v3 database path", async () => {
+test("normal service command boots the Market Flow US schema-v4 database path", async () => {
   const [packageJson, serverEntry, schema] = await Promise.all([
     rootFile("package.json").then(JSON.parse),
     rootFile("local-service/server/index.js"),
@@ -57,10 +57,12 @@ test("normal service command boots the Market Flow US schema-v3 database path", 
   assert.equal(packageJson.scripts.service, "node local-service/server/index.js");
   assert.match(serverEntry, /openMarketFlowUsDatabase/);
   assert.doesNotMatch(serverEntry, /openMarketScopeDatabase/);
-  assert.match(schema, /MARKET_FLOW_US_SCHEMA_VERSION\s*=\s*3/);
+  assert.match(schema, /MARKET_FLOW_US_SCHEMA_VERSION\s*=\s*4/);
+  assert.match(schema, /demo_buy_captures/);
+  assert.match(schema, /demo_buy_items/);
 });
 
-test("Scanner authoring guide exposes only the active U.S. schema-v3 contract", async () => {
+test("Scanner authoring guide retains the proven U.S. market-schema contract during additive v4 rollout", async () => {
   const guide = await rootFile("docs/SCANNER_SQL_GUIDE.md");
 
   assert.match(guide, /active Market Flow US contract is \*\*schema v3\*\*/);

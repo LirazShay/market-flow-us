@@ -2,13 +2,18 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { DuckDBInstance } from "@duckdb/node-api";
 import {
+  CREATE_DEMO_BUY_CAPTURES_TABLE,
+  CREATE_DEMO_BUY_ITEMS_TABLE,
   CREATE_SAVED_QUERIES_TABLE,
   CREATE_SCHEMA_STATEMENTS,
+  DEMO_BUY_TABLES,
   LEGACY_SCHEMA_VERSION,
   LEGACY_V1_REQUIRED_TABLES,
   MARKET_FLOW_US_CREATE_SCHEMA_STATEMENTS,
   MARKET_FLOW_US_REQUIRED_TABLES,
   MARKET_FLOW_US_SCHEMA_VERSION,
+  MARKET_FLOW_US_V3_REQUIRED_TABLES,
+  MARKET_FLOW_US_V3_SCHEMA_VERSION,
   REQUIRED_TABLES,
   SCHEMA_VERSION
 } from "./schema.js";
@@ -194,25 +199,101 @@ async function bootstrapLegacySchema(
   }
 }
 
-async function bootstrapMarketFlowUsSchema(
+async function migrateMarketFlowUsV3ToV4(
   connection,
-  { createdAtMs, productVersion }
+  { productVersion, migrationFault = null }
 ) {
-  const existingTables = new Set(await tableNames(connection));
+  await connection.run("BEGIN TRANSACTION");
+  try {
+    await connection.run(CREATE_DEMO_BUY_CAPTURES_TABLE);
+    migrationFault?.hit?.("M1");
 
-  if (existingTables.has("schema_info")) {
-    const present = [...existingTables];
-    const info = await readSchemaInfo(connection);
-    if (info.schemaVersion !== MARKET_FLOW_US_SCHEMA_VERSION) {
-      throw new DatabaseSchemaUnsupportedError(
-        `Unsupported schema version ${info.schemaVersion}; Market Flow US requires schema v${MARKET_FLOW_US_SCHEMA_VERSION}`
-      );
-    }
+    await connection.run(CREATE_DEMO_BUY_ITEMS_TABLE);
+    migrationFault?.hit?.("M2");
+
+    await connection.run(
+      `UPDATE schema_info
+       SET schema_version = $schemaVersion,
+           product_version = $productVersion`,
+      {
+        schemaVersion: MARKET_FLOW_US_SCHEMA_VERSION,
+        productVersion
+      }
+    );
+    migrationFault?.hit?.("M3");
+
+    await connection.run("COMMIT");
+  } catch (error) {
+    await rollbackPreservingOriginal(connection);
+    throw error;
+  }
+}
+
+async function validateOrMigrateMarketFlowUsSchema(
+  connection,
+  { productVersion, migrationFault = null }
+) {
+  const present = await tableNames(connection);
+  const info = await readSchemaInfo(connection);
+
+  if (info.schemaVersion === MARKET_FLOW_US_SCHEMA_VERSION) {
     assertRequiredTables(
       present,
       MARKET_FLOW_US_REQUIRED_TABLES,
       MARKET_FLOW_US_SCHEMA_VERSION
     );
+    return;
+  }
+
+  if (info.schemaVersion === MARKET_FLOW_US_V3_SCHEMA_VERSION) {
+    assertRequiredTables(
+      present,
+      MARKET_FLOW_US_V3_REQUIRED_TABLES,
+      MARKET_FLOW_US_V3_SCHEMA_VERSION
+    );
+
+    const unexpectedDemoTables = DEMO_BUY_TABLES.filter((table) => present.includes(table));
+    if (unexpectedDemoTables.length > 0) {
+      throw new DatabaseSchemaUnsupportedError(
+        `Schema v${MARKET_FLOW_US_V3_SCHEMA_VERSION} unexpectedly contains Demo Buy structures: ${unexpectedDemoTables.join(", ")}`
+      );
+    }
+
+    await migrateMarketFlowUsV3ToV4(connection, {
+      productVersion,
+      migrationFault
+    });
+
+    const migratedInfo = await readSchemaInfo(connection);
+    if (migratedInfo.schemaVersion !== MARKET_FLOW_US_SCHEMA_VERSION) {
+      throw new DatabaseSchemaUnsupportedError(
+        `Migration did not produce Market Flow US schema v${MARKET_FLOW_US_SCHEMA_VERSION}`
+      );
+    }
+    assertRequiredTables(
+      await tableNames(connection),
+      MARKET_FLOW_US_REQUIRED_TABLES,
+      MARKET_FLOW_US_SCHEMA_VERSION
+    );
+    return;
+  }
+
+  throw new DatabaseSchemaUnsupportedError(
+    `Unsupported schema version ${info.schemaVersion}; Market Flow US requires schema v${MARKET_FLOW_US_V3_SCHEMA_VERSION} or v${MARKET_FLOW_US_SCHEMA_VERSION}`
+  );
+}
+
+async function bootstrapMarketFlowUsSchema(
+  connection,
+  { createdAtMs, productVersion, migrationFault = null }
+) {
+  const existingTables = new Set(await tableNames(connection));
+
+  if (existingTables.has("schema_info")) {
+    await validateOrMigrateMarketFlowUsSchema(connection, {
+      productVersion,
+      migrationFault
+    });
     return;
   }
 
@@ -355,13 +436,17 @@ export async function openMarketScopeDatabase({
 export async function openMarketFlowUsDatabase({
   dbPath,
   productVersion = "0.1.0",
-  now = () => Date.now()
+  now = () => Date.now(),
+  migrationFault = null
 }) {
   return await openDatabase({
     dbPath,
     productVersion,
     now,
     schemaVersion: MARKET_FLOW_US_SCHEMA_VERSION,
-    bootstrap: bootstrapMarketFlowUsSchema
+    bootstrap: (connection, options) => bootstrapMarketFlowUsSchema(connection, {
+      ...options,
+      migrationFault
+    })
   });
 }

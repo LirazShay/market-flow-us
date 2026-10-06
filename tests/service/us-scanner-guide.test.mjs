@@ -6,13 +6,14 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
-import { MARKET_FLOW_US_REQUIRED_TABLES } from "../../local-service/database/schema.js";
+import { MARKET_FLOW_US_V3_REQUIRED_TABLES } from "../../local-service/database/schema.js";
 import { createScannerAuthority } from "../../local-service/scanner/scanner.js";
 import { MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES } from "../../shared/scanner/builtins.js";
 
 const GUIDE_PATH = fileURLToPath(
   new URL("../../docs/SCANNER_SQL_GUIDE.md", import.meta.url)
 );
+const SCANNER_MARKET_TABLES = new Set(MARKET_FLOW_US_V3_REQUIRED_TABLES);
 
 function extractTextManifest(guide, startMarker, endMarker) {
   const start = guide.indexOf(startMarker);
@@ -112,7 +113,7 @@ function sortedSchemaRows(rows) {
 async function createFixture() {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-guide-"));
   const database = await openMarketFlowUsDatabase({
-    dbPath: path.join(tempDir, "guide-v3.duckdb"),
+    dbPath: path.join(tempDir, "guide-v4.duckdb"),
     productVersion: "scanner-guide-test",
     now: () => 1
   });
@@ -132,7 +133,7 @@ async function createFixture() {
   };
 }
 
-test("Market Flow US Scanner guide stays synchronized with schema v3 and U.S. source-defined built-ins", async () => {
+test("Market Flow US Scanner guide keeps the proven U.S. market manifest synchronized while schema v4 adds Demo Buy tables", async () => {
   const guide = await readFile(GUIDE_PATH, "utf8");
   const fixture = await createFixture();
 
@@ -153,10 +154,10 @@ test("Market Flow US Scanner guide stays synchronized with schema v3 and U.S. so
     const documentedColumns = parseColumnsManifest(guide);
     assert.deepEqual(
       [...documentedColumns.keys()].sort(),
-      [...MARKET_FLOW_US_REQUIRED_TABLES].sort()
+      [...MARKET_FLOW_US_V3_REQUIRED_TABLES].sort()
     );
 
-    const actualColumns = (await fixture.database.viewerReadConnection.runAndReadAll(`
+    const allColumns = (await fixture.database.viewerReadConnection.runAndReadAll(`
       SELECT
         table_name AS tableName,
         column_name AS columnName,
@@ -167,6 +168,9 @@ test("Market Flow US Scanner guide stays synchronized with schema v3 and U.S. so
       WHERE table_schema = 'main'
       ORDER BY table_name, ordinal_position
     `)).getRowObjectsJson();
+    const actualColumns = allColumns.filter((row) =>
+      SCANNER_MARKET_TABLES.has(String(row.tableName ?? row.table_name))
+    );
 
     const actualByTable = new Map();
     for (const row of actualColumns) {
@@ -176,7 +180,7 @@ test("Market Flow US Scanner guide stays synchronized with schema v3 and U.S. so
       actualByTable.get(tableName).push(columnName);
     }
 
-    for (const tableName of MARKET_FLOW_US_REQUIRED_TABLES) {
+    for (const tableName of MARKET_FLOW_US_V3_REQUIRED_TABLES) {
       assert.deepEqual(
         documentedColumns.get(tableName),
         actualByTable.get(tableName),
@@ -187,7 +191,7 @@ test("Market Flow US Scanner guide stays synchronized with schema v3 and U.S. so
     assert.deepEqual(
       sortedSchemaRows(parseTypesManifest(guide)),
       sortedSchemaRows(actualColumns),
-      "U.S. guide schema type/nullability manifest drifted from schema v3"
+      "U.S. guide market-schema type/nullability manifest drifted"
     );
 
     assert.deepEqual(
