@@ -4,8 +4,11 @@ import { FakeIbkrAdapter } from "./fake-adapter.js";
 import {
   OrderIntentValidationError,
   fingerprintOrderIntent,
+  normalizeInstrument,
   normalizeOrderIntent
 } from "./intent.js";
+import { prepareOrderPreview } from "./live-gates.js";
+import { createLiveOrderAuthority } from "./live-order-authority.js";
 import { createDryRunOrderAuthority } from "./order-authority.js";
 import {
   LocalSecurityError,
@@ -22,12 +25,6 @@ export const ORDER_SERVICE_HOST = "127.0.0.1";
 export const ORDER_SERVICE_PORT = 8770;
 export const ORDER_SERVICE_MAX_BODY_BYTES = 64 * 1024;
 
-const PROTECTED_READ_PATHS = new Set([
-  "/session",
-  "/orders",
-  "/trades"
-]);
-
 function writeJson(response, statusCode, payload) {
   const body = JSON.stringify(payload);
   response.writeHead(statusCode, {
@@ -40,6 +37,13 @@ function writeJson(response, statusCode, payload) {
 
 function securityFailure(code, statusCode) {
   const error = new LocalSecurityError(code, statusCode);
+  throw error;
+}
+
+function routeFailure(code, statusCode = 409) {
+  const error = new Error(code);
+  error.code = code;
+  error.statusCode = statusCode;
   throw error;
 }
 
@@ -91,16 +95,15 @@ async function readBoundedJson(request) {
   }
 }
 
-function isProtectedReadPath(pathname) {
-  return PROTECTED_READ_PATHS.has(pathname) || /^\/orders\/[^/]+$/u.test(pathname);
-}
-
-function isKnownProtectedMutation(pathname) {
-  return pathname === "/session/init"
-    || pathname === "/instruments/resolve"
-    || pathname === "/orders/preview"
-    || pathname === "/orders"
-    || /^\/orders\/[^/]+\/(confirm|cancel)$/u.test(pathname);
+function assertExactBodyKeys(body, keys, code = "INVALID_REQUEST_BODY") {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    routeFailure(code, 400);
+  }
+  const actual = Object.keys(body).sort();
+  const expected = [...keys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
+    routeFailure(code, 400);
+  }
 }
 
 function sanitizedError(error) {
@@ -128,9 +131,41 @@ function sanitizedError(error) {
   };
 }
 
+function supportsProviderPreview(adapter) {
+  return [
+    "getSessionStatus",
+    "getTradableAccounts",
+    "checkTradingPermission",
+    "resolveInstrument",
+    "getSnapshot",
+    "previewOrder"
+  ].every((method) => typeof adapter?.[method] === "function");
+}
+
+function supportsLiveLifecycle(adapter) {
+  return supportsProviderPreview(adapter)
+    && [
+      "getLongPosition",
+      "submitOrder",
+      "confirmReply",
+      "getOrders",
+      "getTrades",
+      "cancelOrder"
+    ].every((method) => typeof adapter?.[method] === "function");
+}
+
+function requireAdapterMethod(adapter, method, code) {
+  if (typeof adapter?.[method] !== "function") {
+    routeFailure(code, 501);
+  }
+  return adapter[method].bind(adapter);
+}
+
 async function handlePreview(body, adapter) {
   const intent = normalizeOrderIntent(body);
-  const preview = await adapter.previewOrder(intent);
+  const preview = supportsProviderPreview(adapter)
+    ? (await prepareOrderPreview({ intent, adapter })).preview
+    : await adapter.previewOrder(intent);
   return {
     requestId: intent.requestId,
     intentFingerprint: fingerprintOrderIntent(intent),
@@ -138,20 +173,72 @@ async function handlePreview(body, adapter) {
   };
 }
 
-async function handleDryRunOrder(body, orderAuthority) {
+async function handleCreateOrder(body, dryRunAuthority, liveOrderAuthority) {
   const intent = normalizeOrderIntent(body);
-  return orderAuthority.create(intent);
+  if (intent.executionMode === "DRY_RUN") {
+    return dryRunAuthority.create(intent);
+  }
+  if (!liveOrderAuthority) {
+    routeFailure("LIVE_EXECUTION_NOT_ENABLED");
+  }
+  return liveOrderAuthority.create(intent);
 }
 
-export function createOrderRequestHandler({ callerToken, adapter, orderAuthority }) {
+async function getLocalOrder(localOrderId, { store, liveOrderAuthority }) {
+  if (!store || typeof store.getByLocalOrderId !== "function") {
+    routeFailure("ORDER_LOOKUP_UNAVAILABLE", 501);
+  }
+  const execution = await store.getByLocalOrderId(localOrderId);
+  if (!execution) {
+    routeFailure("ORDER_NOT_FOUND", 404);
+  }
+  const provider = typeof store.getProviderState === "function"
+    ? await store.getProviderState(localOrderId)
+    : null;
+  if (provider) {
+    if (!liveOrderAuthority) {
+      routeFailure("LIVE_EXECUTION_NOT_ENABLED");
+    }
+    return liveOrderAuthority.get(localOrderId);
+  }
+  return Object.freeze({
+    requestId: execution.requestId,
+    intentFingerprint: execution.intentFingerprint,
+    localOrderId: execution.localOrderId,
+    lifecycleState: execution.lifecycleState,
+    executionMode: "DRY_RUN",
+    replayed: true
+  });
+}
+
+function matchOrderAction(pathname) {
+  const match = pathname.match(/^\/orders\/([^/]+)\/(confirm|cancel)$/u);
+  if (!match) return null;
+  return { localOrderId: decodeURIComponent(match[1]), action: match[2] };
+}
+
+function matchOrderRead(pathname) {
+  const match = pathname.match(/^\/orders\/([^/]+)$/u);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function createOrderRequestHandler({
+  callerToken,
+  adapter,
+  dryRunAuthority,
+  orderAuthority,
+  liveOrderAuthority = null,
+  store = null
+}) {
+  const effectiveDryRunAuthority = dryRunAuthority ?? orderAuthority;
   if (typeof callerToken !== "string" || callerToken.length === 0) {
     throw new TypeError("callerToken is required");
   }
   if (!adapter || typeof adapter.previewOrder !== "function") {
     throw new TypeError("adapter with previewOrder() is required");
   }
-  if (!orderAuthority || typeof orderAuthority.create !== "function") {
-    throw new TypeError("orderAuthority with create() is required");
+  if (!effectiveDryRunAuthority || typeof effectiveDryRunAuthority.create !== "function") {
+    throw new TypeError("dryRunAuthority with create() is required");
   }
 
   return async function orderRequestHandler(request, response) {
@@ -171,28 +258,98 @@ export function createOrderRequestHandler({ callerToken, adapter, orderAuthority
       assertAuthorizedCaller(request.headers.authorization, callerToken);
       assertNoBrowserOrigin(request.headers.origin);
 
+      if (request.method === "GET" && pathname === "/session") {
+        const getSessionStatus = requireAdapterMethod(
+          adapter,
+          "getSessionStatus",
+          "PROVIDER_SESSION_UNAVAILABLE"
+        );
+        writeJson(response, 200, await getSessionStatus());
+        return;
+      }
+
+      if (request.method === "GET" && pathname === "/orders") {
+        const getOrders = requireAdapterMethod(adapter, "getOrders", "PROVIDER_ORDERS_UNAVAILABLE");
+        writeJson(response, 200, { orders: await getOrders() });
+        return;
+      }
+
+      if (request.method === "GET" && pathname === "/trades") {
+        const getTrades = requireAdapterMethod(adapter, "getTrades", "PROVIDER_TRADES_UNAVAILABLE");
+        writeJson(response, 200, { trades: await getTrades() });
+        return;
+      }
+
+      if (request.method === "GET") {
+        const localOrderId = matchOrderRead(pathname);
+        if (localOrderId !== null) {
+          writeJson(response, 200, await getLocalOrder(localOrderId, {
+            store,
+            liveOrderAuthority
+          }));
+          return;
+        }
+      }
+
       if (request.method === "POST") {
         assertJsonContentType(request.headers["content-type"]);
         const body = await readBoundedJson(request);
+
+        if (pathname === "/session/init") {
+          assertExactBodyKeys(body, []);
+          const initializeSession = requireAdapterMethod(
+            adapter,
+            "initializeSession",
+            "PROVIDER_SESSION_INIT_UNAVAILABLE"
+          );
+          writeJson(response, 200, await initializeSession());
+          return;
+        }
+
+        if (pathname === "/instruments/resolve") {
+          const instrument = normalizeInstrument(body);
+          const resolveInstrument = requireAdapterMethod(
+            adapter,
+            "resolveInstrument",
+            "PROVIDER_INSTRUMENT_RESOLUTION_UNAVAILABLE"
+          );
+          writeJson(response, 200, await resolveInstrument(instrument));
+          return;
+        }
 
         if (pathname === "/orders/preview") {
           writeJson(response, 200, await handlePreview(body, adapter));
           return;
         }
-        if (pathname === "/orders") {
-          writeJson(response, 200, await handleDryRunOrder(body, orderAuthority));
-          return;
-        }
-        if (isKnownProtectedMutation(pathname)) {
-          writeJson(response, 501, { code: "NOT_IMPLEMENTED" });
-          return;
-        }
-        writeJson(response, 404, { code: "NOT_FOUND" });
-        return;
-      }
 
-      if (request.method === "GET" && isProtectedReadPath(pathname)) {
-        writeJson(response, 501, { code: "NOT_IMPLEMENTED" });
+        if (pathname === "/orders") {
+          writeJson(response, 200, await handleCreateOrder(
+            body,
+            effectiveDryRunAuthority,
+            liveOrderAuthority
+          ));
+          return;
+        }
+
+        const action = matchOrderAction(pathname);
+        if (action) {
+          if (!liveOrderAuthority) {
+            routeFailure("LIVE_EXECUTION_NOT_ENABLED");
+          }
+          if (action.action === "confirm") {
+            assertExactBodyKeys(body, ["confirmed"]);
+            writeJson(response, 200, await liveOrderAuthority.confirm(
+              action.localOrderId,
+              { confirmed: body.confirmed }
+            ));
+            return;
+          }
+          assertExactBodyKeys(body, []);
+          writeJson(response, 200, await liveOrderAuthority.cancel(action.localOrderId));
+          return;
+        }
+
+        writeJson(response, 404, { code: "NOT_FOUND" });
         return;
       }
 
@@ -206,20 +363,54 @@ export function createOrderRequestHandler({ callerToken, adapter, orderAuthority
 
 export function createOrderServiceRuntime({
   adapter = new FakeIbkrAdapter(),
-  store
+  store,
+  processLiveEnabled = false
 } = {}) {
   const callerToken = generateCallerToken();
-  const orderAuthority = createDryRunOrderAuthority({ adapter, store });
-  const handler = createOrderRequestHandler({ callerToken, adapter, orderAuthority });
-  return Object.freeze({ callerToken, handler });
+  const dryRunAdapter = supportsProviderPreview(adapter)
+    ? Object.freeze({
+        async previewOrder(intent) {
+          return (await prepareOrderPreview({ intent, adapter })).preview;
+        }
+      })
+    : adapter;
+  const dryRunAuthority = createDryRunOrderAuthority({
+    adapter: dryRunAdapter,
+    store
+  });
+  const liveOrderAuthority = store && supportsLiveLifecycle(adapter)
+    ? createLiveOrderAuthority({
+        adapter,
+        store,
+        processLiveEnabled
+      })
+    : null;
+  const handler = createOrderRequestHandler({
+    callerToken,
+    adapter,
+    dryRunAuthority,
+    liveOrderAuthority,
+    store
+  });
+  return Object.freeze({
+    callerToken,
+    handler,
+    liveCapable: liveOrderAuthority !== null,
+    liveEnabled: liveOrderAuthority !== null && processLiveEnabled === true
+  });
 }
 
 export async function startOrderService({
   adapter = new FakeIbkrAdapter(),
-  dbPath = DEFAULT_ORDER_STORE_PATH
+  dbPath = DEFAULT_ORDER_STORE_PATH,
+  processLiveEnabled = false
 } = {}) {
   const store = await openOrderExecutionStore({ dbPath });
-  const runtime = createOrderServiceRuntime({ adapter, store });
+  const runtime = createOrderServiceRuntime({
+    adapter,
+    store,
+    processLiveEnabled
+  });
   const server = createServer(runtime.handler);
 
   try {
@@ -249,6 +440,8 @@ export async function startOrderService({
   return Object.freeze({
     server,
     callerToken: runtime.callerToken,
+    liveCapable: runtime.liveCapable,
+    liveEnabled: runtime.liveEnabled,
     async close() {
       if (closed) return;
       closed = true;
