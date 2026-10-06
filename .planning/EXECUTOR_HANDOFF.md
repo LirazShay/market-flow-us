@@ -77,10 +77,10 @@ Chat 17: 8.1 done
 Chat 18: 8.2 done
 Chat 19: 8.3 done
 Chat 20: 8.4 done
-Chat 21: 9.1 → 9.2
-Chat 22: 9.3
-Chat 23: 9.4
-Chat 24: 9.5
+Chat 21: 9.1 → 9.2 done
+Chat 22: 9.3 done
+Chat 23: 9.4 done
+Chat 24: 9.5 done
 Chat 25: 7.4
 ```
 
@@ -91,6 +91,14 @@ Do not skip forward. Current dependency order is:
 ```
 
 The earlier Chat-21 allocation of `7.4` was deliberately repaired during Replay planning because `7.4` now depends on `9.5`.
+
+TREE `9.5` completed and pinned this exact post-branch-9 product candidate:
+
+```text
+243f4f2e78e434378ff2202ba95af7b8626a0369
+```
+
+PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later planning-only metadata commits do not replace this product candidate.
 
 ## Branch-9 architectural boundary
 
@@ -399,11 +407,19 @@ Branch `8.4` completed against the post-order-service baseline:
 28e950afc1c4bfe4322d0593f483d05d92553e2d
 ```
 
-That SHA is branch-8 evidence and the starting implementation baseline for branch 9; it must not be reused as the final accepted complete-product candidate after Replay implementation begins.
+That SHA remains branch-8 evidence only.
 
-TREE `9.5` owns deterministic Replay reclosure and must pin the exact post-branch-9 candidate after focused Replay proof, materially affected broad gates, merge/main-green and open-PR audit.
+TREE `9.5` completed deterministic Replay reclosure and pinned the exact post-branch-9 product candidate:
 
-Only after `9.5` is done may Chat 25 / TREE `7.4` perform final user-dependent target-machine heavy performance, Replay usability/isolation, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility against that exact new candidate.
+```text
+243f4f2e78e434378ff2202ba95af7b8626a0369
+```
+
+That candidate passed focused Replay proof plus the materially affected Fast, Browser/Local Fake, Planning and bounded Workload gates on main; PR #53 was squash-merged and the open-PR audit was clean.
+
+Under the currently frozen plan, Chat 25 / TREE `7.4` is the next leaf and must perform final user-dependent target-machine heavy performance, Replay usability/isolation, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility against that exact candidate.
+
+If the user requests additional capability/hardening before `7.4`, reopen planning explicitly under FRAMEWORK `execution_reopen`; do not silently execute new work under `7.4` or rewrite the pinned candidate.
 
 Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
 
