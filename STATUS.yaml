@@ -5,7 +5,7 @@ overall_status: in_progress
 current:
   chat: 21
   node: "9"
-  title: "Market recording and replay mini-project planning"
+  title: "Market recording and replay planning"
   status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -17,6 +17,7 @@ authority:
   ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
   ibkr_order_security_contract: "docs/IBKR_ORDER_SERVICE_SECURITY.md"
   market_replay_mini_project: ".planning/MARKET_REPLAY_MINI_PROJECT.md"
+  market_replay_contract: "docs/MARKET_REPLAY.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
@@ -34,7 +35,7 @@ planning_completion:
   ibkr_order_durable_contract: pass
   ibkr_order_tree_freeze: pass
   market_replay_extension: in_progress
-  market_replay_durable_contract: pending
+  market_replay_durable_contract: pass
   market_replay_tree_freeze: pending
 
 execution:
