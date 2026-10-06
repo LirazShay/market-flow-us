@@ -10,19 +10,15 @@
 
 זהו checkpoint של release/GitHub truth, לא פעולה על מחשב היעד. לפני שמבקשים מהמשתמש להתקין או לבדוק משהו, המאמת קורא fresh `main` ומוודא:
 
-- TREE `8.4` סגור ו־`STATUS.yaml` / `.planning/STATUS.yaml` מצביעים על TREE `7.4`;
-- `.planning/EXECUTOR_HANDOFF.md` מצמיד את ה־post-order-service product candidate המדויק:
-
-```text
-28e950afc1c4bfe4322d0593f483d05d92553e2d
-```
-
+- TREE `9.5` סגור ו־`STATUS.yaml` / `.planning/STATUS.yaml` מצביעים על TREE `7.4`;
+- `.planning/EXECUTOR_HANDOFF.md` מצמיד את ה־post-branch-9 product candidate המדויק;
+- ה־candidate אינו ה־historical post-branch-8 SHA;
 - commits מאוחרים יותר ב־`main` שהם planning/docs/metadata בלבד אינם מחליפים את ה־candidate;
 - אין PR release פתוח או product work לא ממוזג שמחליף את ה־candidate.
 
-PASS: ה־candidate לעיל מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
+PASS: ה־post-branch-9 SHA המדויק מה־handoff מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
 
-FAIL: זהות ה־candidate אינה חד־משמעית, `8.4` אינו סגור, ה־status כבר לא מאשר `7.4`, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
+FAIL: זהות ה־candidate אינה חד־משמעית, `9.5` אינו סגור, ה־status כבר לא מאשר `7.4`, ה־handoff עדיין מצביע על candidate של Branch 8, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -35,7 +31,7 @@ git --version
 powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 ```
 
-נדרש Node.js `24.x`, npm דרך אותה התקנת Node, Git ו־PowerShell תקינים, disk write תקין ו־loopback מקומי זמין. ודא גם ש־ports `8765` ו־`8770` אינם תפוסים על ידי process מתחרה ושקיים Chromium-family browser למסלול ה־market-data. למסלול FR-11B יידרש Client Portal Gateway מקומי authenticated ידנית.
+נדרש Node.js `24.x`, npm דרך אותה התקנת Node, Git ו־PowerShell תקינים, disk write תקין ו־loopback מקומי זמין. ודא גם ש־ports `8765`, `8766` ו־`8770` אינם תפוסים על ידי process מתחרה כאשר המסלול המתאים נבדק, ושקיים Chromium-family browser למסלולי browser/Replay. למסלול FR-11B יידרש Client Portal Gateway מקומי authenticated ידנית.
 
 אל תריץ `npm ci` לפני ש־FR-1 ירוק.
 
@@ -43,12 +39,12 @@ powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 
 אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, השתמש בו רק אם ה־working tree נקי. לאחר מכן pin את ה־checkout ל־accepted SHA שהוקפא ב־FR-0; אין דרישה שה־branch יהיה `main`, ו־`main` מאוחר יותר עם metadata בלבד אינו ה־product candidate.
 
-בריפו קיים:
+בריפו קיים, קח את ה־SHA המדויק מ־`.planning/EXECUTOR_HANDOFF.md` ואז הרץ:
 
 ```text
 git fetch origin
 git status --short
-git switch --detach 28e950afc1c4bfe4322d0593f483d05d92553e2d
+git switch --detach <accepted-post-branch-9-SHA>
 git status --short
 git rev-parse HEAD
 ```
@@ -58,7 +54,7 @@ git rev-parse HEAD
 PASS:
 
 - `git status --short` ריק לפני ואחרי החלפת ה־candidate;
-- `HEAD` הוא בדיוק `28e950afc1c4bfe4322d0593f483d05d92553e2d`;
+- `HEAD` שווה בדיוק ל־accepted SHA מ־`.planning/EXECUTOR_HANDOFF.md`;
 - detached checkout תקין ומועדף ל־acceptance; אין צורך להיות על branch `main`;
 - אין substitution שקט ל־SHA מאוחר יותר של metadata בלבד.
 
@@ -74,28 +70,32 @@ SETUP.cmd
 
 PASS: setup יוצא בהצלחה; `node_modules` קיים; Chromium המוצמד הותקן.
 
-## FR-4 — Fast local correctness
+## FR-4 — Fast local correctness + deterministic Replay/order acceptance
 
 הרץ בנפרד:
 
 ```text
 npm run test:unit
 npm run test:service
+npm run test:acceptance:replay
 npm run test:acceptance:order
 ```
 
-PASS: שלושתם ירוקים. שמור wall-clock timing לצורכי אבחון בלבד.
+PASS: ארבעתם ירוקים. שמור wall-clock timing לצורכי אבחון בלבד.
+
+`test:acceptance:replay` משתמש רק ב־synthetic/public-safe recordings ומוכיח את מסלול Recorder/File/Player/Replay Host/Browser, כולל arbitrary middle-frame start ללא preroll, replay ביום מאוחר יותר עם local-time rebase, Current/History/Scanner/Demo Buy, fresh-run isolation ו־live-DB safety. הוא אינו הוכחת provider availability או market movement אמיתי.
 
 `test:acceptance:order` משתמש רק ב־synthetic provider/account data ומוכיח את מסלול ה־standalone IBKR order-service ללא הרשאת מסחר אמיתית; הוא אינו real-order evidence.
 
-## FR-5 — Browser build + Chromium E2E
+## FR-5 — Normal + Replay browser build and Chromium E2E
 
 ```text
 npm run build:browser
+npm run build:replay
 npm run test:e2e
 ```
 
-PASS: browser artifacts נבנו תחת `dist`, וכל E2E ירוק ללא retry/timeout שמסתיר defect.
+PASS: browser artifacts רגילים ו־Replay artifacts נבנו תחת `dist`, וכל E2E ירוק ללא retry/timeout שמסתיר defect.
 
 ## FR-6 — Local demo/UI smoke
 
@@ -117,6 +117,8 @@ START_DEMO.cmd
 - Support Snapshot זמין;
 - `Ctrl+C` עוצר נקי;
 - restart לא משחית את `.demo/market-flow-us.duckdb`.
+
+Replay target-machine correctness כבר נבדק ב־FR-4 דרך ה־dedicated deterministic acceptance; אין להכניס waits ארוכים של replay למסלול ה־demo הרגיל.
 
 ## FR-7 — Local Fake Leumi static acceptance
 
@@ -209,7 +211,7 @@ PASS:
 - saved Scanner queries נשמרים;
 - אין rollover בזמן session פעילה.
 
-ה־IBKR execution DuckDB נפרד ואינו חלק מ־`NEW_TRADING_DAY.cmd`.
+ה־IBKR execution DuckDB ו־Replay-owned DuckDBs נפרדים ואינם חלק מ־`NEW_TRADING_DAY.cmd`.
 
 ## FR-11A — Real-provider market-data deployment smoke
 
@@ -363,17 +365,19 @@ movement.status = "FAIL"
 
 רשום בקיצור:
 
-- accepted SHA: `28e950afc1c4bfe4322d0593f483d05d92553e2d`;
+- accepted post-branch-9 SHA המדויק מ־`.planning/EXECUTOR_HANDOFF.md`;
 - סטטוס FR-0..FR-13, כולל FR-8A..FR-8H ו־FR-11A/FR-11B;
+- focused deterministic Replay acceptance status;
 - deterministic IBKR order-service acceptance status;
 - real CPGW session compatibility status;
 - real-order evidence: `PASS` רק אם בוצע בפועל עם permission וביוזמת המשתמש; אחרת בדיוק `PENDING_EXTERNAL_PERMISSION`;
 - אם נעשה two-pass run: FR-12 pre-market report + FR-13 market-open report על אותו accepted SHA;
 - שמות/מיקומי sanitized reports שנשמרו מקומית;
 - active DB path: `data/market-flow-us.duckdb`;
+- Replay השתמש רק ב־replay-owned DBs ולא פתח/איפס/מחק את ה־normal active DB;
 - separate order execution DB לפי `docs/IBKR_ORDER_SERVICE_OPERATOR.md`;
 - daily stop/archive/new-day procedure עבר בפועל ויצר fresh schema v4;
-- normal start/stop commands ידועים לשני התהליכים;
+- normal + Replay start/stop commands ידועים;
 - Demo Buy/AI Investigation recovery path ידוע;
 - Support Snapshot recovery path ידוע;
 - אין blocking defect פתוח;
@@ -387,6 +391,7 @@ movement.status = "FAIL"
 
 מסמכים משלימים:
 
+- `docs/MARKET_REPLAY.md` — Market Recording + Replay operator/contract truth;
 - `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — startup, caller-token handling, CPGW ו־order acceptance;
 - `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload, כולל Demo Buy/AI;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound gate;

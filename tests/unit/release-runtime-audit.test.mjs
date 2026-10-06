@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run acceptance plan and user runbook stay reclosed through branch-8 and final provider proof", async () => {
+test("first-run acceptance plan and user runbook stay reclosed through branch-9 Replay and final provider proof", async () => {
   const [startHere, plan, runbook, liveVerification] = await Promise.all([
     rootFile("START_HERE.md"),
     rootFile(".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"),
@@ -108,14 +108,22 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-8 
     assert.match(runbook, new RegExp(`FR-${subCheckpoint}\\b`));
   }
 
-  const acceptedCandidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
+  const historicalBranch8Candidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
   assert.match(plan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
   assert.match(plan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
-  assert.match(plan, /Chat 21/);
-  assert.match(runbook, new RegExp(acceptedCandidate));
+  assert.match(plan, /Chat 25/);
+  assert.match(plan, /post-branch-9 product SHA/);
+  assert.match(plan, /test:acceptance:replay/);
+  assert.match(plan, /build:replay/);
   assert.match(runbook, /אין דרישת checkout מקומי ב־FR-0/);
-  assert.match(runbook, new RegExp(`git switch --detach ${acceptedCandidate}`));
+  assert.match(runbook, /git switch --detach <accepted-post-branch-9-SHA>/);
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
+  assert.match(runbook, /test:acceptance:replay/);
+  assert.match(runbook, /build:replay/);
+  assert.match(runbook, /Replay-owned DuckDBs/);
+  assert.doesNotMatch(plan, /Chat 21/);
+  assert.doesNotMatch(plan, new RegExp(historicalBranch8Candidate));
+  assert.doesNotMatch(runbook, new RegExp(historicalBranch8Candidate));
   assert.doesNotMatch(runbook, /branch הוא `main`|accepted `main` SHA/);
   assert.doesNotMatch(runbook, /f2789a4ec43e0878688aa9ea29c647e40a1154b6/);
 
