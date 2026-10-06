@@ -111,29 +111,31 @@ export function createMarketReplayRecorder({
     }, cadenceMs);
   }
 
+  function recordProviderFailure(activeToken) {
+    if (activeToken !== token || state.status !== "recording") return;
+    publish({
+      providerFailureCount: state.providerFailureCount + 1,
+      latestErrorCode: "PROVIDER_SNAPSHOT_FAILED"
+    });
+    scheduleNext(activeToken);
+  }
+
   async function captureOnce(activeToken) {
     if (activeToken !== token || state.status !== "recording") return;
 
-    let snapshot;
+    let frame;
     try {
-      snapshot = await fetchSnapshot();
-    } catch {
+      const snapshot = await fetchSnapshot();
       if (activeToken !== token || state.status !== "recording") return;
-      publish({
-        providerFailureCount: state.providerFailureCount + 1,
-        latestErrorCode: "PROVIDER_SNAPSHOT_FAILED"
+      frame = createRecordingFrame({
+        recordingId: state.recordingId,
+        sequence: state.frameCount,
+        snapshot
       });
-      scheduleNext(activeToken);
+    } catch {
+      recordProviderFailure(activeToken);
       return;
     }
-
-    if (activeToken !== token || state.status !== "recording") return;
-
-    const frame = createRecordingFrame({
-      recordingId: state.recordingId,
-      sequence: state.frameCount,
-      snapshot
-    });
 
     try {
       const summary = await store.appendFrame(frame);
