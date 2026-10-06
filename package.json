@@ -14,6 +14,7 @@
     "test:service": "node --test tests/service/**/*.test.mjs",
     "test:fast": "npm run test:unit && npm run test:service",
     "test:e2e": "playwright test",
+    "test:acceptance:replay": "node --test tests/unit/replay-*.test.mjs tests/service/replay-*.test.mjs && playwright test tests/e2e/replay-recording.spec.mjs tests/e2e/replay-portable.spec.mjs tests/e2e/replay-export-ui.spec.mjs tests/e2e/replay-player-ui.spec.mjs",
     "test:acceptance:local": "node scripts/run-local-acceptance.mjs all",
     "test:acceptance:local:static": "node scripts/run-local-acceptance.mjs static",
     "test:acceptance:local:moving": "node scripts/run-local-acceptance.mjs moving",
