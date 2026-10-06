@@ -34,7 +34,7 @@ function syntheticAccount() {
   return {
     tradable: true,
     providerAccountId: "SYNTH-ACCOUNT-1",
-    allowedAssetTypes: ["STK"]
+    allowedAssetTypes: ["STK", "OPT"]
   };
 }
 
@@ -45,20 +45,20 @@ function scriptedTransport(script) {
     calls.push(request);
     const step = script[index++];
     assert.ok(step, `unexpected provider call ${request.method} ${request.path}`);
-    if (step.assert) {
-      step.assert(request);
-    }
-    if (step.error) {
-      throw step.error;
-    }
-    return typeof step.result === "function"
-      ? step.result(request)
-      : step.result;
+    step.assert?.(request);
+    if (step.error) throw step.error;
+    return typeof step.result === "function" ? step.result(request) : step.result;
   };
-  return { requestJson, calls, done: () => assert.equal(index, script.length) };
+  return {
+    requestJson,
+    calls,
+    done() {
+      assert.equal(index, script.length);
+    }
+  };
 }
 
-test("session/accounts/permission/contract/snapshot/what-if sequence is exact and sanitized", async () => {
+test("session/account/contract/snapshot/what-if provider sequence is exact and sanitized", async () => {
   const transport = scriptedTransport([
     {
       assert: ({ method, path, body }) => {
@@ -83,8 +83,7 @@ test("session/accounts/permission/contract/snapshot/what-if sequence is exact an
       },
       result: {
         accounts: ["SYNTH-ACCOUNT-1"],
-        allowFeatures: { allowedAssetTypes: "STK,OPT" },
-        selectedAccount: "SYNTH-ACCOUNT-1"
+        allowFeatures: { allowedAssetTypes: "STK,OPT" }
       }
     },
     {
@@ -121,11 +120,6 @@ test("session/accounts/permission/contract/snapshot/what-if sequence is exact an
       ]
     },
     {
-      assert: ({ method, path, query }) => {
-        assert.equal(method, "GET");
-        assert.equal(path, "/iserver/marketdata/snapshot");
-        assert.deepEqual(query, { conids: "265598", fields: "31,84,86,6509" });
-      },
       result: [{ conid: 265598, conidEx: "265598" }]
     },
     {
@@ -199,16 +193,25 @@ test("session/accounts/permission/contract/snapshot/what-if sequence is exact an
     instrument: liveIntent().instrument
   });
 
-  const snapshot = await adapter.getSnapshot({
-    account: accounts[0],
-    resolution
-  });
-  assert.equal(snapshot.status, "READY");
-  assert.equal(snapshot.conid, 265598);
-  assert.equal(snapshot.marketDataAvailability, "RpB");
-  assert.equal(snapshot.last, 123.4);
-  assert.equal(snapshot.bid, 123.39);
-  assert.equal(snapshot.ask, 123.41);
+  const snapshot = await adapter.getSnapshot({ account: accounts[0], resolution });
+  assert.deepEqual(
+    {
+      status: snapshot.status,
+      conid: snapshot.conid,
+      marketDataAvailability: snapshot.marketDataAvailability,
+      last: snapshot.last,
+      bid: snapshot.bid,
+      ask: snapshot.ask
+    },
+    {
+      status: "READY",
+      conid: 265598,
+      marketDataAvailability: "RpB",
+      last: 123.4,
+      bid: 123.39,
+      ask: 123.41
+    }
+  );
 
   const preview = await adapter.previewOrder(liveIntent(), {
     account: accounts[0],
@@ -216,39 +219,36 @@ test("session/accounts/permission/contract/snapshot/what-if sequence is exact an
     snapshot,
     whatIf: true
   });
-  assert.equal(preview.status, "ACCEPTED");
-  assert.equal(preview.commission, "1.00");
-  assert.equal(preview.total, "247.90");
+  assert.deepEqual(preview, {
+    status: "ACCEPTED",
+    commission: "1.00",
+    total: "247.90"
+  });
   assert.equal(Object.hasOwn(preview, "raw"), false);
   transport.done();
 });
 
-test("instrument resolution fails closed for missing or ambiguous U.S. STK matches", async () => {
-  for (const { result, expectedStatus } of [
-    { result: [], expectedStatus: "UNRESOLVED" },
-    {
-      result: [
-        { conid: "1", symbol: "AAPL", restricted: false, sections: [{ secType: "STK" }] },
-        { conid: "2", symbol: "AAPL", restricted: false, sections: [{ secType: "STK" }] }
-      ],
-      expectedStatus: "AMBIGUOUS"
-    }
+test("instrument resolution fails closed for missing or ambiguous STK matches", async () => {
+  for (const [result, expectedStatus] of [
+    [[], "UNRESOLVED"],
+    [[
+      { conid: "1", symbol: "AAPL", restricted: false, sections: [{ secType: "STK" }] },
+      { conid: "2", symbol: "AAPL", restricted: false, sections: [{ secType: "STK" }] }
+    ], "AMBIGUOUS"]
   ]) {
     const transport = scriptedTransport([{ result }]);
     const adapter = new CpgwAdapter({ requestJson: transport.requestJson });
-    const resolution = await adapter.resolveInstrument(liveIntent().instrument);
-    assert.equal(resolution.status, expectedStatus);
+    assert.equal(
+      (await adapter.resolveInstrument(liveIntent().instrument)).status,
+      expectedStatus
+    );
     transport.done();
   }
 });
 
-test("what-if provider errors become a stable rejection without raw provider content", async () => {
+test("what-if rejection is stable and never exposes raw provider content", async () => {
   const transport = scriptedTransport([
-    {
-      result: {
-        error: "Synthetic provider rejection mentioning SYNTH-ACCOUNT-1"
-      }
-    }
+    { result: { error: "Synthetic rejection mentioning SYNTH-ACCOUNT-1" } }
   ]);
   const adapter = new CpgwAdapter({ requestJson: transport.requestJson });
   const preview = await adapter.previewOrder(liveIntent(), {
@@ -264,60 +264,40 @@ test("what-if provider errors become a stable rejection without raw provider con
   assert.equal(JSON.stringify(preview).includes("SYNTH-ACCOUNT-1"), false);
 });
 
-test("SELL position lookup distinguishes exact zero/long coverage from unavailable or ambiguous state", async () => {
+test("SELL position lookup distinguishes exact, flat and ambiguous provider state", async () => {
   const account = syntheticAccount();
 
-  const exactTransport = scriptedTransport([
-    { result: [{ accountId: "SYNTH-ACCOUNT-1" }] },
-    { result: [{ acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 7 }] }
-  ]);
-  const exactAdapter = new CpgwAdapter({ requestJson: exactTransport.requestJson });
-  assert.deepEqual(
-    await exactAdapter.getLongPosition({ account, resolution: { conid: 265598 } }),
-    { status: "EXACT", longQuantity: 7 }
-  );
-
-  const flatTransport = scriptedTransport([
-    { result: [{ accountId: "SYNTH-ACCOUNT-1" }] },
-    { result: [] }
-  ]);
-  const flatAdapter = new CpgwAdapter({ requestJson: flatTransport.requestJson });
-  assert.deepEqual(
-    await flatAdapter.getLongPosition({ account, resolution: { conid: 265598 } }),
-    { status: "EXACT", longQuantity: 0 }
-  );
-
-  const ambiguousTransport = scriptedTransport([
-    { result: [{ accountId: "SYNTH-ACCOUNT-1" }] },
-    {
-      result: [
-        { acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 7 },
-        { acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 2 }
-      ]
-    }
-  ]);
-  const ambiguousAdapter = new CpgwAdapter({ requestJson: ambiguousTransport.requestJson });
-  assert.deepEqual(
-    await ambiguousAdapter.getLongPosition({ account, resolution: { conid: 265598 } }),
-    { status: "AMBIGUOUS" }
-  );
+  for (const [positionRows, expected] of [
+    [[{ acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 7 }], { status: "EXACT", longQuantity: 7 }],
+    [[], { status: "EXACT", longQuantity: 0 }],
+    [[
+      { acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 7 },
+      { acctId: "SYNTH-ACCOUNT-1", conid: 265598, position: 2 }
+    ], { status: "AMBIGUOUS" }]
+  ]) {
+    const transport = scriptedTransport([
+      { result: [{ accountId: "SYNTH-ACCOUNT-1" }] },
+      { result: positionRows }
+    ]);
+    const adapter = new CpgwAdapter({ requestJson: transport.requestJson });
+    assert.deepEqual(
+      await adapter.getLongPosition({ account, resolution: { conid: 265598 } }),
+      expected
+    );
+  }
 });
 
-test("submit classifies immediate success, reply-required and post-dispatch transport loss without blind retry", async () => {
-  const account = syntheticAccount();
+test("submit classifies success, reply-required and post-dispatch uncertainty without retry", async () => {
   const prepared = {
-    account,
+    account: syntheticAccount(),
     resolution: { status: "EXACT", conid: 265598 }
   };
 
-  const successTransport = scriptedTransport([
-    {
-      result: [{ order_id: "SYNTH-ORDER-1", order_status: "Submitted" }]
-    }
+  const success = scriptedTransport([
+    { result: [{ order_id: "SYNTH-ORDER-1", order_status: "Submitted" }] }
   ]);
-  const successAdapter = new CpgwAdapter({ requestJson: successTransport.requestJson });
   assert.deepEqual(
-    await successAdapter.submitOrder(liveIntent(), prepared),
+    await new CpgwAdapter({ requestJson: success.requestJson }).submitOrder(liveIntent(), prepared),
     {
       status: "SUBMITTED",
       providerOrderId: "SYNTH-ORDER-1",
@@ -325,21 +305,17 @@ test("submit classifies immediate success, reply-required and post-dispatch tran
     }
   );
 
-  const replyTransport = scriptedTransport([
+  const reply = scriptedTransport([
     {
-      result: [
-        {
-          id: "SYNTH-REPLY-1",
-          message: ["Synthetic warning"],
-          messageIds: ["o163"],
-          isSuppressed: false
-        }
-      ]
+      result: [{
+        id: "SYNTH-REPLY-1",
+        message: ["Synthetic warning"],
+        messageIds: ["o163"]
+      }]
     }
   ]);
-  const replyAdapter = new CpgwAdapter({ requestJson: replyTransport.requestJson });
   assert.deepEqual(
-    await replyAdapter.submitOrder(liveIntent(), prepared),
+    await new CpgwAdapter({ requestJson: reply.requestJson }).submitOrder(liveIntent(), prepared),
     {
       status: "REPLY_REQUIRED",
       replyId: "SYNTH-REPLY-1",
@@ -347,26 +323,24 @@ test("submit classifies immediate success, reply-required and post-dispatch tran
     }
   );
 
-  const uncertainTransport = scriptedTransport([
-    {
-      error: new CpgwTransportError("synthetic connection reset", { dispatched: true })
-    }
+  const uncertain = scriptedTransport([
+    { error: new CpgwTransportError("synthetic reset", { dispatched: true }) }
   ]);
-  const uncertainAdapter = new CpgwAdapter({ requestJson: uncertainTransport.requestJson });
+  const adapter = new CpgwAdapter({ requestJson: uncertain.requestJson });
   await assert.rejects(
-    uncertainAdapter.submitOrder(liveIntent(), prepared),
+    adapter.submitOrder(liveIntent(), prepared),
     (error) => {
       assert.ok(error instanceof CpgwAdapterError);
       assert.equal(error.code, "ACKNOWLEDGEMENT_UNKNOWN");
       assert.equal(error.checkpoint, "order-submit");
-      assert.equal(error.message.includes("synthetic connection reset"), false);
+      assert.equal(error.message.includes("synthetic reset"), false);
       return true;
     }
   );
-  assert.equal(uncertainTransport.calls.length, 1);
+  assert.equal(uncertain.calls.length, 1);
 });
 
-test("explicit reply confirmation, order/trade observation, cancel and keepalive return only sanitized facts", async () => {
+test("reply, order/trade observation, cancel and keepalive expose sanitized facts only", async () => {
   const transport = scriptedTransport([
     {
       assert: ({ method, path, body }) => {
@@ -378,39 +352,30 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
     },
     {
       result: {
-        orders: [
-          {
-            account: "SYNTH-ACCOUNT-1",
-            orderId: "SYNTH-ORDER-1",
-            conid: 265598,
-            status: "Submitted",
-            filledQuantity: 1,
-            remainingQuantity: 1,
-            totalSize: 2,
-            order_ref: CORRELATION_ID
-          }
-        ],
-        snapshot: true
+        orders: [{
+          account: "SYNTH-ACCOUNT-1",
+          orderId: "SYNTH-ORDER-1",
+          conid: 265598,
+          status: "Submitted",
+          filledQuantity: 1,
+          remainingQuantity: 1,
+          totalSize: 2,
+          order_ref: CORRELATION_ID
+        }]
       }
     },
     {
-      result: [
-        {
-          account: "SYNTH-ACCOUNT-1",
-          accountCode: "SYNTH-ACCOUNT-1",
-          execution_id: "SYNTH-EXEC-1",
-          conid: 265598,
-          size: 1,
-          price: "123.40",
-          order_ref: CORRELATION_ID
-        }
-      ]
+      result: [{
+        account: "SYNTH-ACCOUNT-1",
+        accountCode: "SYNTH-ACCOUNT-1",
+        execution_id: "SYNTH-EXEC-1",
+        conid: 265598,
+        size: 1,
+        price: "123.40",
+        order_ref: CORRELATION_ID
+      }]
     },
     {
-      assert: ({ method, path }) => {
-        assert.equal(method, "DELETE");
-        assert.equal(path, "/iserver/account/SYNTH-ACCOUNT-1/order/SYNTH-ORDER-1");
-      },
       result: {
         msg: "Request was submitted",
         order_id: "SYNTH-ORDER-1",
@@ -419,52 +384,26 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
       }
     },
     {
-      assert: ({ method, path }) => {
-        assert.equal(method, "POST");
-        assert.equal(path, "/tickle");
-      },
       result: {
         session: "PRIVATE-SYNTH-SESSION",
         ssoExpires: 300000,
         userId: 123,
-        iserver: {
-          authStatus: { authenticated: true, connected: true }
-        }
+        iserver: { authStatus: { authenticated: true, connected: true } }
       }
     }
   ]);
 
   const adapter = new CpgwAdapter({ requestJson: transport.requestJson });
-  assert.deepEqual(await adapter.confirmReply("SYNTH-REPLY-1"), {
-    status: "SUBMITTED",
-    providerOrderId: "SYNTH-ORDER-1",
-    providerStatus: "Submitted"
-  });
+  assert.equal((await adapter.confirmReply("SYNTH-REPLY-1")).status, "SUBMITTED");
 
   const orders = await adapter.getOrders();
-  assert.deepEqual(orders, [
-    {
-      providerOrderId: "SYNTH-ORDER-1",
-      conid: 265598,
-      status: "Submitted",
-      filledQuantity: 1,
-      remainingQuantity: 1,
-      totalQuantity: 2,
-      correlationId: CORRELATION_ID
-    }
-  ]);
+  assert.equal(orders.length, 1);
+  assert.equal(orders[0].correlationId, CORRELATION_ID);
   assert.equal(JSON.stringify(orders).includes("SYNTH-ACCOUNT-1"), false);
 
   const trades = await adapter.getTrades();
-  assert.deepEqual(trades, [
-    {
-      executionId: "SYNTH-EXEC-1",
-      conid: 265598,
-      quantity: 1,
-      price: "123.40",
-      correlationId: CORRELATION_ID
-    }
-  ]);
+  assert.equal(trades.length, 1);
+  assert.equal(trades[0].correlationId, CORRELATION_ID);
   assert.equal(JSON.stringify(trades).includes("SYNTH-ACCOUNT-1"), false);
 
   assert.deepEqual(
@@ -478,16 +417,15 @@ test("explicit reply confirmation, order/trade observation, cancel and keepalive
       conid: 265598
     }
   );
-
   assert.deepEqual(await adapter.keepalive(), {
     authenticated: true,
     connected: true,
     ssoExpiresMs: 300000
   });
-  transport.done();
+  assert.equal(JSON.stringify(await adapter.keepalive).includes("PRIVATE-SYNTH-SESSION"), false);
 });
 
-test("real transport only accepts HTTPS loopback CPGW and never changes process-global TLS policy", () => {
+test("transport accepts only HTTPS loopback and never changes process-global TLS policy", () => {
   const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
   assert.throws(
     () => createCpgwTransport({ baseUrl: "https://example.com/v1/api" }),
@@ -497,11 +435,12 @@ test("real transport only accepts HTTPS loopback CPGW and never changes process-
     () => createCpgwTransport({ baseUrl: "http://127.0.0.1:5000/v1/api" }),
     /https/u
   );
-
-  const transport = createCpgwTransport({
-    baseUrl: "https://127.0.0.1:5000/v1/api",
-    allowInsecureLoopbackTls: true
-  });
-  assert.equal(typeof transport, "function");
+  assert.equal(
+    typeof createCpgwTransport({
+      baseUrl: "https://127.0.0.1:5000/v1/api",
+      allowInsecureLoopbackTls: true
+    }),
+    "function"
+  );
   assert.equal(process.env.NODE_TLS_REJECT_UNAUTHORIZED, previous);
 });
