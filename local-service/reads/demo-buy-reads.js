@@ -157,6 +157,7 @@ function buildEvaluationSql(selectedItemsSql) {
       selection_mode AS selectionMode,
       is_automatic AS isAutomatic,
       top_x AS topX,
+      captured_item_count AS capturedItemCount,
       result_rank AS resultRank,
       security_id AS securityId,
       buy_cycle_id AS buyCycleId,
@@ -202,6 +203,11 @@ function buildPageSelection(decodedCursor) {
           c.selection_mode,
           c.is_automatic,
           c.top_x,
+          (
+            SELECT COUNT(*)
+            FROM demo_buy_items AS capture_items
+            WHERE capture_items.capture_id = c.capture_id
+          ) AS captured_item_count,
           i.result_rank,
           i.security_id,
           i.buy_cycle_id
@@ -232,6 +238,11 @@ const OBSERVATION_SELECTION_SQL = `SELECT
         c.selection_mode,
         c.is_automatic,
         c.top_x,
+        (
+          SELECT COUNT(*)
+          FROM demo_buy_items AS capture_items
+          WHERE capture_items.capture_id = c.capture_id
+        ) AS captured_item_count,
         i.result_rank,
         i.security_id,
         i.buy_cycle_id,
@@ -270,6 +281,7 @@ function shapeCapture(row) {
     selectionMode: row.selectionMode,
     isAutomatic: row.isAutomatic === true,
     topX: asSafeInteger(row.topX, "topX", { nullable: true, min: 1 }),
+    capturedItemCount: asSafeInteger(row.capturedItemCount, "capturedItemCount"),
     scannerDurationMs: scannerDurationRaw >= 0 ? scannerDurationRaw : null,
     captureLatencyMs: captureLatencyRaw >= 0 ? captureLatencyRaw : null,
     timingAnomaly: anomalies.length === 0 ? null : anomalies.join("|")
@@ -514,8 +526,7 @@ export function createDemoBuyReads({ connection }) {
     const capture = shapeCapture(row);
     return Object.freeze({
       ...capture,
-      sourceQuerySql: row.sourceQuerySql,
-      capturedItemCount: asSafeInteger(row.capturedItemCount, "capturedItemCount")
+      sourceQuerySql: row.sourceQuerySql
     });
   }
 
