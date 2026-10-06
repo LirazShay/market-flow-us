@@ -118,10 +118,10 @@ RUN_LOCAL_ACCEPTANCE.cmd moving
 RUN_LOCAL_ACCEPTANCE.cmd membership
 RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
 RUN_LOCAL_ACCEPTANCE.cmd restart
-RUN_LOCAL_ACCEPTANCE.cmd demo-buy-capture
+RUN_LOCAL_ACCEPTANCE.cmd demo-buy-runtime
 RUN_LOCAL_ACCEPTANCE.cmd demo-buy-outcomes
-RUN_LOCAL_ACCEPTANCE.cmd demo-buy-ai-ui
-RUN_LOCAL_ACCEPTANCE.cmd demo-buy-ai-pack
+RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
+RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
 ```
 
 אפשר להריץ רק את ארבעת תתי־השלבים החדשים יחד:
@@ -237,7 +237,7 @@ movement.status = "PENDING"
 
 על אותו accepted candidate, בזמן שוק פעיל, הפעל שוב את אותו SHA-bound gate.
 
-ה־gate עצמו מפיק evidence מכני נפרד לתנועה מתוך טווח ה־cycles שהריצה עצמה commit-תה. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
+ה־gate עצמו מפיק כעת evidence מכני נפרד לתנועה מתוך טווח ה־cycles שהריצה עצמה commit-תה. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
 
 PASS של FR-13 דורש יחד:
 
