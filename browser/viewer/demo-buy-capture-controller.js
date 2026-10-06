@@ -30,6 +30,11 @@ export const DEMO_BUY_CAPTURE_PRECHECK = Object.freeze({
   CAPTURE_LOCKED: "CAPTURE_LOCKED"
 });
 
+export const DEMO_BUY_AI_EXPORT_PRECHECK = Object.freeze({
+  BUSY: "AI_EXPORT_BUSY",
+  UNAVAILABLE: "AI_EXPORT_UNAVAILABLE"
+});
+
 export class DemoBuyCapturePrecheckError extends Error {
   constructor(code, message, details = null) {
     super(message);
@@ -320,6 +325,9 @@ export function createDemoBuyCaptureController({
   let autoBlockedReason = null;
   let lastAutoReason = null;
   let lastCapture = null;
+  let aiExportBusy = false;
+  let aiExportTargetKey = null;
+  let lastAiExport = null;
   const listeners = new Set();
 
   function snapshot() {
@@ -332,6 +340,9 @@ export function createDemoBuyCaptureController({
       autoBlockedReason,
       lastAutoReason,
       lastCapture,
+      aiExportBusy,
+      aiExportTargetKey,
+      lastAiExport,
       selectedCount: selectedRanks.size,
       rendered: renderedGeneration === null ? null : Object.freeze({
         generation: renderedGeneration.generation,
@@ -579,6 +590,66 @@ export function createDemoBuyCaptureController({
     });
   }
 
+  async function createAiPack(captureId, securityId) {
+    if (!Number.isSafeInteger(captureId) || captureId < 1) {
+      throw new TypeError("captureId must be a positive safe integer.");
+    }
+    if (
+      typeof securityId !== "string"
+      || securityId.length === 0
+      || securityId.length > DEMO_BUY_MAX_SECURITY_ID_CODE_UNITS
+    ) {
+      throw new TypeError("securityId must be a non-empty bounded string.");
+    }
+    if (typeof client.createDemoBuyAiPack !== "function") {
+      return Object.freeze({
+        started: false,
+        reason: DEMO_BUY_AI_EXPORT_PRECHECK.UNAVAILABLE
+      });
+    }
+    if (aiExportBusy) {
+      return Object.freeze({
+        started: false,
+        reason: DEMO_BUY_AI_EXPORT_PRECHECK.BUSY
+      });
+    }
+
+    aiExportBusy = true;
+    aiExportTargetKey = `${captureId}\u0000${securityId}`;
+    emit();
+
+    try {
+      const result = await client.createDemoBuyAiPack(captureId, securityId);
+      lastAiExport = Object.freeze({
+        captureId,
+        securityId,
+        status: result.status ?? "UNKNOWN",
+        completedAtMs: now(),
+        outcomeEvidenceStatus: result.outcomeEvidenceStatus ?? null,
+        targetInScannerContext: result.targetInScannerContext ?? null,
+        exportPathRelative: result.exportPathRelative ?? null,
+        fileCount: result.fileCount ?? null
+      });
+      return Object.freeze({ started: true, result });
+    } catch (error) {
+      lastAiExport = Object.freeze({
+        captureId,
+        securityId,
+        status: "CLIENT_ERROR",
+        completedAtMs: now(),
+        outcomeEvidenceStatus: null,
+        targetInScannerContext: null,
+        exportPathRelative: null,
+        fileCount: null
+      });
+      return Object.freeze({ started: true, error });
+    } finally {
+      aiExportBusy = false;
+      aiExportTargetKey = null;
+      emit();
+    }
+  }
+
   return Object.freeze({
     subscribe,
     getState: snapshot,
@@ -592,6 +663,7 @@ export function createDemoBuyCaptureController({
     captureSelected,
     captureAll,
     captureTopX,
-    captureAutomaticGeneration
+    captureAutomaticGeneration,
+    createAiPack
   });
 }
