@@ -3,6 +3,6 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 17 / TREE 7.4 is in progress. Execute first-run target-machine acceptance one checkpoint at a time against accepted product candidate e0af9d105004f175a44ec33fa481fba0631773bf, starting with FR-0/FR-1 and stopping on the first failing checkpoint."
+next_action: "Chat 17 / TREE 7.4 is in progress. Repository-side final-candidate checks are complete; target-machine FR-0 evidence is now required. On the user's Windows machine, verify clean working tree and exact HEAD e0af9d105004f175a44ec33fa481fba0631773bf. Only after FR-0 PASS continue serially to FR-1; do not infer or fabricate target-machine acceptance from GitHub evidence."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
