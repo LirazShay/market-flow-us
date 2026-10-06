@@ -88,6 +88,24 @@ function requirePositiveFiniteNumber(value, label) {
   return value;
 }
 
+export function normalizeInstrument(input) {
+  if (!isObject(input)) {
+    invalid("instrument must be an object");
+  }
+  assertExactKeys(input, INSTRUMENT_KEYS, "instrument");
+
+  const symbol = requireBoundedString(input.symbol, {
+    label: "instrument.symbol",
+    maxChars: ORDER_INTENT_LIMITS.symbolChars,
+    normalize: (value) => value.toUpperCase()
+  });
+  const secType = requireExact(input.secType, "STK", "instrument.secType");
+  const currency = requireExact(input.currency, "USD", "instrument.currency");
+  const exchange = requireExact(input.exchange, "SMART", "instrument.exchange");
+
+  return Object.freeze({ symbol, secType, currency, exchange });
+}
+
 export function normalizeOrderIntent(input) {
   if (!isObject(input)) {
     invalid("order intent must be an object");
@@ -96,23 +114,11 @@ export function normalizeOrderIntent(input) {
   const orderType = requireEnum(input.orderType, ["LMT", "MKT"], "orderType");
   assertExactKeys(input, orderType === "LMT" ? LMT_INTENT_KEYS : MKT_INTENT_KEYS, "order intent");
 
-  if (!isObject(input.instrument)) {
-    invalid("instrument must be an object");
-  }
-  assertExactKeys(input.instrument, INSTRUMENT_KEYS, "instrument");
-
   const requestId = requireBoundedString(input.requestId, {
     label: "requestId",
     maxChars: ORDER_INTENT_LIMITS.requestIdChars
   });
-  const symbol = requireBoundedString(input.instrument.symbol, {
-    label: "instrument.symbol",
-    maxChars: ORDER_INTENT_LIMITS.symbolChars,
-    normalize: (value) => value.toUpperCase()
-  });
-  const secType = requireExact(input.instrument.secType, "STK", "instrument.secType");
-  const currency = requireExact(input.instrument.currency, "USD", "instrument.currency");
-  const exchange = requireExact(input.instrument.exchange, "SMART", "instrument.exchange");
+  const instrument = normalizeInstrument(input.instrument);
   const side = requireEnum(input.side, ["BUY", "SELL"], "side");
   const quantity = requirePositiveFiniteNumber(input.quantity, "quantity");
   const tif = requireEnum(input.tif, ["DAY", "GTC"], "tif");
@@ -120,7 +126,7 @@ export function normalizeOrderIntent(input) {
 
   const normalized = {
     requestId,
-    instrument: { symbol, secType, currency, exchange },
+    instrument,
     side,
     quantity,
     orderType,
@@ -131,10 +137,7 @@ export function normalizeOrderIntent(input) {
     executionMode
   };
 
-  return Object.freeze({
-    ...normalized,
-    instrument: Object.freeze(normalized.instrument)
-  });
+  return Object.freeze({ ...normalized, instrument });
 }
 
 function intentFingerprintPayload(normalizedIntent) {

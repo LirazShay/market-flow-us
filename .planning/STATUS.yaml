@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "8.2"
+current_node: "8.3"
 blockers: []
-next_action: "Chat 17 / TREE 8.1 is complete with required PR CI green. After its PR is squash-merged and main required CI is green, Chat 18 / TREE 8.2 is the next executable leaf: implement the real Client Portal Gateway lifecycle, independent fail-closed LIVE gates, SELL long-position guard, explicit reply-confirmation flow, acknowledgement-unknown reconciliation, cancel/fill observation and scoped localhost TLS behavior. Do not advance to 8.3 until 8.2 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
+next_action: "Chat 18 / TREE 8.2 is complete with deterministic CPGW lifecycle proof and required Fast/Planning CI green. After PR #39 is squash-merged and main required CI is green, Chat 19 / TREE 8.3 is the next executable leaf: add the thin Windows/operator launcher, explicit DRY_RUN/LIVE startup semantics, deterministic standalone acceptance and stable authenticated localhost integration documentation. Do not advance to 8.4 until 8.3 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
 last_review: "R-US-IBKR-ORDER-EXTERNAL"
 implementation_authorized: true

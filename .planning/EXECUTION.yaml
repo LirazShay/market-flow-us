@@ -82,7 +82,7 @@ chats:
 
   "18":
     nodes:
-      "8.2": { state: pending, result: null }
+      "8.2": { state: done, result: "Real Client Portal Gateway lifecycle is implemented with scoped loopback HTTPS transport, session/init/accounts/instrument/snapshot/what-if/submit/reply/orders/trades/cancel/keepalive adapter coverage, independent fail-closed LIVE gates, exact SELL long-position coverage, durable reply/submit/acknowledgement-unknown reconciliation, distinct cancel/partial/full fill observation and restart-safe provider-state persistence without account/session material. PR #39 head d6d40218673624ed2b31d986daebf4c6d0e49d2e passed Fast CI #382 and Planning Docs CI #495 after the final CPGW init-delay/privacy regression proof; diff review found no remaining blocking defect." }
 
   "19":
     nodes:
