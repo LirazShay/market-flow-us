@@ -220,8 +220,17 @@ test("trusted Demo Buy page and targeted observation share exact watermark, targ
     assert.equal(targetedResponse.type, "response.ok");
     const targeted = targetedResponse.payload.data;
     assert.equal(targeted.outcomeEvidenceStatus, "PARTIAL_OUTCOME");
-    const { outcomeEvidenceStatus, ...targetedObservation } = targeted;
+    assert.equal(targeted.evidenceWatermarkMs, 25000);
+    assert.equal(targeted.postWindowEndMs, 605000);
+    const {
+      outcomeEvidenceStatus,
+      evidenceWatermarkMs,
+      postWindowEndMs,
+      ...targetedObservation
+    } = targeted;
     assert.equal(outcomeEvidenceStatus, "PARTIAL_OUTCOME");
+    assert.equal(evidenceWatermarkMs, 25000);
+    assert.equal(postWindowEndMs, 605000);
     assert.deepEqual(targetedObservation, item);
 
     const captureResponse = await viewer.request("demo.buy.capture.get", { captureId: 1 });
