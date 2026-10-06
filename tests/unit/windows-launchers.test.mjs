@@ -60,17 +60,18 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
 
   assert.match(order, /Starting standalone IBKR order service in DRY_RUN mode/);
   assert.match(order, /if \/I "%~1"=="LIVE"/);
-  assert.match(order, /npm run order-service -- --live/);
+  assert.match(order, /call npm run order-service -- --live/);
+  assert.match(order, /call npm run order-service(?:\r?\n|\s)/);
   assert.match(order, /DRY_RUN cannot submit provider orders/);
   assert.doesNotMatch(order, /caller.?token|account.?id|password|cookie/i);
   assert.doesNotMatch(order, /npm run service(?:\s|$)/);
 
-  assert.match(sessionCheck, /npm run order-service:session-check/);
+  assert.match(sessionCheck, /call npm run order-service:session-check/);
   assert.match(sessionCheck, /INSECURE_LOCALHOST_TLS/);
   assert.match(sessionCheck, /--allow-insecure-loopback-tls/);
   assert.doesNotMatch(sessionCheck, /--live/);
 
-  assert.match(orderAcceptance, /npm run test:acceptance:order/);
+  assert.match(orderAcceptance, /call npm run test:acceptance:order/);
   assert.match(orderAcceptance, /synthetic-only/i);
   assert.match(orderAcceptance, /never requires or claims a real-money order/i);
 
