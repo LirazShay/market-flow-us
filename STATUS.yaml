@@ -6,7 +6,7 @@ current:
   chat: 12
   node: "4.4.1"
   title: "Scanner Demo Buy capture / Auto / Stop UX"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
