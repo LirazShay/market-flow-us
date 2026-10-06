@@ -281,7 +281,7 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
 
   await page.getByRole("button", { name: "Hide provenance / SQL" }).first().click();
   await page.getByRole("button", { name: "View provenance / SQL" }).first().click();
-  await expect(page.getByText("Exact Scanner SQL")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Exact Scanner SQL", exact: true })).toBeVisible();
   await expect(page.getByText("SELECT security_id FROM latest ORDER BY security_id", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Load more" }).click();
