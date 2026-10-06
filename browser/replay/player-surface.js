@@ -234,6 +234,10 @@ export function createReplayPlayerSurface({
   });
 
   const unsubscribe = controller.subscribe(render);
+  const progressInterval = globalThis.setInterval?.(() => {
+    const state = controller.getState();
+    if (state.status === "playing") render(state);
+  }, 250) ?? null;
   documentRef.body.append(host);
 
   return Object.freeze({
@@ -247,6 +251,7 @@ export function createReplayPlayerSurface({
     },
     destroy() {
       unsubscribe();
+      if (progressInterval !== null) globalThis.clearInterval?.(progressInterval);
       host.remove();
     }
   });
