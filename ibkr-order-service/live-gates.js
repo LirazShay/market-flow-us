@@ -14,7 +14,7 @@ function fail(code, checkpoint) {
   throw new LiveGateError(code, checkpoint);
 }
 
-function assertAdapter(adapter) {
+function assertAdapter(adapter, { requirePosition = false } = {}) {
   const requiredMethods = [
     "getSessionStatus",
     "getTradableAccounts",
@@ -22,7 +22,7 @@ function assertAdapter(adapter) {
     "resolveInstrument",
     "getSnapshot",
     "previewOrder",
-    "getLongPosition"
+    ...(requirePosition ? ["getLongPosition"] : [])
   ];
 
   if (!adapter || typeof adapter !== "object") {
@@ -91,21 +91,7 @@ function assertSellCoverage(position, requestedQuantity) {
   }
 }
 
-export async function prepareLiveSubmission({
-  intent: inputIntent,
-  adapter,
-  processLiveEnabled = false
-}) {
-  assertAdapter(adapter);
-  const intent = normalizeOrderIntent(inputIntent);
-
-  if (intent.executionMode !== "LIVE") {
-    fail("LIVE_REQUEST_REQUIRED", "request-live-gate");
-  }
-  if (processLiveEnabled !== true) {
-    fail("LIVE_PROCESS_NOT_ENABLED", "process-live-gate");
-  }
-
+async function prepareProviderPreflight(intent, adapter) {
   const session = await adapter.getSessionStatus();
   if (session?.authenticated !== true) {
     fail("PROVIDER_NOT_AUTHENTICATED", "brokerage-session");
@@ -139,18 +125,45 @@ export async function prepareLiveSubmission({
   });
   assertWhatIf(preview);
 
-  let position = null;
-  if (intent.side === "SELL") {
-    position = await adapter.getLongPosition({ account, resolution });
-    assertSellCoverage(position, intent.quantity);
-  }
-
   return Object.freeze({
     intent,
     account,
     resolution,
     snapshot,
-    preview,
-    position
+    preview
   });
+}
+
+export async function prepareOrderPreview({ intent: inputIntent, adapter }) {
+  assertAdapter(adapter);
+  const intent = normalizeOrderIntent(inputIntent);
+  return prepareProviderPreflight(intent, adapter);
+}
+
+export async function prepareLiveSubmission({
+  intent: inputIntent,
+  adapter,
+  processLiveEnabled = false
+}) {
+  assertAdapter(adapter, { requirePosition: true });
+  const intent = normalizeOrderIntent(inputIntent);
+
+  if (intent.executionMode !== "LIVE") {
+    fail("LIVE_REQUEST_REQUIRED", "request-live-gate");
+  }
+  if (processLiveEnabled !== true) {
+    fail("LIVE_PROCESS_NOT_ENABLED", "process-live-gate");
+  }
+
+  const prepared = await prepareProviderPreflight(intent, adapter);
+  let position = null;
+  if (intent.side === "SELL") {
+    position = await adapter.getLongPosition({
+      account: prepared.account,
+      resolution: prepared.resolution
+    });
+    assertSellCoverage(position, intent.quantity);
+  }
+
+  return Object.freeze({ ...prepared, position });
 }
