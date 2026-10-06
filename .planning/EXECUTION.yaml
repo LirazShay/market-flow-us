@@ -90,7 +90,7 @@ chats:
 
   "20":
     nodes:
-      "8.4": { state: in_progress, result: null }
+      "8.4": { state: done, result: "Branch-8 deterministic reclosure audited the complete IBKR order-service contract set plus affected generic release contracts and pinned exact post-order-service product candidate 28e950afc1c4bfe4322d0593f483d05d92553e2d. That exact candidate passed Browser run 37485480788, Fast 37485481325, Planning Docs 37485480804 and Workload 37485480773 on main. Chat 20 found release-truth drift in first-run ownership/candidate/order-sidecar acceptance, repaired it without runtime changes, added explicit FR-11B CPGW/order-service target-machine acceptance with exact PENDING_EXTERNAL_PERMISSION semantics, and root-caused two release-contract regressions before PR #41 reclosure validation passed Fast #394 and Planning Docs #507." }
 
   "21":
     nodes:
