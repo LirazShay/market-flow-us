@@ -235,8 +235,8 @@ test("AI pack exports immutable evidence with watermark partition, sharing-safe 
 
     const authorityAfter = await fixture.rows("SELECT COUNT(*) AS n FROM history");
     const capturesAfter = await fixture.rows("SELECT COUNT(*) AS n FROM demo_buy_captures");
-    assert.deepEqual(authorityAfter, [{ n: 2 }]);
-    assert.deepEqual(capturesAfter, capturesBefore);
+    assert.equal(Number(authorityAfter[0].n), 2);
+    assert.equal(Number(capturesAfter[0].n), Number(capturesBefore[0].n));
     assert.equal(Number(authorityAfter[0].n), Number(authorityBefore[0].n) + 1);
 
     const diagnostics = JSON.stringify(fixture.service.diagnostics.snapshot());
