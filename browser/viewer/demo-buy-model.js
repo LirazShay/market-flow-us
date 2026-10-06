@@ -131,11 +131,16 @@ export function applyDemoBuyObservationError(model, captureId, securityId, error
 }
 
 export function applyDemoBuyProvenanceLoading(model, captureId) {
+  const previous = model.provenance[captureId];
   return Object.freeze({
     ...model,
     provenance: freezeRecord({
       ...model.provenance,
-      [captureId]: Object.freeze({ state: "LOADING", data: null, error: null })
+      [captureId]: Object.freeze({
+        state: "LOADING",
+        data: previous?.data ?? null,
+        error: null
+      })
     })
   });
 }
