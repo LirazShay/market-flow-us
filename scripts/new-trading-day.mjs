@@ -8,8 +8,11 @@ import {
   openMarketFlowUsDatabase
 } from "../local-service/database/database.js";
 import {
+  DEMO_BUY_TABLES,
   MARKET_FLOW_US_REQUIRED_TABLES,
-  MARKET_FLOW_US_SCHEMA_VERSION
+  MARKET_FLOW_US_SCHEMA_VERSION,
+  MARKET_FLOW_US_V3_REQUIRED_TABLES,
+  MARKET_FLOW_US_V3_SCHEMA_VERSION
 } from "../local-service/database/schema.js";
 
 const DEFAULT_DB_PATH = "data/market-flow-us.duckdb";
@@ -74,20 +77,39 @@ async function inspectActiveDay(dbPath) {
       connection,
       "SELECT schema_version FROM schema_info"
     );
-    if (
-      schemaRows.length !== 1
-      || Number(schemaRows[0].schema_version) !== MARKET_FLOW_US_SCHEMA_VERSION
-    ) {
+    if (schemaRows.length !== 1) {
       throw new DatabaseSchemaUnsupportedError(
-        `New-day rollover requires Market Flow US schema v${MARKET_FLOW_US_SCHEMA_VERSION}`
+        "Active database must contain exactly one schema_info row"
       );
     }
 
-    const missing = MARKET_FLOW_US_REQUIRED_TABLES.filter((table) => !present.has(table));
+    const schemaVersion = Number(schemaRows[0].schema_version);
+    if (
+      schemaVersion !== MARKET_FLOW_US_V3_SCHEMA_VERSION
+      && schemaVersion !== MARKET_FLOW_US_SCHEMA_VERSION
+    ) {
+      throw new DatabaseSchemaUnsupportedError(
+        `New-day rollover requires Market Flow US schema v${MARKET_FLOW_US_V3_SCHEMA_VERSION} or v${MARKET_FLOW_US_SCHEMA_VERSION}`
+      );
+    }
+
+    const requiredTables = schemaVersion === MARKET_FLOW_US_V3_SCHEMA_VERSION
+      ? MARKET_FLOW_US_V3_REQUIRED_TABLES
+      : MARKET_FLOW_US_REQUIRED_TABLES;
+    const missing = requiredTables.filter((table) => !present.has(table));
     if (missing.length > 0) {
       throw new DatabaseSchemaUnsupportedError(
-        `Market Flow US schema v${MARKET_FLOW_US_SCHEMA_VERSION} is missing required tables: ${missing.join(", ")}`
+        `Market Flow US schema v${schemaVersion} is missing required tables: ${missing.join(", ")}`
       );
+    }
+
+    if (schemaVersion === MARKET_FLOW_US_V3_SCHEMA_VERSION) {
+      const unexpectedDemoTables = DEMO_BUY_TABLES.filter((table) => present.has(table));
+      if (unexpectedDemoTables.length > 0) {
+        throw new DatabaseSchemaUnsupportedError(
+          `Market Flow US schema v${schemaVersion} unexpectedly contains Demo Buy structures: ${unexpectedDemoTables.join(", ")}`
+        );
+      }
     }
 
     const running = await queryRows(
