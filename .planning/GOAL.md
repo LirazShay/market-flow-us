@@ -24,6 +24,7 @@ authenticated U.S. market provider page
 
 separate local execution sidecar
 → 127.0.0.1 IBKR order-service (Node.js 24)
+→ authenticated local caller boundary
 → HTTPS localhost Client Portal Gateway
 → Interactive Brokers
 ```
@@ -41,12 +42,13 @@ AI Investigation remains a local evidence export. It does not call an AI provide
 
 ## Execution lane
 
-Branch `8` adds one isolated execution boundary owned by `docs/IBKR_ORDER_SERVICE.md`.
+Branch `8` adds one isolated execution boundary owned by `docs/IBKR_ORDER_SERVICE.md` plus its mandatory localhost-security supplement `docs/IBKR_ORDER_SERVICE_SECURITY.md`.
 
 Core direction:
 
 ```text
 explicit normalized order intent
+→ authenticated local caller
 → DRY_RUN / provider what-if preview
 → fail-closed live gate
 → explicit provider confirmation handling
@@ -55,6 +57,8 @@ explicit normalized order intent
 ```
 
 The service is local, loopback-only and public-safe. It never stores credentials, cookies/session tokens or real provider account identifiers. Manual Client Portal Gateway authentication remains user-owned.
+
+Loopback binding alone is not treated as authorization. Every protected local endpoint requires an ephemeral per-run caller credential, and browser-origin requests are rejected by default before provider logic.
 
 The initial execution scope is deliberately narrow:
 
@@ -86,6 +90,7 @@ A live SELL must fail closed when the service cannot establish that the requeste
 - The AI Investigation Pack remains deterministic local evidence: exact SQL + bounded original Scanner context + prediction-time history + baseline + later outcome history + trusted Demo Buy outcomes + anti-hindsight prompt.
 - The product never sends the AI pack automatically, stores an AI API key or applies AI-proposed SQL automatically.
 - The IBKR order-service is a separate local process and stable API. Future Scanner/order integration must consume this boundary instead of bypassing it to call IBKR directly.
+- Local order-service authorization is independent from provider authentication: loopback caller auth, live process/request gating and IBKR session/permission checks must all pass independently.
 - Live submission is fail-closed and impossible unless both the service and individual request explicitly opt into live execution and the provider session/account/permission/preview checks succeed.
 - Provider confirmation questions are surfaced explicitly; unknown questions are not auto-accepted.
 - A lost submit acknowledgement is unknown, not rejection, and must reconcile before any possible new submit.
@@ -111,12 +116,13 @@ For branch `8` IBKR execution behavior:
 ```text
 .planning/GOAL.md
 → docs/IBKR_ORDER_SERVICE.md
+→ docs/IBKR_ORDER_SERVICE_SECURITY.md
 → .planning/IBKR_ORDER_MINI_PROJECT.md   planning/provider rationale
 → generic PRODUCT/TECHNICAL/TEST documents where non-conflicting
 → TREE success_evidence / EXECUTOR_HANDOFF
 ```
 
-Older generic statements that the repository contains no real-order capability are historical constraints for branches `1`–`7`; they do not override `docs/IBKR_ORDER_SERVICE.md` for branch `8`. Scanner/Demo Buy/AI themselves still have no direct real-order authority in this mini-project.
+Older generic statements that the repository contains no real-order capability are historical constraints for branches `1`–`7`; they do not override the branch-8 order contracts. Scanner/Demo Buy/AI themselves still have no direct real-order authority in this mini-project.
 
 ## Planning boundary
 
@@ -158,7 +164,7 @@ The current overall product program is complete only when:
 - staged candidate SQL executes correctly;
 - Demo Buy capture/evaluation/provenance/Auto/targeted-refresh behavior is proven;
 - AI Investigation generates sharing-safe deterministic anti-hindsight evidence packs;
-- the standalone IBKR order-service is code-complete with strict BUY/SELL validation, dry-run/what-if preview, fail-closed live gating, explicit provider-reply handling, restart-safe idempotency, acknowledgement-unknown reconciliation, cancellation/trade observation, SELL short-opening protection and public-safe diagnostics;
+- the standalone IBKR order-service is code-complete with strict BUY/SELL validation, authenticated localhost caller protection, dry-run/what-if preview, fail-closed live gating, explicit provider-reply handling, restart-safe idempotency, acknowledgement-unknown reconciliation, cancellation/trade observation, SELL short-opening protection and public-safe diagnostics;
 - Scanner/Demo Buy/AI remain disconnected from automatic live submission until a later explicit integration project;
 - actual live IBKR execution is either proven when permission exists or recorded exactly as `PENDING_EXTERNAL_PERMISSION` without fabricated evidence;
 - required Fast, Browser, Planning, service and bounded acceptance gates are green on the post-order-service candidate;
