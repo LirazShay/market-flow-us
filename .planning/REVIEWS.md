@@ -1,164 +1,322 @@
 # Market Flow US Planning Reviews
 
-This file records the current review truth. Older implementation evidence remains valid where preserved by STATUS/EXECUTION, but any earlier planning review that conflicts with a later entry is superseded by the later entry.
+This file records the current review truth. Older implementation evidence remains valid where preserved by STATUS/EXECUTION. Later review entries supersede conflicting conclusions in earlier planning reviews.
 
 ## Historical U.S. planning / execution reviews
 
-The original U.S. migration planning and execution reviews established and preserved the completed implementation through TREE `7.3`, including provider acquisition, schema-v3 authority, trusted reads, Scanner, Fake Market/runtime, diagnostics, workload tooling, deterministic local acceptance and release cleanup.
+The original U.S. migration reviews established the completed implementation through TREE `7.3`: provider acquisition, schema-v3 authority, trusted reads, Scanner, Fake Market/runtime, diagnostics, workload tooling, deterministic local acceptance and release cleanup.
 
-Those completed leaves remain historical green evidence and are not reopened by the Demo Buy replan.
+The Demo Buy + AI Investigation replan later extended market schema to v4 and completed implementation through `7.5`.
 
-The prior review **R-US-EXEC-REOPEN-005 — Demo Buy strategy-validation final review** originally froze a smaller Demo Buy plan with:
+Those completed leaves remain historical green evidence and are not reopened by branch `8`.
 
-```text
-36 TREE nodes
-26 implementation leaves
-no AI Investigation branch
-older context bounds
-no authority-watermark cycle constraint
-no targeted observation refresh
-```
+## R-US-EXEC-REOPEN-006 — Comprehensive Demo Buy + AI Investigation re-audit
 
-That PASS is **superseded** by the comprehensive re-audit below and must not be used as current planning authority.
+**Result:** PASS AFTER CORRECTIONS; historically authoritative for branches `1`–`7`.
 
-## R-US-EXEC-REOPEN-006 — Comprehensive Demo Buy + AI Investigation re-audit opened
+The re-audit corrected selection/dedupe semantics, writer/cycle authority, bounded Scanner provenance, lost-ACK handling, wall-clock anomalies, targeted refresh, Auto/Stop operability, AI anti-hindsight evidence, sharing-safe export projection, new-day lifecycle, TREE structure/allocation and final release routing.
 
-**Result:** REOPENED; IMPLEMENTATION UNAUTHORIZED
+## R-US-DEMO-BUY-FINAL — Five-pass Demo Buy + AI Investigation Planning Review
 
-The user requested a repeated full review of the feature planning, including the entire S&T tree and all reasoning layers, before local testing/implementation continued.
+**Result:** PASS AFTER CORRECTIONS.
 
-The plan was reopened under the FRAMEWORK execution-reopen contract:
+The formal passes closed product semantics, data/schema, protocol/concurrency/failure semantics, UX/operability, S&T necessity/sufficiency/KISS, tests, allocation, handoff and Planning CI for the 39-node / 28-leaf pre-IBKR plan.
 
-```text
-plan_state: active
-replan_mode: execution_reopen
-root phase: planning
-no execution node in_progress
-current Demo Buy implementation leaf blocked
-completed historical leaves preserved
-```
+## R-US-DEMO-BUY-EXTERNAL — External-user-from-zero Demo Buy/AI review
 
-The re-audit discovered that the previous PASS was not sufficient. Material defects included duplicate-ID ownership ambiguity, missing signal-vs-capture provenance, missing Scanner interval/generation context, page/provenance transport ambiguity, unjustified heavy page sizing, capture lost-ACK ambiguity, wall-clock/authority confusion, overly large persisted Scanner context, missing long-running-Auto targeted refresh, missing global Auto operability, stale Scanner Stop UX, and Planning-CI/TREE parser drift.
+**Result:** PASS AFTER CORRECTIONS.
 
-## Review 1/5 — Product / user semantics
+The external walkthrough found and corrected two final defects:
 
-**Result:** PASS AFTER CORRECTIONS
+1. `resultRank` is returned position, not semantic ranking without deterministic SQL ordering;
+2. AI Investigation exports a sharing-safe projection rather than raw local operational/session fields.
 
-Corrections:
+Durable decisions `D-US-032` and `D-US-033` own these corrections.
 
-- Top X is defined over source rows before dedupe; duplicates never backfill from later rows.
-- Manual selection preserves original Scanner order rather than checkbox click order.
-- Every retained item keeps original 1-based `resultRank`, including gaps.
-- Signal/result-ready time is distinct from virtual-buy acceptance time.
-- Active-generation provenance is immutable even when query draft/library state later changes.
-- AI Investigation was added to the current pre-local-acceptance scope as a local forensic evidence workflow rather than an AI trading agent.
+---
 
-User journey after correction:
+# Branch 8 — Standalone IBKR Order Service Replan
+
+## R-US-IBKR-ORDER-OPEN — Replan opened before final 7.4 acceptance
+
+**Result:** REOPENED; IMPLEMENTATION UNAUTHORIZED.
+
+The user requested a standalone Node.js BUY/SELL service for Interactive Brokers while the account does not yet have trading permission. Final target-machine/provider acceptance `7.4` had begun but was not complete.
+
+Correct response:
 
 ```text
-Scanner generation
-→ explicit/Auto virtual-buy observation
-→ progressive trusted outcome inspection
-→ optional forensic evidence pack
-→ external AI proposes testable SQL hypotheses
-→ human decides what to test
+preserve completed branches 1–7 evidence
+→ block/not-done 7.4
+→ reopen smallest affected planning area
+→ define isolated branch 8
+→ re-close deterministically
+→ resume 7.4 on the new candidate
 ```
 
-No real execution/fill/portfolio/liquidity scope was introduced.
+The old candidate is historical after branch-8 implementation starts and may not silently remain final-candidate authority.
 
-## Review 2/5 — Data / schema / persistence
+## Review 1 — Product boundary / user intent
 
-**Result:** PASS AFTER CORRECTIONS
+**Result:** PASS AFTER ALIGNMENT.
 
-Corrections:
-
-- Schema v4 remains additive and stores only Demo Buy facts/provenance, not derived future outcomes.
-- `result_rank` stores original Scanner returned position, not a dense selection position; later external review further clarified that returned position is not semantic rank by itself.
-- Capture stores immutable query ID/name/SQL, interval, result start/completion/count and bounded original Scanner context.
-- Valid v3→v4 migration is transactional; suspicious partial-v3 Demo structures fail closed; migration failure leaves v3 usable.
-- New Trading Day accepts valid v3 or v4, preserves saved queries only and always installs fresh v4.
-- No new `history` index is added without measured evidence.
-- Demo Buy page size is fixed at 50 items, not inherited 500-row History sizing.
-- Full SQL/provenance is read on demand rather than repeated across item rows.
-
-## Review 3/5 — Protocol / concurrency / failure / lifecycle
-
-**Result:** PASS AFTER CORRECTIONS
-
-Corrections:
-
-### Capture acknowledgement
+Required user outcome:
 
 ```text
-CONFIRMED_COMMITTED
-CONFIRMED_REJECTED
-ACKNOWLEDGEMENT_UNKNOWN
+build execution capability now
+→ run safely without trading permission
+→ later enable real permission without rewriting core lifecycle
+→ integrate with the central system only in a later explicit project
 ```
 
-A capture that may have committed before transport loss is never called failed and is never blindly replayed.
+Corrections/decisions:
 
-### Writer/cycle authority watermark
+- branch `8` is a separate local execution sidecar;
+- Scanner, Demo Buy, AI Investigation and Current gain no automatic order authority;
+- initial scope is deliberately narrow: U.S. `STK`, `USD`, `SMART`, BUY/SELL, LMT/MKT, DAY/GTC;
+- no short-opening, options/futures/FX, bracket/OCA/algo, leverage engine or portfolio strategy subsystem;
+- actual live submission may remain `PENDING_EXTERNAL_PERMISSION` without blocking permission-independent software completion.
 
-`buy_cycle_id` is both exact baseline cycle and the capture-time market-authority watermark:
+The boundary is owned by `docs/IBKR_ORDER_SERVICE.md` and `D-US-034`, `D-US-038`, `D-US-039`.
+
+## Review 2 — Provider / lifecycle contract
+
+**Result:** PASS AFTER ALIGNMENT.
+
+The initial individual-account path uses the first-party Client Portal Web API through Client Portal Gateway.
+
+Manual browser/gateway authentication remains user-owned. The service never automates credential login or bypasses IBKR permissions/confirmation requirements.
+
+The planned adapter owns:
 
 ```text
-prediction-time authority: cycle_id <= buy_cycle_id
-post-capture authority:    cycle_id > buy_cycle_id
+auth status / session init
+→ accounts
+→ instrument resolution
+→ market-data snapshot prerequisite
+→ what-if
+→ submit
+→ reply-required confirmation
+→ open-order/trade reconciliation
+→ cancel
+→ tickle/keepalive
 ```
 
-Every Demo Buy future-horizon read requires `cycle_id > buy_cycle_id` in addition to the target timestamp. AI Investigation uses the same partition, preventing later-committed evidence from leaking backward under misleading wall-clock timestamps.
+Provider uncertainty is explicit:
 
-### Wall-clock anomalies
+- pre-submit failure may be conclusively rejected;
+- transport loss after possible submit becomes `ACKNOWLEDGEMENT_UNKNOWN`;
+- acknowledgement-unknown never triggers blind resubmit;
+- reconciliation precedes any later explicit retry decision;
+- unknown provider reply questions fail closed.
 
-Scanner/collection/capture wall-clock times are diagnostics only. Raw timestamps remain unchanged; negative derived duration/latency/age becomes null + bounded timing anomaly and never changes authority ordering.
+## Review 3 — Localhost security / privacy threat model
 
-### Capture/context bounds
+**Result:** PASS AFTER MATERIAL CORRECTION.
 
-Current authoritative bounds:
+Initial planning treated loopback binding as sufficient isolation. External security review rejected that assumption because browser content can attempt requests to localhost.
+
+Correction:
 
 ```text
-unique items <= 5000
-SQL <= 1 MiB UTF-8
-context source rows <= 50
-retained context columns <= 64 total
-canonical identity column always retained
-textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping
-serialized context <= 256 KiB UTF-8
+127.0.0.1:8770 only
++ high-entropy per-run local caller token
++ protected reads and mutations require token
++ browser Origin rejected by default
++ no wildcard/credentialed CORS
++ bounded JSON-only mutations
++ unauthorized request performs zero provider calls/state mutation
 ```
 
-The lower context bound is deliberate daily-storage protection for repeated Auto capture, not merely transport protection.
+`GET /health` may be unauthenticated only when strictly non-sensitive.
 
-Node cross-checks selected item returned-position/identity against retained Top-50 context before commit.
+The caller token is never hard-coded, committed, persisted, logged, reported or sent to IBKR and is invalidated on process exit.
 
-### Export
+Provider account identity may exist in memory only while required for provider calls; it is never persisted/reported.
 
-AI pack uses one bounded export slot, product-owned temp-dir→atomic-rename publication, relative product path, no DB mutation and safe regeneration after lost export ACK.
+Credentials, cookies/session tokens, private browser state and raw authenticated provider dumps remain forbidden from repo/persistence/diagnostics.
 
-## Review 4/5 — UX / operability
+Any CPGW localhost TLS exception must be scoped to the CPGW client only; process-global TLS disable is forbidden.
 
-**Result:** PASS AFTER CORRECTIONS
+`docs/IBKR_ORDER_SERVICE_SECURITY.md` and `D-US-036` own this correction.
 
-Corrections:
+## Review 4 — Local authority / idempotency / failure safety
 
-- Auto mode has a persistent cross-surface indicator + direct Off action.
-- Enabling/changing Auto affects only future successful Scanner generations; no retroactive capture.
-- Turning Auto Off does not pretend to cancel an already-dispatched capture.
-- Scanner gains a resumable `Stop recurring scan` action distinct from terminal Viewer destruction.
-- Capture freezes the exact rendered Scanner generation before async submission.
-- Selection controls never trigger row-to-Detail navigation accidentally.
-- Auto status is bounded rather than an unbounded event log.
-- Demo Buy is capture-grouped; capture-level provenance is not repeated per item.
-- Ten horizons use one compact cell each with sticky identity/baseline columns.
-- `NO_FUTURE_OBSERVATION` displays as Pending; non-temporal unavailable states remain warnings.
-- `Refresh latest` resets first page; `Load more` continues the keyset walk.
-- `demo.buy.observation.get(captureId, securityId)` + `Refresh observation` keep an older target inspectable while Auto adds newer captures.
-- AI panel owns Generate/Regenerate, Partial/Complete/context coverage, relative path, Copy Prompt/Path and clipboard fallback.
+**Result:** PASS.
 
-## Review 5/5 — S&T / contracts / tests / CI / handoff
+`DRY_RUN` is the default and must be structurally incapable of calling provider submit.
 
-**Result:** PASS AFTER CORRECTIONS
+LIVE requires independent gates:
 
-Mechanical alignment was performed across:
+```text
+local caller authorization
+process LIVE-enabled
+request LIVE
+brokerage session
+tradable runtime account
+provider permission
+unambiguous instrument
+snapshot preflight
+successful what-if
+local validation
+SELL position coverage
+```
+
+No gate may degrade to a warning/bypass.
+
+`requestId` is mandatory:
+
+```text
+same requestId + same normalized intent → reuse/reconcile
+same requestId + different normalized intent → reject
+```
+
+Use the smallest separate DuckDB store for restart-safe idempotency/reconciliation. Do not add order state to the day-bounded market DB.
+
+Persist only product execution facts; never persist provider account/authentication/caller-token/raw authenticated state.
+
+The no-short-opening SELL guard fails closed when long-position authority is insufficient/unavailable/ambiguous.
+
+## Review 5 — Verification / synthetic provider / no fabricated evidence
+
+**Result:** PASS.
+
+Permission-independent proof is deterministic and public-safe.
+
+One configurable fake IBKR adapter/gateway covers:
+
+```text
+disconnected / unauthenticated / authenticated
+accounts empty/non-empty
+instrument exact/missing/ambiguous
+snapshot preflight
+what-if success/rejection
+BUY/SELL translation
+submit success
+reply-required confirmation success/rejection
+unknown reply fail-closed
+provider failure before submit
+transport loss after submit
+reconciliation
+cancel
+partial/full fill
+session timeout/keepalive
+SELL long-position guard
+caller auth/origin rejection
+restart-safe idempotency
+```
+
+All fixtures use synthetic identities.
+
+Deterministic fake-LIVE proof establishes software lifecycle correctness but is never represented as real-money success.
+
+Actual order submission remains an independent external-permission evidence family.
+
+## Review 6 — S&T necessity / sufficiency / KISS
+
+**Result:** PASS.
+
+### Structural result
+
+```text
+root capability branches: 8
+TREE nodes:              44
+implementation leaves:   32
+new leaves:              8.1, 8.2, 8.3, 8.4
+final leaf after branch 8: 7.4
+```
+
+### Necessity
+
+Each new leaf owns a distinct responsibility:
+
+- `8.1` — safe local service, normalized intent, caller security, DRY_RUN, persistence/idempotency;
+- `8.2` — real CPGW adapter, LIVE gates, reply/cancel/fills/reconciliation/SELL guard;
+- `8.3` — operator packaging, deterministic standalone acceptance and stable future-integration boundary;
+- `8.4` — deterministic reclosure and new exact candidate truth.
+
+Merging any pair would make the work unit materially too broad or mix implementation with release closure. Splitting further would create technical-action leaves rather than meaningful capability leaves.
+
+### Sufficiency
+
+Outside-in path is fully owned:
+
+```text
+start standalone service safely
+→ authenticate local caller
+→ validate normalized order intent
+→ preview in DRY_RUN
+→ persist/replay requestId safely
+→ restart safely
+→ diagnose CPGW/session/account/instrument/permission
+→ what-if
+→ explicit LIVE submission only when all gates pass
+→ handle provider reply
+→ reconcile uncertain acknowledgement
+→ cancel / observe partial/full fills
+→ reject unsafe SELL
+→ operate via Windows launcher
+→ consume stable API later from central system
+→ deterministic reclosure
+→ resume final target-machine acceptance
+```
+
+### KISS
+
+The plan reuses:
+
+- Node 24/native ESM;
+- existing DuckDB package;
+- existing diagnosability pattern;
+- existing repo CI/release discipline.
+
+It does not create:
+
+```text
+Strategy Engine
+automatic Scanner-to-order subsystem
+portfolio/risk engine
+cloud execution service
+credential store
+automated gateway login
+new database technology
+second market-data authority
+```
+
+The one new HTTP process/port and separate minimal execution DB are justified boundaries because execution safety/lifecycle must remain independent from the existing Viewer/market-data service.
+
+## Review 7 — Allocation / dependency order / handoff
+
+**Result:** PASS.
+
+Final serial allocation:
+
+```text
+Chats 1–16: completed historical prefix through 7.5
+Chat 17: 8.1
+Chat 18: 8.2
+Chat 19: 8.3
+Chat 20: 8.4
+Chat 21: 7.4
+```
+
+Dependencies:
+
+```text
+7.5 → 8.1 → 8.2 → 8.3 → 8.4 → 7.4
+```
+
+This corrects the temporary planning-reopen state where `7.4` was blocked before branch `8` existed. `7.4` is not done and is now reallocated only after reclosure.
+
+`verify-handoff.mjs` remains sufficient and dynamic; no new allocation framework was introduced.
+
+Planning CI is updated from seven branches / 39 nodes / 28 leaves to eight branches / 44 nodes / 32 leaves and explicitly checks branch-8 contracts/decisions/reviews.
+
+## R-US-IBKR-ORDER-FINAL — Formal final branch-8 planning review
+
+**Result:** PASS AFTER CORRECTIONS; IMPLEMENTATION STILL UNAUTHORIZED UNTIL PLANNING PR/MAIN GATES.
+
+Whole-goal re-read found no unresolved contradiction after alignment of:
 
 ```text
 .planning/GOAL.md
@@ -166,233 +324,84 @@ Mechanical alignment was performed across:
 .planning/TREE.yaml
 .planning/EXECUTION.yaml
 .planning/EXECUTOR_HANDOFF.md
-STATUS.yaml
 .planning/STATUS.yaml
+STATUS.yaml
 docs/PRODUCT_REQUIREMENTS.md
 docs/PRODUCT_SPEC.md
-docs/DATA_CONTRACT.md
 docs/TECHNICAL_SPEC.md
 docs/TEST_STRATEGY.md
-docs/DEMO_BUY_VALIDATION.md
-docs/DEMO_BUY_PROTOCOL_LIMITS.md
-docs/DEMO_BUY_UX.md
-docs/AI_INVESTIGATION_PACK.md
+docs/IBKR_ORDER_SERVICE.md
+docs/IBKR_ORDER_SERVICE_SECURITY.md
 .github/workflows/planning-docs-ci.yml
 ```
 
-Material corrections:
+`DATA_CONTRACT.md` is intentionally unchanged because provider market-data schema/authority is not changed by the isolated order sidecar.
 
-- TREE format was repaired to the double-quoted/inline-list form actually parsed by Planning CI and `verify-handoff.mjs`.
-- Planning CI requires all Demo Buy/AI contract files and checks schema v4, the five Demo Buy operations, watermark semantics, current protocol bounds, targeted refresh/Auto UX, 39-node/28-leaf structure and current review markers.
-- TEST_STRATEGY owns explicit proof for every current bound, watermark/timing edge, lost ACK, Auto/Stop behavior, targeted observation refresh, AI export atomicity/path/clipboard behavior and v3/v4 new-day lifecycle.
-- Durable decisions were consolidated so no older contradictory numeric/authority wording remains current.
-- Handoff routes each new leaf to the exact current contracts and forbids implementation before freeze/authorization.
+The final plan has explicit owners for product intent, security/privacy, normalized intent, provider lifecycle, idempotency, reply/cancel/fills, uncertain acknowledgement, SELL safety, packaging, deterministic proof, external permission and final candidate reclosure.
 
-### Structural S&T result
+## R-US-IBKR-ORDER-EXTERNAL — External-user-from-zero adversarial review
 
-Current TREE:
+**Result:** PASS — READY TO FREEZE; IMPLEMENTATION STILL REQUIRES PLANNING PR MERGE + MAIN CI/OPEN-PR GATES.
 
-```text
-root capability branches: 7
-TREE nodes:              39
-implementation leaves:   28
-one-child decompositions: 0
-missing child refs:        0
-leaf dependency cycles:    0
-non-leaf dependencies:     0
-```
+The plan was walked again without relying on earlier review conclusions, from the perspective of a user who currently has an Interactive Israel/IBKR account but no trading permission.
 
-New/current implementation leaves:
+Walkthrough:
 
 ```text
-4.3.1 schema v4 / persistence
-4.3.2 capture authority / protocol
-4.3.3 evaluation + page/provenance/targeted reads
-4.4.1 Scanner capture/Auto/resumable Stop UX
-4.4.2 Demo Buy progressive outcome UX
-4.5.1 deterministic AI Investigation exporter
-4.5.2 AI Investigation Viewer workflow
-7.5   post-feature deterministic reclosure
-7.4   final target-machine/authenticated acceptance
+fresh checkout
+→ start order service with no credentials in repo
+→ understand DRY_RUN is default
+→ authorize a local non-browser caller
+→ create valid/invalid BUY and SELL intents
+→ see preview/what-if result without submit
+→ replay same request safely
+→ restart without duplicate risk
+→ authenticate CPGW manually
+→ diagnose missing permission cleanly
+→ later enable LIVE deliberately when permission exists
+→ encounter provider confirmation
+→ encounter transport loss after submit
+→ reconcile before any possible resubmit
+→ cancel/open/partial/fill state
+→ reject attempted short opening
+→ inspect sanitized diagnostics
+→ stop/restart independently of Market Flow US
+→ later integrate central system through the same API
 ```
 
-### Necessity challenge
-
-PASS.
-
-Removing any leaf loses a distinct necessary responsibility:
-
-- schema lifecycle;
-- writer-ordered capture authority;
-- one trusted evaluation/read model;
-- usable/controllable Scanner capture;
-- inspectable progressive outcomes;
-- reproducible forensic export;
-- usable export interaction;
-- post-feature release reclosure;
-- external target-machine/provider acceptance.
-
-No new leaf can be removed without leaving an explicit requirement unowned.
-
-### Sufficiency / outside-in walkthrough
-
-PASS after the later external-user corrections recorded below.
-
-Fresh-user path is owned:
-
-```text
-run/activate Scanner
-→ receive exact generation
-→ manually capture or arm future-generation Auto
-→ capture exact writer-ordered baseline
-→ inspect progressive outcomes
-→ keep one observation refreshed while Auto continues
-→ open provenance/SQL
-→ generate partial/complete forensic pack
-→ copy prompt/path with fallback
-→ regenerate after later evidence
-→ validate SQL hypotheses across observations
-→ deterministic reclosure
-→ final target-machine/provider acceptance
-```
-
-Failures/edges are explicitly owned: invalid identities, duplicate rows, context truncation/oversize, stale timing, clock regression, market-write races, unresolved baseline candidate, DB rollback, capture lost ACK, read failure, continuation failure, export write/rename failure, export lost ACK, restart and new-day rollover.
-
-### KISS challenge
-
-PASS.
-
-The plan intentionally reuses the existing writer, Viewer WebSocket, DuckDB, Scanner scheduler/query library, trusted read connection, Fake Market/generator and diagnostics. It does **not** introduce:
-
-```text
-Strategy Engine
-order/fill/portfolio subsystem
-background horizon worker
-materialized horizon columns
-second DB or transport
-cross-day strategy warehouse
-capture replay/idempotency subsystem
-AI provider/API-key integration
-automatic AI SQL mutation
-OS file-manager integration
-```
-
-### Allocation review
-
-PASS.
-
-Every one of the 28 leaves is allocated exactly once and dependency order is valid:
-
-```text
-Chat 10: 4.3.1 → 4.3.2
-Chat 11: 4.3.3
-Chat 12: 4.4.1
-Chat 13: 4.4.2
-Chat 14: 4.5.1
-Chat 15: 4.5.2
-Chat 16: 7.5
-Chat 17: 7.4
-```
-
-Completed historical nodes remain a contiguous done prefix. During planning reopen `4.3.1` is blocked and later new leaves are pending; no node is in progress.
-
-## R-US-DEMO-BUY-FINAL — Five-pass Demo Buy + AI Investigation Planning Review
-
-**Result:** PASS AFTER CORRECTIONS; SUBSEQUENT EXTERNAL REVIEW REQUIRED AND RECORDED BELOW
-
-The five formal passes closed product intent, data/schema, protocol/concurrency/failure semantics, UX/operability, S&T necessity/sufficiency/KISS, tests, allocation, handoff and Planning CI. They established the 39-node / 28-leaf plan and the core Demo Buy + AI Investigation architecture.
-
-The user then explicitly required a separate outside user-from-zero review. That review found two additional material interpretation/sharing defects, so this five-pass PASS is not the final authority by itself.
-
-## R-US-DEMO-BUY-EXTERNAL — Final external-user-from-zero adversarial review
-
-**Result:** PASS AFTER TWO MATERIAL CORRECTIONS — READY TO RE-FREEZE; IMPLEMENTATION STILL REQUIRES PR/MAIN GATES
-
-The complete feature was walked again as if by an external user with no reliance on the earlier review conclusions:
-
-```text
-Scanner query/result
-→ Selected / All / Top X / Auto capture
-→ virtual-buy authority
-→ progressive outcomes
-→ old-observation targeted refresh
-→ provenance inspection
-→ AI Investigation generation/share workflow
-→ failures/recovery
-→ new-day lifecycle
-→ implementation allocation
-→ deterministic reclosure
-→ final target-machine/provider acceptance
-```
-
-### External defect 1 — returned position was being over-interpreted as semantic rank
-
-A Scanner row at `resultRank=1` is not necessarily “the best candidate”. Without deterministic SQL ordering, it is only the first returned row.
-
-Correction:
-
-- `resultRank` / `result_rank` is now explicitly defined as original 1-based **returned position**;
-- Viewer uses neutral Position/Scanner position wording;
-- AI prompt must inspect exact SQL before using ranking language;
-- unordered/ambiguous SQL must state that position does not prove strategy preference;
-- ordered-vs-unordered regression fixtures protect this distinction;
-- durable decision `D-US-032` owns the rule.
-
-No SQL parser or new subsystem was added.
-
-### External defect 2 — shareable AI pack could have leaked local operational/session fields
-
-The prior wording promised no session data but also described history/context evidence too much like raw local rows. `history` includes `session_id`, and arbitrary Scanner SQL can return operational/string fields. A raw export would therefore violate the sharing promise even though the DB itself was correct.
-
-Correction:
-
-- persisted DB/context remains full local provenance;
-- AI export now derives a separate deterministic **sharing-safe projection** before file creation;
-- target-history/baseline files allowlist authority keys + documented provider market fields + provider `raw_data` and exclude session/producer/config/error/request/source_metadata/path fields;
-- Scanner context preserves structural metadata, identity, numeric/null/boolean and documented market-text values; arbitrary other string/array/object contents are exported only as redaction metadata with `redactedForSharing=true`;
-- redacted contents may not enter files, prompt, README, manifest, response metadata or diagnostics;
-- exact user-authored SQL remains verbatim, with an explicit pre-share warning to review it and never put secrets in Scanner SQL;
-- canary tests require operational/session/arbitrary-string byte sequences to be absent from every shareable artifact/surface;
-- durable decision `D-US-033` owns the boundary.
-
-This is an export projection, not a second DB/sanitization subsystem.
-
-### Re-run necessity / sufficiency / KISS
-
-**PASS.**
-
-The two corrections fit existing leaves `4.4.2`, `4.5.1`, `4.5.2`, `7.5` and `7.4`; no new capability leaf is independently necessary. The existing 39-node / 28-leaf decomposition remains valid, dependencies remain unchanged, and the corrections strengthen existing success evidence rather than creating a new subsystem.
-
-### Final negative-space challenge
+### External negative-space challenge
 
 No remaining material gap was found in:
 
 ```text
-identity
-selection/dedupe
-returned-position semantics
-capture ordering/baseline
-wall-clock anomalies
-horizon calculation
-paging/targeted refresh
-Auto visibility/backpressure/Stop
-lost capture ACK
-migration/new-day
-AI anti-hindsight
-AI sharing safety
-export atomicity/lost ACK
-privacy/diagnostics
-verification/allocation/release sequence
+local browser-to-localhost threat
+caller-token lifecycle
+credential/account privacy
+DRY_RUN accidental-submit prevention
+LIVE double opt-in
+provider permission/session/account failures
+instrument ambiguity
+snapshot/what-if prerequisites
+idempotency
+post-submit uncertainty
+reply-required handling
+cancel/fill semantics
+SELL position safety
+restart behavior
+operator packaging
+future integration seam
+synthetic-vs-real evidence labeling
+final candidate sequencing
 ```
 
 ### Final planning truth
 
 ```text
-root capability branches: 7
-TREE nodes:              39
-implementation leaves:   28
-new implementation allocation: Chats 10–17
-implementation_authorized: false until planning PR merge + main Planning CI/open-PR verification
+root capability branches: 8
+TREE nodes:              44
+implementation leaves:   32
+implementation sequence: 8.1 → 8.2 → 8.3 → 8.4 → 7.4
+actual live order proof: permission-dependent only
 ```
 
-The plan may be re-frozen once the updated Planning Docs CI is green. Production code remains unauthorized until PR #17 is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean; only then may repository truth deliberately advance to `phase: implementation`, Chat 10 / TREE `4.3.1`.
+The plan may now be frozen. Production implementation remains unauthorized until the frozen planning PR is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean. Only then may repository truth advance deliberately to `phase: implementation`, Chat 17 / TREE `8.1`.
