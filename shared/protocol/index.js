@@ -1,3 +1,5 @@
+import { validateDemoBuyCapturePayload } from "../demo-buy/capture.js";
+
 export const PROTOCOL_VERSION = 1;
 export const MAX_REQUEST_ID_LENGTH = 128;
 
@@ -70,7 +72,8 @@ const VIEWER_OPERATIONS = new Set([
   "scanner.queries.list",
   "scanner.queries.create",
   "scanner.queries.update",
-  "scanner.queries.delete"
+  "scanner.queries.delete",
+  "demo.buy.capture"
 ]);
 
 export const REQUEST_TYPES = Object.freeze([
@@ -207,6 +210,14 @@ function validateSavedQueryDelete(payload) {
   assertNonEmptyString(payload.queryId, 128);
 }
 
+function validateDemoBuyCapture(payload) {
+  try {
+    validateDemoBuyCapturePayload(payload);
+  } catch {
+    fail(ERROR_CODES.INVALID_MESSAGE);
+  }
+}
+
 const PAYLOAD_VALIDATORS = Object.freeze({
   "client.hello": validateHello,
   "producer.session.start": validateSessionStart,
@@ -224,7 +235,8 @@ const PAYLOAD_VALIDATORS = Object.freeze({
   "scanner.queries.list": validateEmpty,
   "scanner.queries.create": validateSavedQueryCreate,
   "scanner.queries.update": validateSavedQueryUpdate,
-  "scanner.queries.delete": validateSavedQueryDelete
+  "scanner.queries.delete": validateSavedQueryDelete,
+  "demo.buy.capture": validateDemoBuyCapture
 });
 
 export function isOperationAllowed(role, type) {
