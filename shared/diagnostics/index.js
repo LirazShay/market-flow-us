@@ -7,6 +7,7 @@ export const DIAGNOSTIC_COMPONENTS = Object.freeze([
   "persistence",
   "viewer",
   "scanner",
+  "demo_buy",
   "demo"
 ]);
 
@@ -25,6 +26,7 @@ export const DIAGNOSTIC_CHECKPOINTS = Object.freeze({
   "viewer.detail.read": "viewer",
   "scanner.execute": "scanner",
   "scanner.query_library": "scanner",
+  "demo_buy.capture": "demo_buy",
   "demo.runtime.built": "demo",
   "demo.fake_market.ready": "demo",
   "demo.stack.ready": "demo"
@@ -46,6 +48,9 @@ const MAX_TEXT_LENGTH = 256;
 const ALLOWED_CONTEXT_KEYS = new Set([
   "universeRevision",
   "cycleId",
+  "captureId",
+  "capturedItemCount",
+  "timingAnomaly",
   "requested",
   "received",
   "unique",

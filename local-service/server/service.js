@@ -5,6 +5,7 @@ import { openMarketScopeDatabase } from "../database/database.js";
 import { createSerializedWriter } from "../database/writer.js";
 import { createProducerPersistence } from "../persistence/producer-authority.js";
 import { createCycleAuthorityPersistence } from "../persistence/cycle-authority.js";
+import { createDemoBuyCapturePersistence } from "../persistence/demo-buy-capture.js";
 import { createViewerReads } from "../reads/viewer-reads.js";
 import { createScannerAuthority } from "../scanner/scanner.js";
 import { createSavedQueryLibrary } from "../scanner/query-library.js";
@@ -106,6 +107,11 @@ export async function startMarketScopeService({
     persistenceFault
   });
   const cycleAuthorityPersistence = createCycleAuthorityPersistence({
+    writer,
+    now,
+    persistenceFault
+  });
+  const demoBuyCapturePersistence = createDemoBuyCapturePersistence({
     writer,
     now,
     persistenceFault
@@ -232,6 +238,13 @@ export async function startMarketScopeService({
         component: "scanner",
         checkpoint: "scanner.query_library",
         message: "Saved-query library operation failed."
+      };
+    }
+    if (type === "demo.buy.capture") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.capture",
+        message: "Demo Buy capture failed safely."
       };
     }
     return null;
@@ -450,6 +463,7 @@ export async function startMarketScopeService({
         const diagnosticSpec = viewerDiagnosticSpec(parsed.type);
         try {
           let result;
+          let diagnosticContext;
           if (parsed.type === "viewer.current.get") {
             result = await viewerReads.current();
           } else if (parsed.type === "viewer.status.get") {
@@ -473,6 +487,18 @@ export async function startMarketScopeService({
             result = await savedQueryLibrary.update(parsed.payload);
           } else if (parsed.type === "scanner.queries.delete") {
             result = await savedQueryLibrary.delete(parsed.payload);
+          } else if (parsed.type === "demo.buy.capture") {
+            const captured = await demoBuyCapturePersistence.capture(parsed.payload);
+            result = {
+              captureId: captured.captureId,
+              capturedAtMs: captured.capturedAtMs,
+              capturedItemCount: captured.capturedItemCount
+            };
+            diagnosticContext = {
+              captureId: captured.captureId,
+              capturedItemCount: captured.capturedItemCount,
+              timingAnomaly: captured.timingAnomaly
+            };
           } else {
             throw operationError(ERROR_CODES.SERVICE_NOT_READY);
           }
@@ -481,7 +507,8 @@ export async function startMarketScopeService({
             recordBoundarySuccess({
               ...diagnosticSpec,
               operation: parsed.type,
-              operationId: parsed.requestId
+              operationId: parsed.requestId,
+              context: diagnosticContext
             });
           }
 
@@ -501,7 +528,9 @@ export async function startMarketScopeService({
                 ? "ScannerQueryLibraryError"
                 : diagnosticSpec.component === "scanner"
                   ? "ScannerExecutionError"
-                  : "ViewerReadError"
+                  : diagnosticSpec.component === "demo_buy"
+                    ? "DemoBuyCaptureError"
+                    : "ViewerReadError"
             });
           }
           sendJson(socket, errorResponseFrom(error, safeRequestContext(parsed)));
