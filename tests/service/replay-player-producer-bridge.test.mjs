@@ -7,6 +7,7 @@ import { createMarketReplayPlayer } from "../../browser/replay/market-player.js"
 import { createReplayFrame } from "../../browser/replay/recording-model.js";
 import { createRecordingSource } from "../../browser/replay/recording-source.js";
 import { createProducerBridge } from "../../browser/runtime/producer-bridge.js";
+import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
 import { createServiceFixture } from "./helpers/service-fixture.mjs";
 
 function row(id, price) {
@@ -91,10 +92,13 @@ function createManualPlayerScheduler() {
 }
 
 test("Replay Player uses the unchanged ProducerBridge protocol and real service ACK path", async () => {
-  const fixture = await createServiceFixture();
+  let wallNowMs = 1_000_000;
+  const fixture = await createServiceFixture({
+    now: () => wallNowMs,
+    openDatabase: openMarketFlowUsDatabase
+  });
   const sentMessages = [];
   const playerScheduler = createManualPlayerScheduler();
-  let wallNowMs = 1_000_000;
 
   const bridge = createProducerBridge({
     url: fixture.url,
