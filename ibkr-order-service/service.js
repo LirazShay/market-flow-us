@@ -165,6 +165,7 @@ export function createOrderRequestHandler({ callerToken, adapter }) {
       const pathname = url.pathname;
 
       if (request.method === "GET" && pathname === "/health") {
+        assertNoBrowserOrigin(request.headers.origin);
         writeJson(response, 200, {
           service: "ibkr-order-service",
           status: "ok"
