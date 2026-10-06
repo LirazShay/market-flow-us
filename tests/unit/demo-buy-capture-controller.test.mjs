@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createDemoBuyCaptureController,
+  DEMO_BUY_AI_EXPORT_PRECHECK,
   DEMO_BUY_AUTO_MODE,
   DEMO_BUY_CAPTURE_PRECHECK
 } from "../../browser/viewer/demo-buy-capture-controller.js";
-import { DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT } from "../../browser/viewer/client.js";
+import {
+  DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT,
+  DEMO_BUY_CAPTURE_ACKNOWLEDGEMENT
+} from "../../browser/viewer/client.js";
 
 function deferred() {
   let resolve;
@@ -237,4 +241,66 @@ test("acknowledgement unknown locks the Viewer capture controller without blind 
   assert.equal(second.started, false);
   assert.equal(second.reason, DEMO_BUY_CAPTURE_PRECHECK.CAPTURE_LOCKED);
   assert.equal(calls, 1);
+});
+
+test("one Viewer AI export slot refuses concurrent generation without queueing and releases after outcome", async () => {
+  const first = deferred();
+  const calls = [];
+  let nowMs = 4000;
+  const controller = createDemoBuyCaptureController({
+    client: {
+      async captureDemoBuy() {
+        return committed();
+      },
+      createDemoBuyAiPack(captureId, securityId) {
+        calls.push([captureId, securityId]);
+        return first.promise;
+      }
+    },
+    now: () => nowMs
+  });
+
+  const inFlight = controller.createAiPack(7, "1001");
+  assert.equal(controller.getState().aiExportBusy, true);
+  assert.equal(controller.getState().aiExportTargetKey, "7\u00001001");
+
+  const refused = await controller.createAiPack(8, "1002");
+  assert.equal(refused.started, false);
+  assert.equal(refused.reason, DEMO_BUY_AI_EXPORT_PRECHECK.BUSY);
+  assert.deepEqual(calls, [[7, "1001"]]);
+
+  first.resolve({
+    status: DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.UNKNOWN
+  });
+  const completed = await inFlight;
+  assert.equal(completed.started, true);
+  assert.equal(completed.result.status, DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.UNKNOWN);
+  assert.equal(controller.getState().aiExportBusy, false);
+  assert.equal(controller.getState().aiExportTargetKey, null);
+  assert.equal(controller.getState().lastAiExport.status, DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.UNKNOWN);
+
+  nowMs = 5000;
+  const secondClient = deferred();
+  const retryController = createDemoBuyCaptureController({
+    client: {
+      async captureDemoBuy() {
+        return committed();
+      },
+      createDemoBuyAiPack() {
+        return secondClient.promise;
+      }
+    },
+    now: () => nowMs
+  });
+  const retry = retryController.createAiPack(7, "1001");
+  secondClient.resolve({
+    status: DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.CREATED,
+    outcomeEvidenceStatus: "PARTIAL_OUTCOME",
+    targetInScannerContext: true,
+    exportPathRelative: "exports/ai-investigations/example",
+    fileCount: 10
+  });
+  const retried = await retry;
+  assert.equal(retried.result.status, DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.CREATED);
+  assert.equal(retryController.getState().aiExportBusy, false);
 });
