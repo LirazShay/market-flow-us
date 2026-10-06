@@ -90,7 +90,7 @@ chats:
 
   "20":
     nodes:
-      "8.4": { state: pending, result: null }
+      "8.4": { state: in_progress, result: null }
 
   "21":
     nodes:
