@@ -141,14 +141,14 @@ PASS: responses זהים מקבלים durable ACK, History גדל לכל cycle, 
 הרץ כל תת־שלב בנפרד:
 
 ```text
-RUN_LOCAL_ACCEPTANCE.cmd moving
-RUN_LOCAL_ACCEPTANCE.cmd membership
-RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
-RUN_LOCAL_ACCEPTANCE.cmd restart
-RUN_LOCAL_ACCEPTANCE.cmd demo-buy-runtime
-RUN_LOCAL_ACCEPTANCE.cmd demo-buy-outcomes
-RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
-RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
+FR-8A  RUN_LOCAL_ACCEPTANCE.cmd moving
+FR-8B  RUN_LOCAL_ACCEPTANCE.cmd membership
+FR-8C  RUN_LOCAL_ACCEPTANCE.cmd provider-recovery
+FR-8D  RUN_LOCAL_ACCEPTANCE.cmd restart
+FR-8E  RUN_LOCAL_ACCEPTANCE.cmd demo-buy-runtime
+FR-8F  RUN_LOCAL_ACCEPTANCE.cmd demo-buy-outcomes
+FR-8G  RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
+FR-8H  RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
 ```
 
 אפשר גם:
