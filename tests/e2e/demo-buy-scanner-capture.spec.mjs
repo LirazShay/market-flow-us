@@ -86,7 +86,8 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     const preview = viewer.locator(".market-flow-us-demo-buy-capture").getByText(/All: 2 source rows → 2 unique Demo Buy items/);
     await expect(preview).toBeVisible();
 
-    await viewer.getByLabel("Auto").selectOption("all");
+    const autoSelect = viewer.getByLabel("Auto", { exact: true });
+    await autoSelect.selectOption("all");
     await viewer.waitForTimeout(150);
     expect(await captureCount(service)).toBe(1, "enabling Auto must not capture the already-rendered generation");
 
@@ -104,7 +105,7 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     const stoppedCount = await captureCount(service);
     await viewer.waitForTimeout(500);
     expect(await captureCount(service)).toBe(stoppedCount);
-    await expect(viewer.getByLabel("Auto")).toHaveValue("all");
+    await expect(autoSelect).toHaveValue("all");
 
     await viewer.getByRole("button", { name: "הפעל" }).click();
     await expect.poll(() => captureCount(service), { timeout: 5000 }).toBeGreaterThan(stoppedCount);
@@ -114,7 +115,7 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound and Stop remai
     await expect(viewer.getByText("Auto Demo Buy: All", { exact: true })).toHaveCount(0);
 
     await viewer.getByRole("button", { name: "Scanner" }).click();
-    await expect(viewer.getByLabel("Auto")).toHaveValue("off");
+    await expect(autoSelect).toHaveValue("off");
   } finally {
     await stopRuntime(page).catch(() => {});
     for (const candidate of context.pages()) {
