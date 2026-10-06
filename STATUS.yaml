@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 13
-  node: "4.4.2"
-  title: "Demo Buy outcome screen / progressive outcomes UX"
-  status: in_progress
+  chat: 14
+  node: "4.5.1"
+  title: "AI Investigation Pack exporter"
+  status: pending
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -31,7 +31,7 @@ planning_completion:
 execution:
   chats_total: 17
   implementation_leaves_total: 28
-  current_chat: 13
-  current_node: "4.4.2"
+  current_chat: 14
+  current_node: "4.5.1"
 
 blockers: []
