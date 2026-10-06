@@ -6,14 +6,14 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
-import { MARKET_FLOW_US_V3_REQUIRED_TABLES } from "../../local-service/database/schema.js";
+import { MARKET_FLOW_US_REQUIRED_TABLES } from "../../local-service/database/schema.js";
 import { createScannerAuthority } from "../../local-service/scanner/scanner.js";
 import { MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES } from "../../shared/scanner/builtins.js";
 
 const GUIDE_PATH = fileURLToPath(
   new URL("../../docs/SCANNER_SQL_GUIDE.md", import.meta.url)
 );
-const SCANNER_MARKET_TABLES = new Set(MARKET_FLOW_US_V3_REQUIRED_TABLES);
+const SCANNER_TABLES = new Set(MARKET_FLOW_US_REQUIRED_TABLES);
 
 function extractTextManifest(guide, startMarker, endMarker) {
   const start = guide.indexOf(startMarker);
@@ -32,8 +32,8 @@ function extractTextManifest(guide, startMarker, endMarker) {
 function parseColumnsManifest(guide) {
   const lines = extractTextManifest(
     guide,
-    "SCANNER_US_SCHEMA_MANIFEST_V3",
-    "END_SCANNER_US_SCHEMA_MANIFEST_V3"
+    "SCANNER_US_SCHEMA_MANIFEST_V4",
+    "END_SCANNER_US_SCHEMA_MANIFEST_V4"
   );
   const tables = new Map();
 
@@ -56,8 +56,8 @@ function parseColumnsManifest(guide) {
 function parseTypesManifest(guide) {
   return extractTextManifest(
     guide,
-    "SCANNER_US_SCHEMA_TYPES_V3",
-    "END_SCANNER_US_SCHEMA_TYPES_V3"
+    "SCANNER_US_SCHEMA_TYPES_V4",
+    "END_SCANNER_US_SCHEMA_TYPES_V4"
   ).map((line) => {
     const [qualifiedName, dataType, nullable] = line.split("|");
     assert.ok(qualifiedName?.includes("."), `Invalid U.S. schema type line: ${line}`);
@@ -133,14 +133,17 @@ async function createFixture() {
   };
 }
 
-test("Market Flow US Scanner guide keeps the proven U.S. market manifest synchronized while schema v4 adds Demo Buy tables", async () => {
+test("Market Flow US Scanner guide keeps the complete schema-v4 manifest synchronized", async () => {
   const guide = await readFile(GUIDE_PATH, "utf8");
   const fixture = await createFixture();
 
   try {
     for (const anchor of [
       "# Market Flow US Scanner SQL Guide",
-      "## 5. Public Scanner schema — schema v3",
+      "## 5. Public Scanner schema — schema v4",
+      "demo_buy_captures",
+      "demo_buy_items",
+      "no persisted Demo Buy outcome table",
       "## 6. Market Flow US built-in queries",
       "security_id AS securityId",
       "Staged candidate ranking",
@@ -154,8 +157,9 @@ test("Market Flow US Scanner guide keeps the proven U.S. market manifest synchro
     const documentedColumns = parseColumnsManifest(guide);
     assert.deepEqual(
       [...documentedColumns.keys()].sort(),
-      [...MARKET_FLOW_US_V3_REQUIRED_TABLES].sort()
+      [...MARKET_FLOW_US_REQUIRED_TABLES].sort()
     );
+    assert.equal(documentedColumns.has("demo_buy_outcomes"), false);
 
     const allColumns = (await fixture.database.viewerReadConnection.runAndReadAll(`
       SELECT
@@ -169,7 +173,7 @@ test("Market Flow US Scanner guide keeps the proven U.S. market manifest synchro
       ORDER BY table_name, ordinal_position
     `)).getRowObjectsJson();
     const actualColumns = allColumns.filter((row) =>
-      SCANNER_MARKET_TABLES.has(String(row.tableName ?? row.table_name))
+      SCANNER_TABLES.has(String(row.tableName ?? row.table_name))
     );
 
     const actualByTable = new Map();
@@ -180,18 +184,18 @@ test("Market Flow US Scanner guide keeps the proven U.S. market manifest synchro
       actualByTable.get(tableName).push(columnName);
     }
 
-    for (const tableName of MARKET_FLOW_US_V3_REQUIRED_TABLES) {
+    for (const tableName of MARKET_FLOW_US_REQUIRED_TABLES) {
       assert.deepEqual(
         documentedColumns.get(tableName),
         actualByTable.get(tableName),
-        `U.S. guide column order drifted for ${tableName}`
+        `U.S. schema-v4 guide column order drifted for ${tableName}`
       );
     }
 
     assert.deepEqual(
       sortedSchemaRows(parseTypesManifest(guide)),
       sortedSchemaRows(actualColumns),
-      "U.S. guide market-schema type/nullability manifest drifted"
+      "U.S. guide schema-v4 type/nullability manifest drifted"
     );
 
     assert.deepEqual(
@@ -217,6 +221,7 @@ test("every U.S. guide SQL example executes through the real Scanner and built-i
     [
       "latest-with-universe",
       "recent-history",
+      "demo-buy-captures",
       "builtin-all-current-fields",
       "builtin-market-ranking-example",
       "builtin-staged-candidate-ranking",
