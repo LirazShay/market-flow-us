@@ -62,7 +62,7 @@ chats:
 
   "13":
     nodes:
-      "4.4.2": { state: done, result: "Dedicated Demo Buy now renders capture-grouped progressive outcomes with sticky Scanner-position/identity/baseline context, compact ten-horizon UP/DOWN/FLAT/Pending/warning cells, stable Load more versus Refresh latest behavior, targeted old-observation refresh, on-demand immutable provenance/SQL and smallest-surface error preservation while recurring Scanner/Auto continues behind the visible outcome screen. A compact capturedItemCount was added to the existing set-wise trusted read model to avoid N+1 provenance reads; SQL preflight, focused unit/service proof, split-capture Chromium continuity and composed Fake Market/real-service/DuckDB lifecycle proof are green. PR #23 implementation candidate da627c89fe31224e62e0dc957ae127ae883516eb passed Fast, Browser, Planning and both bounded Workload jobs." }
+      "4.4.2": { state: done, result: "Dedicated Demo Buy now renders capture-grouped progressive outcomes with sticky Scanner-position/identity/baseline context, compact ten-horizon UP/DOWN/FLAT/Pending/warning cells, stable Load more versus Refresh latest behavior, targeted old-observation refresh, on-demand immutable provenance/SQL and smallest-surface error preservation while recurring Scanner/Auto continues behind the visible outcome screen. A compact capturedItemCount was added to the existing set-wise trusted read model to avoid N+1 provenance reads; SQL preflight, focused unit/service proof, split-capture Chromium continuity and composed Fake Market/real-service/DuckDB lifecycle proof are green. PR #23 implementation candidate da627c89fe31224e62e0dc957ae127ae883516eb passed Fast, Browser, Planning Docs and both bounded Workload jobs." }
 
   "14":
     nodes:
@@ -99,7 +99,7 @@ chats:
 
   "22":
     nodes:
-      "9.3": { state: pending, result: null }
+      "9.3": { state: done, result: "Market Replay Player implements 1x media controls, exact irregular scheduling, coherent contemporary timestamp rebasing, source-fact preservation, Pause/Resume timing, stale-generation cancellation and fail-closed Stop/Seek/error lifecycle. Real ProducerBridge/WebSocket/service/DuckDB proof uses only the existing normal producer messages/ACKs, and the dedicated UI keeps Play blocked until an isolated replay-owned producer is attached. PR #50 code candidate 1c609033b210134a87e965b0fc74e52077b7f192 passed Fast #446, Browser #405, Planning Docs #578 and Workload #233; final diff review found no replay-aware shared protocol/server/live-DB change." }
 
   "23":
     nodes:
