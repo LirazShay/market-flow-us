@@ -7,13 +7,25 @@ import { runBoundedCommand } from "./acceptance-process.mjs";
 
 const MEMBERSHIP_RECOVERY_TEST_FILE = "tests/e2e/us-runtime-membership-recovery.spec.mjs";
 const MOVING_VALUES_TEST_FILE = "tests/e2e/us-runtime-moving-values.spec.mjs";
+const DEMO_BUY_RUNTIME_TEST_FILE = "tests/e2e/demo-buy-scanner-capture.spec.mjs";
+const DEMO_BUY_OUTCOME_TEST_FILE = "tests/e2e/demo-buy-outcome-surface.spec.mjs";
+const AI_INVESTIGATION_UI_TEST_FILE = "tests/e2e/demo-buy-ai-investigation.spec.mjs";
+const AI_PACK_SERVICE_TEST_FILE = "tests/service/demo-buy-ai-pack.test.mjs";
 const REPORT_DIR = path.resolve("test-results", "acceptance");
 const DETAIL_DIR = path.join(REPORT_DIR, "details");
 const PLAYWRIGHT_CLI = path.resolve("node_modules", "@playwright", "test", "cli.js");
 const WORKLOAD_RUNNER = path.resolve("scripts", "run-workload-profile.mjs");
 const MAX_DIAGNOSTIC_CHARS = 4000;
 const PLAYWRIGHT_ACCEPTANCE_TIMEOUT_MS = 3 * 60 * 1000;
+const NODE_TEST_ACCEPTANCE_TIMEOUT_MS = 3 * 60 * 1000;
 const WORKLOAD_ACCEPTANCE_TIMEOUT_MS = 45 * 60 * 1000;
+
+const FEATURE_PROFILES = Object.freeze([
+  "demo-buy-runtime",
+  "demo-buy-outcomes",
+  "ai-investigation-ui",
+  "ai-pack-safety"
+]);
 
 export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
   static: Object.freeze({
@@ -46,6 +58,35 @@ export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
     testFile: MEMBERSHIP_RECOVERY_TEST_FILE,
     grep: "preserves committed authority across service restart"
   }),
+  "demo-buy-runtime": Object.freeze({
+    checkpoint: "FR-8E",
+    kind: "playwright",
+    testFile: DEMO_BUY_RUNTIME_TEST_FILE,
+    grep: "Scanner Demo Buy manual/Auto capture stays generation-bound, keeps running behind Demo Buy, and Stop remains resumable"
+  }),
+  "demo-buy-outcomes": Object.freeze({
+    checkpoint: "FR-8F",
+    kind: "playwright",
+    testFile: DEMO_BUY_OUTCOME_TEST_FILE,
+    grep: "Demo Buy outcome surface renders grouped progressive evidence and isolates provenance failure"
+  }),
+  "ai-investigation-ui": Object.freeze({
+    checkpoint: "FR-8G",
+    kind: "playwright",
+    testFile: AI_INVESTIGATION_UI_TEST_FILE,
+    grep: "AI Investigation uses authoritative refresh, neutral returned-position wording, one Viewer export slot and partial-to-complete regeneration"
+  }),
+  "ai-pack-safety": Object.freeze({
+    checkpoint: "FR-8H",
+    kind: "node-test",
+    testFiles: Object.freeze([AI_PACK_SERVICE_TEST_FILE]),
+    testNamePattern: "AI pack exports immutable evidence with watermark partition, sharing-safe redaction and partial-to-complete regeneration"
+  }),
+  feature: Object.freeze({
+    checkpoint: "FR-8E+FR-8H",
+    kind: "composite",
+    profiles: FEATURE_PROFILES
+  }),
   all: Object.freeze({
     checkpoint: "FR-7+FR-8",
     kind: "composite",
@@ -54,7 +95,8 @@ export const LOCAL_ACCEPTANCE_PROFILES = Object.freeze({
       "moving",
       "membership",
       "provider-recovery",
-      "restart"
+      "restart",
+      ...FEATURE_PROFILES
     ])
   }),
   isolated: Object.freeze({
@@ -207,6 +249,30 @@ async function runProfile(profile) {
       },
       detailReports: []
     };
+  }
+
+  if (profile.kind === "node-test") {
+    const args = ["--test"];
+    if (profile.testNamePattern) {
+      args.push("--test-name-pattern", profile.testNamePattern);
+    }
+    args.push(...profile.testFiles);
+
+    return {
+      result: await run(process.execPath, args, {
+        timeoutMs: NODE_TEST_ACCEPTANCE_TIMEOUT_MS
+      }),
+      summary: {
+        runner: "node-test",
+        testFiles: profile.testFiles,
+        testNamePattern: profile.testNamePattern ?? null
+      },
+      detailReports: []
+    };
+  }
+
+  if (profile.kind !== "workload") {
+    throw new Error(`Unsupported local acceptance runner kind: ${profile.kind}`);
   }
 
   const detailPath = path.join(DETAIL_DIR, profile.detailReport);
