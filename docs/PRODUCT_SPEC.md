@@ -2,7 +2,7 @@
 
 ## 1. Runtime topology
 
-Preserve the proven market-analysis topology and add one isolated execution sidecar:
+Preserve the proven market-analysis topology, the isolated execution sidecar, and add one isolated Market Recording + Replay lane:
 
 ```text
 authenticated market provider page
@@ -17,11 +17,19 @@ separate execution sidecar
 → Node.js ibkr-order-service
 → HTTPS localhost Client Portal Gateway
 → Interactive Brokers
+
+separate recording/replay lane
+→ validated browser snapshot frames
+→ IndexedDB and/or portable replay file
+→ Market Player
+→ normal ProducerBridge messages
+→ unchanged Market Flow US service
+→ replay-only DuckDB
 ```
 
 Market-provider authentication remains browser-owned. IBKR CPGW authentication is separately user-owned/manual. Final market-data schema is v4.
 
-Scanner, Demo Buy, AI Investigation and Current do not call the order service automatically in branch `8`.
+Scanner, Demo Buy, AI Investigation and Current do not call the order service automatically in branch `8`; they also receive no Replay-specific read/SQL mode in branch `9`.
 
 ## 2. Product identity and market authority
 
@@ -30,6 +38,8 @@ Canonical market-data security identity is validated `String(PaperId)`. `Symbol`
 Successful committed market cycles remain the only market authority. Demo Buy adds analytical observation/provenance facts; AI Investigation adds derivative local export files.
 
 The IBKR order service has separate local execution state for idempotency/reconciliation only; it does not become market-data authority and does not change schema-v4 market-day semantics.
+
+A replay recording is source evidence before Node authority. During Replay, only cycles committed normally into the replay-only DuckDB become market authority for that replay run.
 
 ## 3. Existing U.S. flows retained
 
@@ -45,7 +55,7 @@ The product continues to provide:
 - deterministic Fake Market/runtime/service/DuckDB proof;
 - one-day active-DB lifecycle and saved-query preservation.
 
-Schema/provider field details remain owned by `DATA_CONTRACT.md` and `TECHNICAL_SPEC.md`. The standalone order lane is owned by `IBKR_ORDER_SERVICE.md` and `IBKR_ORDER_SERVICE_SECURITY.md`.
+Schema/provider field details remain owned by `DATA_CONTRACT.md` and `TECHNICAL_SPEC.md`. The standalone order lane is owned by `IBKR_ORDER_SERVICE.md` and `IBKR_ORDER_SERVICE_SECURITY.md`. Replay is owned by `MARKET_REPLAY.md`.
 
 ## 4. Scanner lifecycle
 
@@ -73,7 +83,7 @@ columns / rows
 
 A generation is Demo-Buy-capable only with exactly one recognized `securityId` or `security_id` column.
 
-Scanner has no direct live-order authority in this mini-project.
+Scanner has no direct live-order authority in this mini-project and no Replay-specific query semantics.
 
 ## 5. Demo Buy selection/capture flow
 
@@ -318,7 +328,7 @@ Valid v3 migrates transactionally to v4. Suspicious partial v3+Demo structures f
 
 No new `history` index is part of the initial contract; add one only after measured evidence and focused replan.
 
-The order service does not add order tables to this market-day schema. Its smallest durable idempotency/reconciliation store is separate from market authority.
+The order service does not add order tables to this market-day schema. Its smallest durable idempotency/reconciliation store is separate from market authority. Replay also does not add schema-v4 tables; it runs the unchanged service against a separate replay-only DB path.
 
 ## 14. Scanner comparison context
 
@@ -392,13 +402,15 @@ Clipboard actions use the existing fallback pattern: try `navigator.clipboard`, 
 
 Completeness uses a committed post-capture evidence watermark reaching `captured_at_ms + 10m`. No “day ended therefore complete” shortcut exists; an archive whose evidence never reached that boundary remains partial.
 
+Complete evidence does not guarantee every target horizon has a usable Price and does not imply fillability/profitability.
+
 ## 18. New Trading Day
 
 New Trading Day accepts structurally valid v3 or v4 source DBs, rejects v1/v2, corrupt/partial states and running producer ownership, preserves `scanner_saved_queries`, optionally archives the source as-is, and installs a fresh v4 active DB with empty Demo Buy state.
 
 Prior-day Demo Buy evidence never bridges into the new DB.
 
-Order-service execution state is not part of this rollover.
+Order-service execution state is not part of this rollover. Replay DBs are not active-day rollover inputs unless an explicit future contract says otherwise.
 
 ## 19. Diagnostics and privacy
 
@@ -407,6 +419,8 @@ Market-analysis diagnostics may expose bounded operational state such as current
 Never include SQL text, Scanner rows, history rows, pack prompt/evidence, credentials, cookies, auth/session data or raw authenticated dumps.
 
 The order service follows the same public-safe discipline and additionally excludes provider account identifiers and local caller-token values. Order diagnostics expose only product-owned local IDs, bounded lifecycle state, stable error code/checkpoint and sanitized causal messages.
+
+Replay diagnostics are owned by the Player/Host and expose only bounded recording/frame/position/storage/host states plus stable error/checkpoint data; recordings/diagnostics never include provider authentication/session/account/private DOM material.
 
 ## 20. Performance discipline
 
@@ -419,9 +433,9 @@ static SQL preflight
 → optimize only on evidence
 ```
 
-Do not add background horizon materialization, another market-data transport/DB, a speculative history index or Strategy Engine before evidence requires it.
+Do not add background horizon materialization, another normal market-data transport/DB, a speculative history index or Strategy Engine before evidence requires it.
 
-The isolated local order HTTP API is a deliberate new execution boundary; it is not a replacement transport for market-data/Viewer traffic.
+The isolated local order HTTP API is a deliberate new execution boundary; it is not a replacement transport for market-data/Viewer traffic. Replay reuses the normal producer/service path and must not create a second persistence implementation.
 
 ## 21. Standalone IBKR order-service topology
 
@@ -530,10 +544,103 @@ The existing Market Flow US runtime starts independently.
 
 A future Scanner/strategy integration must consume this authenticated local API and must not bypass it to call IBKR directly.
 
-## 29. Release boundary
+## 29. Market Replay recording/source model
 
-Deterministic implementation/reclosure completes before final target-machine/authenticated acceptance.
+The dedicated Replay browser artifact reuses the validated U.S. snapshot acquisition boundary but does not require the localhost market-data service while recording.
 
-The exact final candidate must prove Demo Buy capture/evaluation, Auto operability, targeted refresh, AI Investigation pack generation/regeneration, and the permission-independent standalone IBKR order-service contract locally before final acceptance is considered complete.
+Each committed recording frame owns:
+
+```text
+strict sequence
+validated snapshot timing
+recordCount
+complete source-shaped records
+canonical membership/identity evidence required to reconstruct the normal U.S. collection candidate
+bounded replay metadata
+```
+
+Only complete validated snapshots become frames. Provider acquisition/validation failure cannot create a valid frame.
+
+IndexedDB holds the browser recording library. A closed complete recording is immutable except user naming metadata. Storage/quota failure stops new recording while preserving previously committed frames.
+
+## 30. Portable Replay file
+
+Version 1 is streaming-friendly UTF-8 line-oriented JSON:
+
+```text
+manifest
+frame 0
+frame 1
+...
+footer
+```
+
+Playback is allowed only after exact manifest/frame/footer identity, count, sequence and snapshot validation succeeds. Truncated/malformed/wrong-version input fails closed.
+
+Large export is cursor/stream-oriented. Portable-file playback can build a lightweight frame-position/byte-offset index and read frames on demand; full-memory buffering and mandatory IndexedDB re-import are not requirements.
+
+## 31. Replay Player timing
+
+Initial speed is exactly `1x`.
+
+The delay between two frames is the recorded difference between validated snapshot completion timestamps, not the configured poll interval.
+
+Provider/source fields remain unchanged. Local browser timing that would normally be stamped during live acquisition is rebased to current wall clock before normal candidate/ProducerBridge emission. All cycle/chunk/security local timestamps receive one coherent segment offset so existing duration/order validation remains valid.
+
+The Player remains ACK-gated: the next market frame cannot overtake an unresolved normal producer commit.
+
+## 32. Pause / Resume / Stop
+
+`Pause` emits nothing and freezes recording position without resetting the replay DB. Old scheduled callbacks are invalidated by Player generation.
+
+`Resume` establishes a new wall-clock timing segment, preserves the remaining part of the current inter-frame delay, then continues at recorded `1x` gaps. A real pause may therefore produce a real gap in persisted replay history. This preserves compatibility with Node-owned wall-clock facts such as Demo Buy `captured_at_ms` without a server virtual clock.
+
+`Stop` closes the current player/producer generation but never deletes the source recording.
+
+## 33. Seek and replay isolation
+
+A seek target snaps deterministically to a real recorded frame boundary. Seek performs no hidden historical playback:
+
+```text
+invalidate Player generation
+→ stop normal producer when possible
+→ Replay Host stops only the service child it owns
+→ delete/reset only replay-owned DB artifacts
+→ restart unchanged normal service on fresh replay DB
+→ selected frame becomes first authoritative replay cycle
+→ continue at recorded 1x spacing
+```
+
+Missing prior history after seek is correct and equivalent to starting the live application at that real market moment.
+
+Replay Host must use explicit child/process ownership and replay-only DB path ownership. If the normal service port is occupied by a process it did not create, it fails closed instead of attaching to, stopping or resetting it.
+
+## 34. Replay product surfaces
+
+Replay reuses normal read and analytical surfaces against the isolated replay DB:
+
+```text
+Current
+Detail / History
+Scanner
+Demo Buy
+AI Investigation
+```
+
+No Viewer/Scanner call receives an `isReplay` parameter. The existing server/shared producer protocol remains unaware of recording, seek, speed or replay identity.
+
+## 35. Replay packaging / test isolation
+
+Replay receives a dedicated browser artifact and operator launcher. Ordinary live/demo commands retain existing semantics and do not auto-load Replay.
+
+Replay timing is primarily tested with deterministic/fake clocks. A short real-wall-clock integration smoke is allowed; multi-hour real-time test playback is not.
+
+Normal local acceptance must not silently inherit long Replay waits.
+
+## 36. Release boundary
+
+Deterministic branch-9 implementation/reclosure completes before final target-machine/authenticated acceptance resumes.
+
+The exact final candidate must prove Demo Buy capture/evaluation, Auto operability, targeted refresh, AI Investigation pack generation/regeneration, the permission-independent standalone IBKR order-service contract, and the complete Replay recorder/file/player/host/mid-start/next-day contract locally before final acceptance is considered complete.
 
 Actual live order submission may remain `PENDING_EXTERNAL_PERMISSION` when IBKR permission is not yet available; no live-success evidence may be fabricated.
