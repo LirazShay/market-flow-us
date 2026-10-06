@@ -15,6 +15,8 @@ export const ERROR_CODES = Object.freeze({
   UNIVERSE_REVISION_MISMATCH: "UNIVERSE_REVISION_MISMATCH",
   CYCLE_INVALID: "CYCLE_INVALID",
   CURSOR_INVALID: "CURSOR_INVALID",
+  DEMO_BUY_CURSOR_INVALID: "DEMO_BUY_CURSOR_INVALID",
+  DEMO_BUY_BASELINE_INTEGRITY: "DEMO_BUY_BASELINE_INTEGRITY",
   NOT_FOUND: "NOT_FOUND",
   SCANNER_EMPTY_SQL: "SCANNER_EMPTY_SQL",
   SCANNER_MULTIPLE_STATEMENTS: "SCANNER_MULTIPLE_STATEMENTS",
@@ -40,6 +42,8 @@ const SAFE_MESSAGES = Object.freeze({
   [ERROR_CODES.UNIVERSE_REVISION_MISMATCH]: "Universe revision does not match.",
   [ERROR_CODES.CYCLE_INVALID]: "Cycle payload is invalid.",
   [ERROR_CODES.CURSOR_INVALID]: "History cursor is invalid.",
+  [ERROR_CODES.DEMO_BUY_CURSOR_INVALID]: "Demo Buy cursor is invalid.",
+  [ERROR_CODES.DEMO_BUY_BASELINE_INTEGRITY]: "Demo Buy baseline authority is missing.",
   [ERROR_CODES.NOT_FOUND]: "Requested item was not found.",
   [ERROR_CODES.SCANNER_EMPTY_SQL]: "Scanner SQL is empty.",
   [ERROR_CODES.SCANNER_MULTIPLE_STATEMENTS]: "Scanner accepts exactly one statement.",
@@ -73,7 +77,10 @@ const VIEWER_OPERATIONS = new Set([
   "scanner.queries.create",
   "scanner.queries.update",
   "scanner.queries.delete",
-  "demo.buy.capture"
+  "demo.buy.capture",
+  "demo.buy.page",
+  "demo.buy.observation.get",
+  "demo.buy.capture.get"
 ]);
 
 export const REQUEST_TYPES = Object.freeze([
@@ -218,6 +225,22 @@ function validateDemoBuyCapture(payload) {
   }
 }
 
+function validateDemoBuyPage(payload) {
+  assertExactKeys(payload, ["cursor"]);
+  if (payload.cursor !== null) assertNonEmptyString(payload.cursor, 4096);
+}
+
+function validateDemoBuyObservationGet(payload) {
+  assertExactKeys(payload, ["captureId", "securityId"]);
+  assertSafeInteger(payload.captureId, { min: 1 });
+  assertNonEmptyString(payload.securityId, 128);
+}
+
+function validateDemoBuyCaptureGet(payload) {
+  assertExactKeys(payload, ["captureId"]);
+  assertSafeInteger(payload.captureId, { min: 1 });
+}
+
 const PAYLOAD_VALIDATORS = Object.freeze({
   "client.hello": validateHello,
   "producer.session.start": validateSessionStart,
@@ -236,7 +259,10 @@ const PAYLOAD_VALIDATORS = Object.freeze({
   "scanner.queries.create": validateSavedQueryCreate,
   "scanner.queries.update": validateSavedQueryUpdate,
   "scanner.queries.delete": validateSavedQueryDelete,
-  "demo.buy.capture": validateDemoBuyCapture
+  "demo.buy.capture": validateDemoBuyCapture,
+  "demo.buy.page": validateDemoBuyPage,
+  "demo.buy.observation.get": validateDemoBuyObservationGet,
+  "demo.buy.capture.get": validateDemoBuyCaptureGet
 });
 
 export function isOperationAllowed(role, type) {
