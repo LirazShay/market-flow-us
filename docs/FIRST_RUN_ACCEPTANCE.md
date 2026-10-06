@@ -2,27 +2,29 @@
 
 זהו מסלול הקבלה הסדרתי למחשב Windows שמריץ את Market Flow US בפעם הראשונה.
 
-הכלל החשוב ביותר: **מבצעים checkpoint אחד בכל פעם ועוצרים ב־FAIL הראשון.** אין לדלג קדימה כדי לאסוף רעש נוסף. אחרי תיקון חוזרים מה־checkpoint הירוק האחרון, אלא אם התיקון ביטל evidence קודם.
+הכלל החשוב ביותר: **מבצעים checkpoint אחד בכל פעם ועוצרים ב־FAIL הראשון.** אחרי תיקון חוזרים מה־checkpoint הירוק האחרון שה־fix לא ביטל.
 
-אין להעתיק או לשמור בדוחות credentials, cookies, tokens, authorization/session data, account identifiers, full authenticated responses או private browser state.
+אין להעתיק או לשמור בדוחות credentials, cookies, caller tokens, authorization/session data, account identifiers, raw authenticated responses או private browser state.
 
-## FR-0 — Freeze exact candidate
+## FR-0 — Freeze exact post-order-service candidate
 
-זהו checkpoint של release/GitHub truth, לא פעולה על מחשב היעד. לפני שמבקשים מהמשתמש להתקין או לבדוק משהו, המאמת קורא fresh `main` ומוודא:
+לפני כל בדיקה במחשב היעד, קרא fresh `main` וודא ש־TREE `8.4` נסגר וש־TREE `7.4` הוא השלב הנוכחי.
 
-- `STATUS.yaml` ו־`.planning/STATUS.yaml` עדיין מצביעים על TREE `7.4`;
-- `.planning/EXECUTOR_HANDOFF.md` עדיין מצמיד את ה־product candidate המדויק:
+ה־product candidate שנקבע על ידי branch-8 deterministic reclosure הוא:
 
 ```text
-f2789a4ec43e0878688aa9ea29c647e40a1154b6
+28e950afc1c4bfe4322d0593f483d05d92553e2d
 ```
 
-- commits מאוחרים יותר ב־`main` הם planning/docs/metadata בלבד ואינם מחליפים את ה־candidate;
-- אין PR release פתוח או product work לא ממוזג שמחליף את ה־candidate.
+זהו SHA של המוצר אחרי מימוש ה־IBKR order-service. commits מאוחרים יותר שהם planning/docs/metadata בלבד אינם מחליפים אותו אוטומטית כמוצר שנבדק.
 
-PASS: ה־candidate לעיל מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
+PASS:
 
-FAIL: זהות ה־candidate אינה חד־משמעית, ה־status כבר לא מאשר `7.4`, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
+- `.planning/EXECUTOR_HANDOFF.md` מצמיד את אותו SHA;
+- `STATUS.yaml` / `.planning/STATUS.yaml` מאשרים TREE `7.4`;
+- אין PR מוצר/release פתוח שמחליף את ה־candidate.
+
+FAIL: זהות ה־candidate אינה חד־משמעית או `8.4` עדיין לא סגור.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -35,55 +37,65 @@ git --version
 powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 ```
 
-נדרש Node.js `24.x`, npm דרך אותה התקנת Node, Git ו־PowerShell תקינים, disk write תקין ו־loopback מקומי זמין.
+נדרש:
+
+- Node.js `24.x`;
+- npm דרך אותה התקנת Node;
+- Git ו־PowerShell תקינים;
+- disk write תקין;
+- loopback מקומי זמין;
+- ports `8765` ו־`8770` אינם תפוסים על ידי process מתחרה;
+- Chromium-family browser למסלול ה־market-data;
+- Client Portal Gateway זמין בהמשך אם מבצעים את FR-11B.
 
 אל תריץ `npm ci` לפני ש־FR-1 ירוק.
 
 ## FR-2 — Repository acquisition/update
 
-אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, השתמש בו רק אם ה־working tree נקי. לאחר מכן pin את ה־checkout ל־accepted SHA שהוקפא ב־FR-0; אין דרישה שה־branch יהיה `main`, ו־`main` מאוחר יותר עם metadata בלבד אינו ה־product candidate.
+אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, עצור אם `git status --short` אינו ריק.
 
-בריפו קיים:
+לאחר fetch, pin את ה־checkout ל־candidate המדויק:
 
 ```text
 git fetch origin
 git status --short
-git switch --detach f2789a4ec43e0878688aa9ea29c647e40a1154b6
+git switch --detach 28e950afc1c4bfe4322d0593f483d05d92553e2d
 git status --short
 git rev-parse HEAD
 ```
 
-אם `git status --short` הראשון אינו ריק — עצור לפני `git switch` ואל תדרוס שינוי מקומי.
-
-PASS:
-
-- `git status --short` ריק לפני ואחרי החלפת ה־candidate;
-- `HEAD` הוא בדיוק `f2789a4ec43e0878688aa9ea29c647e40a1154b6`;
-- detached checkout תקין ומועדף ל־acceptance; אין צורך להיות על branch `main`;
-- אין substitution שקט ל־SHA מאוחר יותר של metadata בלבד.
+PASS: ה־working tree נקי ו־`HEAD` הוא בדיוק ה־SHA לעיל.
 
 ## FR-3 — Deterministic dependency install
 
-הפעל:
+הרץ:
 
 ```text
 SETUP.cmd
 ```
 
-הוא מבצע Node 24 preflight, `npm ci` ו־Playwright Chromium install.
+Expected:
 
-PASS: setup יוצא בהצלחה; `node_modules` קיים; Chromium המוצמד הותקן.
+```text
+Node 24 preflight
+→ npm ci
+→ pinned Playwright Chromium install
+→ setup complete
+```
 
-## FR-4 — Fast local correctness
+## FR-4 — Fast local correctness + order-service deterministic proof
 
 הרץ בנפרד:
 
 ```text
 npm run test:unit
 npm run test:service
+npm run test:acceptance:order
 ```
 
-PASS: שתי הסוויטות ירוקות. שמור wall-clock timing לצורכי אבחון בלבד.
+PASS: שלושתם ירוקים.
+
+`test:acceptance:order` משתמש רק ב־synthetic provider/account data ומוכיח את מסלול ה־IBKR order-service ללא הרשאת מסחר אמיתית. הוא אינו נחשב real-order evidence.
 
 ## FR-5 — Browser build + Chromium E2E
 
@@ -92,7 +104,7 @@ npm run build:browser
 npm run test:e2e
 ```
 
-PASS: browser artifacts נבנו תחת `dist`, וכל E2E ירוק ללא retry/timeout שמסתיר defect.
+PASS: browser artifacts נבנים תחת `dist`, וכל Chromium E2E ירוק ללא retry/timeout שמסתיר defect.
 
 ## FR-6 — Local demo/UI smoke
 
@@ -102,15 +114,14 @@ START_DEMO.cmd
 
 בדוק ידנית:
 
-- demo נפתח;
 - runtime מגיע ל־running;
 - Current מציג synthetic U.S. rows;
 - Detail/History נפתח משורה;
 - Scanner מריץ built-in בטוח;
-- Demo Buy זמין מה־Scanner ומסך Demo Buy נפתח;
-- progressive outcomes מוצגים ו־targeted `Refresh observation` עובד;
-- `Investigate with AI` זמין עבור observation קיים ואינו שולח דבר אוטומטית החוצה;
-- Generate/Regenerate מציגים נתיב pack יחסי בלבד וה־clipboard כולל fallback ידני;
+- Demo Buy זמין ומציג progressive outcomes;
+- targeted `Refresh observation` עובד;
+- `Investigate with AI` זמין ואינו שולח דבר אוטומטית החוצה;
+- Generate/Regenerate מחזירים רק product-relative pack metadata ויש clipboard fallback;
 - Support Snapshot זמין;
 - `Ctrl+C` עוצר נקי;
 - restart לא משחית את `.demo/market-flow-us.duckdb`.
@@ -121,11 +132,11 @@ START_DEMO.cmd
 RUN_LOCAL_ACCEPTANCE.cmd static
 ```
 
-PASS: כמה responses זהים מושלמים מקבלים durable ACK; History גדל לכל cycle; Latest נשאר זהה; universe revision נשמר; Current/Security/History ו־ownership תקינים; clean stop; report sanitized ומכיל candidate/profile.
+PASS: responses זהים מקבלים durable ACK, History גדל לכל cycle, Current רשאי להישאר זהה כי המקור זהה, universe/reads/ownership תקינים, clean stop, והדו״ח sanitized ו־SHA-bound.
 
-אין דרישת movement בשלב הזה.
+אין דרישת movement.
 
-## FR-8 — Local Fake Leumi dynamic/recovery/restart + post-feature closure
+## FR-8 — Local Fake dynamic/recovery/restart + Demo Buy/AI closure
 
 הרץ כל תת־שלב בנפרד:
 
@@ -140,30 +151,14 @@ RUN_LOCAL_ACCEPTANCE.cmd ai-investigation-ui
 RUN_LOCAL_ACCEPTANCE.cmd ai-pack-safety
 ```
 
-אפשר להריץ רק את ארבעת תתי־השלבים החדשים יחד:
+אפשר גם:
 
 ```text
 RUN_LOCAL_ACCEPTANCE.cmd feature
-```
-
-או את כל FR-7/FR-8 הדטרמיניסטי יחד:
-
-```text
 RUN_LOCAL_ACCEPTANCE.cmd all
 ```
 
-PASS כולל:
-
-- `FR-8A` moving values מגיעים ל־Current ונשמרים ב־History;
-- `FR-8B` add/remove membership מקבל revision ACK לפני commit של אותה response;
-- `FR-8C` provider failure נכשל fail-closed ואז recovery חוזר ל־commit תקין, ו־Scanner רואה את התנועה הדטרמיניסטית;
-- `FR-8D` restart משמר authority שנשמרה;
-- `FR-8E` Scanner generation יוצר Demo Buy capture אמיתי דרך Browser → Service → DuckDB עם provenance/baseline תקינים;
-- `FR-8F` Demo Buy מציג progressive outcomes, `Refresh latest` ו־targeted `Refresh observation` בלי לאבד paging/state;
-- `FR-8G` Investigate with AI מוכיח position/context semantics, generate/regenerate ו־clipboard/fallback דרך ה־UI;
-- `FR-8H` AI Investigation Pack נוצר דרך השירות האמיתי, מתקדם מ־`PARTIAL_OUTCOME` ל־`COMPLETE_OUTCOME` לאחר evidence נוסף, regeneration אינו דורס pack קודם, ואין leakage של operational/session canaries לקבצים/תגובה/diagnostics.
-
-ה־`feature` וה־`all` אינם כוללים את workload הכבד של FR-9.
+PASS כולל movement ל־Current/History, membership revision ACK, fail-closed provider recovery, restart authority, Demo Buy provenance/outcomes, ו־AI Pack sharing-safety ללא operational/session leakage.
 
 ## FR-9 — Target-machine load acceptance
 
@@ -174,23 +169,21 @@ RUN_LOCAL_ACCEPTANCE.cmd isolated
 RUN_LOCAL_ACCEPTANCE.cmd target
 ```
 
-`isolated` חייב לכלול persistence וגם one-trading-day read/Scanner probes בלי שכבות browser/HTTP לא רלוונטיות.
-
-`target` הוא הפרופיל המייצג:
+ה־target profile הוא:
 
 ```text
 4096 securities × 180 completed end-to-end cycles = 737280 history rows
 ```
 
-ה־target-machine acceptance ceiling לפרופיל end-to-end הוא חמש דקות. שמור את ה־sanitized reports ואת ה־candidate SHA.
+ה־end-to-end ceiling הוא חמש דקות במחשב היעד. שמור רק sanitized reports ו־candidate SHA.
 
 ## FR-10 — Daily DB lifecycle
 
-עם active-day data, Demo Buy captures ו־saved Scanner query קיימים:
+עם active-day data, Demo Buy capture/item ו־saved Scanner query קיימים:
 
-1. עצור producer/service עם `Ctrl+C`.
+1. עצור producer/service.
 2. ודא שאין process שמחזיק את ה־DB.
-3. הפעל:
+3. הרץ:
 
 ```text
 NEW_TRADING_DAY.cmd
@@ -198,50 +191,102 @@ NEW_TRADING_DAY.cmd
 
 PASS:
 
-- source DB תקין ב־schema v3 או v4 מתקבל לפי חוזה ה־migration/rollover;
-- prior-day DB archived ללא שינוי תחת `data/archive/`;
-- fresh active DB נוצר כ־schema v4;
-- active market tables מתחילים נקיים;
-- Demo Buy capture/item tables מתחילות נקיות ליום החדש;
+- source schema v3/v4 תקין מתקבל;
+- archive אופציונלי שומר prior-day source ללא שינוי;
+- fresh active DB הוא schema v4;
+- market + Demo Buy state נקיים ליום החדש;
 - saved Scanner queries נשמרים;
-- אין rollover בזמן session פעילה.
+- running session מונע rollover.
 
-## FR-11 — Real-provider deployment smoke
+ה־IBKR execution DuckDB נפרד ואינו חלק מ־New Trading Day.
 
-1. התחבר רגיל לעמוד הספק בדפדפן והשאר אותו פתוח.
-2. הפעל:
+## FR-11A — Market-data provider deployment smoke
+
+1. התחבר רגיל לעמוד ספק ה־market-data והשאר אותו פתוח.
+2. הרץ:
 
 ```text
 START_MARKET_FLOW_US.cmd
 ```
 
-3. כאשר מתבקש URL, הדבק את כתובת העמוד מה־Address Bar. ה־launcher מצמצם אותה ל־Origin המאושר.
-4. הוסף/עדכן Bookmark מה־bookmarklet שנוצר תחת `dist/browser/`.
-5. הפעל את ה־bookmarklet ידנית בעמוד המחובר.
+3. הדבק את כתובת העמוד כאשר ה־launcher מבקש URL.
+4. הפעל ידנית את ה־bookmarklet שנוצר.
 
-PASS: runtime/service מתחברים ומגיעים ל־running או לשגיאת provider יציבה ומאובחנת, בלי להעתיק authentication material.
+PASS: runtime/service מגיעים ל־running או לשגיאת provider יציבה ומאובחנת ללא העתקת authentication material.
 
 אם יש provider error — עצור ותקן לפני FR-12.
 
-## FR-12 — Authenticated closed/static-market acceptance
+## FR-11B — IBKR CPGW + standalone order-service compatibility
 
-הכן את ה־SHA-bound live gate:
+זהו boundary נפרד ממסלול ה־market-data.
+
+Prerequisite: Client Portal Gateway כבר רץ והמשתמש כבר authenticated אליו ידנית. המוצר אינו מבצע credential login אוטומטי.
+
+### 11B-1 — deterministic standalone proof
+
+הרץ:
+
+```text
+RUN_IBKR_ORDER_ACCEPTANCE.cmd
+```
+
+PASS: דו״ח sanitized עם `providerEvidence=SYNTHETIC_ONLY` ו־`realOrderSubmitted=false`, שמוכיח:
+
+- local caller auth + browser-origin rejection;
+- BUY/SELL preview;
+- DRY_RUN ללא provider submit;
+- requestId idempotency + restart token rotation;
+- explicit fake-LIVE reply confirmation;
+- partial fill / cancellation / full fill;
+- `ACKNOWLEDGEMENT_UNKNOWN` reconciliation ללא blind resubmit;
+- no-short-opening SELL guard;
+- clean stop.
+
+### 11B-2 — real CPGW session compatibility
+
+הרץ:
+
+```text
+CHECK_IBKR_SESSION.cmd
+```
+
+אם ה־localhost certificate אינו trusted ונדרש fallback מתועד ומצומצם ל־CPGW בלבד:
+
+```text
+CHECK_IBKR_SESSION.cmd INSECURE_LOCALHOST_TLS
+```
+
+PASS: מתקבל sanitized session-compatibility result דרך ה־protected local order-service path. הבדיקה אינה שולחת order ואינה שומרת/מדפיסה caller token, provider account ID, credentials או raw authenticated body.
+
+### 11B-3 — external trading permission
+
+אם הרשאת המסחר האמיתית אינה זמינה, רשום בדיוק:
+
+```text
+PENDING_EXTERNAL_PERMISSION
+```
+
+זה מצב תקין של external evidence ואינו מוחלף ב־synthetic success.
+
+אם permission כן קיימת, כל real-order verification חייב להיות user-initiated, bounded, SHA-bound ו־provider-compliant.
+
+## FR-12 — Authenticated closed/static-market acceptance
 
 ```text
 PREPARE_LIVE_VERIFICATION.cmd
 ```
 
-הפעל את ה־bookmarklet שנוצר בעמוד הספק המחובר.
+הפעל את ה־bookmarklet בעמוד ה־market-data המאומת.
 
-PASS של ה־base gate מחמיר יותר מהמינימום של TREE: הוא דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
+PASS של ה־base gate דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, יחד עם validation, universe handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop.
 
-ל־FR-12 נדרש:
+נדרש:
 
 ```text
 overall = "PASS"
 ```
 
-אין דרישת movement בשלב הזה. בשוק סטטי/לפני המסחר התוצאה הצפויה והתקינה יכולה להיות:
+בשוק סגור/סטטי תוצאה חוקית יכולה להיות:
 
 ```text
 overall = "PASS"
@@ -249,32 +294,26 @@ movement.status = "PENDING"
 movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
 ```
 
-זה **FR-12 PASS**: החיבור האמיתי וה־authority path הוכחו, ורק הוכחת תנועה אמיתית נשארה ל־FR-13.
+שוק סטטי חוקי רק אם cycles חדשים ממשיכים לקבל COMMIT ACK ו־History ממשיך לגדול.
 
-כדי להבדיל שוק סטטי מ־collector תקוע, חייבים לראות cycles חדשים: כל response מלאה, COMMIT ACK חדש לכל cycle, History גדל, ו־Current נשאר זהה רק משום שערכי המקור זהים.
+### PRE-MARKET READINESS
 
-### PRE-MARKET READINESS checkpoint
-
-אם FR-0..FR-12 ירוקים, רשום:
+אם FR-0..FR-12 ירוקים, כולל FR-11A/FR-11B, רשום:
 
 ```text
 PRE-MARKET READINESS = PASS
 FR-13 = PENDING MARKET MOVEMENT
 ```
 
-שמור את ה־sanitized FR-12 report ואת ה־accepted candidate SHA.
+`PENDING_EXTERNAL_PERMISSION` עבור real-order placement אופציונלי אינו מבטל את PRE-MARKET READINESS כאשר deterministic order acceptance ו־real CPGW session compatibility ירוקים.
 
-אם לאחר מכן רק נפתח המסחר, ובינתיים **לא** השתנו candidate SHA, code/runtime, dependencies או machine configuration רלוונטי, אין צורך לחזור על FR-0..FR-12. ממשיכים ישירות ל־FR-13 על אותו candidate.
-
-אם התגלה defect ותוקן, חוזרים ל־checkpoint הירוק האחרון שה־fix לא ביטל. שינוי candidate או שינוי runtime שמערער evidence קודם מחייב חזרה לנקודה המוקדמת ביותר שהושפעה.
+אם רק נפתח המסחר ולא השתנו candidate/runtime/dependencies/machine configuration רלוונטיים — ממשיכים ישירות ל־FR-13.
 
 ## FR-13 — Authenticated market-open acceptance
 
-על אותו accepted candidate, בזמן שוק פעיל, הפעל שוב את אותו SHA-bound gate.
+על אותו accepted candidate, בזמן שוק פעיל, הרץ שוב את אותו SHA-bound market-data gate.
 
-ה־gate מפיק evidence מכני נפרד לתנועה מתוך **טווח ה־cycles של הריצה הנוכחית בלבד**. הוא אינו משתמש ב־`collectedAtMs` כדי להמציא תנועה; הוא מחפש שינוי בשדות provider שמורים (`Price`, `ChangePercent`, `BidRate`, `AskRate`, `DailyVolume`, `TradeDateTime`) ומוכיח את ה־witness דרך Current ו־History סמכותיים.
-
-PASS של FR-13 דורש יחד:
+PASS דורש:
 
 ```text
 overall = "PASS"
@@ -284,59 +323,54 @@ movement.currentReflected = true
 movement.historyReflected = true
 ```
 
-ובכך מתקיימים גם:
+וכן לפחות 20 consecutive complete provider cycles לאורך 60 שניות לפחות, market/freshness movement אמיתי, committed Current/History reflection, bounded Scanner, ownership/status תקינים ו־clean stop.
 
-```text
-at least 20 consecutive complete ScreenerHulPaging3 cycles
-spanning at least 60 seconds
-+ observable provider market/freshness change
-+ committed Current/History reflection
-+ bounded Scanner
-+ correct ownership/status
-+ clean stop
-```
-
-אם ה־base gate עובר אבל לא נצפה שינוי provider אמיתי:
-
-```text
-movement.status = "PENDING"
-```
-
-FR-13 נשאר `pending/inconclusive` ויש להריץ שוב מאוחר יותר. אסור להחליש את ה־gate או לסמן PASS ידנית.
-
-אם נצפה שינוי אבל Current/History reflection לא הוכח:
-
-```text
-movement.status = "FAIL"
-```
-
-עוצרים ומתקנים לפני FR-14.
+אם לא נצפה provider-field change אמיתי, movement נשאר `PENDING`. אם change נצפה אבל Current/History reflection לא הוכח, movement הוא `FAIL` ויש לתקן לפני FR-14.
 
 ## FR-14 — Final evidence and operational handoff
 
 רשום בקיצור:
 
-- accepted SHA;
-- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H;
-- אם נעשה two-pass run: FR-12 pre-market report + FR-13 market-open report על אותו accepted SHA;
-- שמות/מיקומי sanitized reports שנשמרו מקומית;
-- active DB path: `data/market-flow-us.duckdb`;
-- daily stop/archive/new-day procedure עבר בפועל ויצר fresh schema v4;
-- normal start/stop commands ידועים;
-- Demo Buy/AI Investigation recovery path ידוע;
-- Support Snapshot recovery path ידוע;
-- אין blocking defect פתוח;
-- `main` CI ירוק אחרי כל fix שנדרש במהלך acceptance.
+- accepted post-order-service SHA: `28e950afc1c4bfe4322d0593f483d05d92553e2d`;
+- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H ו־FR-11A/FR-11B;
+- deterministic IBKR order-service acceptance status;
+- real CPGW session compatibility status;
+- real-order evidence: `PASS` רק אם בוצע בפועל עם permission וביוזמת המשתמש; אחרת בדיוק `PENDING_EXTERNAL_PERMISSION`;
+- FR-12/FR-13 reports על אותו accepted SHA אם נעשה two-pass;
+- sanitized local report paths;
+- active market DB: `data/market-flow-us.duckdb`;
+- separate order execution DB לפי `docs/IBKR_ORDER_SERVICE_OPERATOR.md`;
+- daily stop/archive/new-day procedure;
+- normal start/stop commands לשני התהליכים;
+- Demo Buy/AI Investigation recovery path;
+- Support Snapshot path;
+- אין blocking defect;
+- required CI/main green אחרי כל fix שנדרש.
 
-רק לאחר שכל success evidence של TREE `7.4` ירוק וה־PR/merge/main-green closure הושלם, מותר להכריז על completion של המוצר.
+רק לאחר שכל success evidence של TREE `7.4` ירוק וה־PR/merge/main-green/open-PR closure הושלם, מותר להכריז על completion כולל של המוצר.
 
 ## Troubleshooting routing
 
-בעת כשל, החזר רק את ה־checkpoint הנוכחי ואת ה־sanitized error/report שלו. אין צורך לשלוח credentials, cookies, session data או full provider responses.
+```text
+FR-0..FR-2   repository/release state
+FR-3         toolchain/install
+FR-4         unit/service/order deterministic correctness
+FR-5         build/Chromium E2E
+FR-6         local UI/runtime
+FR-7..FR-8  Local Fake / Demo Buy / AI
+FR-9         target-machine persistence/read/full-load performance
+FR-10        DB lifecycle/new-day
+FR-11A       market-data deployment/provider startup
+FR-11B       IBKR order-service / CPGW compatibility
+FR-12        authenticated static market-data compatibility
+FR-13        real market movement/reflection
+FR-14        final evidence/operational closure
+```
 
 מסמכים משלימים:
 
-- `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload, כולל Demo Buy/AI;
-- `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound gate;
-- `docs/USER_GUIDE.md` — שימוש שוטף במוצר;
+- `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — startup, token handling, CPGW ו־order acceptance;
+- `docs/LOCAL_FAKE_ACCEPTANCE.md` — Local Fake/workload profiles;
+- `docs/LIVE_VERIFICATION.md` — authenticated market-data static + movement gate;
+- `docs/USER_GUIDE.md` — שימוש שוטף;
 - `START_HERE.md` — כניסה קצרה להפעלה היומיומית.
