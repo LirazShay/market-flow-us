@@ -1,8 +1,9 @@
 version: 2
-plan_state: frozen
-current_stage: "implementation"
-current_node: "7.4"
+plan_state: active
+replan_mode: execution_reopen
+current_stage: "planning"
+current_node: "8"
 blockers: []
-next_action: "Chat 17 / TREE 7.4 remains in progress. FR-0 PASS: accepted product candidate remains f2789a4ec43e0878688aa9ea29c647e40a1154b6; PR #32 correction is squash-merged; required Planning Docs and Fast CI passed on the PR and on main; open-PR audit is clean; later planning/docs-only main commits do not replace the accepted product candidate. Resume at FR-1 host prerequisite preflight on the target Windows machine. Do not run npm ci before FR-1 is green."
+next_action: "User requested a new standalone IBKR buy/sell mini-project before completing TREE 7.4 target-machine acceptance. Planning is reopened at the smallest new scope: add branch 8 for an isolated Node 24 ibkr-order-service using Interactive Brokers Client Portal Web API through Client Portal Gateway, dry-run by default and live-capable only after explicit enablement plus provider permission. .planning/IBKR_ORDER_MINI_PROJECT.md contains the researched provider boundary, safety/privacy contract, order intent/API target, synthetic-provider proof and proposed 8.1->8.4 decomposition. Preserve existing execution truth; do not mark 7.4 done. Next: update GOAL/TREE/contracts/decisions/reviews/planning validator, perform whole-goal/final/external-user review, freeze, allocate the new leaves and update executor handoff before production implementation."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
-implementation_authorized: true
+implementation_authorized: false
