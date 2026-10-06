@@ -255,6 +255,23 @@ export function createMarketReplayPlayer({
     }
   }
 
+  function select(sequence) {
+    if (status === "empty") throw new Error("Replay source has no frames.");
+    if (status !== "ready" || sessionStarted || committedFrameCount !== 0 || requiresFreshRun) {
+      throw new Error("Replay start position can only change before the run starts.");
+    }
+    assertSequence(sequence, summary.frameCount, "selected sequence");
+    selectedSequence = sequence;
+    nextSequence = sequence;
+    committedSequence = null;
+    currentMembership = null;
+    segment = null;
+    pausedOriginalPositionMs = originalAt(sequence);
+    latestError = null;
+    notify();
+    return snapshotState();
+  }
+
   async function play() {
     if (status === "empty") throw new Error("Replay source has no frames.");
     if (status === "paused") return await resume();
@@ -352,6 +369,7 @@ export function createMarketReplayPlayer({
     pause,
     resume,
     stop,
+    select,
     seek,
     getState: snapshotState
   });
