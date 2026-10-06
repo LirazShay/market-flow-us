@@ -28,20 +28,30 @@ export function buildWorkloadEnvironment(profile, baseEnv = process.env) {
       ?? path.join(reportDir, `${profile}-end-to-end.json`),
     MARKET_FLOW_US_ISOLATED_REPORT:
       env.MARKET_FLOW_US_ISOLATED_REPORT
-      ?? path.join(reportDir, `${profile}-isolated.json`)
+      ?? path.join(reportDir, `${profile}-isolated.json`),
+    MARKET_FLOW_US_DEMO_BUY_REPORT:
+      env.MARKET_FLOW_US_DEMO_BUY_REPORT
+      ?? path.join(reportDir, `${profile}-demo-buy-evaluator.json`)
   };
 }
 
 export function resolveWorkloadTestFiles(profile) {
   if (profile === "target-e2e") {
-    return ["tests/workload/representative-workload.test.mjs"];
+    return [
+      "tests/workload/representative-workload.test.mjs",
+      "tests/workload/demo-buy-evaluator-probe.test.mjs"
+    ];
   }
   if (profile === "target-day") {
-    return ["tests/workload/isolated-probes.test.mjs"];
+    return [
+      "tests/workload/isolated-probes.test.mjs",
+      "tests/workload/demo-buy-evaluator-probe.test.mjs"
+    ];
   }
   return [
     "tests/workload/representative-workload.test.mjs",
-    "tests/workload/isolated-probes.test.mjs"
+    "tests/workload/isolated-probes.test.mjs",
+    "tests/workload/demo-buy-evaluator-probe.test.mjs"
   ];
 }
 
