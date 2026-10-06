@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "8.3"
+current_node: "8.4"
 blockers: []
-next_action: "Chat 18 / TREE 8.2 is complete with deterministic CPGW lifecycle proof and required Fast/Planning CI green. After PR #39 is squash-merged and main required CI is green, Chat 19 / TREE 8.3 is the next executable leaf: add the thin Windows/operator launcher, explicit DRY_RUN/LIVE startup semantics, deterministic standalone acceptance and stable authenticated localhost integration documentation. Do not advance to 8.4 until 8.3 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
+next_action: "Chat 19 / TREE 8.3 is complete with standalone order-service operator packaging, secure ephemeral caller-token handoff, deterministic synthetic acceptance and required Fast/Browser/Planning/Workload CI green. After PR #40 is squash-merged and main required CI is green, Chat 20 / TREE 8.4 is the next executable leaf: perform branch-8 deterministic reclosure across all IBKR order contracts plus affected generic contracts, run the full required deterministic gates, audit PR/main/open-PR truth and pin the exact post-order-service candidate SHA for final acceptance. Do not advance to 7.4 until 8.4 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
 last_review: "R-US-IBKR-ORDER-EXTERNAL"
 implementation_authorized: true

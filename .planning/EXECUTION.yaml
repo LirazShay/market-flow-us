@@ -86,7 +86,7 @@ chats:
 
   "19":
     nodes:
-      "8.3": { state: pending, result: null }
+      "8.3": { state: done, result: "Standalone IBKR order-service packaging is implemented with a real CPGW operator entrypoint, DRY_RUN-by-default/explicit-LIVE Windows startup, scoped loopback TLS/session check, ephemeral caller-token IPC seam, hardened loopback CPGW URL validation, stable authenticated localhost integration documentation and deterministic synthetic HTTP/DuckDB acceptance covering auth, BUY/SELL preview, restart idempotency, reply/cancel/fills, acknowledgement-unknown reconciliation and no-short SELL. Two packaging defects (unsupported port override and missing CMD call semantics) were root-caused and regression-guarded before closure. PR #40 head 8ed0e6fec3f203487d98aaea4f94925501a25f50 passed Fast CI including standalone order acceptance, Browser CI, Planning Docs CI and bounded Workload; final diff review found no remaining blocking defect." }
 
   "20":
     nodes:

@@ -11,14 +11,17 @@ async function launcher(name) {
 }
 
 test("Windows launchers remain thin wrappers around canonical npm commands", async () => {
-  const [setup, demo, reset, tests, real, live, newDay] = await Promise.all([
+  const [setup, demo, reset, tests, real, live, newDay, order, sessionCheck, orderAcceptance] = await Promise.all([
     launcher("SETUP.cmd"),
     launcher("START_DEMO.cmd"),
     launcher("RESET_DEMO.cmd"),
     launcher("RUN_TESTS.cmd"),
     launcher("START_MARKET_FLOW_US.cmd"),
     launcher("PREPARE_LIVE_VERIFICATION.cmd"),
-    launcher("NEW_TRADING_DAY.cmd")
+    launcher("NEW_TRADING_DAY.cmd"),
+    launcher("START_IBKR_ORDER_SERVICE.cmd"),
+    launcher("CHECK_IBKR_SESSION.cmd"),
+    launcher("RUN_IBKR_ORDER_ACCEPTANCE.cmd")
   ]);
 
   assert.match(setup, /npm ci/);
@@ -55,7 +58,24 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.doesNotMatch(newDay, /schema-v3 active DB/);
   assert.doesNotMatch(newDay, /\b(?:del|erase|rd|rmdir)\b/i);
 
-  for (const content of [setup, demo, reset, tests, real, live, newDay]) {
+  assert.match(order, /Starting standalone IBKR order service in DRY_RUN mode/);
+  assert.match(order, /if \/I "%~1"=="LIVE"/);
+  assert.match(order, /call npm run order-service -- --live/);
+  assert.match(order, /call npm run order-service(?:\r?\n|\s)/);
+  assert.match(order, /DRY_RUN cannot submit provider orders/);
+  assert.doesNotMatch(order, /caller.?token|account.?id|password|cookie/i);
+  assert.doesNotMatch(order, /npm run service(?:\s|$)/);
+
+  assert.match(sessionCheck, /call npm run order-service:session-check/);
+  assert.match(sessionCheck, /INSECURE_LOCALHOST_TLS/);
+  assert.match(sessionCheck, /--allow-insecure-loopback-tls/);
+  assert.doesNotMatch(sessionCheck, /--live/);
+
+  assert.match(orderAcceptance, /call npm run test:acceptance:order/);
+  assert.match(orderAcceptance, /synthetic-only/i);
+  assert.match(orderAcceptance, /never requires or claims a real-money order/i);
+
+  for (const content of [setup, demo, reset, tests, real, live, newDay, order, sessionCheck, orderAcceptance]) {
     assert.match(content, /pushd "%~dp0"/);
     assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }
