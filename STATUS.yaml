@@ -4,9 +4,9 @@ overall_status: in_progress
 
 current:
   chat: 21
-  node: "9.1"
-  title: "Market Replay recording authority and browser storage"
-  status: in_progress
+  node: "9.2"
+  title: "Market Replay portable recording format and file-backed source"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -42,7 +42,7 @@ execution:
   chats_total: 25
   implementation_leaves_total: 37
   current_chat: 21
-  current_node: "9.1"
+  current_node: "9.2"
   final_acceptance_node: "7.4"
 
 blockers: []
