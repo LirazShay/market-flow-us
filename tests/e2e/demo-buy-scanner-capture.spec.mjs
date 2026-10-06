@@ -42,6 +42,10 @@ async function stopRuntime(page) {
   });
 }
 
+async function latestCount(service) {
+  return Number((await service.rows("SELECT COUNT(*) AS count FROM latest"))[0].count);
+}
+
 async function captureCount(service) {
   return Number((await service.rows("SELECT COUNT(*) AS count FROM demo_buy_captures"))[0].count);
 }
@@ -59,6 +63,7 @@ test("Scanner Demo Buy manual/Auto capture stays generation-bound, keeps running
     await page.goto(fake.baseUrl);
     const viewer = await popupPromise;
     await waitForRunning(page);
+    await expect.poll(() => latestCount(service), { timeout: 5000 }).toBeGreaterThanOrEqual(2);
 
     await expect(viewer.getByRole("button", { name: "Demo Buy", exact: true })).toBeVisible();
 
