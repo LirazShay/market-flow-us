@@ -164,3 +164,20 @@ test("Demo Buy context serialization is deterministic and enforces the complete 
   assert.equal(firstJson, secondJson);
   assert.equal(new TextEncoder().encode(firstJson).byteLength <= DEMO_BUY_CONTEXT_MAX_BYTES, true);
 });
+
+test("Demo Buy shaping fails closed when the mandated 50x64 retained evidence cannot fit 256 KiB", () => {
+  const sourceColumns = columns([
+    "securityId",
+    ...Array.from({ length: DEMO_BUY_CONTEXT_MAX_COLUMNS - 1 }, (_, index) => `c${index + 1}`)
+  ]);
+  const payload = "x".repeat(DEMO_BUY_CONTEXT_MAX_CELL_BYTES);
+  const sourceRows = Array.from({ length: DEMO_BUY_CONTEXT_MAX_ROWS }, (_, rowIndex) => [
+    `SEC-${rowIndex + 1}`,
+    ...Array.from({ length: DEMO_BUY_CONTEXT_MAX_COLUMNS - 1 }, () => payload)
+  ]);
+
+  assert.throws(
+    () => shapeDemoBuyScannerContext({ columns: sourceColumns, rows: sourceRows }),
+    /256 KiB/i
+  );
+});
