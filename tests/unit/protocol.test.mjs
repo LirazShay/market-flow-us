@@ -19,6 +19,38 @@ const request = (type, payload, overrides = {}) => ({
   ...overrides
 });
 
+function demoBuyPayload() {
+  return {
+    items: [{ securityId: "42", resultRank: 1 }],
+    sourceQuery: {
+      queryId: null,
+      name: null,
+      sql: "SELECT security_id FROM latest",
+      intervalMs: 3000
+    },
+    sourceResult: {
+      startedAtMs: 100,
+      completedAtMs: 120,
+      rowCount: 1,
+      context: {
+        version: 1,
+        sourceRowCount: 1,
+        retainedRowCount: 1,
+        omittedRowCount: 0,
+        sourceColumnCount: 1,
+        identityColumn: { sourceIndex: 0, name: "security_id" },
+        retainedColumns: [{ sourceIndex: 0, name: "security_id", type: "VARCHAR" }],
+        omittedColumns: [],
+        rows: [{ resultRank: 1, values: ["42"] }],
+        cellMetadata: []
+      }
+    },
+    selectionMode: "all",
+    isAutomatic: false,
+    topX: null
+  };
+}
+
 function assertCode(fn, code) {
   assert.throws(fn, (error) => {
     assert.ok(error instanceof ProtocolValidationError);
@@ -79,17 +111,20 @@ const validCases = [
   ["scanner.queries.list", {}, "viewer"],
   ["scanner.queries.create", { name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
   ["scanner.queries.update", { queryId: "user:1", name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
-  ["scanner.queries.delete", { queryId: "user:1" }, "viewer"]
+  ["scanner.queries.delete", { queryId: "user:1" }, "viewer"],
+  ["demo.buy.capture", demoBuyPayload(), "viewer"]
 ];
 
 test("every protocol-v1 operation has an explicit valid payload boundary", () => {
-  assert.equal(REQUEST_TYPES.length, 17);
+  assert.equal(REQUEST_TYPES.length, 18);
   for (const [type, payload, role] of validCases) {
     assert.equal(validateRequest(request(type, payload), { role, helloComplete: true }).type, type);
   }
 });
 
 test("operation validators reject wrong or extra fields", () => {
+  const invalidDemoBuy = demoBuyPayload();
+  invalidDemoBuy.items = [{ securityId: "42", resultRank: 1, price: 10 }];
   const badCases = [
     ["producer.session.start", { startedAtMs: "1", config: {} }, "producer"],
     ["producer.universe.replace", { loadedAtMs: 1, recordCount: 1, securities: {}, extra: true }, "producer"],
@@ -107,7 +142,8 @@ test("operation validators reject wrong or extra fields", () => {
     ["scanner.queries.create", { name: "", sql: "select 1", intervalMs: 5000 }, "viewer"],
     ["scanner.queries.create", { name: "One", sql: 1, intervalMs: 5000 }, "viewer"],
     ["scanner.queries.update", { queryId: "", name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
-    ["scanner.queries.delete", { queryId: "user:1", extra: true }, "viewer"]
+    ["scanner.queries.delete", { queryId: "user:1", extra: true }, "viewer"],
+    ["demo.buy.capture", invalidDemoBuy, "viewer"]
   ];
 
   for (const [type, payload, role] of badCases) {
@@ -122,6 +158,7 @@ test("role permissions are closed and exact", () => {
   assert.equal(isOperationAllowed("producer", "producer.heartbeat"), true);
   assert.equal(isOperationAllowed("producer", "viewer.current.get"), false);
   assert.equal(isOperationAllowed("viewer", "scanner.execute"), true);
+  assert.equal(isOperationAllowed("viewer", "demo.buy.capture"), true);
   assert.equal(isOperationAllowed("viewer", "producer.cycle.commit"), false);
 
   assertCode(
