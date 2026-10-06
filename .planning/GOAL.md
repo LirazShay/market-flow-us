@@ -68,6 +68,8 @@ explicit normalized order intent
 
 The service is local, loopback-only and public-safe. It never stores credentials, cookies/session tokens or real provider account identifiers. Manual Client Portal Gateway authentication remains user-owned.
 
+Loopback binding alone is not authorization. Every protected local endpoint requires the durable ephemeral per-run caller credential defined by the branch-8 security contract, and browser-origin requests are rejected by default before provider logic.
+
 The initial execution scope remains narrow:
 
 ```text
@@ -77,6 +79,8 @@ LMT / MKT
 DAY / GTC
 no short opening
 ```
+
+A live SELL fails closed when the service cannot establish that requested quantity is covered by the known long position. Lost provider-submit acknowledgement remains unknown rather than rejection and must reconcile before any possible later submit.
 
 ## Market Recording + Replay lane
 
@@ -113,7 +117,7 @@ Replay preserves the original interval between recorded validated snapshots. Ini
 
 `Pause` stops emission without resetting replay history. `Resume` starts a new replay timing segment at the current wall clock, preserving the remaining inter-frame delay. A real pause therefore may appear as a real time gap in history; no server virtual clock is introduced.
 
-A small Replay Host may orchestrate the unchanged service process and replay-only DB for `Seek`. It may start/stop/reset only replay-owned artifacts and must never persist market frames itself, execute Scanner SQL, translate the producer protocol or touch the normal live DB.
+A small Replay Host may orchestrate the unchanged service process and replay-only DB for `Seek`. It may start/stop/reset only replay-owned artifacts and must never persist market frames itself, execute Scanner SQL, translate the producer protocol, stop an unrelated pre-existing service process or touch the normal live DB.
 
 ## Stable product direction
 
@@ -131,13 +135,18 @@ A small Replay Host may orchestrate the unchanged service process and replay-onl
 - Phase-1 Demo Buy evaluates `Price` after 10s, 20s, 30s, 45s, 60s, 90s, 120s, 3m, 5m and 10m using the first qualifying post-watermark history observation at/after each target time.
 - Manual and automatic Demo Buy capture preserve bounded immutable Scanner comparison provenance.
 - The AI Investigation Pack remains deterministic local evidence and never sends data automatically to an AI provider.
-- The IBKR order-service remains a separate local process and stable API. Future Scanner/order integration must consume this boundary.
-- Live order submission remains fail-closed behind independent local and provider gates.
+- The IBKR order-service remains a separate local process and stable API. Future Scanner/order integration must consume this boundary instead of bypassing it to call IBKR directly.
+- Local order-service authorization remains independent from provider authentication: ephemeral localhost caller auth, LIVE process/request gating and IBKR session/permission checks all pass independently.
+- Live submission remains fail-closed and impossible unless both process and request explicitly opt into LIVE and provider session/account/permission/preview checks succeed.
+- Provider confirmation questions remain explicit; unknown/unmodeled questions are not auto-accepted.
+- Lost submit acknowledgement remains unknown, not rejection, and requires reconciliation before any later explicit retry decision.
+- Live SELL retains no-short-opening protection and fails closed when long-position authority is unavailable/ambiguous.
 - Replay recording authority is the validated browser snapshot boundary, not DuckDB output or DOM/session state.
 - Replay portable files are versioned, structurally validated and streaming-friendly; large files must not require full-memory or mandatory IndexedDB re-import.
 - Replay emits normal producer messages only and remains ACK-ordered.
 - Replay `Seek` never fast-forwards/prerolls hidden history.
 - Replay DB/process lifecycle is isolated from the normal live DB and normal launchers.
+- Replay Host controls only the service child it started and only replay-owned DB artifacts; occupied/conflicting runtime resources fail closed rather than being stopped or reused silently.
 - Ordinary local tests/acceptance must not silently gain long replay waits; replay timing is primarily deterministic/fake-clock proof plus a short integration smoke.
 - Do not add temporal precompute/background jobs, another normal market-data transport, another production market-data database, a cross-day strategy warehouse or speculative history indexes before measured evidence requires them.
 - Keep all product, execution and replay diagnostics public-safe.
@@ -212,18 +221,20 @@ root phase = planning
 The current overall product program is complete only when:
 
 - U.S. market provider path is authoritative;
+- Israel-only runtime assumptions are removed/superseded;
 - Current/Detail/History/Scanner operate on the U.S. market authority;
 - staged candidate SQL executes correctly;
 - Demo Buy capture/evaluation/provenance/Auto/targeted-refresh behavior is proven;
 - AI Investigation generates sharing-safe deterministic anti-hindsight evidence packs;
-- the standalone IBKR order-service is code-complete with its strict validation/security/reconciliation contracts;
+- the standalone IBKR order-service is code-complete with strict BUY/SELL validation, authenticated localhost caller protection, dry-run/what-if preview, fail-closed live gating, explicit provider-reply handling, restart-safe idempotency, acknowledgement-unknown reconciliation, cancellation/trade observation, SELL short-opening protection and public-safe diagnostics;
+- Scanner/Demo Buy/AI remain disconnected from automatic live submission until a later explicit integration project;
 - actual live IBKR execution is either proven when permission exists or recorded exactly as `PENDING_EXTERNAL_PERMISSION` without fabricated evidence;
 - Market Recording can capture complete validated provider frames with the local service off and preserve them in IndexedDB;
 - portable Replay export/file playback is validated and does not require full-memory or mandatory browser-storage duplication;
 - Market Player Play/Pause/Seek reproduces recorded `1x` timing while rebasing local collection/cycle timestamps to current replay time and preserving provider data;
 - arbitrary mid-recording Replay starts with no preroll work through the unchanged normal service path;
 - Current/Detail/History/Scanner/Demo Buy/AI operate normally over an isolated replay DB;
-- Replay Host/process reset cannot touch the normal live DB and the server/shared producer protocol remain replay-unaware;
+- Replay Host/process reset cannot touch the normal live DB, cannot stop unrelated processes, and the server/shared producer protocol remain replay-unaware;
 - required Replay-specific and affected Fast/Browser/Planning/Workload gates are green without materially expanding ordinary local verification time;
 - branch `9` is deterministically reclosed and the exact complete-product candidate is re-pinned;
 - final target-machine/local Fake/authenticated market-data and IBKR compatibility gates pass where required;
