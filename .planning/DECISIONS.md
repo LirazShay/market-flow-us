@@ -24,7 +24,7 @@ After fail-closed source-type validation:
 securityId = String(PaperId)
 ```
 
-Never key authority by Symbol, row order, name or PaperIdYatab.
+Never key market-data authority by Symbol, row order, name or PaperIdYatab.
 
 ## D-US-004 — One U.S. response maps to one complete cycle
 
@@ -153,7 +153,9 @@ The production active DB is day-bounded. Prior days may archive; new day starts 
 
 **Status:** resolved
 
-Phase 1 supports manual selected/all/Top-X and session-only Auto All/Top-X observations. It does not add orders, manual buy price, fills, portfolio state, fees/slippage, sell rules, quantity, liquidity proof or aggregate strategy scoring. Repeated later capture of the same security is valid because observations are not positions.
+Phase 1 supports manual selected/all/Top-X and session-only Auto All/Top-X observations. Demo Buy itself does not add orders, manual buy price, fills, portfolio state, fees/slippage, sell rules, quantity, liquidity proof or aggregate strategy scoring. Repeated later capture of the same security is valid because observations are not positions.
+
+The later branch-8 standalone IBKR sidecar does not change this Demo Buy invariant.
 
 ## D-US-024 — Demo Buy uses additive schema v4, exact baseline linkage and direct trusted reads
 
@@ -182,23 +184,15 @@ ORDER BY collected_at_ms ASC, cycle_id ASC
 LIMIT 1
 ```
 
-No background horizon updater/materialized result schema/new DB/new transport is added before evidence requires it.
+No background horizon updater/materialized result schema/new market DB/new market transport is added before evidence requires it.
 
 ## D-US-025 — Demo Buy + AI Investigation precede final target-machine acceptance
 
-**Status:** resolved
+**Status:** resolved; sequence extended by D-US-039
 
-Completed migration leaves through `7.3` remain historical evidence. Current sequence is:
+Completed migration leaves through `7.3` remain historical evidence. The prior sequence implemented Demo Buy/AI, then `7.5`, then began `7.4`.
 
-```text
-implement Demo Buy backend/read authority
-→ Scanner/Demo Buy UX
-→ AI Investigation exporter/UI
-→ post-feature deterministic re-closure 7.5
-→ final target-machine/authenticated 7.4
-```
-
-Final acceptance must run on the exact post-feature candidate.
+Branch `8` was later requested before `7.4` completed. D-US-039 owns the new continuation order.
 
 ## D-US-026 — Capture preserves original Scanner meaning under bounded provenance
 
@@ -323,3 +317,107 @@ Scanner context keeps structural metadata, canonical identity, numeric/null/bool
 Exact Scanner SQL remains user-authored content and is exported verbatim; the UI/README must visibly remind the user not to put secrets in SQL and to review generated files before sharing.
 
 This is an export-projection rule, not a second database or sanitization subsystem. Regression tests use canary operational/session/string values and require their byte sequences to be absent from every generated shareable artifact and response surface.
+
+## D-US-034 — IBKR execution is a standalone sidecar, not Scanner execution
+
+**Status:** resolved
+
+Branch `8` introduces one separate Node 24 process on `127.0.0.1:8770` using the first-party Interactive Brokers Client Portal Web API through Client Portal Gateway.
+
+Scanner, Demo Buy, AI Investigation and Current do not automatically submit orders in this mini-project. A future integration must consume the sidecar's stable local API instead of bypassing it to call IBKR directly.
+
+The existing market-data WebSocket/service/schema-v4 authority stays unchanged.
+
+## D-US-035 — DRY_RUN is default; LIVE requires independent local and provider gates
+
+**Status:** resolved
+
+`DRY_RUN` must never reach the provider submit endpoint.
+
+Actual submit requires all independent gates:
+
+```text
+valid authenticated local caller
+process explicitly LIVE-enabled
+request explicitly executionMode=LIVE
+valid brokerage session
+tradable runtime account
+provider permission
+unambiguous instrument
+snapshot preflight
+successful what-if
+local validation / no-short-opening SELL guard
+```
+
+Missing any gate is a diagnosable rejection, never a fallback/bypass. Provider reply questions are surfaced explicitly; unknown questions fail closed.
+
+## D-US-036 — Loopback is not authorization
+
+**Status:** resolved
+
+An order-capable localhost HTTP service must defend against hostile browser-origin traffic.
+
+Every endpoint except strictly non-sensitive `GET /health` requires a high-entropy per-run local caller credential before provider/order logic. Browser `Origin` requests are rejected by default; wildcard/credentialed CORS is forbidden.
+
+The token is never hard-coded, committed, persisted, logged, reported or sent to IBKR and is invalidated by process exit.
+
+This local caller gate is independent from LIVE/provider permission checks.
+
+## D-US-037 — Order creation is restart-safe and acknowledgement-unknown never blind-retries
+
+**Status:** resolved
+
+`requestId` is mandatory.
+
+```text
+same requestId + same normalized intent
+→ return/reconcile existing local result
+
+same requestId + different normalized intent
+→ reject
+```
+
+Transport loss after provider submit produces `ACKNOWLEDGEMENT_UNKNOWN` unless a conclusive result is known. It is neither rejection nor permission to resubmit. The service reconciles provider open-order/trade state before any later explicit retry decision.
+
+Use the smallest separate DuckDB store required for these facts; provider account identity, credentials, cookies/session tokens, caller token and raw authenticated responses are never persisted.
+
+## D-US-038 — Initial execution scope is narrow U.S.-equity BUY/SELL with no short opening
+
+**Status:** resolved
+
+Initial normalized scope:
+
+```text
+STK / USD / SMART
+BUY | SELL
+LMT | MKT
+DAY | GTC
+positive finite quantity
+```
+
+`LMT` requires positive finite price; `MKT` forbids price.
+
+Before LIVE SELL, the service must establish that requested quantity does not exceed the known long position. Unavailable/ambiguous position authority fails closed. This is a narrow safety guard, not a portfolio/risk engine.
+
+Short selling, options/futures/FX, bracket/OCA/algo orders and leverage optimization remain out of scope.
+
+## D-US-039 — Branch 8 reclosure precedes resuming final 7.4 acceptance
+
+**Status:** resolved
+
+The user requested the standalone IBKR mini-project after `7.5` was done and while `7.4` final acceptance was still unfinished.
+
+Current sequence is:
+
+```text
+preserve all completed branch 1–7 implementation evidence
+→ keep 7.4 blocked/not-done
+→ implement 8.1 standalone service + dry-run authority
+→ implement 8.2 IBKR adapter + live-capable lifecycle
+→ implement 8.3 operator packaging + integration-ready boundary
+→ implement 8.4 deterministic branch-8 reclosure
+→ produce the new exact candidate truth
+→ resume 7.4 final target-machine/provider acceptance
+```
+
+Actual live-money order proof may remain exactly `PENDING_EXTERNAL_PERMISSION` when IBKR has not granted the user's trading permission. Permission-independent software proof must be complete; fake evidence must never be presented as live success.
