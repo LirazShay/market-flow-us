@@ -1,9 +1,9 @@
 version: 2
 plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "planning"
+current_stage: "implementation"
 current_node: "8.1"
 blockers: []
-next_action: "Branch-8 standalone IBKR order-service planning is fully aligned and frozen: 8.1 local service/dry-run authority -> 8.2 CPGW/live-capable lifecycle -> 8.3 operator packaging/integration seam -> 8.4 deterministic reclosure -> 7.4 final target-machine/provider acceptance. R-US-IBKR-ORDER-FINAL and R-US-IBKR-ORDER-EXTERNAL are PASS. Implementation remains unauthorized until this frozen planning PR passes Planning Docs CI, receives final diff review, is squash-merged, main Planning Docs CI is green and open-PR audit is clean. After those gates, advance root phase to implementation, implementation_authorized=true, Chat 17 / TREE 8.1 pending as the first executable leaf."
+next_action: "Implementation is authorized. Chat 17 / TREE 8.1 is the first executable leaf: build the standalone Node 24 localhost order service with strict normalized U.S. STK BUY/SELL intent validation, authenticated loopback caller boundary, DRY_RUN submit prohibition, deterministic fake adapter, separate minimal DuckDB idempotency/reconciliation state and focused proof. Do not advance to 8.2 until 8.1 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
 last_review: "R-US-IBKR-ORDER-EXTERNAL"
-implementation_authorized: false
+implementation_authorized: true
