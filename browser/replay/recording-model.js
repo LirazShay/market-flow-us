@@ -19,19 +19,25 @@ function assertNonNegativeSafeInteger(value, name) {
 }
 
 function cloneJson(value) {
-  return JSON.parse(JSON.stringify(value));
+  try {
+    const serialized = JSON.stringify(value);
+    if (serialized === undefined) throw new Error("not serializable");
+    return JSON.parse(serialized);
+  } catch {
+    throw new TypeError("Replay recording values must be JSON serializable.");
+  }
 }
 
 function assertSnapshotIdentity(snapshot) {
   if (!Array.isArray(snapshot?.responseIds) || !Array.isArray(snapshot?.membership)) {
-    throw new Error("Validated replay snapshot identity evidence is missing.");
+    throw new Error("Validated Replay snapshot identity evidence is missing.");
   }
   if (snapshot.responseIds.length !== snapshot.recordCount || snapshot.membership.length !== snapshot.recordCount) {
-    throw new Error("Validated replay snapshot identity evidence does not match recordCount.");
+    throw new Error("Validated Replay snapshot identity evidence does not match recordCount.");
   }
   const expectedMembership = [...snapshot.responseIds].sort();
   if (!expectedMembership.every((securityId, index) => securityId === snapshot.membership[index])) {
-    throw new Error("Validated replay snapshot membership does not match responseIds.");
+    throw new Error("Validated Replay snapshot membership does not match responseIds.");
   }
 }
 
@@ -39,11 +45,11 @@ function assertSnapshotTiming(snapshot) {
   const timing = snapshot?.timing;
   for (const key of ["startedAtMs", "responseReceivedAtMs", "completedAtMs"]) {
     if (!Number.isFinite(timing?.[key]) || timing[key] < 0) {
-      throw new Error(`Validated replay snapshot timing.${key} is invalid.`);
+      throw new Error(`Validated Replay snapshot timing.${key} is invalid.`);
     }
   }
   if (timing.responseReceivedAtMs < timing.startedAtMs || timing.completedAtMs < timing.responseReceivedAtMs) {
-    throw new Error("Validated replay snapshot timing order is invalid.");
+    throw new Error("Validated Replay snapshot timing order is invalid.");
   }
 }
 
@@ -56,17 +62,35 @@ export function normalizeRecordingName(value, fallback = "Market Replay recordin
   return normalized;
 }
 
+export function createRecordingId({
+  nowMs,
+  random = () => globalThis.crypto.getRandomValues(new Uint32Array(2))
+}) {
+  assertNonNegativeSafeInteger(nowMs, "nowMs");
+  const values = random();
+  if (!values || typeof values[Symbol.iterator] !== "function") {
+    throw new TypeError("random() must return iterable numeric values.");
+  }
+  const suffix = [...values]
+    .map((value) => Number(value).toString(16).padStart(8, "0"))
+    .join("");
+  if (!/^[0-9a-f]{16,}$/u.test(suffix)) {
+    throw new Error("random() must provide at least 64 bits of numeric entropy.");
+  }
+  return `replay-${nowMs.toString(36)}-${suffix}`;
+}
+
 export function createReplayFrame({ recordingId, sequence, snapshot }) {
   assertNonEmptyString(recordingId, "recordingId");
   assertNonNegativeSafeInteger(sequence, "sequence");
 
-  // Reuse the normal U.S. candidate contract before any snapshot becomes recording evidence.
+  // The normal U.S. candidate contract remains the validation authority.
   buildUsCollectionCandidate(snapshot);
   assertSnapshotIdentity(snapshot);
   assertSnapshotTiming(snapshot);
 
   if (!Number.isInteger(snapshot.httpStatus) || snapshot.httpStatus < 200 || snapshot.httpStatus >= 300) {
-    throw new Error("Validated replay snapshot httpStatus is invalid.");
+    throw new Error("Validated Replay snapshot httpStatus is invalid.");
   }
 
   return Object.freeze({
@@ -89,22 +113,41 @@ export function approximateJsonBytes(value) {
 }
 
 export function createRecordingMetadata({ recordingId, name, createdAtMs }) {
-  assertNonEmptyString(recordingId, "recordingId");
+  const id = assertNonEmptyString(recordingId, "recordingId");
   assertNonNegativeSafeInteger(createdAtMs, "createdAtMs");
 
   return Object.freeze({
-    recordingId,
+    recordingId: id,
     name: normalizeRecordingName(name),
     format: REPLAY_RECORDING_FORMAT,
     version: REPLAY_RECORDING_VERSION,
-    status: "recording",
-    terminalReason: null,
+    // Persist incomplete until a clean Stop commits completion. A storage failure therefore fails safe.
+    status: "incomplete",
     createdAtMs,
-    updatedAtMs: createdAtMs,
-    originalStartedAtMs: null,
-    originalCompletedAtMs: null,
-    originalDurationMs: 0,
+    firstFrameAtMs: null,
+    lastFrameAtMs: null,
     frameCount: 0,
-    approximateBytes: 0
+    approximateBytes: 0,
+    lastErrorCode: null
+  });
+}
+
+export function toRecordingSummary(recording) {
+  if (!recording || typeof recording !== "object") throw new TypeError("recording is required.");
+  const firstFrameAtMs = recording.firstFrameAtMs ?? null;
+  const lastFrameAtMs = recording.lastFrameAtMs ?? null;
+  return Object.freeze({
+    id: recording.recordingId,
+    name: recording.name,
+    status: recording.status,
+    createdAtMs: recording.createdAtMs,
+    firstFrameAtMs,
+    lastFrameAtMs,
+    durationMs: firstFrameAtMs === null || lastFrameAtMs === null
+      ? 0
+      : Math.max(0, lastFrameAtMs - firstFrameAtMs),
+    frameCount: recording.frameCount,
+    approximateBytes: recording.approximateBytes,
+    lastErrorCode: recording.lastErrorCode ?? null
   });
 }
