@@ -115,6 +115,59 @@ test("Scanner scheduler preserves active draft, waits after completion and never
   assert.equal(timers.pending().length, 0);
 });
 
+test("Scanner scheduler stop is resumable and suppresses a stale in-flight result", async () => {
+  const timers = createManualTimers();
+  const executions = [];
+  const results = [];
+
+  const scheduler = createScannerScheduler({
+    execute(sql) {
+      const pending = deferred();
+      executions.push({ sql, pending });
+      return pending.promise;
+    },
+    onResult(result, context) {
+      results.push([context.generation, context.sql, result]);
+    },
+    setTimer: timers.setTimer,
+    clearTimer: timers.clearTimer
+  });
+
+  scheduler.setDraft({ sql: "SELECT 'before-stop'", intervalMs: 50 });
+  scheduler.activate();
+  assert.equal(scheduler.getState().generation, 1);
+  assert.equal(scheduler.getState().inFlight, true);
+
+  scheduler.stop();
+  assert.equal(scheduler.getState().stopped, true);
+  assert.equal(scheduler.getState().generation, 2);
+  assert.equal(timers.pending().length, 0);
+
+  scheduler.setDraft({ sql: "SELECT 'after-stop'", intervalMs: 25 });
+  assert.doesNotThrow(() => scheduler.activate());
+  assert.equal(scheduler.getState().stopped, false);
+  assert.equal(scheduler.getState().generation, 3);
+  assert.equal(scheduler.getState().activeSql, "SELECT 'after-stop'");
+  assert.deepEqual(executions.map((item) => item.sql), ["SELECT 'before-stop'"]);
+
+  executions[0].pending.resolve({ marker: "stale" });
+  await flush();
+
+  assert.deepEqual(results, []);
+  assert.deepEqual(executions.map((item) => item.sql), [
+    "SELECT 'before-stop'",
+    "SELECT 'after-stop'"
+  ]);
+
+  executions[1].pending.resolve({ marker: "fresh" });
+  await flush();
+
+  assert.deepEqual(results, [[3, "SELECT 'after-stop'", { marker: "fresh" }]]);
+  assert.deepEqual(timers.pending().map((timer) => timer.delayMs), [25]);
+
+  scheduler.stop();
+});
+
 test("Scanner scheduler requires a positive integer interval at activation", () => {
   const scheduler = createScannerScheduler({
     execute: async () => ({})

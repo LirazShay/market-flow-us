@@ -16,23 +16,37 @@ function assertPositiveInterval(value) {
   }
 }
 
+function normalizeNullableString(value, name) {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string") {
+    throw new TypeError(`${name} must be a string or null.`);
+  }
+  return value;
+}
+
 export function createScannerScheduler({
   execute,
   onResult = () => {},
   onError = () => {},
   setTimer = (callback, delayMs) => globalThis.setTimeout(callback, delayMs),
-  clearTimer = (timerId) => globalThis.clearTimeout(timerId)
+  clearTimer = (timerId) => globalThis.clearTimeout(timerId),
+  now = () => Date.now()
 } = {}) {
   assertFunction(execute, "execute");
   assertFunction(onResult, "onResult");
   assertFunction(onError, "onError");
   assertFunction(setTimer, "setTimer");
   assertFunction(clearTimer, "clearTimer");
+  assertFunction(now, "now");
 
   let draftSql = "";
   let draftIntervalMs = null;
+  let draftQueryId = null;
+  let draftQueryName = null;
   let activeSql = null;
   let activeIntervalMs = null;
+  let activeQueryId = null;
+  let activeQueryName = null;
   let generation = 0;
   let timerId = null;
   let inFlight = false;
@@ -49,18 +63,24 @@ export function createScannerScheduler({
       generation,
       draftSql,
       draftIntervalMs,
+      draftQueryId,
+      draftQueryName,
       activeSql,
       activeIntervalMs,
+      activeQueryId,
+      activeQueryName,
       inFlight,
       timerScheduled: timerId !== null,
       stopped
     });
   }
 
-  function setDraft({ sql, intervalMs }) {
+  function setDraft({ sql, intervalMs, queryId = null, queryName = null }) {
     assertSql(sql);
     draftSql = sql;
     draftIntervalMs = intervalMs;
+    draftQueryId = normalizeNullableString(queryId, "Scanner queryId");
+    draftQueryName = normalizeNullableString(queryName, "Scanner queryName");
     return getState();
   }
 
@@ -91,10 +111,13 @@ export function createScannerScheduler({
       return;
     }
 
-    const context = Object.freeze({
+    const execution = Object.freeze({
       generation: expectedGeneration,
       sql: activeSql,
-      intervalMs: activeIntervalMs
+      intervalMs: activeIntervalMs,
+      queryId: activeQueryId,
+      queryName: activeQueryName,
+      startedAtMs: now()
     });
 
     inFlight = true;
@@ -102,12 +125,17 @@ export function createScannerScheduler({
     let executionError = null;
 
     try {
-      result = await execute(context.sql);
+      result = await execute(execution.sql);
     } catch (error) {
       executionError = error;
     } finally {
       inFlight = false;
     }
+
+    const context = Object.freeze({
+      ...execution,
+      completedAtMs: now()
+    });
 
     if (stopped) return;
 
@@ -126,16 +154,15 @@ export function createScannerScheduler({
   }
 
   function activate() {
-    if (stopped) {
-      throw new Error("Scanner scheduler is stopped.");
-    }
-
     assertSql(draftSql);
     assertPositiveInterval(draftIntervalMs);
 
     generation += 1;
+    stopped = false;
     activeSql = draftSql;
     activeIntervalMs = draftIntervalMs;
+    activeQueryId = draftQueryId;
+    activeQueryName = draftQueryName;
     clearScheduledTimer();
 
     if (!inFlight) {
@@ -146,10 +173,12 @@ export function createScannerScheduler({
   }
 
   function stop() {
-    if (stopped) return;
+    if (stopped) return getState();
+    // Stop invalidates the current generation and future timer only; Activate remains resumable from the latest draft.
     stopped = true;
     generation += 1;
     clearScheduledTimer();
+    return getState();
   }
 
   return Object.freeze({

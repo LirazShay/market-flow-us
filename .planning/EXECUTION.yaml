@@ -58,7 +58,7 @@ chats:
 
   "12":
     nodes:
-      "4.4.1": { state: pending, result: null }
+      "4.4.1": { state: done, result: "Scanner now converts exact rendered generations into bounded Selected/All/Top-X Demo Buy captures with source-row-first ordered dedupe, immutable query/result provenance, one Viewer capture slot, explicit committed/rejected/acknowledgement-unknown handling, future-only Auto with visible busy-skip/no-queue semantics and a persistent cross-surface Turn off control; recurring Stop suppresses stale results and later Activate resumes while Auto may remain armed. Focused unit proof plus composed Fake Market/real-service/DuckDB Chromium proof are green, and PR #22 implementation candidate cfe0b2115d692f195919cf3a0b7576928fac6ffe passed Fast, Browser, Planning and bounded Workload CI." }
 
   "13":
     nodes:
