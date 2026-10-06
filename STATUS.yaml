@@ -6,7 +6,7 @@ current:
   chat: 11
   node: "4.3.3"
   title: "Demo Buy outcome evaluator / trusted reads"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
