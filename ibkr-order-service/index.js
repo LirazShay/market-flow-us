@@ -4,14 +4,20 @@ import {
   startOrderService
 } from "./service.js";
 
-const { server } = await startOrderService();
+const runtime = await startOrderService();
 
 console.log(`ibkr-order-service listening on http://${ORDER_SERVICE_HOST}:${ORDER_SERVICE_PORT}`);
 
-function shutdown() {
-  server.close(() => {
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  try {
+    await runtime.close();
     process.exitCode = 0;
-  });
+  } catch {
+    process.exitCode = 1;
+  }
 }
 
 process.once("SIGINT", shutdown);
