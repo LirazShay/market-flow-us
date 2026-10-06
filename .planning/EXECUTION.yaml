@@ -62,7 +62,7 @@ chats:
 
   "13":
     nodes:
-      "4.4.2": { state: in_progress, result: null }
+      "4.4.2": { state: done, result: "Dedicated Demo Buy now renders capture-grouped progressive outcomes with sticky Scanner-position/identity/baseline context, compact ten-horizon UP/DOWN/FLAT/Pending/warning cells, stable Load more versus Refresh latest behavior, targeted old-observation refresh, on-demand immutable provenance/SQL and smallest-surface error preservation while recurring Scanner/Auto continues behind the visible outcome screen. A compact capturedItemCount was added to the existing set-wise trusted read model to avoid N+1 provenance reads; SQL preflight, focused unit/service proof, split-capture Chromium continuity and composed Fake Market/real-service/DuckDB lifecycle proof are green. PR #23 implementation candidate da627c89fe31224e62e0dc957ae127ae883516eb passed Fast, Browser, Planning and both bounded Workload jobs." }
 
   "14":
     nodes:
