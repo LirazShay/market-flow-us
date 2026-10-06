@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 21
-  node: "9.2"
-  title: "Market Replay portable recording format and file-backed source"
-  status: in_progress
+  chat: 22
+  node: "9.3"
+  title: "Market Replay Player timing and normal producer integration"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -41,8 +41,8 @@ planning_completion:
 execution:
   chats_total: 25
   implementation_leaves_total: 37
-  current_chat: 21
-  current_node: "9.2"
+  current_chat: 22
+  current_node: "9.3"
   final_acceptance_node: "7.4"
 
 blockers: []
