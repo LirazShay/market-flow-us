@@ -1,4 +1,6 @@
 import { createMarketReplayRecorder } from "./market-recorder.js";
+import { createReplayPlayerController } from "./player-controller.js";
+import { createReplayPlayerSurface } from "./player-surface.js";
 import { exportRecordingToUserFile } from "./portable-recording.js";
 import { openReplayRecordingStore } from "./recording-store.js";
 import { createReplayRecordingSurface } from "./recording-surface.js";
@@ -46,6 +48,16 @@ export async function startReplayRecordingRuntime({
 
   const store = await openReplayRecordingStore({ indexedDb });
   const recorder = createMarketReplayRecorder({ store, storageManager });
+
+  // 9.3 deliberately does not attach the ordinary localhost ProducerBridge here.
+  // 9.4 will provide an isolated replay-owned service/bridge after Host readiness.
+  const playerController = createReplayPlayerController({ store });
+  const playerSurface = createReplayPlayerSurface({
+    controller: playerController,
+    documentRef,
+    initiallyVisible: false
+  });
+
   const surface = createReplayRecordingSurface({
     recorder,
     documentRef,
@@ -55,9 +67,21 @@ export async function startReplayRecordingRuntime({
       recordingName: name,
       globalRef,
       documentRef
-    })
+    }),
+    playRecording: async ({ id }) => {
+      await playerController.loadIndexedDbRecording(id);
+      playerSurface.show();
+    },
+    openPlayer: () => playerSurface.show()
   });
-  const runtime = Object.freeze({ store, recorder, surface });
+
+  const runtime = Object.freeze({
+    store,
+    recorder,
+    surface,
+    playerController,
+    playerSurface
+  });
   globalThis[REPLAY_RUNTIME_KEY] = runtime;
 
   await Promise.allSettled([

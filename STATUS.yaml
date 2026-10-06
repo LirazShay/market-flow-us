@@ -6,7 +6,7 @@ current:
   chat: 22
   node: "9.3"
   title: "Market Replay Player timing and normal producer integration"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
