@@ -2,11 +2,11 @@
 
 ## Ownership
 
-This document owns **what the user must be able to do and understand**. Exact provider/data semantics belong to `DATA_CONTRACT.md`; implementation/protocol mechanics to `TECHNICAL_SPEC.md` and `DEMO_BUY_PROTOCOL_LIMITS.md`; browser interaction details to `DEMO_BUY_UX.md`; AI-pack contents to `AI_INVESTIGATION_PACK.md`; verification to `TEST_STRATEGY.md`.
+This document owns **what the user must be able to do and understand**. Exact provider/data semantics belong to `DATA_CONTRACT.md`; implementation/protocol mechanics to `TECHNICAL_SPEC.md` and `DEMO_BUY_PROTOCOL_LIMITS.md`; browser interaction details to `DEMO_BUY_UX.md`; AI-pack contents to `AI_INVESTIGATION_PACK.md`; the standalone execution sidecar to `IBKR_ORDER_SERVICE.md` plus `IBKR_ORDER_SERVICE_SECURITY.md`; verification to `TEST_STRATEGY.md`.
 
 ## 1. Product outcome
 
-Market Flow US is a local, single-user U.S.-market analysis product that preserves the proven MarketScope operating model:
+Market Flow US is a local, single-user U.S.-market product with two separated lanes:
 
 ```text
 validated U.S. market snapshots
@@ -14,9 +14,14 @@ validated U.S. market snapshots
 → editable read-only Scanner SQL
 → Demo Buy short-horizon validation
 → AI Investigation evidence for improving Scanner SQL
+
+separate standalone execution sidecar
+→ authenticated loopback IBKR order service
+→ dry-run / what-if by default
+→ explicit future live BUY/SELL only when every local/provider gate passes
 ```
 
-Demo Buy is analytical evidence only. It does not place or simulate broker orders, fills, portfolios, fees, sell rules or liquidity/fillability.
+Demo Buy remains analytical evidence only. It does not place or simulate broker orders, fills, portfolios, fees, sell rules or liquidity/fillability. The new IBKR order service is isolated and is **not** automatically driven by Scanner, Demo Buy, AI Investigation or Current in this mini-project.
 
 ## 2. Core user outcomes
 
@@ -34,13 +39,18 @@ The user can:
 10. generate a local AI Investigation Pack for one observation, copy its disciplined prompt/path, and regenerate it when more outcome evidence exists;
 11. understand when AI evidence is partial, when the target is outside retained Scanner peer context, and which facts were actually authoritative at decision time;
 12. restart safely, rotate to a new trading day while preserving saved queries, and retain prior-day evidence only in its self-contained archived DB;
-13. run deterministic Fake Market/local acceptance before final target-machine/authenticated verification.
+13. run deterministic Fake Market/local acceptance before final target-machine/authenticated verification;
+14. run a separate Node 24 `ibkr-order-service` on loopback without changing the existing market-data runtime;
+15. create strict normalized U.S.-equity BUY/SELL intents and obtain deterministic dry-run/provider what-if previews without submitting an order;
+16. keep live submission fail-closed behind authenticated local caller access, explicit process-level live enablement, explicit request-level LIVE mode, valid IBKR session/account/permission, successful instrument/snapshot/what-if preflight and all local safety guards;
+17. observe explicit order lifecycle/reply/cancel/reconciliation/trade states without blind duplicate submission after an uncertain acknowledgement;
+18. keep real credentials, cookies/session tokens, account identifiers and raw authenticated IBKR dumps out of repository, persistence and diagnostics.
 
 ## 3. Canonical identity and authority
 
-Canonical identity is validated `String(PaperId)`. `Symbol` and display names are metadata only.
+Canonical market-data identity is validated `String(PaperId)`. `Symbol` and display names are metadata only.
 
-Market authority remains successful committed `history`/`latest` rows. Demo Buy never mutates market authority.
+Market authority remains successful committed `history`/`latest` rows. Demo Buy never mutates market authority. The isolated order service has a separate execution responsibility and does not become market-data authority.
 
 For one Demo Buy item:
 
@@ -82,6 +92,8 @@ It provides:
 - Demo Buy controls only when exactly one recognized `securityId` or `security_id` column exists.
 
 Stopping recurring scan stops future Scanner generations and therefore future Auto Demo Buy attempts. Auto configuration may remain armed for the next later Activate.
+
+Scanner has no direct order-submit authority in branch `8`.
 
 ## 6. Demo Buy selection
 
@@ -198,26 +210,34 @@ The Viewer provides Generate/Regenerate, Partial/Complete status, `Copy AI Promp
 
 Returned/displayed export paths are product-relative under `exports/ai-investigations/`, never absolute machine/user paths.
 
+AI Investigation has no direct order-submit authority in branch `8`.
+
 ## 12. Daily lifecycle
 
-The active DB represents one trading day.
+The active market DB represents one trading day.
 
 New Trading Day accepts a structurally valid Market Flow US v3 or v4 source, rejects unsupported/corrupt/running states, preserves `scanner_saved_queries`, optionally archives the source unchanged, and installs a fresh schema-v4 active DB with empty Demo Buy tables.
 
 Demo Buy evidence never crosses into a new active-day DB without its referenced history. Archived v4 DBs remain self-contained; archived v3 DBs remain valid pre-Demo-Buy historical databases.
 
+Order-service idempotency/reconciliation persistence is a separate local execution concern and must not be copied into the market-day DB lifecycle.
+
 ## 13. Security / privacy
 
-The provider browser owns authentication. Credentials, cookies, session data, account identifiers and raw authenticated dumps never enter the repository, diagnostics, Demo Buy payloads or AI packs.
+The market provider browser owns market-data authentication. Credentials, cookies, session data, account identifiers and raw authenticated dumps never enter the repository, diagnostics, Demo Buy payloads or AI packs.
+
+The IBKR provider browser/gateway authentication is also user-owned. The order service never accepts credentials, persists provider account identity or authentication/session material, or exposes raw authenticated provider responses.
+
+Loopback binding alone is not authorization for an order-capable service. Every protected order-service endpoint requires the ephemeral local caller credential defined in `IBKR_ORDER_SERVICE_SECURITY.md`; browser-origin requests are rejected by default and wildcard/credentialed CORS is forbidden.
 
 Generated AI packs are explicit local user artifacts and are git-ignored. Support diagnostics may contain bounded status/counters/IDs, not SQL text or evidence payloads.
 
-## 14. Phase-1 non-goals
+## 14. Analytical-lane non-goals
 
-Do not add:
+The following remain non-goals for Scanner / Demo Buy / AI Investigation themselves:
 
 ```text
-real orders or fill simulation
+automatic real orders
 manual buy price
 portfolio/P&L/risk
 fees/slippage/sell automation
@@ -226,14 +246,42 @@ liquidity/fillability proof
 aggregate strategy dashboard/scorecard
 background horizon materialization
 Strategy Engine
-second DB or transport
 cross-day strategy warehouse
 AI API/provider integration
 automatic AI SQL mutation
 ```
 
-Liquidity/volume/fillability analysis remains a later phase.
+Branch `8` deliberately adds a **separate** order-execution sidecar; this does not convert Demo Buy into execution. Order-service non-goals additionally include short selling, options/futures/FX, bracket/OCA/algo orders, automated CPGW login, credential storage and permission bypass.
 
-## 15. Completion requirement
+Liquidity/volume/fillability strategy analysis remains a later phase.
 
-Demo Buy + AI Investigation are ready for implementation only when their durable contracts, TREE, tests, allocation and handoff are mutually consistent and the plan is frozen/authorized. Product completion later requires all assigned leaves, deterministic re-closure, final target-machine/provider acceptance, merged PRs, green main CI and no blocking defect.
+## 15. Standalone IBKR order-service requirements
+
+The durable execution contract is `IBKR_ORDER_SERVICE.md` plus `IBKR_ORDER_SERVICE_SECURITY.md`.
+
+Initial observable requirements:
+
+```text
+Node.js 24
+127.0.0.1:8770 only
+high-entropy per-run local caller authorization
+DRY_RUN default
+U.S. STK / USD / SMART
+BUY / SELL
+LMT / MKT
+DAY / GTC
+requestId idempotency
+no short opening
+```
+
+The user must be able to preview a normalized intent without live submission, and later enable LIVE without redesign when provider permission becomes available. Live submission must still fail closed unless every local authorization/live/risk gate and every IBKR session/account/permission/what-if/confirmation requirement is satisfied.
+
+Provider reply-required states, cancellation, partial/final fill observation, session expiry and `ACKNOWLEDGEMENT_UNKNOWN` must remain explicit and diagnosable. Unknown provider questions are never automatically accepted.
+
+## 16. Completion requirement
+
+Branch `8` is ready for implementation only when the durable order contracts, TREE, tests, allocation and handoff are mutually consistent and the plan is frozen/authorized.
+
+Software implementation may later be declared complete without fabricated live-money evidence when every permission-independent requirement is green and actual live submission is recorded exactly as `PENDING_EXTERNAL_PERMISSION` because IBKR has not yet granted the account permission.
+
+Overall product completion still requires all assigned leaves, deterministic re-closure, final target-machine/provider acceptance, merged PRs, green main CI and no blocking defect.
