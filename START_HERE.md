@@ -153,6 +153,22 @@ overall = "PASS"
 
 אותו report מפיק גם evidence נפרד ל־market-open movement מתוך ה־cycles המחויבים עצמם. הוא אינו משתמש בזמן האיסוף המקומי כתחליף לתנועת provider.
 
+### התקנה לפני שעות המסחר — מסלול דו־שלבי
+
+אם אתה מבצע את ה־First Run לפני שהשוק מתחיל לזוז, אל תחכה עם כל ההתקנה. עבור לפי `docs/FIRST_RUN_ACCEPTANCE.md` עד `FR-12`.
+
+מצב תקין לפני המסחר הוא:
+
+```text
+overall = "PASS"
+movement.status = "PENDING"
+movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
+```
+
+זה אומר שהחיבור האמיתי, ה־provider shape, ה־commit, Current/History/Scanner וה־ownership עברו. ערכים זהים לאורך כל הריצה אינם כשל כל עוד cycles חדשים ממשיכים לקבל COMMIT ACK ו־History ממשיך לגדול.
+
+שמור את ה־sanitized report ואת ה־candidate SHA. אם ה־candidate, ההתקנה וה־runtime לא השתנו, לאחר פתיחת המסחר אין צורך לחזור על FR-0..FR-12: מריצים שוב את אותו SHA-bound gate עבור `FR-13` בלבד.
+
 ל־FR-13 נדרש:
 
 ```text
