@@ -59,7 +59,7 @@ export function createReplayPlayerController({
   }
 
   function snapshotState() {
-    const state = playerState ?? {};
+    const state = player?.getState?.() ?? playerState ?? {};
     return Object.freeze({
       sourceReady: source !== null,
       sourceKind: source?.kind ?? null,
@@ -123,6 +123,10 @@ export function createReplayPlayerController({
     if (!nextSource || typeof nextSource.getSummary !== "function" || typeof nextSource.getFrameIndex !== "function") {
       throw new TypeError("Replay source is invalid.");
     }
+    const current = snapshotState();
+    if (current.sessionStarted || ["playing", "paused", "stopping"].includes(current.status)) {
+      throw new Error("Cannot replace the Replay source while a run is active.");
+    }
     source = nextSource;
     summary = source.getSummary();
     selectedSequence = 0;
@@ -152,8 +156,8 @@ export function createReplayPlayerController({
 
   function attachProducerBridge(nextBridge) {
     if (!nextBridge) throw new TypeError("producerBridge is required.");
-    const active = playerState?.sessionStarted === true || ["playing", "paused", "stopping"].includes(playerState?.status);
-    if (active) {
+    const current = snapshotState();
+    if (current.sessionStarted || ["playing", "paused", "stopping"].includes(current.status)) {
       throw new Error("Cannot replace the Replay producer bridge while a run is active.");
     }
     bridge = nextBridge;
@@ -163,8 +167,10 @@ export function createReplayPlayerController({
   }
 
   function detachProducerBridge() {
-    const active = playerState?.sessionStarted === true || ["playing", "paused", "stopping"].includes(playerState?.status);
-    if (active) throw new Error("Cannot detach the Replay producer bridge while a run is active.");
+    const current = snapshotState();
+    if (current.sessionStarted || ["playing", "paused", "stopping"].includes(current.status)) {
+      throw new Error("Cannot detach the Replay producer bridge while a run is active.");
+    }
     bridge = null;
     player = null;
     playerState = null;
