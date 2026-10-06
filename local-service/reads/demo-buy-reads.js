@@ -1,5 +1,9 @@
 import { deriveDemoBuyCaptureTiming } from "../../shared/demo-buy/capture.js";
 import {
+  DEMO_BUY_POST_WINDOW_MS,
+  deriveDemoBuyOutcomeEvidenceStatus
+} from "../../shared/demo-buy/outcome-evidence.js";
+import {
   ERROR_CODES,
   ProtocolValidationError
 } from "../../shared/protocol/index.js";
@@ -21,6 +25,11 @@ const PAGE_SIZE = 50;
 const HORIZON_VALUES_SQL = DEMO_BUY_HORIZONS_MS
   .map((value) => `(${value})`)
   .join(",\n      ");
+
+const EVIDENCE_WATERMARK_SQL = `SELECT
+  MAX(collected_at_ms) AS evidenceWatermarkMs
+FROM history
+WHERE cycle_id > $buyCycleId`;
 
 function fail(code) {
   throw new ProtocolValidationError(code);
@@ -488,7 +497,36 @@ export function createDemoBuyReads({ connection }) {
     if (items.length !== 1) {
       throw new Error("Demo Buy targeted observation returned an invalid item count.");
     }
-    return items[0];
+
+    const observation = items[0];
+    const watermarkRows = await queryRows(
+      connection,
+      EVIDENCE_WATERMARK_SQL,
+      { buyCycleId: observation.buyCycleId }
+    );
+    if (watermarkRows.length !== 1) {
+      throw new Error("Demo Buy targeted evidence watermark returned an invalid row count.");
+    }
+
+    const evidenceWatermarkMs = asSafeInteger(
+      watermarkRows[0].evidenceWatermarkMs,
+      "evidenceWatermarkMs",
+      { nullable: true }
+    );
+    const postWindowEndMs = observation.capture.capturedAtMs + DEMO_BUY_POST_WINDOW_MS;
+    if (!Number.isSafeInteger(postWindowEndMs)) {
+      throw new Error("Demo Buy post-window boundary is invalid.");
+    }
+
+    return Object.freeze({
+      ...observation,
+      evidenceWatermarkMs,
+      postWindowEndMs,
+      outcomeEvidenceStatus: deriveDemoBuyOutcomeEvidenceStatus(
+        evidenceWatermarkMs,
+        postWindowEndMs
+      )
+    });
   }
 
   async function captureGet(captureId) {
