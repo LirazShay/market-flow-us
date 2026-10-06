@@ -72,7 +72,7 @@ function snapshotData(response) {
   return response.payload.data;
 }
 
-test("schema-v3 support snapshot localizes U.S. commit failure without exposing provider/session material", async () => {
+test("schema-v4 support snapshot localizes U.S. commit failure without exposing provider/session material", async () => {
   const fixture = await createServiceFixture({
     openDatabase: openMarketFlowUsDatabase
   });
@@ -103,7 +103,7 @@ test("schema-v3 support snapshot localizes U.S. commit failure without exposing 
     assert.equal(rejected.payload.code, "DB_ERROR");
 
     const support = snapshotData(await viewer.request("viewer.support.snapshot"));
-    assert.equal(support.service.schemaVersion, 3);
+    assert.equal(support.service.schemaVersion, 4);
     assert.equal(support.authority.latestCount, 0);
     assert.equal(support.authority.historyCount, 0);
     assert.equal(support.diagnostics.lastError.component, "persistence");
