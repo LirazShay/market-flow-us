@@ -45,37 +45,147 @@ Do not ask the user to restate the plan.
 | `4.1`–`4.2` Scanner | PRODUCT_REQUIREMENTS Scanner, PRODUCT_SPEC Scanner, TECHNICAL_SPEC Scanner, SCANNER_SQL_GUIDE, TEST_STRATEGY |
 | `4.3.1` Demo Buy schema | DEMO_BUY_VALIDATION §§5,10,16; DEMO_BUY_PROTOCOL_LIMITS; DATA_CONTRACT v4; TECHNICAL_SPEC schema; TEST_STRATEGY migration/context |
 | `4.3.2` capture authority | DEMO_BUY_VALIDATION §§3–9; DEMO_BUY_PROTOCOL_LIMITS; DECISIONS D-US-026/027/031; TECHNICAL_SPEC protocol/capture; TEST_STRATEGY capture/lost-ACK |
-| `4.3.3` evaluation/read model | DEMO_BUY_VALIDATION §§7,11–13; DEMO_BUY_PROTOCOL_LIMITS watermark; TECHNICAL_SPEC `demo.buy.page/capture.get/observation.get`; TEST_STRATEGY read/evaluation; AGENTS SQL preflight |
-| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_UX Scanner/Auto/Stop sections; PRODUCT_REQUIREMENTS Scanner/Auto; PRODUCT_SPEC Scanner/capture; TEST_STRATEGY browser model |
-| `4.4.2` Demo Buy surface | DEMO_BUY_UX capture groups/horizon layout/refresh/errors; PRODUCT_REQUIREMENTS Demo Buy UX; PRODUCT_SPEC Viewer; TEST_STRATEGY Browser E2E |
-| `4.5.1` AI exporter | AI_INVESTIGATION_PACK; DEMO_BUY_PROTOCOL_LIMITS export/watermark; DATA_CONTRACT; TECHNICAL_SPEC exporter; TEST_STRATEGY AI unit/service |
-| `4.5.2` AI UX | DEMO_BUY_UX investigation/export/clipboard sections; AI_INVESTIGATION_PACK Viewer flow; PRODUCT_SPEC; TEST_STRATEGY Chromium |
+| `4.3.3` evaluation/read model | DEMO_BUY_VALIDATION §§7,11–13; DEMO_BUY_PROTOCOL_LIMITS watermark; TECHNICAL_SPEC Demo Buy reads; TEST_STRATEGY read/evaluation; AGENTS SQL preflight |
+| `4.4.1` Scanner Demo Buy UX | DEMO_BUY_UX Scanner/Auto/Stop; PRODUCT_REQUIREMENTS; PRODUCT_SPEC; TEST_STRATEGY browser model |
+| `4.4.2` Demo Buy surface | DEMO_BUY_UX outcome/refresh/errors; PRODUCT_REQUIREMENTS; PRODUCT_SPEC; TEST_STRATEGY Browser E2E |
+| `4.5.1` AI exporter | AI_INVESTIGATION_PACK; DEMO_BUY_PROTOCOL_LIMITS; DATA_CONTRACT; TECHNICAL_SPEC exporter; TEST_STRATEGY AI unit/service |
+| `4.5.2` AI UX | DEMO_BUY_UX investigation/export/clipboard; AI_INVESTIGATION_PACK; PRODUCT_SPEC; TEST_STRATEGY Chromium |
 | `5.*` Fake Market/E2E | TEST_STRATEGY Fake Market/Browser, DATA_CONTRACT, PRODUCT_SPEC runtime |
 | `6.1` packaging | TECHNICAL_SPEC files/artifacts, build/launcher/docs tests |
 | `6.2` diagnostics/live | AGENTS diagnosability, TECHNICAL_SPEC diagnostics/live, TEST_STRATEGY authenticated gates |
 | `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC performance, shared generator, AGENTS SQL preflight |
 | `7.1`–`7.3` historical closure | TREE evidence + existing release/local acceptance contracts |
-| `7.5` post-feature reclosure | all Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + full deterministic gates + PR/main/open-PR truth |
-| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI journey/heavy workload/new-day/authenticated gates |
+| `7.5` historical post-Demo-Buy reclosure | Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + historical deterministic gates |
+| `8.1` local order authority | IBKR_ORDER_SERVICE §§1,3,5–8,10,14,17–18; IBKR_ORDER_SERVICE_SECURITY; PRODUCT_REQUIREMENTS §15; TECHNICAL_SPEC §§33–35,37,40–41; TEST_STRATEGY §§24–25,28 |
+| `8.2` real CPGW lifecycle | IBKR_ORDER_SERVICE §§2,4,5,9,11–16; DECISIONS D-US-035/037/038; TECHNICAL_SPEC §§35–39; TEST_STRATEGY §§26–30 |
+| `8.3` packaging/integration seam | IBKR_ORDER_SERVICE §§19–21; IBKR_ORDER_SERVICE_SECURITY §10; PRODUCT_SPEC/TECHNICAL_SPEC packaging; TEST_STRATEGY §§31–32 |
+| `8.4` branch-8 reclosure | all IBKR order contracts + affected generic contracts + full required deterministic gates + PR/main/open-PR truth |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/heavy workload/authenticated gates; exact candidate pinned by completed `8.4` |
 
 TREE `success_evidence` is always definition-of-done.
 
-## Post-replan serial allocation
+## Current serial allocation
 
 ```text
-Chat 10: 4.3.1 → 4.3.2
-Chat 11: 4.3.3
-Chat 12: 4.4.1
-Chat 13: 4.4.2
-Chat 14: 4.5.1
-Chat 15: 4.5.2
-Chat 16: 7.5
-Chat 17: 7.4
+Chats 1–16: historical completed implementation through 7.5
+Chat 17: 8.1
+Chat 18: 8.2
+Chat 19: 8.3
+Chat 20: 8.4
+Chat 21: 7.4
 ```
 
-Do not skip to reclosure/acceptance. `7.5` requires the complete AI UX path; `7.4` is last.
+Do not skip forward. `8.1 → 8.2 → 8.3 → 8.4 → 7.4` is dependency order.
 
-## Demo Buy invariants
+## Branch-8 architectural boundary
+
+The market-analysis lane remains independently runnable:
+
+```text
+browser producer/Viewer
+→ ws://127.0.0.1:8765
+→ Market Flow US service
+→ market-flow-us DuckDB schema v4
+```
+
+The execution lane is a separate process:
+
+```text
+authorized local caller
+→ http://127.0.0.1:8770
+→ ibkr-order-service
+→ HTTPS localhost Client Portal Gateway
+→ Interactive Brokers
+```
+
+Branch `8` does **not** wire Scanner, Demo Buy, AI Investigation or Current to automatic order submission. Future integration must consume the sidecar API rather than bypassing it.
+
+## IBKR order invariants
+
+### Initial scope
+
+```text
+U.S. STK / USD / SMART
+BUY | SELL
+LMT | MKT
+DAY | GTC
+positive finite quantity
+no short opening
+```
+
+`LMT` requires positive finite `limitPrice`; `MKT` forbids it.
+
+### DRY_RUN default / LIVE fail-closed
+
+`DRY_RUN` must never call the provider submit endpoint.
+
+Actual submit requires every independent gate:
+
+```text
+valid local caller authorization
+process explicitly LIVE-enabled
+request explicitly executionMode=LIVE
+valid brokerage session
+tradable runtime account
+provider permission
+unambiguous instrument
+snapshot preflight
+successful what-if
+local validation
+SELL long-position coverage when SELL
+```
+
+No missing gate may be bypassed or treated as a warning.
+
+### Localhost security
+
+Loopback binding is not authorization.
+
+```text
+bind exactly 127.0.0.1:8770
+GET /health unauthenticated only when strictly non-sensitive
+all other endpoints require high-entropy per-run caller token
+browser Origin rejected by default
+no wildcard/credentialed CORS
+bounded JSON-only state-changing requests
+unauthorized request -> zero provider calls + zero state mutation
+```
+
+Caller token is never hard-coded, persisted, logged, reported or sent to IBKR and is invalidated by process exit.
+
+### Provider authentication / privacy
+
+Manual Client Portal Gateway authentication is user-owned. Never automate credential login or store credentials, cookies/session tokens, real account identifiers, private browser state or raw authenticated provider dumps.
+
+A provider account ID may exist only in process memory for required provider calls and must be redacted from diagnostics.
+
+If CPGW localhost TLS verification must be relaxed, scope the exception to that loopback client only. Never use process-global TLS disable.
+
+### Idempotency / unknown acknowledgement
+
+`requestId` is mandatory.
+
+```text
+same requestId + same normalized intent
+→ return/reconcile existing local result
+
+same requestId + different normalized intent
+→ reject
+```
+
+After possible provider submit, transport loss is `ACKNOWLEDGEMENT_UNKNOWN` unless the remote outcome is conclusively known. Never blind-resubmit. Reconcile provider open-order/trade state first.
+
+### Reply / cancel / fills
+
+Provider `REPLY_REQUIRED` is surfaced explicitly. Unknown/unmodeled reply questions fail closed. No global warning suppression.
+
+Cancellation reconciles provider state and never claims already-filled quantity was cancelled. Partial fill and fill remain distinct lifecycle states.
+
+### SELL guard
+
+Before LIVE SELL, prove requested quantity is covered by known long position. Insufficient, unavailable or ambiguous position authority fails closed. This is not a portfolio/risk engine.
+
+## Demo Buy invariants preserved
 
 ### Selection/provenance
 
@@ -88,8 +198,6 @@ choose source rows
 
 Exact bounds live in `DEMO_BUY_PROTOCOL_LIMITS.md`: 5000 items, 1 MiB SQL, first 50 context rows, <=64 retained columns with canonical identity mandatory, 128-byte clipped textual/serialized cells, <=256 KiB context.
 
-Node rejects malformed duplicates/order/context and cross-checks selected ranks <=50 against context identity.
-
 ### Authority
 
 No browser-supplied price.
@@ -101,8 +209,6 @@ post-capture authority:    cycle_id > buy_cycle_id
 ```
 
 Horizon match must also satisfy `cycle_id > buy_cycle_id` and `collected_at_ms >= captured_at_ms + H`.
-
-Wall-clock timestamps are diagnostics only. Preserve raw values; negative derived durations/latencies/ages become null + timing anomaly, never authority reordering.
 
 ### Capture acknowledgement
 
@@ -118,62 +224,27 @@ Never blindly replay acknowledgement-unknown capture.
 
 One Viewer-wide capture slot. Busy Auto generations are visibly skipped, not queued. One Viewer-wide AI-export slot; extra Generate/Regenerate actions do not queue.
 
-## Scanner/Viewer UX invariants
+## AI Investigation invariants preserved
 
-- Scanner result capture always refers to the exact rendered active generation, not edited draft text.
-- Capture freezes generation + row selection synchronously before async submit.
-- Checkbox/control interaction must not trigger row-to-Detail navigation.
-- Auto is Viewer-session state, visible across surfaces and directly switchable Off.
-- Auto changes apply only to future generations; Off does not cancel an already in-flight capture.
-- Scanner has a **resumable** Stop recurring scan distinct from terminal Viewer destroy; later Activate works.
-- Demo Buy page uses capture groups, sticky identity/baseline columns and one compact cell per horizon.
-- `NO_FUTURE_OBSERVATION` is shown as Pending; other unavailable reasons remain warnings.
-- `Refresh latest` resets page one; `Load more` continues keyset walk; `Refresh observation` uses `demo.buy.observation.get` and does not reset pagination.
+AI Investigation is local evidence packaging only. No AI credential/cloud call/web enrichment/automatic Scanner mutation and no broker-order authority.
 
-## AI Investigation invariants
+Prediction-time and outcome evidence obey the `buy_cycle_id` watermark. AI export uses its sharing-safe projection and exact user SQL remains verbatim with pre-share warning.
 
-AI Investigation is local evidence packaging only:
+## Schema/new-day invariants preserved
 
-```text
-Demo Buy observation
-→ deterministic local pack
-→ user copies/uploads to AI of choice
-```
-
-No AI credential/cloud call/web enrichment/automatic Scanner mutation.
-
-Prediction-time and outcome evidence obey the same `buy_cycle_id` watermark. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
-
-Exporter accepts no browser path, publishes temp-dir→atomic-rename under `exports/ai-investigations/`, returns a product-relative path, never overwrites a successful pack and mutates no DB.
-
-A lost export ACK may be regenerated after reconnect because export is non-mutating/collision-safe. Clipboard operations require manual-copy fallback.
-
-## Schema/new-day invariants
-
-Valid v3 migrates transactionally to v4; suspicious partial-v3 Demo structures fail closed. Fresh DB boots v4. No speculative history index.
-
-New Trading Day accepts valid v3 or v4 source, rejects v1/v2/corrupt/running states, preserves saved queries only, optionally archives source unchanged and installs fresh v4 with empty Demo Buy state.
+Valid v3 migrates transactionally to market schema v4; suspicious partial-v3 Demo structures fail closed. Fresh market DB boots v4. New Trading Day preserves saved queries only and does not own the separate IBKR execution store.
 
 ## Performance / KISS
 
-Do not add Strategy Engine, order/fill simulator, portfolio model, background horizon updater, materialized horizon columns, second DB/transport, cross-day strategy warehouse, capture replay queue or AI-agent subsystem.
+Do not add Strategy Engine, automatic Scanner-to-order subsystem, portfolio engine, background horizon updater, materialized horizon columns, another market-data DB/transport, cross-day strategy warehouse, capture replay subsystem, AI-agent subsystem or cloud order service.
 
-If recurring verification is materially slow:
-
-```text
-localize dominant cost
-→ remove duplication/waste
-→ preserve proof
-→ remeasure
-```
-
-Hosted CI is correctness-first; heavy 4096×180/day-bounded performance remains target-machine evidence.
+The separate order-service HTTP API and minimal execution DuckDB are explicitly approved branch-8 boundaries; keep both narrow.
 
 ## Diagnostics/security
 
-Preserve the existing checkpoint/support architecture; do not add parallel logging.
+Preserve the existing checkpoint/support pattern. Order diagnostics may use an `ibkr_order.*` component namespace but must expose only stable checkpoint/code, product-owned local IDs, bounded lifecycle state and sanitized cause.
 
-Support evidence may contain bounded status/counters/IDs but never credentials, cookies, auth/session data, raw authenticated dumps, stored SQL, Scanner/history evidence or AI prompt contents.
+Never include credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored Scanner SQL/history evidence or AI prompt contents in support diagnostics.
 
 ## Work-unit lifecycle
 
@@ -198,24 +269,16 @@ set in_progress
 
 A blocking defect stays with the discovering chat: root cause → fix → regression/proof → affected verification → green.
 
-If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area per FRAMEWORK, repair/review/freeze, then continue.
+If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area, repair/review/freeze, then continue.
 
 If required GitHub Actions/CI is unavailable, do not merge unverified work or start the next implementation unit.
 
 ## Final acceptance
 
-Chat 17 / TREE `7.4` is authorized only after fresh `main` shows `7.5` done and the current pointer at `7.4`.
+The pre-branch-8 product candidate `f2789a4ec43e0878688aa9ea29c647e40a1154b6` is historical evidence only after branch `8` begins implementation; it must **not** be reused as the final accepted candidate.
 
-The exact accepted **product candidate** for final acceptance is:
+TREE `8.4` owns deterministic reclosure and must pin the new exact post-order-service candidate SHA in STATUS/handoff/final-acceptance truth before `7.4` resumes.
 
-```text
-f2789a4ec43e0878688aa9ea29c647e40a1154b6
-```
+Only `7.4` owns final user-dependent target-machine heavy performance, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility. Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
 
-This is the squash merge of PR #29, which repaired the release-blocking stale `NEW_TRADING_DAY.cmd` schema-v3 wording and added a regression guard without changing rollover/runtime behavior. Fast and Planning Docs were green on the PR head and again on this `main` merge. Browser, bounded Local Fake (`all` / FR-7 + FR-8A–H) and bounded Workload runtime paths were unchanged by PR #29, so their deterministic proof from the immediately preceding accepted candidate `e0af9d105004f175a44ec33fa481fba0631773bf` remains applicable to this product candidate.
-
-Handoff-only metadata commits after `f2789a4ec43e0878688aa9ea29c647e40a1154b6` do **not** replace the accepted product candidate. Chat 17 should bootstrap authorization from fresh `main`, but all target-machine/heavy/authenticated acceptance evidence must remain pinned to the exact product candidate SHA above rather than silently substituting a later metadata-only SHA.
-
-Only `7.4`/Chat 17 owns user-dependent authenticated browser, target-machine heavy performance and market-open checks. It also proves a complete local Demo Buy + AI Investigation user journey on the exact accepted SHA; sending the generated pack to an external AI is not itself an acceptance prerequisite.
-
-Overall completion requires every assigned leaf done, deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
+Overall completion requires every assigned leaf done, branch-8 deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
