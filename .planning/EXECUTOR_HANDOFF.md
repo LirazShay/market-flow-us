@@ -209,10 +209,12 @@ Chat 17 / TREE `7.4` is authorized only after fresh `main` shows `7.5` done and 
 The exact accepted **product candidate** for final acceptance is:
 
 ```text
-e0af9d105004f175a44ec33fa481fba0631773bf
+f2789a4ec43e0878688aa9ea29c647e40a1154b6
 ```
 
-It is the squash merge of PR #27 and passed Fast, Browser (including bounded Local Fake `all` / FR-7 + FR-8A–H), Planning Docs and bounded Workload on PR and again on `main` before handoff. Handoff-only metadata commits after this SHA do **not** replace the accepted product candidate. Chat 17 should bootstrap authorization from fresh `main`, but the product acceptance evidence must remain pinned to the exact SHA above (checkout/verify that candidate as required by the acceptance tooling rather than silently substituting a later metadata-only SHA).
+This is the squash merge of PR #29, which repaired the release-blocking stale `NEW_TRADING_DAY.cmd` schema-v3 wording and added a regression guard without changing rollover/runtime behavior. Fast and Planning Docs were green on the PR head and again on this `main` merge. Browser, bounded Local Fake (`all` / FR-7 + FR-8A–H) and bounded Workload runtime paths were unchanged by PR #29, so their deterministic proof from the immediately preceding accepted candidate `e0af9d105004f175a44ec33fa481fba0631773bf` remains applicable to this product candidate.
+
+Handoff-only metadata commits after `f2789a4ec43e0878688aa9ea29c647e40a1154b6` do **not** replace the accepted product candidate. Chat 17 should bootstrap authorization from fresh `main`, but all target-machine/heavy/authenticated acceptance evidence must remain pinned to the exact product candidate SHA above rather than silently substituting a later metadata-only SHA.
 
 Only `7.4`/Chat 17 owns user-dependent authenticated browser, target-machine heavy performance and market-open checks. It also proves a complete local Demo Buy + AI Investigation user journey on the exact accepted SHA; sending the generated pack to an external AI is not itself an acceptance prerequisite.
 
