@@ -4,6 +4,6 @@ replan_mode: execution_reopen
 current_stage: "implementation"
 current_node: "9.5"
 blockers: []
-next_action: "TREE 9.4 implementation and success_evidence are complete on Chat 23 PR #52. After PR #52 squash-merge, verify main Fast/Browser/Planning/Workload CI and clean open-PR state, then start Chat 24 / TREE 9.5 from fresh main for deterministic branch-9 reclosure. Audit MARKET_REPLAY and affected product/data/technical/test contracts against the implemented isolated Replay Host/operator flow, run focused Replay acceptance plus materially affected broad gates, and pin the exact post-branch-9 candidate for final 7.4 acceptance."
+next_action: "Chat 24 / TREE 9.5 is in progress on PR #53. Focused integrated Replay reclosure proof is green in Fast CI and a dedicated test:acceptance:replay target has been added. Complete the branch-9 contract/release-truth audit and repairs, run the focused Replay acceptance plus materially affected Browser/Planning/Workload/ordinary Local Fake gates, review and squash-merge PR #53, require green main and clean open-PR state, then pin the exact post-branch-9 candidate and hand off Chat 25 / TREE 7.4."
 last_review: "R-US-MARKET-REPLAY-EXTERNAL"
 implementation_authorized: true
