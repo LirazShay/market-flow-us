@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 16
-  node: "7.5"
-  title: "Post-feature deterministic reclosure"
-  status: in_progress
+  chat: 17
+  node: "7.4"
+  title: "Final target-machine/provider acceptance"
+  status: ready
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -30,7 +30,7 @@ planning_completion:
 execution:
   chats_total: 17
   implementation_leaves_total: 28
-  current_chat: 16
-  current_node: "7.5"
+  current_chat: 17
+  current_node: "7.4"
 
 blockers: []
