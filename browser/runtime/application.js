@@ -19,6 +19,7 @@ import {
   createDemoBuyCaptureController,
   DEMO_BUY_AUTO_MODE
 } from "../viewer/demo-buy-capture-controller.js";
+import { createDemoBuySurface } from "../viewer/demo-buy-surface.js";
 import { createViewerRefreshController } from "../viewer/refresh-controller.js";
 import { createScannerSurface } from "../viewer/scanner-surface.js";
 import { createProducerBridge } from "./producer-bridge.js";
@@ -69,6 +70,48 @@ function createShellDocument(viewerWindow) {
     th { background: #eef1f4; }
     .market-flow-us-diagnostics { display: flex; gap: 12px; flex-wrap: wrap; }
     .market-flow-us-diagnostics div { display: flex; gap: 4px; }
+    .market-flow-us-demo-buy-controls,
+    .market-flow-us-demo-buy-capture-fields,
+    .market-flow-us-demo-buy-provenance-fields,
+    .market-flow-us-demo-buy-observation-details dl {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .market-flow-us-demo-buy-capture { margin-block: 18px; }
+    .market-flow-us-demo-buy-capture-header {
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: #f6f7f9;
+      padding-block: 6px;
+    }
+    .market-flow-us-demo-buy-field { display: flex; gap: 4px; }
+    .market-flow-us-demo-buy-field dt { font-weight: 700; }
+    .market-flow-us-demo-buy-field dd { margin: 0; }
+    .market-flow-us-demo-buy-scroll { max-width: 100%; }
+    .market-flow-us-demo-buy-table { min-width: max-content; }
+    .market-flow-us-demo-buy-horizon > div:first-child { font-weight: 700; }
+    .market-flow-us-demo-buy-pending { background: #f4f4f4; }
+    .market-flow-us-demo-buy-warning,
+    .market-flow-us-demo-buy-warning.market-flow-us-demo-buy-horizon { background: #fff3cd; }
+    .market-flow-us-demo-buy-up { background: #e9f7ef; }
+    .market-flow-us-demo-buy-down { background: #fdecec; }
+    .market-flow-us-demo-buy-flat { background: #eef1f4; }
+    .market-flow-us-demo-buy-provenance,
+    .market-flow-us-demo-buy-observation-details {
+      margin-block: 8px;
+      padding: 8px;
+      border: 1px solid #d7dce2;
+      background: #fff;
+    }
+    .market-flow-us-demo-buy-provenance pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: 360px;
+      overflow: auto;
+    }
     textarea { width: min(100%, 900px); }
   `;
 
@@ -94,6 +137,10 @@ function createShellDocument(viewerWindow) {
   scannerButton.type = "button";
   scannerButton.textContent = "Scanner";
 
+  const demoBuyButton = document.createElement("button");
+  demoBuyButton.type = "button";
+  demoBuyButton.textContent = "Demo Buy";
+
   const refreshControls = document.createElement("span");
   refreshControls.className = "market-flow-us-refresh-controls";
 
@@ -101,7 +148,13 @@ function createShellDocument(viewerWindow) {
   autoDemoBuyIndicator.className = "market-flow-us-auto-demo-buy";
   autoDemoBuyIndicator.setAttribute("aria-live", "polite");
 
-  toolbar.append(currentButton, scannerButton, refreshControls, autoDemoBuyIndicator);
+  toolbar.append(
+    currentButton,
+    scannerButton,
+    demoBuyButton,
+    refreshControls,
+    autoDemoBuyIndicator
+  );
 
   const diagnostics = document.createElement("section");
   diagnostics.setAttribute("aria-label", "אבחון תפעולי");
@@ -126,6 +179,10 @@ function createShellDocument(viewerWindow) {
   scannerRoot.className = "market-flow-us-view";
   scannerRoot.hidden = true;
 
+  const demoBuyRoot = document.createElement("section");
+  demoBuyRoot.className = "market-flow-us-view";
+  demoBuyRoot.hidden = true;
+
   shell.append(
     title,
     runtimeStatus,
@@ -133,7 +190,8 @@ function createShellDocument(viewerWindow) {
     diagnostics,
     currentRoot,
     detailRoot,
-    scannerRoot
+    scannerRoot,
+    demoBuyRoot
   );
 
   document.head.replaceChildren(style);
@@ -144,6 +202,7 @@ function createShellDocument(viewerWindow) {
     runtimeStatus,
     currentButton,
     scannerButton,
+    demoBuyButton,
     refreshControls,
     autoDemoBuyIndicator,
     diagnostics,
@@ -151,7 +210,8 @@ function createShellDocument(viewerWindow) {
     supportDiagnostics,
     currentRoot,
     detailRoot,
-    scannerRoot
+    scannerRoot,
+    demoBuyRoot
   };
 }
 
@@ -187,6 +247,7 @@ function createViewerShell({
     profile: currentProfile,
     onOpenSecurity(securityId) {
       elements.scannerRoot.hidden = true;
+      elements.demoBuyRoot.hidden = true;
       void refreshController.openDetail(securityId);
     }
   });
@@ -198,6 +259,7 @@ function createViewerShell({
     captureReturnState: () => currentSurface.captureViewState(),
     onBack(returnState) {
       elements.scannerRoot.hidden = true;
+      elements.demoBuyRoot.hidden = true;
       refreshController.backToCurrent(returnState);
     }
   });
@@ -217,8 +279,14 @@ function createViewerShell({
     demoBuyController,
     onOpenSecurity(securityId) {
       elements.scannerRoot.hidden = true;
+      elements.demoBuyRoot.hidden = true;
       void refreshController.openDetail(securityId);
     }
+  });
+
+  const demoBuySurface = createDemoBuySurface({
+    root: elements.demoBuyRoot,
+    client
   });
 
   function renderAutoDemoBuyIndicator(state) {
@@ -275,9 +343,11 @@ function createViewerShell({
     const demoBuyState = demoBuyController.getState();
     return {
       runtimeState,
-      viewerSurface: elements.scannerRoot.hidden
-        ? refreshState.activeSurface
-        : "SCANNER",
+      viewerSurface: !elements.demoBuyRoot.hidden
+        ? "DEMO_BUY"
+        : elements.scannerRoot.hidden
+          ? refreshState.activeSurface
+          : "SCANNER",
       selectedSecurityIdPresent: detailState.selectedSecurityId !== null,
       scannerActive: scannerState.activeSql !== null && scannerState.stopped !== true,
       autoDemoBuyMode: demoBuyState.autoMode,
@@ -323,11 +393,18 @@ function createViewerShell({
     void copySupportSnapshot();
   });
 
+  function clearNavigationState() {
+    elements.currentButton.removeAttribute("aria-current");
+    elements.scannerButton.removeAttribute("aria-current");
+    elements.demoBuyButton.removeAttribute("aria-current");
+  }
+
   function showCurrent() {
     elements.scannerRoot.hidden = true;
+    elements.demoBuyRoot.hidden = true;
     refreshController.backToCurrent(null);
+    clearNavigationState();
     elements.currentButton.setAttribute("aria-current", "page");
-    elements.scannerButton.removeAttribute("aria-current");
   }
 
   function showScanner() {
@@ -335,12 +412,25 @@ function createViewerShell({
     elements.currentRoot.hidden = true;
     elements.detailRoot.hidden = true;
     elements.scannerRoot.hidden = false;
-    elements.currentButton.removeAttribute("aria-current");
+    elements.demoBuyRoot.hidden = true;
+    clearNavigationState();
     elements.scannerButton.setAttribute("aria-current", "page");
+  }
+
+  function showDemoBuy() {
+    refreshController.backToCurrent(null);
+    elements.currentRoot.hidden = true;
+    elements.detailRoot.hidden = true;
+    elements.scannerRoot.hidden = true;
+    elements.demoBuyRoot.hidden = false;
+    demoBuySurface.start();
+    clearNavigationState();
+    elements.demoBuyButton.setAttribute("aria-current", "page");
   }
 
   elements.currentButton.addEventListener("click", showCurrent);
   elements.scannerButton.addEventListener("click", showScanner);
+  elements.demoBuyButton.addEventListener("click", showDemoBuy);
 
   refreshController.start();
   showCurrent();
@@ -389,6 +479,7 @@ function createViewerShell({
     unsubscribeDemoBuy = null;
     refreshController.close();
     scannerSurface.destroy();
+    demoBuySurface.destroy();
     client.close();
     if (viewerWindow[VIEWER_SHELL_KEY] === api) {
       try {
