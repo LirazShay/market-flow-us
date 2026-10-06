@@ -15,8 +15,30 @@ import { resetDemoState } from "../../scripts/demo-reset.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
-function npmCommandForPlatform(platform = process.platform) {
-  return platform === "win32" ? "npm.cmd" : "npm";
+function npmRunInvocation({
+  platform = process.platform,
+  npmExecPath = process.env.npm_execpath,
+  nodeExecPath = process.execPath,
+  comSpec = process.env.ComSpec ?? process.env.COMSPEC
+} = {}) {
+  if (typeof npmExecPath === "string" && npmExecPath.length > 0) {
+    return {
+      command: nodeExecPath,
+      args: [npmExecPath, "run", "demo:fake-market"]
+    };
+  }
+
+  if (platform === "win32") {
+    return {
+      command: comSpec || "cmd.exe",
+      args: ["/d", "/s", "/c", "npm run demo:fake-market"]
+    };
+  }
+
+  return {
+    command: "npm",
+    args: ["run", "demo:fake-market"]
+  };
 }
 
 async function openClient({ url, origin, role, clientInstanceId }) {
@@ -56,7 +78,8 @@ async function openClient({ url, origin, role, clientInstanceId }) {
 }
 
 async function startDemoCommand() {
-  const child = spawn(npmCommandForPlatform(), ["run", "demo:fake-market"], {
+  const invocation = npmRunInvocation();
+  const child = spawn(invocation.command, invocation.args, {
     cwd: ROOT,
     env: process.env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -188,10 +211,49 @@ async function commitOneDemoCycle(handle) {
   }
 }
 
-test("demo subprocess command maps npm to npm.cmd on Windows", () => {
-  assert.equal(npmCommandForPlatform("win32"), "npm.cmd");
-  assert.equal(npmCommandForPlatform("linux"), "npm");
-  assert.equal(npmCommandForPlatform("darwin"), "npm");
+test("demo subprocess uses npm CLI through Node and a cmd fallback on Windows", () => {
+  assert.deepEqual(
+    npmRunInvocation({
+      platform: "win32",
+      npmExecPath: "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+      nodeExecPath: "C:\\Program Files\\nodejs\\node.exe",
+      comSpec: "C:\\Windows\\System32\\cmd.exe"
+    }),
+    {
+      command: "C:\\Program Files\\nodejs\\node.exe",
+      args: [
+        "C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js",
+        "run",
+        "demo:fake-market"
+      ]
+    }
+  );
+
+  assert.deepEqual(
+    npmRunInvocation({
+      platform: "win32",
+      npmExecPath: "",
+      nodeExecPath: "C:\\Program Files\\nodejs\\node.exe",
+      comSpec: "C:\\Windows\\System32\\cmd.exe"
+    }),
+    {
+      command: "C:\\Windows\\System32\\cmd.exe",
+      args: ["/d", "/s", "/c", "npm run demo:fake-market"]
+    }
+  );
+
+  assert.deepEqual(
+    npmRunInvocation({
+      platform: "linux",
+      npmExecPath: "",
+      nodeExecPath: "/usr/bin/node",
+      comSpec: ""
+    }),
+    {
+      command: "npm",
+      args: ["run", "demo:fake-market"]
+    }
+  );
 });
 
 test("npm run demo:fake-market starts the normal stack and prints one useful URL", async () => {
