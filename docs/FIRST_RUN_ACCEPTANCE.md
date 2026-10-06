@@ -8,24 +8,21 @@
 
 ## FR-0 — Freeze exact candidate
 
-לפני התקנה או בדיקה, מתוך תיקיית הריפו:
+זהו checkpoint של release/GitHub truth, לא פעולה על מחשב היעד. לפני שמבקשים מהמשתמש להתקין או לבדוק משהו, המאמת קורא fresh `main` ומוודא:
+
+- `STATUS.yaml` ו־`.planning/STATUS.yaml` עדיין מצביעים על TREE `7.4`;
+- `.planning/EXECUTOR_HANDOFF.md` עדיין מצמיד את ה־product candidate המדויק:
 
 ```text
-git fetch origin
-git checkout main
-git pull --ff-only
-git status --short
-git rev-parse HEAD
+f2789a4ec43e0878688aa9ea29c647e40a1154b6
 ```
 
-PASS:
+- commits מאוחרים יותר ב־`main` הם planning/docs/metadata בלבד ואינם מחליפים את ה־candidate;
+- אין PR release פתוח או product work לא ממוזג שמחליף את ה־candidate.
 
-- `git status --short` ריק;
-- branch הוא `main`;
-- `HEAD` הוא ה־candidate שאושר לבדיקה;
-- אין PR release פתוח או שינוי לא ממוזג שמחליף את ה־candidate.
+PASS: ה־candidate לעיל מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
 
-שמור את ה־SHA. כל evidence כבד/authenticated בהמשך חייב להיות משויך אליו.
+FAIL: זהות ה־candidate אינה חד־משמעית, ה־status כבר לא מאשר `7.4`, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -44,9 +41,26 @@ powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 
 ## FR-2 — Repository acquisition/update
 
-אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, עדכן אותו ל־accepted `main` SHA.
+אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, השתמש בו רק אם ה־working tree נקי. לאחר מכן pin את ה־checkout ל־accepted SHA שהוקפא ב־FR-0; אין דרישה שה־branch יהיה `main`, ו־`main` מאוחר יותר עם metadata בלבד אינו ה־product candidate.
 
-PASS: `HEAD` תואם ל־FR-0 וה־working tree נקי לפני outputs/tests.
+בריפו קיים:
+
+```text
+git fetch origin
+git status --short
+git switch --detach f2789a4ec43e0878688aa9ea29c647e40a1154b6
+git status --short
+git rev-parse HEAD
+```
+
+אם `git status --short` הראשון אינו ריק — עצור לפני `git switch` ואל תדרוס שינוי מקומי.
+
+PASS:
+
+- `git status --short` ריק לפני ואחרי החלפת ה־candidate;
+- `HEAD` הוא בדיוק `f2789a4ec43e0878688aa9ea29c647e40a1154b6`;
+- detached checkout תקין ומועדף ל־acceptance; אין צורך להיות על branch `main`;
+- אין substitution שקט ל־SHA מאוחר יותר של metadata בלבד.
 
 ## FR-3 — Deterministic dependency install
 
