@@ -24,6 +24,8 @@ function text(documentRef, tagName, value, className) {
 export function createReplayRecordingSurface({
   recorder,
   exportRecording = null,
+  playRecording = null,
+  openPlayer = null,
   documentRef = globalThis.document,
   rootId = "market-flow-us-replay-recorder"
 }) {
@@ -32,6 +34,12 @@ export function createReplayRecordingSurface({
   }
   if (exportRecording !== null && typeof exportRecording !== "function") {
     throw new TypeError("exportRecording must be a function when supplied.");
+  }
+  if (playRecording !== null && typeof playRecording !== "function") {
+    throw new TypeError("playRecording must be a function when supplied.");
+  }
+  if (openPlayer !== null && typeof openPlayer !== "function") {
+    throw new TypeError("openPlayer must be a function when supplied.");
   }
   if (!documentRef?.body) throw new Error("document.body is required.");
 
@@ -64,10 +72,14 @@ export function createReplayRecordingSurface({
       .complete { color: #86efac; }
       .incomplete { color: #fde68a; }
       .header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+      .header-actions { display: flex; gap: 6px; }
       .close { padding: 3px 8px; }
     </style>
     <div class="panel">
-      <div class="header"><h1>Market Replay — הקלטה</h1><button class="close" type="button" title="סגור חלון">×</button></div>
+      <div class="header">
+        <h1>Market Replay — הקלטה</h1>
+        <div class="header-actions"><button class="open-player" type="button">Player</button><button class="close" type="button" title="סגור חלון">×</button></div>
+      </div>
       <div class="row"><input class="name" maxlength="120" placeholder="שם הקלטה (אופציונלי)"><button class="record" type="button">Record</button><button class="stop" type="button">Stop</button></div>
       <div class="metrics">
         <div class="metric"><div class="label">סטטוס</div><div class="value status"></div></div>
@@ -84,6 +96,7 @@ export function createReplayRecordingSurface({
 
   const elements = {
     close: shadow.querySelector(".close"),
+    openPlayer: shadow.querySelector(".open-player"),
     name: shadow.querySelector(".name"),
     record: shadow.querySelector(".record"),
     stop: shadow.querySelector(".stop"),
@@ -146,6 +159,23 @@ export function createReplayRecordingSurface({
       );
 
       const actions = text(documentRef, "div", "", "row");
+      const playButton = text(documentRef, "button", "נגן");
+      playButton.type = "button";
+      playButton.disabled = busy || item.status !== "complete" || playRecording === null;
+      playButton.addEventListener("click", async () => {
+        if (!playRecording) return;
+        clearOperationMessages();
+        setBusy(true);
+        try {
+          await playRecording({ id: item.id, name: item.name });
+          operationNotice = "ההקלטה נבחרה ב־Player.";
+        } catch {
+          operationError = "לא ניתן לפתוח את ההקלטה ב־Player.";
+        } finally {
+          setBusy(false);
+        }
+      });
+
       const renameInput = documentRef.createElement("input");
       renameInput.value = item.name;
       renameInput.maxLength = 120;
@@ -204,7 +234,7 @@ export function createReplayRecordingSurface({
           setBusy(false);
         }
       });
-      actions.append(renameInput, renameButton, exportButton, deleteButton);
+      actions.append(playButton, renameInput, renameButton, exportButton, deleteButton);
       card.append(titleRow, meta, actions);
       elements.library.append(card);
     }
@@ -216,6 +246,7 @@ export function createReplayRecordingSurface({
     elements.stop.disabled = busy || !active;
     elements.name.disabled = busy || active;
     elements.refresh.disabled = busy;
+    elements.openPlayer.disabled = busy || openPlayer === null;
     elements.status.textContent = statusLabel(state.status);
     elements.duration.textContent = formatDuration(state.durationMs);
     elements.frames.textContent = String(state.frameCount);
@@ -269,6 +300,11 @@ export function createReplayRecordingSurface({
     } finally {
       setBusy(false);
     }
+  });
+
+  elements.openPlayer.addEventListener("click", () => {
+    clearOperationMessages();
+    openPlayer?.();
   });
 
   elements.close.addEventListener("click", () => {
