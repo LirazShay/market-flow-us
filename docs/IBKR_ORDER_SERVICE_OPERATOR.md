@@ -37,6 +37,8 @@ START_IBKR_ORDER_SERVICE.cmd LIVE
 
 There is no committed account/authentication config file. Provider authentication remains manual in Client Portal Gateway.
 
+The plain Windows launcher is an operator process launcher; it intentionally does **not** print the caller token. A trusted programmatic caller that needs protected API access uses the in-memory IPC/in-process seam described below rather than scraping console output or reading a token file.
+
 ## 3. Advanced CLI options
 
 Equivalent direct command:
@@ -57,7 +59,7 @@ Supported options after `--`:
 
 The default CPGW URL is `https://localhost:5000/v1/api`.
 
-`--cpgw-url` is restricted to HTTPS loopback and may not contain credentials. `--allow-insecure-loopback-tls` affects only the dedicated loopback CPGW client; it does not set `NODE_TLS_REJECT_UNAUTHORIZED` or weaken process-global TLS.
+`--cpgw-url` is restricted to HTTPS loopback and may not contain credentials, query data or a fragment. `--allow-insecure-loopback-tls` affects only the dedicated loopback CPGW client; it does not set `NODE_TLS_REJECT_UNAUTHORIZED` or weaken process-global TLS.
 
 ## 4. Caller token handling
 
