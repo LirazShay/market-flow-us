@@ -1,9 +1,9 @@
 version: 2
 plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "planning_freeze"
+current_stage: "implementation"
 current_node: "9.1"
 blockers: []
-next_action: "Market Recording + Replay planning is fully reviewed, approved, allocated and frozen. TREE has 9 capability branches / 50 nodes / 37 implementation leaves; R-US-MARKET-REPLAY-FINAL and R-US-MARKET-REPLAY-EXTERNAL are PASS after concrete Stop→Play isolation, Host bootstrap and allocation-order corrections. EXECUTION is repaired to Chat 21: 9.1→9.2, Chat 22: 9.3, Chat 23: 9.4, Chat 24: 9.5, Chat 25: 7.4. Implementation remains unauthorized until this planning PR is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean. After those gates, deliberately advance root phase to implementation, set implementation_authorized=true and execute Chat 21 / 9.1 first."
+next_action: "Market Recording + Replay planning is frozen, merged to main, main Planning Docs CI is green and open-PR audit is clean. Implementation is authorized. Start Chat 21 / TREE 9.1 from fresh main, then continue to 9.2 in the same chat only after 9.1 success_evidence is green and merged. Preserve the server-unaware replay boundary, normal live DB/test isolation and all docs/MARKET_REPLAY.md invariants."
 last_review: "R-US-MARKET-REPLAY-EXTERNAL"
-implementation_authorized: false
+implementation_authorized: true
