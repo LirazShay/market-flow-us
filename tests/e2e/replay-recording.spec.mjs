@@ -26,9 +26,9 @@ test.beforeAll(async () => {
         import { openReplayRecordingStore } from ${JSON.stringify(storePath)};
         import { createMarketReplayRecorder } from ${JSON.stringify(recorderPath)};
         import { createReplayRecordingSurface } from ${JSON.stringify(surfacePath)};
-        import { createRecordingFrame } from ${JSON.stringify(modelPath)};
+        import { createReplayFrame } from ${JSON.stringify(modelPath)};
         import { buildValidatedSnapshot } from ${JSON.stringify(providerPath)};
-        globalThis.__ReplayTest = { openReplayRecordingStore, createMarketReplayRecorder, createReplayRecordingSurface, createRecordingFrame, buildValidatedSnapshot };
+        globalThis.__ReplayTest = { openReplayRecordingStore, createMarketReplayRecorder, createReplayRecordingSurface, createReplayFrame, buildValidatedSnapshot };
       `,
       resolveDir: ROOT,
       sourcefile: "replay-recording-test-entry.js"
@@ -47,7 +47,7 @@ test("IndexedDB recording survives reopen with exact order/timing/membership and
 
   const persisted = await page.evaluate(async () => {
     const dbName = `replay-e2e-${crypto.randomUUID()}`;
-    const { openReplayRecordingStore, createRecordingFrame, buildValidatedSnapshot } = globalThis.__ReplayTest;
+    const { openReplayRecordingStore, createReplayFrame, buildValidatedSnapshot } = globalThis.__ReplayTest;
     const makeRow = (id) => ({ PaperId: id, Symbol: `SYM${id}`, Price: Number(id) * 10 });
     const makeSnapshot = (ids, completedAtMs) => buildValidatedSnapshot({
       responseJson: {
@@ -69,7 +69,7 @@ test("IndexedDB recording survives reopen with exact order/timing/membership and
       makeSnapshot([3, 1], 3_111)
     ];
     for (let sequence = 0; sequence < snapshots.length; sequence += 1) {
-      await store.appendFrame(createRecordingFrame({ recordingId: "r1", sequence, snapshot: snapshots[sequence] }));
+      await store.appendFrame(createReplayFrame({ recordingId: "r1", sequence, snapshot: snapshots[sequence] }));
     }
     await store.completeRecording("r1");
     store.close();
@@ -85,9 +85,9 @@ test("IndexedDB recording survives reopen with exact order/timing/membership and
       library,
       frames: frames.map((frame) => ({
         sequence: frame.sequence,
-        completedAtMs: frame.timing.completedAtMs,
-        responseIds: frame.responseIds,
-        membership: frame.membership
+        completedAtMs: frame.snapshot.timing.completedAtMs,
+        responseIds: frame.snapshot.responseIds,
+        membership: frame.snapshot.membership
       })),
       afterDelete
     };
@@ -146,6 +146,7 @@ test("browser UI exposes recording metrics, quota estimate, library and explicit
       surface,
       async fireNext() {
         const callback = scheduled.shift();
+        if (!callback) throw new Error("Expected a scheduled Replay capture.");
         callback();
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
@@ -214,8 +215,11 @@ test("write failure keeps prior committed IndexedDB frames readable and recordin
     });
 
     await recorder.start({ name: "Quota recording" });
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let index = 0; index < 4 && recorder.getState().frameCount !== 1; index += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     const callback = scheduled.shift();
+    if (!callback) throw new Error("Expected a scheduled Replay capture.");
     callback();
     for (let index = 0; index < 4 && recorder.getState().status !== "storage_error"; index += 1) {
       await new Promise((resolve) => setTimeout(resolve, 0));
