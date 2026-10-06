@@ -134,6 +134,19 @@ AI edits/adds .sql file
 - CI gives precise feedback for syntax/schema/correctness/performance-static failures.
 - The workflow preserves normal saved-query UX and does not create a second Scanner engine.
 
+### B-US-001..004 sequencing note
+
+These four items are strongly related and should probably be planned as one future capability with ordered leaves:
+
+```text
+file-backed query source
+→ correctness harness
+→ static performance analyzer/gate
+→ AI authoring workflow/docs
+```
+
+However, future planning must re-evaluate the smallest sufficient decomposition from fresh `main`; this backlog does not pre-authorize that exact TREE shape.
+
 ## B-US-005 — Replay pre-user-run hardening audit
 
 ### Priority / timing
@@ -265,7 +278,7 @@ Keep decisions that are not needed for the basic MVP open for the later API deve
 - Existing Scanner/Demo Buy/Replay behavior remains green and does not automatically gain order authority.
 - Unit, service, browser/composition and dedicated BUY integration acceptance are green; materially affected broad gates are green before merge.
 
-## Priority / sequencing note
+### New work sequencing note
 
 The current intended sequence after the frozen Replay work is:
 
@@ -276,4 +289,4 @@ complete TREE 9.5
 → later deeper API/order product planning
 ```
 
-The earlier query-development backlog remains valid independently. Future planning must always re-evaluate ordering from fresh `main`; this file does not itself authorize implementation.
+Future planning must always re-evaluate ordering from fresh `main`; this file does not itself authorize implementation.
