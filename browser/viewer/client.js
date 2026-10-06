@@ -40,6 +40,12 @@ function assertNonEmptyString(value, name, maxLength = 4096) {
   }
 }
 
+function assertPositiveSafeInteger(value, name) {
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new TypeError(`${name} must be a positive safe integer.`);
+  }
+}
+
 function defaultCreateSocket(url) {
   if (typeof globalThis.WebSocket !== "function") {
     throw new ViewerUnavailableError("Browser WebSocket is unavailable.");
@@ -117,6 +123,30 @@ export function createViewerClient({
         checkpoint: "demo_buy.capture",
         name: "DemoBuyCaptureError",
         message: "Demo Buy capture did not receive a confirmed commit."
+      };
+    }
+    if (type === "demo.buy.page") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.read",
+        name: "DemoBuyReadError",
+        message: "Demo Buy page read failed."
+      };
+    }
+    if (type === "demo.buy.observation.get") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.observation_read",
+        name: "DemoBuyObservationReadError",
+        message: "Demo Buy observation read failed."
+      };
+    }
+    if (type === "demo.buy.capture.get") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.provenance_read",
+        name: "DemoBuyProvenanceReadError",
+        message: "Demo Buy provenance read failed."
       };
     }
     return null;
@@ -503,6 +533,22 @@ export function createViewerClient({
     return await request("viewer.history.page", { securityId, cursor });
   }
 
+  async function getDemoBuyPage(cursor = null) {
+    if (cursor !== null) assertNonEmptyString(cursor, "cursor");
+    return await request("demo.buy.page", { cursor });
+  }
+
+  async function getDemoBuyObservation(captureId, securityId) {
+    assertPositiveSafeInteger(captureId, "captureId");
+    assertNonEmptyString(securityId, "securityId", 128);
+    return await request("demo.buy.observation.get", { captureId, securityId });
+  }
+
+  async function getDemoBuyCapture(captureId) {
+    assertPositiveSafeInteger(captureId, "captureId");
+    return await request("demo.buy.capture.get", { captureId });
+  }
+
   async function getSupportSnapshot() {
     return await request("viewer.support.snapshot", {});
   }
@@ -553,6 +599,9 @@ export function createViewerClient({
     getStatus,
     getSecurity,
     getHistoryPage,
+    getDemoBuyPage,
+    getDemoBuyObservation,
+    getDemoBuyCapture,
     getSupportSnapshot,
     executeScanner,
     listScannerQueries,
