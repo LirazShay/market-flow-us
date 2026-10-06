@@ -224,7 +224,8 @@ test("viewer client correlates concurrent responses and routes every trusted rea
 
   assert.deepEqual(client.getState(), {
     state: "ready",
-    pendingRequests: 0
+    pendingRequests: 0,
+    captureAcknowledgementLocked: false
   });
 });
 
@@ -323,6 +324,7 @@ test("viewer client fails explicitly when the service is unavailable and never a
 
   assert.deepEqual(client.getState(), {
     state: "disconnected",
-    pendingRequests: 0
+    pendingRequests: 0,
+    captureAcknowledgementLocked: false
   });
 });
