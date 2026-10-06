@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "8.1"
+current_node: "8.2"
 blockers: []
-next_action: "Implementation is authorized. Chat 17 / TREE 8.1 is the first executable leaf: build the standalone Node 24 localhost order service with strict normalized U.S. STK BUY/SELL intent validation, authenticated loopback caller boundary, DRY_RUN submit prohibition, deterministic fake adapter, separate minimal DuckDB idempotency/reconciliation state and focused proof. Do not advance to 8.2 until 8.1 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
+next_action: "Chat 17 / TREE 8.1 is complete with required PR CI green. After its PR is squash-merged and main required CI is green, Chat 18 / TREE 8.2 is the next executable leaf: implement the real Client Portal Gateway lifecycle, independent fail-closed LIVE gates, SELL long-position guard, explicit reply-confirmation flow, acknowledgement-unknown reconciliation, cancel/fill observation and scoped localhost TLS behavior. Do not advance to 8.3 until 8.2 success_evidence is green, its PR is squash-merged, main required CI is green and STATUS/EXECUTION advance to the next truth."
 last_review: "R-US-IBKR-ORDER-EXTERNAL"
 implementation_authorized: true
