@@ -70,7 +70,7 @@ chats:
 
   "15":
     nodes:
-      "4.5.2": { state: in_progress, result: null }
+      "4.5.2": { state: done, result: "Demo Buy now exposes an expandable Investigate with AI workflow backed by one Viewer-wide export slot: targeted observation refresh supplies authority-watermarked PARTIAL_OUTCOME/COMPLETE_OUTCOME state, neutral returned-position/context coverage is shown before and after generation, Generate/Regenerate returns bounded relative folder/file-count/latest-partial metadata, clipboard copy has selectable fallback, sharing warnings remain explicit, export errors are isolated and lost export ACK is safely regenerable without capture-style locking. Viewer client/runtime/controller wiring is shared and bounded, outcome-status derivation is reused by reads/exporter, and focused unit/real-service/Chromium proof covers ordered/unordered position 1, position>50 reduced context, partial→complete regeneration, copy fallback, one export slot, error and lost-ACK behavior. PR #26 candidate c60cdd6bb2b5188da79cd3193837a8af85ace7e3 passed Fast, Browser, Planning Docs and bounded Workload CI before closure." }
 
   "16":
     nodes:
