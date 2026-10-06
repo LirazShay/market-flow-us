@@ -3,6 +3,6 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 17 / TREE 7.4 is in progress. Static target-acceptance preflight found a release-blocking stale NEW_TRADING_DAY.cmd message claiming fresh schema v3 while the implemented/new-day contract is schema v4. Root cause is launcher text/regression coverage only; rollover behavior itself is schema v4. Fix + windows-launcher regression are on chat-17-final-acceptance. Do not resume target-machine FR-0 against e0af9d105004f175a44ec33fa481fba0631773bf. First get focused/full deterministic CI green, review/merge the fix, verify main green/open-PR truth, establish the new accepted product candidate SHA, then restart FR-0 serially on that exact SHA."
+next_action: "Chat 17 / TREE 7.4 is in progress. Static target-acceptance preflight found and fixed stale NEW_TRADING_DAY.cmd schema-v3 wording; rollover behavior itself was already correct schema v4. Regression coverage now guards schema-v4/Demo Buy new-day wording. PR #29 affected verification is green (Fast + Planning Docs; Browser/Workload runtime paths are unchanged and were not triggered by path filters). Review/squash-merge PR #29, verify main CI and open-PR truth, then record the merge SHA as the new exact accepted product candidate and restart target-machine FR-0 serially on that SHA. Do not resume acceptance against e0af9d105004f175a44ec33fa481fba0631773bf."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
