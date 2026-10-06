@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
 import {
@@ -8,8 +11,12 @@ import {
 } from "../../ibkr-order-service/service.js";
 
 test("production order service binds only the contracted loopback host and port", async () => {
-  const runtime = await startOrderService();
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-order-bind-"));
+  const dbPath = path.join(tempDir, "orders.duckdb");
+  let runtime = null;
+
   try {
+    runtime = await startOrderService({ dbPath });
     const address = runtime.server.address();
     assert.equal(typeof address, "object");
     assert.equal(address.address, ORDER_SERVICE_HOST);
@@ -17,6 +24,7 @@ test("production order service binds only the contracted loopback host and port"
     assert.equal(address.address, "127.0.0.1");
     assert.equal(address.port, 8770);
   } finally {
-    await new Promise((resolve) => runtime.server.close(resolve));
+    if (runtime) await runtime.close();
+    await rm(tempDir, { recursive: true, force: true });
   }
 });
