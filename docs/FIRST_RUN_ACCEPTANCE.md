@@ -325,7 +325,15 @@ movement.historyReflected = true
 
 וכן לפחות 20 consecutive complete provider cycles לאורך 60 שניות לפחות, market/freshness movement אמיתי, committed Current/History reflection, bounded Scanner, ownership/status תקינים ו־clean stop.
 
-אם לא נצפה provider-field change אמיתי, movement נשאר `PENDING`. אם change נצפה אבל Current/History reflection לא הוכח, movement הוא `FAIL` ויש לתקן לפני FR-14.
+אם לא נצפה provider-field change אמיתי, movement נשאר `PENDING`.
+
+אם נצפה change אבל Current/History reflection לא הוכח:
+
+```text
+movement.status = "FAIL"
+```
+
+עצור ותקן לפני FR-14.
 
 ## FR-14 — Final evidence and operational handoff
 
