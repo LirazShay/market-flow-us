@@ -96,6 +96,10 @@ function executableExamples(guide) {
   }));
 }
 
+function normalizeNewlines(value) {
+  return value.replace(/\r\n/g, "\n");
+}
+
 function sortedSchemaRows(rows) {
   return rows
     .map((row) => ({
@@ -241,7 +245,11 @@ test("every U.S. guide SQL example executes through the real Scanner and built-i
       (query) => query.queryId === queryId
     );
     assert.ok(source, queryId);
-    assert.equal(byId.get(exampleId), source.sql.trim(), `${queryId} guide SQL drifted`);
+    assert.equal(
+      normalizeNewlines(byId.get(exampleId)),
+      normalizeNewlines(source.sql.trim()),
+      `${queryId} guide SQL drifted`
+    );
   }
 
   const fixture = await createFixture();
