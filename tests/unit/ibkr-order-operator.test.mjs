@@ -79,9 +79,10 @@ test("operator entrypoint keeps caller token off console and exposes it only thr
   assert.doesNotMatch(operatorSource, /\bport\s*:/u);
 });
 
-test("operator help makes DRY_RUN default and deliberate LIVE opt-in explicit", () => {
+test("operator help makes DRY_RUN default and deliberate LIVE opt-in explicit without sensitive material", () => {
   const usage = operatorUsage();
   assert.match(usage, /Default mode is DRY_RUN/u);
   assert.match(usage, /unless --live is supplied/u);
   assert.match(usage, /loopback CPGW client/u);
+  assert.doesNotMatch(usage, /caller.?token|account.?id|password|cookie|session.?token/iu);
 });
