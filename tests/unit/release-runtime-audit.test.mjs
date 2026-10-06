@@ -82,16 +82,26 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run acceptance is complete and routed from START_HERE", async () => {
-  const [startHere, runbook] = await Promise.all([
+test("first-run acceptance plan and user runbook stay reclosed through pre-market and market-open proof", async () => {
+  const [startHere, plan, runbook, liveVerification] = await Promise.all([
     rootFile("START_HERE.md"),
-    rootFile("docs/FIRST_RUN_ACCEPTANCE.md")
+    rootFile(".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"),
+    rootFile("docs/FIRST_RUN_ACCEPTANCE.md"),
+    rootFile("docs/LIVE_VERIFICATION.md")
   ]);
 
   assert.match(startHere, /docs\/FIRST_RUN_ACCEPTANCE\.md/);
+  assert.match(startHere, /PRE-MARKET|לפני שעות המסחר/);
+  assert.match(startHere, /NO_MARKET_MOVEMENT_OBSERVED/);
 
   for (let checkpoint = 0; checkpoint <= 14; checkpoint += 1) {
+    assert.match(plan, new RegExp(`FR-${checkpoint}\\b`));
     assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
+  }
+
+  for (const subCheckpoint of ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]) {
+    assert.match(plan, new RegExp(`FR-${subCheckpoint}\\b`));
+    assert.match(runbook, new RegExp(`FR-${subCheckpoint}\\b`));
   }
 
   assert.match(runbook, /SETUP\.cmd/);
@@ -105,5 +115,21 @@ test("first-run acceptance is complete and routed from START_HERE", async () => 
   assert.match(runbook, /fresh active DB.*schema v4/i);
   assert.match(runbook, /NEW_TRADING_DAY\.cmd/);
   assert.match(runbook, /PREPARE_LIVE_VERIFICATION\.cmd/);
+  assert.match(runbook, /PRE-MARKET READINESS = PASS/);
+  assert.match(runbook, /FR-13 = PENDING MARKET MOVEMENT/);
+  assert.match(runbook, /NO_MARKET_MOVEMENT_OBSERVED/);
+  assert.match(runbook, /אין צורך לחזור על FR-0\.\.FR-12/);
   assert.match(runbook, /pending\/inconclusive/);
+
+  assert.match(plan, /Two-pass first run is valid/);
+  assert.match(plan, /PRE-MARKET READINESS = PASS/);
+  assert.match(plan, /do not replay FR-0\.\.FR-12/i);
+  assert.match(plan, /Demo Buy \+ AI Investigation/);
+  assert.match(plan, /fresh active DB is schema v4/);
+
+  assert.match(liveVerification, /overall = "PASS"/);
+  assert.match(liveVerification, /movement\.status = "PENDING"/);
+  assert.match(liveVerification, /NO_MARKET_MOVEMENT_OBSERVED/);
+  assert.match(liveVerification, /movement\.status = "PASS"/);
+  assert.match(liveVerification, /collected_at_ms/);
 });
