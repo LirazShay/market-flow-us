@@ -1,8 +1,8 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "4.4.2"
+current_node: "4.5.1"
 blockers: []
-next_action: "Chat 13 / TREE 4.4.2 is next after Chat 12 / 4.4.1 merges and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement the dedicated Demo Buy outcome/progressive-results screen without advancing to 4.5.1."
+next_action: "Chat 14 / TREE 4.5.1 is next after Chat 13 / 4.4.2 merged and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement the AI Investigation Pack exporter without advancing to 4.5.2."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
