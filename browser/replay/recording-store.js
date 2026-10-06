@@ -1,6 +1,7 @@
 import {
-  REPLAY_RECORDING_SCHEMA_VERSION,
-  estimateFrameBytes,
+  approximateJsonBytes,
+  createRecordingMetadata,
+  normalizeRecordingName,
   toRecordingSummary
 } from "./recording-model.js";
 
@@ -49,7 +50,7 @@ function openDatabase(indexedDb, dbName) {
     request.onupgradeneeded = () => {
       const database = request.result;
       if (!database.objectStoreNames.contains(RECORDINGS_STORE)) {
-        database.createObjectStore(RECORDINGS_STORE, { keyPath: "id" });
+        database.createObjectStore(RECORDINGS_STORE, { keyPath: "recordingId" });
       }
       if (!database.objectStoreNames.contains(FRAMES_STORE)) {
         const frames = database.createObjectStore(FRAMES_STORE, {
@@ -78,23 +79,7 @@ export async function openReplayRecordingStore({
 
   return Object.freeze({
     async createRecording({ id, name, createdAtMs }) {
-      assertNonEmptyString(id, "id");
-      assertNonEmptyString(name, "name");
-      assertNonNegativeSafeInteger(createdAtMs, "createdAtMs");
-
-      const recording = {
-        schemaVersion: REPLAY_RECORDING_SCHEMA_VERSION,
-        id,
-        name: name.trim(),
-        status: "incomplete",
-        createdAtMs,
-        firstFrameAtMs: null,
-        lastFrameAtMs: null,
-        frameCount: 0,
-        approximateBytes: 0,
-        lastErrorCode: null
-      };
-
+      const recording = { ...createRecordingMetadata({ recordingId: id, name, createdAtMs }) };
       const transaction = database.transaction(RECORDINGS_STORE, "readwrite");
       transaction.objectStore(RECORDINGS_STORE).add(recording);
       await transactionDone(transaction);
@@ -105,7 +90,7 @@ export async function openReplayRecordingStore({
       if (!frame || typeof frame !== "object") throw new TypeError("frame is required.");
       assertNonEmptyString(frame.recordingId, "frame.recordingId");
       assertNonNegativeSafeInteger(frame.sequence, "frame.sequence");
-      assertNonNegativeSafeInteger(frame.timing?.completedAtMs, "frame.timing.completedAtMs");
+      assertNonNegativeSafeInteger(frame.snapshot?.timing?.completedAtMs, "frame.snapshot.timing.completedAtMs");
 
       const transaction = database.transaction([RECORDINGS_STORE, FRAMES_STORE], "readwrite");
       const recordings = transaction.objectStore(RECORDINGS_STORE);
@@ -125,12 +110,12 @@ export async function openReplayRecordingStore({
         throw new Error(`Replay frame sequence must be ${recording.frameCount}.`);
       }
 
-      const frameBytes = estimateFrameBytes(frame);
+      const completedAtMs = frame.snapshot.timing.completedAtMs;
       frames.add(frame);
-      recording.firstFrameAtMs ??= frame.timing.completedAtMs;
-      recording.lastFrameAtMs = frame.timing.completedAtMs;
+      recording.firstFrameAtMs ??= completedAtMs;
+      recording.lastFrameAtMs = completedAtMs;
       recording.frameCount += 1;
-      recording.approximateBytes += frameBytes;
+      recording.approximateBytes += approximateJsonBytes(frame);
       recording.lastErrorCode = null;
       recordings.put(recording);
 
@@ -182,7 +167,6 @@ export async function openReplayRecordingStore({
 
     async renameRecording(recordingId, name) {
       assertNonEmptyString(recordingId, "recordingId");
-      assertNonEmptyString(name, "name");
       const transaction = database.transaction(RECORDINGS_STORE, "readwrite");
       const store = transaction.objectStore(RECORDINGS_STORE);
       const recording = await requestResult(store.get(recordingId));
@@ -192,7 +176,7 @@ export async function openReplayRecordingStore({
         throw new Error("Replay recording does not exist.");
       }
 
-      recording.name = name.trim();
+      recording.name = normalizeRecordingName(name);
       store.put(recording);
       await transactionDone(transaction);
       return cloneSummary(recording);
@@ -211,7 +195,7 @@ export async function openReplayRecordingStore({
       const recordings = await requestResult(transaction.objectStore(RECORDINGS_STORE).getAll());
       await transactionDone(transaction);
       return recordings
-        .sort((left, right) => right.createdAtMs - left.createdAtMs || left.id.localeCompare(right.id))
+        .sort((left, right) => right.createdAtMs - left.createdAtMs || left.recordingId.localeCompare(right.recordingId))
         .map(cloneSummary);
     },
 
@@ -233,7 +217,12 @@ export async function openReplayRecordingStore({
 
       const index = frames.index(FRAMES_BY_RECORDING_INDEX);
       await new Promise((resolve, reject) => {
-        const request = index.openCursor(globalThis.IDBKeyRange?.only(recordingId) ?? recordingId);
+        const keyRange = globalThis.IDBKeyRange?.only(recordingId);
+        if (!keyRange) {
+          reject(new Error("IDBKeyRange is required for Replay deletion."));
+          return;
+        }
+        const request = index.openCursor(keyRange);
         request.onsuccess = () => {
           const cursor = request.result;
           if (!cursor) {
