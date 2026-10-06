@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run acceptance plan and user runbook stay reclosed through pre-market and market-open proof", async () => {
+test("first-run acceptance plan and user runbook stay reclosed through branch-8 and final provider proof", async () => {
   const [startHere, plan, runbook, liveVerification] = await Promise.all([
     rootFile("START_HERE.md"),
     rootFile(".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"),
@@ -94,7 +94,11 @@ test("first-run acceptance plan and user runbook stay reclosed through pre-marke
   assert.match(startHere, /PRE-MARKET|לפני שעות המסחר/);
   assert.match(startHere, /NO_MARKET_MOVEMENT_OBSERVED/);
 
-  for (let checkpoint = 0; checkpoint <= 14; checkpoint += 1) {
+  for (const checkpoint of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]) {
+    assert.match(plan, new RegExp(`FR-${checkpoint}\\b`));
+    assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
+  }
+  for (const checkpoint of ["11A", "11B"]) {
     assert.match(plan, new RegExp(`FR-${checkpoint}\\b`));
     assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
   }
@@ -104,14 +108,12 @@ test("first-run acceptance plan and user runbook stay reclosed through pre-marke
     assert.match(runbook, new RegExp(`FR-${subCheckpoint}\\b`));
   }
 
-  const acceptedCandidate = "f2789a4ec43e0878688aa9ea29c647e40a1154b6";
-  assert.match(plan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
-  assert.match(plan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
+  const acceptedCandidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
+  assert.match(plan, /post-order-service candidate/i);
+  assert.match(plan, /FR-2 proves the target machine is checked out to that SHA/);
   assert.match(runbook, new RegExp(acceptedCandidate));
-  assert.match(runbook, /אין דרישת checkout מקומי ב־FR-0/);
   assert.match(runbook, new RegExp(`git switch --detach ${acceptedCandidate}`));
-  assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
-  assert.doesNotMatch(runbook, /branch הוא `main`|accepted `main` SHA/);
+  assert.doesNotMatch(runbook, /f2789a4ec43e0878688aa9ea29c647e40a1154b6/);
 
   assert.match(runbook, /SETUP\.cmd/);
   assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd provider-recovery/);
@@ -123,18 +125,26 @@ test("first-run acceptance plan and user runbook stay reclosed through pre-marke
   assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd target/);
   assert.match(runbook, /fresh active DB.*schema v4/i);
   assert.match(runbook, /NEW_TRADING_DAY\.cmd/);
+  assert.match(runbook, /RUN_IBKR_ORDER_ACCEPTANCE\.cmd/);
+  assert.match(runbook, /CHECK_IBKR_SESSION\.cmd/);
+  assert.match(runbook, /PENDING_EXTERNAL_PERMISSION/);
   assert.match(runbook, /PREPARE_LIVE_VERIFICATION\.cmd/);
   assert.match(runbook, /PRE-MARKET READINESS = PASS/);
   assert.match(runbook, /FR-13 = PENDING MARKET MOVEMENT/);
   assert.match(runbook, /NO_MARKET_MOVEMENT_OBSERVED/);
-  assert.match(runbook, /אין צורך לחזור על FR-0\.\.FR-12/);
-  assert.match(runbook, /pending\/inconclusive/);
+  assert.match(runbook, /ממשיכים ישירות ל־FR-13/);
+  assert.match(runbook, /movement\.status = "PENDING"/);
+  assert.match(runbook, /movement\.status = "PASS"/);
+  assert.match(runbook, /movement\.status = "FAIL"/);
 
   assert.match(plan, /Two-pass first run is valid/);
   assert.match(plan, /PRE-MARKET READINESS = PASS/);
   assert.match(plan, /do not replay FR-0\.\.FR-12/i);
   assert.match(plan, /Demo Buy \+ AI Investigation/);
   assert.match(plan, /fresh active DB is schema v4/);
+  assert.match(plan, /RUN_IBKR_ORDER_ACCEPTANCE\.cmd/);
+  assert.match(plan, /CHECK_IBKR_SESSION\.cmd/);
+  assert.match(plan, /PENDING_EXTERNAL_PERMISSION/);
 
   assert.match(liveVerification, /overall = "PASS"/);
   assert.match(liveVerification, /movement\.status = "PENDING"/);
