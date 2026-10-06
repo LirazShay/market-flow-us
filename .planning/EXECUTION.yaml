@@ -74,7 +74,7 @@ chats:
 
   "16":
     nodes:
-      "7.5": { state: in_progress, result: null }
+      "7.5": { state: done, result: "Post-feature deterministic reclosure is complete. Schema-v4/user/Scanner/AI release docs were aligned; bounded Local Fake acceptance now covers FR-7 plus FR-8A through FR-8H, including Demo Buy runtime/outcomes, AI Investigation ordered-vs-unordered semantics, PARTIAL-to-COMPLETE regeneration and sharing-safety. A Scanner E2E startup race was root-caused and fixed by waiting for committed latest authority. PR #27 head ecc3f2f4e9955314e7238ebc59a98c7b47bdb7d7 passed Fast, Browser, Planning Docs and bounded Workload, squash-merged as accepted product candidate e0af9d105004f175a44ec33fa481fba0631773bf, and main CI was green before handoff." }
 
   "17":
     nodes:
