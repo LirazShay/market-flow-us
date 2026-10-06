@@ -126,14 +126,11 @@ export function createScannerScheduler({
   }
 
   function activate() {
-    if (stopped) {
-      throw new Error("Scanner scheduler is stopped.");
-    }
-
     assertSql(draftSql);
     assertPositiveInterval(draftIntervalMs);
 
     generation += 1;
+    stopped = false;
     activeSql = draftSql;
     activeIntervalMs = draftIntervalMs;
     clearScheduledTimer();
@@ -146,10 +143,11 @@ export function createScannerScheduler({
   }
 
   function stop() {
-    if (stopped) return;
+    if (stopped) return getState();
     stopped = true;
     generation += 1;
     clearScheduledTimer();
+    return getState();
   }
 
   return Object.freeze({
