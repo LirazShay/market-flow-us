@@ -120,7 +120,7 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-9 
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
   assert.match(runbook, /test:acceptance:replay/);
   assert.match(runbook, /build:replay/);
-  assert.match(runbook, /Replay-owned DBs/);
+  assert.match(runbook, /Replay-owned DuckDBs/);
   assert.doesNotMatch(plan, /Chat 21/);
   assert.doesNotMatch(plan, new RegExp(historicalBranch8Candidate));
   assert.doesNotMatch(runbook, new RegExp(historicalBranch8Candidate));
