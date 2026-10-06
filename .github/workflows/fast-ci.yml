@@ -15,6 +15,7 @@ on:
       - "START_HERE.md"
       - "docs/SCANNER_SQL_GUIDE.md"
       - "docs/FIRST_RUN_ACCEPTANCE.md"
+      - "docs/IBKR_ORDER_SERVICE*.md"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/fast-ci.yml"
@@ -31,6 +32,7 @@ on:
       - "START_HERE.md"
       - "docs/SCANNER_SQL_GUIDE.md"
       - "docs/FIRST_RUN_ACCEPTANCE.md"
+      - "docs/IBKR_ORDER_SERVICE*.md"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/fast-ci.yml"
@@ -45,7 +47,7 @@ permissions:
 
 jobs:
   fast:
-    name: Fast unit + service
+    name: Fast unit + service + order acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -73,3 +75,6 @@ jobs:
           wait "$unit_pid" || status=$?
           wait "$service_pid" || status=$?
           exit "$status"
+
+      - name: Run standalone synthetic order-service acceptance
+        run: npm run test:acceptance:order
