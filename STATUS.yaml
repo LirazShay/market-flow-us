@@ -1,12 +1,12 @@
 schema_version: 2
-phase: implementation
+phase: planning
 overall_status: in_progress
 
 current:
   chat: 25
   node: "7.4"
-  title: "Final target-machine/provider acceptance"
-  status: pending
+  title: "Replan pre-final acceptance sequencing"
+  status: blocked
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -37,6 +37,7 @@ planning_completion:
   market_replay_extension: implementation
   market_replay_durable_contract: pass
   market_replay_tree_freeze: pass
+  replay_hardening_buy_extension: planning
 
 execution:
   chats_total: 25
