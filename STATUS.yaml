@@ -1,11 +1,11 @@
 schema_version: 2
-phase: implementation
+phase: planning
 overall_status: in_progress
 
 current:
   chat: 17
-  node: "7.4"
-  title: "Final target-machine/provider acceptance"
+  node: "8"
+  title: "Standalone IBKR order-service mini-project planning"
   status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -13,6 +13,7 @@ authority:
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
+  ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
@@ -25,12 +26,14 @@ planning_completion:
   plan_freeze: pass
   execution_allocation: pass
   handoff_verification: pass
-  implementation_authorization: pass
+  implementation_authorization: paused_for_ibkr_extension
+  ibkr_order_extension: in_progress
 
 execution:
   chats_total: 17
   implementation_leaves_total: 28
   current_chat: 17
-  current_node: "7.4"
+  current_node: "8"
+  paused_node: "7.4"
 
 blockers: []
