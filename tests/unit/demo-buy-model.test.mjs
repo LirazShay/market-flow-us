@@ -195,9 +195,14 @@ test("provenance loading/error is isolated and preserves already loaded provenan
   );
   model = applyDemoBuyProvenanceLoading(model, 9);
   assert.equal(model.provenance[9].state, "LOADING");
+  assert.equal(model.provenance[9].data, null);
 
   const provenance = Object.freeze({ captureId: 9, sourceQuerySql: "SELECT 1" });
   model = applyDemoBuyProvenance(model, 9, provenance);
+  model = applyDemoBuyProvenanceLoading(model, 9);
+  assert.equal(model.provenance[9].state, "LOADING");
+  assert.equal(model.provenance[9].data, provenance);
+
   model = applyDemoBuyProvenanceError(model, 9, new Error("detail unavailable"));
   assert.equal(model.provenance[9].state, "READY");
   assert.equal(model.provenance[9].data, provenance);
