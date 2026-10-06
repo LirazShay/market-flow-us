@@ -1,8 +1,8 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "4.3.1"
+current_node: "4.3.2"
 blockers: []
-next_action: "Chat 10 / TREE 4.3.1 is authorized to begin from fresh main. Follow AGENTS.md → TREE → contracts → success_evidence; implement schema-v4 Demo Buy persistence/migration first, then 4.3.2 only after 4.3.1 is done/merged/green as required by allocation."
+next_action: "Chat 10 / TREE 4.3.2 is next after 4.3.1 is merged and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement Demo Buy capture authority/protocol without advancing to 4.3.3."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
