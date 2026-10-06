@@ -78,7 +78,7 @@ chats:
 
   "17":
     nodes:
-      "8.1": { state: in_progress, result: null }
+      "8.1": { state: done, result: "Standalone IBKR order-service local authority is implemented with strict normalized STK/USD/SMART BUY/SELL LMT/MKT DAY/GTC validation, ephemeral caller auth/origin/body security on 127.0.0.1:8770, deterministic DRY_RUN fake preview with zero submit, separate hardened DuckDB requestId idempotency/restart persistence, stable product-owned localOrderId and documented SQL preflight. PR #38 head 0b7ecf50be4f1b3eeae5ed8650ff4199cea2d17c passed Fast CI on Node 24.21.0 (181 unit + 128 service, zero failures/skips), Browser CI including full Chromium and bounded Local Fake acceptance, Planning Docs CI and bounded Workload before closure." }
 
   "18":
     nodes:
