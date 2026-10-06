@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { WebSocket, WebSocketServer } from "ws";
 import { openMarketScopeDatabase } from "../database/database.js";
 import { createSerializedWriter } from "../database/writer.js";
+import { createDemoBuyAiPackExporter } from "../exports/demo-buy-ai-pack.js";
 import { createProducerPersistence } from "../persistence/producer-authority.js";
 import { createCycleAuthorityPersistence } from "../persistence/cycle-authority.js";
 import { createDemoBuyCapturePersistence } from "../persistence/demo-buy-capture.js";
@@ -82,6 +83,8 @@ export async function startMarketScopeService({
   now = () => Date.now(),
   openDatabase = openMarketScopeDatabase,
   persistenceFault = null,
+  aiPackExportRoot = undefined,
+  aiPackFault = null,
   diagnosticTracker = createDiagnosticTracker({ productVersion: serviceVersion, now })
 }) {
   if (!config || !Array.isArray(config.allowedOrigins) || config.allowedOrigins.length === 0) {
@@ -131,6 +134,14 @@ export async function startMarketScopeService({
   });
   const demoBuyReads = createDemoBuyReads({
     connection: database.viewerReadConnection
+  });
+  const demoBuyAiPack = createDemoBuyAiPackExporter({
+    connection: database.viewerReadConnection,
+    demoBuyReads,
+    exportRoot: aiPackExportRoot,
+    productVersion: serviceVersion,
+    now,
+    fault: aiPackFault
   });
 
   let scannerAuthority;
@@ -274,6 +285,14 @@ export async function startMarketScopeService({
         checkpoint: "demo_buy.provenance_read",
         name: "DemoBuyProvenanceReadError",
         message: "Demo Buy provenance read failed safely."
+      };
+    }
+    if (type === "demo.buy.ai-pack.create") {
+      return {
+        component: "demo_buy",
+        checkpoint: "demo_buy.ai_pack_export",
+        name: "DemoBuyAiPackExportError",
+        message: "AI Investigation pack export failed safely."
       };
     }
     return null;
@@ -548,6 +567,18 @@ export async function startMarketScopeService({
             diagnosticContext = {
               captureId: result.captureId,
               capturedItemCount: result.capturedItemCount
+            };
+          } else if (parsed.type === "demo.buy.ai-pack.create") {
+            result = await demoBuyAiPack.create(
+              parsed.payload.captureId,
+              parsed.payload.securityId
+            );
+            diagnosticContext = {
+              captureId: parsed.payload.captureId,
+              securityId: parsed.payload.securityId,
+              fileCount: result.fileCount,
+              targetInScannerContext: result.targetInScannerContext,
+              outcomeEvidenceStatus: result.outcomeEvidenceStatus
             };
           } else {
             throw operationError(ERROR_CODES.SERVICE_NOT_READY);
