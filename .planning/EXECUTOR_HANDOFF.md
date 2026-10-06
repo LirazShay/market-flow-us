@@ -320,7 +320,13 @@ If required GitHub Actions/CI is unavailable, do not merge unverified work or st
 
 The pre-branch-8 product candidate `f2789a4ec43e0878688aa9ea29c647e40a1154b6` is historical evidence only after branch `8` begins implementation; it must **not** be reused as the final accepted candidate.
 
-TREE `8.4` owns deterministic reclosure and must pin the new exact post-order-service candidate SHA in STATUS/handoff/final-acceptance truth before `7.4` resumes.
+TREE `8.4` deterministic reclosure is complete and pins the exact post-order-service product candidate for final acceptance:
+
+```text
+28e950afc1c4bfe4322d0593f483d05d92553e2d
+```
+
+This is the product SHA immediately after PR #40 / TREE `8.3`. Later TREE `8.4` planning/docs/test-contract closure commits do not silently replace it. Chat 21 / TREE `7.4` must perform product acceptance against this exact SHA while reading fresh `main` for release/status truth.
 
 Only `7.4` owns final user-dependent target-machine heavy performance, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility. Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
 

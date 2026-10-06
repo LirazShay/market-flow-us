@@ -16,7 +16,8 @@ machine prerequisites
 → Demo Buy + AI Investigation proof
 → target-machine workload proof
 → daily schema-v4 lifecycle proof
-→ real-provider deployment
+→ real-provider market-data deployment
+→ IBKR Client Portal Gateway / standalone order-service compatibility
 → authenticated static/pre-market readiness
 → authenticated market-open movement
 → final release closure
@@ -32,12 +33,14 @@ This is execution refinement of the existing frozen release path, not a new capa
 7.2  reusable Local Fake Leumi acceptance tooling
 7.3  release/docs/deployment + first-run + daily lifecycle
 7.5  post-feature Demo Buy/AI deterministic reclosure
+8.1..8.3  standalone IBKR order-service implementation
+8.4  branch-8 deterministic reclosure + exact candidate pin
 7.4  final target-machine/provider acceptance
 ```
 
-TREE `7.4` remains incomplete until all required target-machine and authenticated evidence is green. The post-feature product candidate remains the exact candidate pinned by `.planning/EXECUTOR_HANDOFF.md`; later planning/docs-only commits do not silently replace it.
+TREE `7.4` remains incomplete until all required target-machine and authenticated evidence is green. The exact post-order-service product candidate remains the candidate pinned by completed TREE `8.4` in `.planning/EXECUTOR_HANDOFF.md`; later planning/docs-only commits do not silently replace it.
 
-### What 7.2 / 7.5 already provide
+### What 7.2 / 7.5 / branch 8 already provide
 
 Existing tooling must be reused rather than replaced:
 
@@ -52,34 +55,38 @@ Existing tooling must be reused rather than replaced:
 - AI Pack sharing-safety and regeneration proof;
 - isolated persistence/day-bounded probes;
 - representative target-machine `4096 × 180` profile;
+- deterministic standalone IBKR order-service acceptance;
+- safe real CPGW session compatibility check;
 - sanitized SHA-bound PASS/FAIL reports.
 
 ### What 7.4 owns
 
-Chat 17 executes this runbook with the user on the target Windows machine, one checkpoint at a time:
+Chat 21 executes this runbook with the user on the target Windows machine, one checkpoint at a time:
 
 - host/toolchain acceptance;
 - heavy target-machine performance;
 - daily DB lifecycle on the final product shape;
-- authenticated real-provider compatibility;
+- authenticated real-provider market-data compatibility;
+- real CPGW target-machine compatibility through the standalone order service;
 - pre-market/static authenticated acceptance;
 - market-open movement acceptance;
+- optional bounded real-order verification only when external IBKR permission exists and the user explicitly initiates it;
 - final evidence/operational handoff.
 
 ## Operating rules
 
 1. **One checkpoint at a time.** Give only the current user-dependent action and the result needed back.
 2. **Stop on first FAIL.** Do not continue downstream to collect unrelated failures.
-3. **Root cause before retry.** A discovered blocking defect stays with Chat 17 until fix + regression proof + affected verification are green.
+3. **Root cause before retry.** A discovered blocking defect stays with Chat 21 until fix + regression proof + affected verification are green.
 4. **Resume from last valid green checkpoint.** Do not restart the whole sequence unless a fix invalidates earlier evidence.
-5. **Exact SHA matters.** FR-0 freezes the release-level accepted product SHA from fresh GitHub truth; FR-2 proves the target machine is actually checked out to that exact SHA. Heavy/authenticated evidence is valid only for that candidate.
+5. **Exact SHA matters.** FR-0 is a release-level checkpoint, not a local-checkout checkpoint. It freezes the exact post-order-service product SHA from fresh GitHub truth; FR-2 proves the target machine is actually checked out to that exact SHA. Heavy/authenticated evidence is valid only for that candidate.
 6. **No secret evidence.** Never store credentials, cookies, tokens, auth/session data, account identifiers, raw authenticated dumps or private browser state.
-7. **Existing launchers first.** Prefer `SETUP.cmd`, `RUN_TESTS.cmd`, `START_DEMO.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `NEW_TRADING_DAY.cmd`, `START_MARKET_FLOW_US.cmd`, and `PREPARE_LIVE_VERIFICATION.cmd`.
+7. **Existing launchers first.** Prefer `SETUP.cmd`, `RUN_TESTS.cmd`, `START_DEMO.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `NEW_TRADING_DAY.cmd`, `START_MARKET_FLOW_US.cmd`, `PREPARE_LIVE_VERIFICATION.cmd`, `RUN_IBKR_ORDER_ACCEPTANCE.cmd`, and `CHECK_IBKR_SESSION.cmd`.
 8. **No silent assumptions.** Check prerequisites before the stage that depends on them.
 9. **Static is valid.** Equal provider values are not a failure in Local Fake static or authenticated pre-market/static acceptance when new complete cycles keep committing.
 10. **Movement is a separate fact.** Only FR-13 can satisfy real market-open movement.
 11. **Two-pass first run is valid.** FR-0..FR-12 may complete before market hours; if candidate/runtime/environment remain materially unchanged, FR-13 may run later without replaying FR-0..FR-12.
-12. **Do not weaken gates.** `PENDING` movement stays pending; it is never manually converted to PASS.
+12. **Do not weaken gates.** `PENDING` movement stays pending; it is never manually converted to PASS. Missing real IBKR trading permission is recorded exactly as `PENDING_EXTERNAL_PERMISSION`; synthetic success never replaces it.
 
 ## First-run tree
 
@@ -92,7 +99,7 @@ FR-2  Acquire/update repository
  |
 FR-3  Install deterministic dependencies
  |
-FR-4  Fast local correctness
+FR-4  Fast local correctness + deterministic order-service acceptance
  |
 FR-5  Browser build + Chromium E2E
  |
@@ -106,7 +113,9 @@ FR-9  Target-machine isolated + 4096×180 load acceptance
  |
 FR-10 Daily DB lifecycle / fresh schema-v4 acceptance
  |
-FR-11 Real-provider deployment smoke
+FR-11A Real-provider market-data deployment smoke
+ |
+FR-11B IBKR CPGW + standalone order-service compatibility
  |
 FR-12 Authenticated static/pre-market acceptance
  |
@@ -125,7 +134,7 @@ A later checkpoint never excuses an earlier failure.
 
 **Goal:** freeze the exact product candidate from fresh GitHub release truth before asking the target machine to install or test anything. FR-0 is a release-level checkpoint, not a local-checkout checkpoint.
 
-**Required state:** fresh `main` shows release/post-feature deterministic reclosure complete and TREE `7.4` current; the accepted candidate SHA is recorded in `.planning/EXECUTOR_HANDOFF.md`; no unexpected release PR or unmerged product work replaces it.
+**Required state:** fresh `main` shows TREE `8.4` deterministic reclosure complete and TREE `7.4` current; the accepted post-order-service candidate SHA is recorded in `.planning/EXECUTOR_HANDOFF.md`; no unexpected release PR or unmerged product work replaces it.
 
 **PASS evidence:**
 
@@ -134,7 +143,7 @@ A later checkpoint never excuses an earlier failure.
 - later planning/docs-only commits, if any, are explicitly not substituted for the accepted product SHA;
 - no unexpected open PR or unmerged product work replaces the candidate.
 
-**FAIL:** candidate identity is ambiguous/missing, current GitHub truth no longer authorizes `7.4`, or unexpected product/release work supersedes the candidate. Stop before target-machine preflight.
+**FAIL:** candidate identity is ambiguous/missing, TREE `8.4` is not closed, current GitHub truth no longer authorizes `7.4`, or unexpected product/release work supersedes the candidate. Stop before target-machine preflight.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -147,8 +156,9 @@ Verify before dependency installation:
 - PowerShell;
 - writable local disk for dependencies/Chromium/DuckDB/reports;
 - loopback networking;
-- required local runtime ports not occupied by a competing Market Flow US process;
-- Chromium-family browser for the authenticated bookmarklet path.
+- ports `8765` and `8770` not occupied by a competing process;
+- Chromium-family browser for the authenticated market-data bookmarklet path;
+- Client Portal Gateway available later for FR-11B when IBKR compatibility is tested.
 
 PASS is a concise sanitized version/capability report. Do not run `npm ci` before FR-1 is green.
 
@@ -165,6 +175,8 @@ PASS:
 - `HEAD` equals the exact FR-0 candidate;
 - the checkout is not silently using a later metadata-only `main` SHA;
 - lockfile, launchers and runtime files required by that candidate are present.
+
+FR-2 proves the target machine is actually checked out to that exact SHA.
 
 ## FR-3 — Deterministic dependency install
 
@@ -192,9 +204,10 @@ Run separately for diagnosability:
 ```text
 npm run test:unit
 npm run test:service
+npm run test:acceptance:order
 ```
 
-PASS: both green. Unit failures stay in logic/contract; service failures stay in Node/WebSocket/DuckDB/persistence/read boundaries.
+PASS: all three green. Unit failures stay in logic/contract; service failures stay in Node/WebSocket/DuckDB/persistence/read boundaries. `test:acceptance:order` is synthetic/public-safe proof of the permission-independent standalone IBKR order-service journey and is not real-order evidence.
 
 ## FR-5 — Browser build + Chromium E2E
 
@@ -336,7 +349,9 @@ PASS:
 - saved Scanner queries are preserved;
 - running session prevents rollover rather than replacing an in-use DB.
 
-## FR-11 — Real-provider deployment smoke
+The separate IBKR execution DuckDB is not owned by New Trading Day.
+
+## FR-11A — Real-provider market-data deployment smoke
 
 Use the already-authenticated eligible provider page and run:
 
@@ -347,6 +362,46 @@ START_MARKET_FLOW_US.cmd
 The user supplies the page URL; launcher reduces it to exact allowed Origin, builds/copies the current bookmarklet, starts the local service, and the user executes the bookmarklet manually on the authenticated page.
 
 PASS: runtime/service connect and reach a valid running state or a stable diagnosable provider error without copying authentication material. A provider error must be fixed before FR-12.
+
+## FR-11B — IBKR CPGW + standalone order-service compatibility
+
+This is a separate boundary from the market-data provider path. Client Portal Gateway must already be running and manually authenticated; the product does not automate credential login.
+
+### FR-11B.1 — Deterministic standalone proof
+
+Run:
+
+```text
+RUN_IBKR_ORDER_ACCEPTANCE.cmd
+```
+
+PASS: a sanitized `SYNTHETIC_ONLY` report proves caller auth, browser-Origin rejection, BUY/SELL preview, DRY_RUN zero submit, restart/idempotency, reply confirmation, partial/full fills, cancellation, acknowledgement-unknown reconciliation without blind resubmit, no-short SELL guard and clean stop.
+
+### FR-11B.2 — Real CPGW session compatibility
+
+Run:
+
+```text
+CHECK_IBKR_SESSION.cmd
+```
+
+If the localhost CPGW certificate requires the documented loopback-only fallback:
+
+```text
+CHECK_IBKR_SESSION.cmd INSECURE_LOCALHOST_TLS
+```
+
+PASS: sanitized CPGW session compatibility succeeds through the protected local order-service path without submitting an order or recording caller token, account identifier, credentials or raw authenticated provider data.
+
+### FR-11B.3 — External permission outcome
+
+If real IBKR trading permission is not available, record exactly:
+
+```text
+PENDING_EXTERNAL_PERMISSION
+```
+
+Synthetic proof does not replace this external status. If permission exists, any real-order verification remains user-initiated, bounded, SHA-bound and provider-compliant.
 
 ## FR-12 — Authenticated static / pre-market acceptance
 
@@ -390,12 +445,14 @@ If cycles/ACK/History stop advancing, treat that as a failure rather than "stati
 
 ### PRE-MARKET READINESS
 
-If FR-0 through FR-12 are green, record:
+If FR-0 through FR-12 are green, including FR-11A and FR-11B, record:
 
 ```text
 PRE-MARKET READINESS = PASS
 FR-13 = PENDING MARKET MOVEMENT
 ```
+
+`PENDING_EXTERNAL_PERMISSION` for optional real-order placement does not invalidate PRE-MARKET READINESS when deterministic order acceptance and real CPGW session compatibility are green.
 
 Preserve the sanitized FR-12 report and accepted candidate SHA.
 
@@ -446,10 +503,14 @@ If a change is observed but Current/History reflection cannot be proven, `moveme
 Record a compact final closure containing:
 
 - exact accepted product SHA;
-- FR-0..FR-13 statuses, including FR-8A..FR-8H;
+- FR-0..FR-13 statuses, including FR-8A..FR-8H and FR-11A/FR-11B;
+- deterministic standalone IBKR order-service acceptance status;
+- real CPGW session compatibility status;
+- real-order evidence `PASS` only if actually executed with permission and explicit user initiation, otherwise exactly `PENDING_EXTERNAL_PERMISSION`;
 - if two-pass: FR-12 pre-market report and FR-13 market-open report on the same accepted SHA;
 - sanitized local report names/paths;
 - normal active DB path `data/market-flow-us.duckdb`;
+- separate order execution DB per `docs/IBKR_ORDER_SERVICE_OPERATOR.md`;
 - proven daily stop/archive/new-day procedure;
 - normal start/stop commands;
 - Demo Buy / AI Investigation recovery path;
@@ -480,13 +541,14 @@ Return only the current checkpoint plus its sanitized error/report.
 ```text
 FR-0..FR-2  repository/release state
 FR-3        toolchain/install
-FR-4        unit/service/DuckDB
+FR-4        unit/service/DuckDB/order deterministic proof
 FR-5        build/Chromium E2E
 FR-6        local UI/runtime
 FR-7..FR-8 Local Fake / Demo Buy / AI feature acceptance
 FR-9        target-machine persistence/read/full-load performance
 FR-10       DB lifecycle/new-day
-FR-11       real deployment/browser/provider startup
+FR-11A      real market-data deployment/browser/provider startup
+FR-11B      IBKR order-service / CPGW compatibility
 FR-12       authenticated static/provider compatibility
 FR-13       real market movement/reflection
 FR-14       evidence/operational closure
@@ -496,6 +558,7 @@ FR-14       evidence/operational closure
 
 - `docs/FIRST_RUN_ACCEPTANCE.md` — authoritative user execution runbook;
 - `START_HERE.md` — short operational entry point;
+- `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — standalone order-service startup/CPGW/acceptance;
 - `docs/LOCAL_FAKE_ACCEPTANCE.md` — Local Fake/workload profiles;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound static + movement gate;
 - `docs/USER_GUIDE.md` — normal product usage.

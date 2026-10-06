@@ -4,25 +4,25 @@
 
 הכלל החשוב ביותר: **מבצעים checkpoint אחד בכל פעם ועוצרים ב־FAIL הראשון.** אין לדלג קדימה כדי לאסוף רעש נוסף. אחרי תיקון חוזרים מה־checkpoint הירוק האחרון, אלא אם התיקון ביטל evidence קודם.
 
-אין להעתיק או לשמור בדוחות credentials, cookies, tokens, authorization/session data, account identifiers, full authenticated responses או private browser state.
+אין להעתיק או לשמור בדוחות credentials, cookies, caller tokens, authorization/session data, account identifiers, full authenticated responses, raw authenticated responses או private browser state.
 
 ## FR-0 — Freeze exact candidate
 
 זהו checkpoint של release/GitHub truth, לא פעולה על מחשב היעד. לפני שמבקשים מהמשתמש להתקין או לבדוק משהו, המאמת קורא fresh `main` ומוודא:
 
-- `STATUS.yaml` ו־`.planning/STATUS.yaml` עדיין מצביעים על TREE `7.4`;
-- `.planning/EXECUTOR_HANDOFF.md` עדיין מצמיד את ה־product candidate המדויק:
+- TREE `8.4` סגור ו־`STATUS.yaml` / `.planning/STATUS.yaml` מצביעים על TREE `7.4`;
+- `.planning/EXECUTOR_HANDOFF.md` מצמיד את ה־post-order-service product candidate המדויק:
 
 ```text
-f2789a4ec43e0878688aa9ea29c647e40a1154b6
+28e950afc1c4bfe4322d0593f483d05d92553e2d
 ```
 
-- commits מאוחרים יותר ב־`main` הם planning/docs/metadata בלבד ואינם מחליפים את ה־candidate;
+- commits מאוחרים יותר ב־`main` שהם planning/docs/metadata בלבד אינם מחליפים את ה־candidate;
 - אין PR release פתוח או product work לא ממוזג שמחליף את ה־candidate.
 
 PASS: ה־candidate לעיל מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
 
-FAIL: זהות ה־candidate אינה חד־משמעית, ה־status כבר לא מאשר `7.4`, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
+FAIL: זהות ה־candidate אינה חד־משמעית, `8.4` אינו סגור, ה־status כבר לא מאשר `7.4`, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -35,7 +35,7 @@ git --version
 powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 ```
 
-נדרש Node.js `24.x`, npm דרך אותה התקנת Node, Git ו־PowerShell תקינים, disk write תקין ו־loopback מקומי זמין.
+נדרש Node.js `24.x`, npm דרך אותה התקנת Node, Git ו־PowerShell תקינים, disk write תקין ו־loopback מקומי זמין. ודא גם ש־ports `8765` ו־`8770` אינם תפוסים על ידי process מתחרה ושקיים Chromium-family browser למסלול ה־market-data. למסלול FR-11B יידרש Client Portal Gateway מקומי authenticated ידנית.
 
 אל תריץ `npm ci` לפני ש־FR-1 ירוק.
 
@@ -48,7 +48,7 @@ powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 ```text
 git fetch origin
 git status --short
-git switch --detach f2789a4ec43e0878688aa9ea29c647e40a1154b6
+git switch --detach 28e950afc1c4bfe4322d0593f483d05d92553e2d
 git status --short
 git rev-parse HEAD
 ```
@@ -58,7 +58,7 @@ git rev-parse HEAD
 PASS:
 
 - `git status --short` ריק לפני ואחרי החלפת ה־candidate;
-- `HEAD` הוא בדיוק `f2789a4ec43e0878688aa9ea29c647e40a1154b6`;
+- `HEAD` הוא בדיוק `28e950afc1c4bfe4322d0593f483d05d92553e2d`;
 - detached checkout תקין ומועדף ל־acceptance; אין צורך להיות על branch `main`;
 - אין substitution שקט ל־SHA מאוחר יותר של metadata בלבד.
 
@@ -81,9 +81,12 @@ PASS: setup יוצא בהצלחה; `node_modules` קיים; Chromium המוצמ�
 ```text
 npm run test:unit
 npm run test:service
+npm run test:acceptance:order
 ```
 
-PASS: שתי הסוויטות ירוקות. שמור wall-clock timing לצורכי אבחון בלבד.
+PASS: שלושתם ירוקים. שמור wall-clock timing לצורכי אבחון בלבד.
+
+`test:acceptance:order` משתמש רק ב־synthetic provider/account data ומוכיח את מסלול ה־standalone IBKR order-service ללא הרשאת מסחר אמיתית; הוא אינו real-order evidence.
 
 ## FR-5 — Browser build + Chromium E2E
 
@@ -206,7 +209,9 @@ PASS:
 - saved Scanner queries נשמרים;
 - אין rollover בזמן session פעילה.
 
-## FR-11 — Real-provider deployment smoke
+ה־IBKR execution DuckDB נפרד ואינו חלק מ־`NEW_TRADING_DAY.cmd`.
+
+## FR-11A — Real-provider market-data deployment smoke
 
 1. התחבר רגיל לעמוד הספק בדפדפן והשאר אותו פתוח.
 2. הפעל:
@@ -222,6 +227,46 @@ START_MARKET_FLOW_US.cmd
 PASS: runtime/service מתחברים ומגיעים ל־running או לשגיאת provider יציבה ומאובחנת, בלי להעתיק authentication material.
 
 אם יש provider error — עצור ותקן לפני FR-12.
+
+## FR-11B — IBKR CPGW + standalone order-service compatibility
+
+זהו boundary נפרד ממסלול ה־market-data. Client Portal Gateway חייב כבר לרוץ ולהיות authenticated ידנית; המוצר אינו מבצע credential login אוטומטי.
+
+### FR-11B.1 — Deterministic standalone proof
+
+הרץ:
+
+```text
+RUN_IBKR_ORDER_ACCEPTANCE.cmd
+```
+
+PASS: מתקבל report sanitized עם `providerEvidence=SYNTHETIC_ONLY` ו־`realOrderSubmitted=false`, שמוכיח local caller auth, browser-Origin rejection, BUY/SELL preview, DRY_RUN ללא submit, restart/idempotency, reply confirmation, partial/full fill, cancellation, `ACKNOWLEDGEMENT_UNKNOWN` reconciliation ללא blind resubmit, no-short SELL guard ו־clean stop.
+
+### FR-11B.2 — Real CPGW session compatibility
+
+הרץ:
+
+```text
+CHECK_IBKR_SESSION.cmd
+```
+
+אם ה־localhost certificate אינו trusted ונדרש fallback מתועד ומצומצם ל־CPGW בלבד:
+
+```text
+CHECK_IBKR_SESSION.cmd INSECURE_LOCALHOST_TLS
+```
+
+PASS: מתקבל sanitized session-compatibility result דרך ה־protected local order-service path. הבדיקה אינה שולחת order ואינה שומרת/מדפיסה caller token, provider account ID, credentials או raw authenticated body.
+
+### FR-11B.3 — External trading permission
+
+אם הרשאת המסחר האמיתית אינה זמינה, רשום בדיוק:
+
+```text
+PENDING_EXTERNAL_PERMISSION
+```
+
+זה מצב תקין של external evidence ואינו מוחלף ב־synthetic success. אם permission כן קיימת, כל real-order verification חייב להיות user-initiated, bounded, SHA-bound ו־provider-compliant.
 
 ## FR-12 — Authenticated closed/static-market acceptance
 
@@ -255,12 +300,14 @@ movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
 
 ### PRE-MARKET READINESS checkpoint
 
-אם FR-0..FR-12 ירוקים, רשום:
+אם FR-0..FR-12 ירוקים, כולל FR-11A ו־FR-11B, רשום:
 
 ```text
 PRE-MARKET READINESS = PASS
 FR-13 = PENDING MARKET MOVEMENT
 ```
+
+`PENDING_EXTERNAL_PERMISSION` עבור real-order placement אינו מבטל את PRE-MARKET READINESS כאשר deterministic order acceptance ו־real CPGW session compatibility ירוקים.
 
 שמור את ה־sanitized FR-12 report ואת ה־accepted candidate SHA.
 
@@ -316,26 +363,31 @@ movement.status = "FAIL"
 
 רשום בקיצור:
 
-- accepted SHA;
-- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H;
+- accepted SHA: `28e950afc1c4bfe4322d0593f483d05d92553e2d`;
+- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H ו־FR-11A/FR-11B;
+- deterministic IBKR order-service acceptance status;
+- real CPGW session compatibility status;
+- real-order evidence: `PASS` רק אם בוצע בפועל עם permission וביוזמת המשתמש; אחרת בדיוק `PENDING_EXTERNAL_PERMISSION`;
 - אם נעשה two-pass run: FR-12 pre-market report + FR-13 market-open report על אותו accepted SHA;
 - שמות/מיקומי sanitized reports שנשמרו מקומית;
 - active DB path: `data/market-flow-us.duckdb`;
+- separate order execution DB לפי `docs/IBKR_ORDER_SERVICE_OPERATOR.md`;
 - daily stop/archive/new-day procedure עבר בפועל ויצר fresh schema v4;
-- normal start/stop commands ידועים;
+- normal start/stop commands ידועים לשני התהליכים;
 - Demo Buy/AI Investigation recovery path ידוע;
 - Support Snapshot recovery path ידוע;
 - אין blocking defect פתוח;
 - `main` CI ירוק אחרי כל fix שנדרש במהלך acceptance.
 
-רק לאחר שכל success evidence של TREE `7.4` ירוק וה־PR/merge/main-green closure הושלם, מותר להכריז על completion של המוצר.
+רק לאחר שכל success evidence של TREE `7.4` ירוק וה־PR/merge/main-green/open-PR closure הושלם, מותר להכריז על completion של המוצר.
 
 ## Troubleshooting routing
 
-בעת כשל, החזר רק את ה־checkpoint הנוכחי ואת ה־sanitized error/report שלו. אין צורך לשלוח credentials, cookies, session data או full provider responses.
+בעת כשל, החזר רק את ה־checkpoint הנוכחי ואת ה־sanitized error/report שלו. אין צורך לשלוח credentials, cookies, caller tokens, session data, account identifiers או full/raw provider responses.
 
 מסמכים משלימים:
 
+- `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — startup, caller-token handling, CPGW ו־order acceptance;
 - `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload, כולל Demo Buy/AI;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound gate;
 - `docs/USER_GUIDE.md` — שימוש שוטף במוצר;
