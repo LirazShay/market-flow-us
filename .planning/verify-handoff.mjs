@@ -111,19 +111,32 @@ for (const match of chatMatches) {
 
 const missing = leaves.filter((id) => !positions.has(id));
 const extra = assigned.filter((id) => !leafSet.has(id));
-if (missing.length || extra.length || assigned.length !== leaves.length) {
+const partialAllocationAllowed = (
+  planState === "active"
+  && replanMode === "execution_reopen"
+  && phase === "planning"
+);
+
+if (extra.length) {
+  throw new Error(`EXECUTION contains nodes that are not current implementation leaves; extra=[${extra.join(", ")}]`);
+}
+
+if (!partialAllocationAllowed && (missing.length || assigned.length !== leaves.length)) {
   throw new Error(
-    `EXECUTION must assign every implementation leaf exactly once; missing=[${missing.join(", ")}], extra=[${extra.join(", ")}]`
+    `EXECUTION must assign every implementation leaf exactly once; missing=[${missing.join(", ")}], extra=[]`
   );
 }
 
-for (const leaf of leaves) {
+for (const leaf of assigned) {
   const current = positions.get(leaf);
   for (const dep of dependencies[leaf]) {
     const before = positions.get(dep);
+    if (!before) {
+      if (partialAllocationAllowed) continue;
+      throw new Error(`Dependency ${dep} for ${leaf} is not allocated`);
+    }
     if (
-      !before
-      || before.chat > current.chat
+      before.chat > current.chat
       || (before.chat === current.chat && before.index >= current.index)
     ) {
       throw new Error(`Dependency order invalid: ${dep} must precede ${leaf}`);
@@ -176,7 +189,9 @@ if (planState === "active") {
   }
   console.log("Execution allocation verified during planning reopen", {
     chats: chats.length,
-    leaves: leaves.length
+    allocatedLeaves: assigned.length,
+    currentLeaves: leaves.length,
+    unallocatedLeaves: missing
   });
   process.exit(0);
 }

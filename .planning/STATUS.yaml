@@ -1,9 +1,9 @@
 version: 2
-plan_state: active
+plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "planning"
-current_node: "9"
+current_stage: "planning_freeze"
+current_node: "9.1"
 blockers: []
-next_action: "Market Recording + Replay durable contract is now defined in docs/MARKET_REPLAY.md and aligned into .planning/GOAL.md. The hard boundary is fixed: recording authority is the validated browser snapshot; portable replay is streaming-friendly; playback is 1x with exact recorded frame spacing; provider market values remain unchanged while local collection/cycle timing is rebased externally to current wall time; Pause/Resume creates a new replay timing segment without server virtual-clock support; Seek starts a fresh isolated replay DB at the selected real frame with no fast-forward/preroll; the existing Market Flow US service/shared producer protocol stay replay-unaware; normal live DB/runtime/tests remain isolated. Planning remains active and implementation unauthorized. Next: mechanically align generic PRODUCT/DATA/TECHNICAL/TEST contracts, record durable D-US replay decisions, extend TREE from eight to nine capability branches with implementation-ready 9.x leaves, update Planning CI structural invariants, perform necessity/sufficiency/KISS/outside-in/final/external-user reviews, allocate execution and repair handoff, then freeze before any production Replay implementation. Existing 7.4 stays blocked/not-done until branch 9 deterministic reclosure produces a new exact product candidate."
-last_review: "R-US-IBKR-ORDER-EXTERNAL"
+next_action: "Market Recording + Replay planning is fully reviewed, approved, allocated and frozen. TREE has 9 capability branches / 50 nodes / 37 implementation leaves; R-US-MARKET-REPLAY-FINAL and R-US-MARKET-REPLAY-EXTERNAL are PASS after concrete Stop→Play isolation, Host bootstrap and allocation-order corrections. EXECUTION is repaired to Chat 21: 9.1→9.2, Chat 22: 9.3, Chat 23: 9.4, Chat 24: 9.5, Chat 25: 7.4. Implementation remains unauthorized until this planning PR is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean. After those gates, deliberately advance root phase to implementation, set implementation_authorized=true and execute Chat 21 / 9.1 first."
+last_review: "R-US-MARKET-REPLAY-EXTERNAL"
 implementation_authorized: false

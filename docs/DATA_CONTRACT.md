@@ -301,7 +301,7 @@ top_x  → exactly first X source rows
 
 Every chosen row must have a valid canonical identity. Duplicate IDs reduce to the first chosen occurrence in the browser; retained items keep original `resultRank` / returned position. Top X never backfills from rows after X.
 
-Node accepts only already-deduped ordered `{securityId,resultRank}` items and rejects duplicate/malformed/out-of-range protocol input rather than repairing it silently.
+Node accepts only already-deduped ordered `{securityId,resultRank}` items and rejects duplicate/malformed/out-of-range protocol input rather than repairing them silently.
 
 Inside the shared serialized writer:
 
@@ -551,3 +551,88 @@ permanent pageCount maximum
 ```
 
 Code/docs must remain conservative until live evidence proves stronger semantics.
+
+## 19. Market recording data authority
+
+Market Recording is a derivative browser artifact, not market authority. A recording frame may be created only from the same **complete validated U.S. snapshot** that is eligible to become a normal collection candidate.
+
+A recording preserves enough information to later rebuild that normal candidate without storing Node/DuckDB state:
+
+```text
+recording format version
+recording-local frame index
+original snapshot timing
+canonical universe membership/revision inputs
+validated provider rows exactly as recorded
+bounded public-safe recorder metadata
+```
+
+It must not contain:
+
+```text
+DuckDB cycle_id/session_id
+Viewer/Scanner/Demo Buy state
+credentials
+cookies
+auth/session/account identifiers
+request headers
+private browser storage
+raw authenticated HTML/network dumps
+```
+
+The recording is immutable evidence of what the browser observed. Replay projection never rewrites the stored recording.
+
+## 20. Portable recording format
+
+The portable format is versioned and streaming-friendly. The initial contract uses one line-oriented record stream with explicit manifest/frame/footer agreement rather than one giant JSON array that requires loading the whole recording into memory.
+
+At minimum the format can prove:
+
+```text
+supported format/version
+recording identity
+frame count when finalized
+first/last recorded local time
+ordered frame indexes
+per-frame validated snapshot payload + original timing
+clean finalization/footer
+```
+
+Import/playback fails closed on unsupported version, malformed JSON, duplicate/out-of-order frame index, invalid snapshot shape, manifest/footer disagreement or detectable truncation.
+
+IndexedDB and portable files represent the same semantic recording. Export/import must not silently change provider values, membership or original timing.
+
+## 21. Replay time projection
+
+Replay distinguishes three clocks:
+
+```text
+provider/source time     = fields such as TradeDateTime from the recorded provider row
+recording-local time     = original browser collection/cycle timing stored in the recording
+replay-local time        = contemporary local timing emitted through the normal producer protocol
+```
+
+Provider/source fields remain unchanged during replay, including `TradeDateTime` and provider `raw_data`.
+
+For one uninterrupted playback segment, let the selected first frame have original reference time `T0` and let playback establish contemporary reference `NOW0`. Every local timestamp in that segment is shifted coherently by one delta:
+
+```text
+delta = NOW0 - T0
+replayLocalTimestamp = recordedLocalTimestamp + delta
+```
+
+The same delta applies to all locally-owned timestamps inside a frame, preserving legal ordering and original intra-frame timing. Subsequent frame dispatch preserves the observed gaps between recorded frames.
+
+Pause emits nothing. Resume begins a new contemporary segment for the next frame, so the human pause can appear as a real gap in replay-local history while the remaining recorded cadence is preserved from that point forward.
+
+Replay never changes `cycle_id`; cycle IDs are freshly allocated by the unchanged server as normal producer commits arrive.
+
+## 22. Seek/startup and replay DB semantics
+
+A seek target resolves to an actual recorded frame boundary. That selected frame becomes the first frame in a **fresh replay DB/session**.
+
+No earlier recording frames are sent to synthesize history. Therefore absence of earlier 10s/20s/2m observations is valid and has the same data meaning as starting the real application in the middle of a trading day.
+
+The replay DB is an ordinary schema-v4 market DB owned only by the replay run. The normal server's market authority, Scanner, Demo Buy and read semantics stay unchanged. Replay orchestration must never reset, delete or repurpose the normal live DB.
+
+A recording may be captured on day A and replayed on day B. Replay-local `collected_at_ms`/cycle timing belongs to day B/current playback, while provider/source fields continue to describe the originally recorded market facts. Queries based on local market-history timing therefore operate normally on replay; queries that explicitly inspect source `TradeDateTime` continue to see the source-recorded value by design.

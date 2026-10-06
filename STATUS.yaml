@@ -4,9 +4,9 @@ overall_status: in_progress
 
 current:
   chat: 21
-  node: "9"
-  title: "Market recording and replay planning"
-  status: in_progress
+  node: "9.1"
+  title: "Market Replay plan frozen; implementation authorization pending"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -30,20 +30,19 @@ planning_completion:
   plan_freeze: pass
   execution_allocation: pass
   handoff_verification: pass
-  implementation_authorization: paused_for_market_replay_extension
+  implementation_authorization: awaiting_market_replay_planning_merge
   ibkr_order_extension: implementation
   ibkr_order_durable_contract: pass
   ibkr_order_tree_freeze: pass
-  market_replay_extension: in_progress
+  market_replay_extension: planned
   market_replay_durable_contract: pass
-  market_replay_tree_freeze: pending
+  market_replay_tree_freeze: pass
 
 execution:
-  chats_total: 21
-  implementation_leaves_total: 32
+  chats_total: 25
+  implementation_leaves_total: 37
   current_chat: 21
-  current_node: "9"
-  paused_node: "7.4"
+  current_node: "9.1"
   final_acceptance_node: "7.4"
 
 blockers: []

@@ -396,3 +396,183 @@ implementation_authorized: false until planning PR merge + main Planning CI/open
 ```
 
 The plan may be re-frozen once the updated Planning Docs CI is green. Production code remains unauthorized until PR #17 is reviewed/squash-merged, main Planning Docs CI is green and open-PR state is clean; only then may repository truth deliberately advance to `phase: implementation`, Chat 10 / TREE `4.3.1`.
+
+## R-US-MARKET-REPLAY-FINAL — Consolidated Market Recording + Replay planning review
+
+**Result:** PASS AFTER CORRECTIONS — READY TO FREEZE; IMPLEMENTATION REMAINS UNAUTHORIZED UNTIL PR/MAIN GATES
+
+The branch-9 planning slice was reviewed once as a complete feature rather than re-reviewing each document independently. The review covered product intent, storage/portable format, timing semantics, ProducerBridge/service authority, Replay Host security/lifecycle, full-product surfaces, deterministic proof, release sequencing and ST allocation.
+
+### Structural result
+
+```text
+root capability branches: 9
+TREE nodes:              50
+implementation leaves:   37
+new Replay leaves:        5
+one-child decompositions: 0
+missing child refs:        0
+leaf dependency cycles:    0
+non-leaf dependencies:     0
+```
+
+`9.1–9.5` are implementation-ready leaves. Removing any one loses a distinct required capability:
+
+```text
+9.1 validated browser recording + IndexedDB authority
+9.2 portable streaming format + direct file source
+9.3 media Player + exact cadence + contemporary local-time projection
+9.4 isolated Host/process/DB lifecycle + existing product surfaces
+9.5 deterministic reclosure + generic live-start classification + candidate pinning
+```
+
+No further decomposition is justified: each leaf has one coherent implementation boundary, explicit dependencies and measurable success evidence.
+
+### Necessity / sufficiency / outside-in
+
+**PASS AFTER CORRECTIONS.**
+
+The complete path is owned:
+
+```text
+provider page
+→ Record complete validated snapshots with local service off
+→ IndexedDB library
+→ stream export to disk when desired
+→ later open IndexedDB recording or validate/index portable file directly
+→ start isolated Replay Host/service
+→ Play at original 1x irregular cadence
+→ Pause/Resume same replay run
+→ Stop and later Play as a fresh replay run
+→ Seek to a real frame boundary with fresh replay DB and zero preroll
+→ Current / History / Scanner / Demo Buy / AI Investigation use normal service facts
+→ replay day-A recording under day-B local collection time
+→ focused deterministic reclosure
+→ final target-machine/provider acceptance on the exact post-Replay candidate
+```
+
+Missing pre-start history is intentionally ordinary startup behavior. Replay must expose, not conceal, any generic Scanner/read defect that also exists when the real system starts mid-session.
+
+### Correction 1 — Stop/Play authority contamination
+
+The first draft ended the producer on Stop but did not say whether a later Play could append previously emitted frames into the old replay DB. That could create duplicate/contradictory history.
+
+Correction:
+
+- Pause/Resume is the only continuation of one replay run/DB.
+- Stop closes the replay run; the current DB may remain readable for inspection.
+- any later Play after Stop starts a fresh replay-owned service/DB before the selected frame is emitted;
+- explicit Seek has the same fresh-run isolation and never prerolls/fast-forwards prior frames.
+
+This is owned by `9.4/9.5`; no replay reset operation is added to the normal server.
+
+### Correction 2 — Host credential was secure but not yet operable from zero
+
+The first draft required an ephemeral per-run Host control credential but did not require a complete user bootstrap path. A secure secret that the user cannot obtain/use reliably would make Replay unusable.
+
+Correction:
+
+- the dedicated Replay launcher/UI must expose a bounded one-run bootstrap/pairing flow;
+- the credential is never committed, persisted in browser storage/durable config or logged;
+- focused proof covers successful pairing plus unauthorized/stale rejection;
+- implementation may reuse an existing ephemeral-local-credential pattern rather than inventing an authentication subsystem.
+
+### KISS / architecture challenge
+
+**PASS.**
+
+Replay deliberately does **not** add:
+
+```text
+server replay mode
+server virtual clock
+shared-protocol replay messages
+server seek/reset API
+hidden fast-forward/preroll
+second market persistence implementation
+Replay Host market-data writes
+playback-speed subsystem
+cloud recording service
+recording editor/merger
+multi-hour real-time CI waits
+```
+
+The only new local process is the minimal Host required because browser code cannot safely spawn/reset the unchanged existing service and replay DB. It owns lifecycle only.
+
+`docs/MARKET_REPLAY.md` is the branch-9 future technical authority. `docs/TECHNICAL_SPEC.md` remains implementation-current until branch 9 exists; `9.5` explicitly requires the final implemented architecture/operator flow to be folded back into the generic technical spec. This avoids duplicating an unimplemented design and falsely presenting it as current runtime truth during planning.
+
+### Verification challenge
+
+**PASS.**
+
+Timing correctness is fake-clock/deterministic first. Only a short real-wall-clock smoke is justified. Replay-specific waits remain in dedicated proof and do not silently extend normal `RUN_TESTS.cmd` / Local Fake acceptance.
+
+The plan explicitly proves:
+
+- complete-frame-only recording and storage failure recovery;
+- streaming portable export and fail-closed file validation;
+- direct file source without IndexedDB duplication;
+- irregular 1x cadence and coherent timestamp rebasing;
+- Pause/Resume same-run semantics;
+- Stop→Play and Seek fresh-run isolation;
+- Host ownership/foreign-process refusal/ephemeral bootstrap;
+- mid-recording startup with missing history;
+- next-day replay with current local timestamps and original provider facts;
+- Scanner/Demo Buy behavior through the unchanged normal service;
+- no normal live DB mutation and no auth/session/account material in recordings/diagnostics.
+
+## R-US-MARKET-REPLAY-EXTERNAL — External-user-from-zero Replay review
+
+**Result:** PASS AFTER CORRECTIONS — ALLOCATION READY; FREEZE MAY PROCEED
+
+The feature was walked again from the perspective of a user who knows only the product controls, not the implementation plan:
+
+```text
+open dedicated recorder on provider page
+→ see storage state
+→ Record
+→ Stop safely
+→ export a large recording without requiring all data in memory
+→ optionally delete browser copy only by explicit user action
+→ later choose browser recording or portable file
+→ start Replay through the operator path and complete one-run Host pairing
+→ see readiness/progress/frame position
+→ Play / Pause / Resume
+→ Stop and inspect the closed run
+→ Play again and get a clean new run rather than duplicated history
+→ drag/seek to the middle and start there with no hidden warm-up
+→ use Current / Detail / Scanner / Demo Buy / AI Investigation normally
+→ encounter missing early anchors as ordinary startup state
+→ replay on another day without stale local timestamps
+→ stop cleanly without touching normal live DB/process/data
+```
+
+No additional product-scope gap remained after the Stop/Play and bootstrap corrections.
+
+### Allocation repair found by external review
+
+The old allocation placed unfinished `7.4` in Chat 21. After adding `7.4 -> 9.5`, appending branch-9 chats after Chat 21 would violate dependency order.
+
+The corrected serial allocation is:
+
+```text
+Chats 1–20: completed historical implementation through 8.4
+Chat 21: 9.1 → 9.2
+Chat 22: 9.3
+Chat 23: 9.4
+Chat 24: 9.5
+Chat 25: 7.4
+```
+
+This preserves the completed done prefix, assigns all 37 leaves exactly once, places every dependency before its consumer and keeps final user/provider acceptance last.
+
+### Freeze truth
+
+```text
+TREE statuses: all approved
+plan_state: frozen after allocation/handoff update
+implementation_authorized: false until planning PR merge + main Planning CI + open-PR audit
+next executable after authorization: Chat 21 / 9.1 then 9.2
+```
+
+No additional review loop is required unless a concrete new finding appears.

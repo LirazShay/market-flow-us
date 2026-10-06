@@ -60,7 +60,12 @@ Do not ask the user to restate the plan.
 | `8.2` real CPGW lifecycle | IBKR_ORDER_SERVICE §§2,4,5,9,11–16; DECISIONS D-US-035/037/038; TECHNICAL_SPEC §§35–39; TEST_STRATEGY §§26–30 |
 | `8.3` packaging/integration seam | IBKR_ORDER_SERVICE §§19–21; IBKR_ORDER_SERVICE_SECURITY §10; PRODUCT_SPEC/TECHNICAL_SPEC packaging; TEST_STRATEGY §§31–32 |
 | `8.4` branch-8 reclosure | all IBKR order contracts + affected generic contracts + full required deterministic gates + PR/main/open-PR truth |
-| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/heavy workload/authenticated gates; exact candidate pinned by completed `8.4` |
+| `9.1` Replay recorder/storage | MARKET_REPLAY recording/library sections; DATA_CONTRACT Replay recording projection; PRODUCT_REQUIREMENTS/PRODUCT_SPEC Replay; TEST_STRATEGY recorder/storage proof; existing ScreenerHulPaging3 validation seam |
+| `9.2` portable recording format | MARKET_REPLAY portable/large-recording sections; DATA_CONTRACT portable format; TEST_STRATEGY file/export/source proof |
+| `9.3` Player/time projection | MARKET_REPLAY playback/time/Pause/Resume sections; DATA_CONTRACT Replay time projection; D-US-042; TEST_STRATEGY player timing; existing ProducerBridge/shared protocol |
+| `9.4` Replay Host/isolation | MARKET_REPLAY Stop/Seek/Host/Viewer sections; D-US-043/044; TEST_STRATEGY Stop/Seek/isolation/bootstrap; existing service `--db`/`--port`/`--allowed-origin` seams |
+| `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad gates + PR/main/open-PR truth |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact candidate pinned by completed `9.5` |
 
 TREE `success_evidence` is always definition-of-done.
 
@@ -68,14 +73,82 @@ TREE `success_evidence` is always definition-of-done.
 
 ```text
 Chats 1–16: historical completed implementation through 7.5
-Chat 17: 8.1
-Chat 18: 8.2
-Chat 19: 8.3
-Chat 20: 8.4
-Chat 21: 7.4
+Chat 17: 8.1 done
+Chat 18: 8.2 done
+Chat 19: 8.3 done
+Chat 20: 8.4 done
+Chat 21: 9.1 → 9.2
+Chat 22: 9.3
+Chat 23: 9.4
+Chat 24: 9.5
+Chat 25: 7.4
 ```
 
-Do not skip forward. `8.1 → 8.2 → 8.3 → 8.4 → 7.4` is dependency order.
+Do not skip forward. Current dependency order is:
+
+```text
+9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 7.4
+```
+
+The earlier Chat-21 allocation of `7.4` was deliberately repaired during Replay planning because `7.4` now depends on `9.5`.
+
+## Branch-9 architectural boundary
+
+Replay is external to the normal market authority:
+
+```text
+recording source (IndexedDB or validated portable file)
+→ Market Player
+→ existing ProducerBridge / protocol
+→ unchanged Market Flow US service
+→ replay-only DuckDB
+→ existing Viewer / Scanner / Demo Buy / AI surfaces
+```
+
+The existing service/shared protocol must not gain `replayMode`, virtual clock, seek/reset/load-recording messages or hidden fast-forward behavior.
+
+### Recording authority
+
+Only complete validated ScreenerHulPaging3 snapshots become recording frames. Recording contains provider market facts + bounded reconstruction/timing metadata, never auth/session/account/private-page material or DuckDB authority state.
+
+### Portable recordings
+
+Versioned line-oriented manifest/frame/footer validation fails closed on malformed/truncated/count/order/version mismatch. Large export/file playback must not require whole-recording memory or mandatory re-import into IndexedDB.
+
+### Time projection
+
+Playback is `1x` only in initial scope and preserves observed irregular frame gaps. Provider/source facts remain unchanged. Local collection/cycle/chunk/security/universe timestamps are rebased coherently to contemporary wall time before normal producer emission.
+
+Pause/Resume continues one replay run/DB. Pause emits no frames and Resume preserves the remaining schedule while starting a contemporary timing segment.
+
+### Stop / Play / Seek
+
+Stop closes the current replay run; the closed DB may remain readable for inspection. A later Play starts a fresh replay-owned service/DB before any selected frame is emitted again. Seek likewise starts a fresh replay DB at a real recorded frame boundary with zero preroll/fast-forward.
+
+Missing earlier history is ordinary startup state. If a normal query/surface breaks solely because earlier history is absent, fix it as a generic live-start defect, never with replay-specific server behavior.
+
+### Replay Host
+
+Replay Host is lifecycle orchestration only:
+
+```text
+loopback control
+exact allowed Origin
+per-run ephemeral credential
+one-run bootstrap/pairing to the dedicated Replay UI
+spawn unchanged Market Flow service child
+pass existing --db / --port / --allowed-origin
+own/reset only replay DB artifacts
+stop only its own child
+```
+
+It never persists market frames, writes market DuckDB tables, translates producer messages, executes Scanner SQL, attaches to/kills unrelated processes or opens/resets/deletes the normal live DB.
+
+If port/path ownership is ambiguous or occupied by a foreign process, fail closed. Credential values are never committed, persisted or logged; unauthorized/stale control must reject.
+
+### Normal verification isolation
+
+Replay remains opt-in with its own browser artifact/operator path/focused tests. Existing ordinary launchers and local acceptance keep their semantics. Timing correctness is deterministic/fake-clock first with only a short real-wall-clock smoke; no multi-hour replay wait becomes an ordinary suite prerequisite.
 
 ## Branch-8 architectural boundary
 
@@ -266,9 +339,9 @@ New Trading Day accepts valid v3 or v4 source, rejects v1/v2/corrupt/running sta
 
 ## Performance / KISS
 
-Do not add Strategy Engine, automatic Scanner-to-order subsystem, portfolio engine, background horizon updater, materialized horizon columns, another market-data DB/transport, cross-day strategy warehouse, capture replay subsystem, AI-agent subsystem or cloud order service.
+Do not add Strategy Engine, automatic Scanner-to-order subsystem, portfolio engine, background horizon updater, materialized horizon columns, another market-data authority/transport, cross-day strategy warehouse, capture replay/idempotency subsystem, AI-agent subsystem or cloud order service.
 
-The separate order-service HTTP API and minimal execution DuckDB are explicitly approved branch-8 boundaries; keep both narrow.
+The separate order-service HTTP API/minimal execution DuckDB and branch-9 Replay Host/replay-only DB are explicitly approved narrow boundaries. Replay Host must not become a second market persistence implementation; the existing Market Flow service remains the only market DB writer.
 
 If recurring verification is materially slow:
 
@@ -285,9 +358,9 @@ Hosted CI is correctness-first; heavy 4096×180/day-bounded performance remains 
 
 Preserve the existing checkpoint/support architecture; do not add parallel logging.
 
-Order diagnostics may use an `ibkr_order.*` component namespace but must expose only stable checkpoint/code, product-owned local IDs, bounded lifecycle state and sanitized cause.
+Order diagnostics may use an `ibkr_order.*` component namespace; Replay may use bounded recorder/player/host component names. Both expose only stable checkpoint/code, product-owned local IDs where needed, bounded lifecycle state and sanitized cause.
 
-Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence or AI prompt contents.
+Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence, AI prompt contents or Replay Host control credentials.
 
 ## Work-unit lifecycle
 
@@ -318,16 +391,20 @@ If required GitHub Actions/CI is unavailable, do not merge unverified work or st
 
 ## Final acceptance
 
-The pre-branch-8 product candidate `f2789a4ec43e0878688aa9ea29c647e40a1154b6` is historical evidence only after branch `8` begins implementation; it must **not** be reused as the final accepted candidate.
+The earlier product candidates remain historical evidence only after later branches extend product scope.
 
-TREE `8.4` deterministic reclosure is complete and pins the exact post-order-service product candidate for final acceptance:
+Branch `8.4` completed against the post-order-service baseline:
 
 ```text
 28e950afc1c4bfe4322d0593f483d05d92553e2d
 ```
 
-This is the product SHA immediately after PR #40 / TREE `8.3`. Later TREE `8.4` planning/docs/test-contract closure commits do not silently replace it. Chat 21 / TREE `7.4` must perform product acceptance against this exact SHA while reading fresh `main` for release/status truth.
+That SHA is branch-8 evidence and the starting implementation baseline for branch 9; it must not be reused as the final accepted complete-product candidate after Replay implementation begins.
 
-Only `7.4` owns final user-dependent target-machine heavy performance, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility. Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
+TREE `9.5` owns deterministic Replay reclosure and must pin the exact post-branch-9 candidate after focused Replay proof, materially affected broad gates, merge/main-green and open-PR audit.
 
-Overall completion requires every assigned leaf done, branch-8 deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
+Only after `9.5` is done may Chat 25 / TREE `7.4` perform final user-dependent target-machine heavy performance, Replay usability/isolation, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility against that exact new candidate.
+
+Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
+
+Overall completion requires every assigned leaf done, branch-9 deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.

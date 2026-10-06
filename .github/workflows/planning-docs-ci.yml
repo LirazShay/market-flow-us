@@ -45,7 +45,7 @@ jobs:
             .planning/README.md .planning/FRAMEWORK.md .planning/GOAL.md .planning/TREE.yaml
             .planning/DECISIONS.md .planning/REVIEWS.md .planning/IBKR_ORDER_REVIEWS.md .planning/STATUS.yaml
             .planning/EXECUTION.yaml .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
-            .planning/IBKR_ORDER_MINI_PROJECT.md
+            .planning/IBKR_ORDER_MINI_PROJECT.md .planning/MARKET_REPLAY_MINI_PROJECT.md
             docs/US_MIGRATION_AUDIT.md docs/US_MIGRATION_FILE_MAP.md docs/US_CONTRACT_REVIEW.md
             docs/US_PRODUCT_DIRECTION.md docs/US_SOURCE_EVIDENCE.md
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md
@@ -53,7 +53,7 @@ jobs:
             docs/SCANNER_SQL_GUIDE.md
             docs/DEMO_BUY_VALIDATION.md docs/DEMO_BUY_PROTOCOL_LIMITS.md
             docs/DEMO_BUY_UX.md docs/AI_INVESTIGATION_PACK.md
-            docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md
+            docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md docs/MARKET_REPLAY.md
           )
 
           for file in "${required[@]}"; do
@@ -82,13 +82,14 @@ jobs:
             echo "TREE root must be 0"; exit 1;
           }
 
-          grep -Fq '    children: ["1", "2", "3", "4", "5", "6", "7", "8"]' .planning/TREE.yaml || {
-            echo "TREE root must contain eight capability branches"; exit 1;
+          grep -Fq '    children: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]' .planning/TREE.yaml || {
+            echo "TREE root must contain nine capability branches"; exit 1;
           }
 
           for node in \
             '"4.3.1"' '"4.3.2"' '"4.3.3"' '"4.4.1"' '"4.4.2"' '"4.5.1"' '"4.5.2"' \
-            '"7.5"' '"8.1"' '"8.2"' '"8.3"' '"8.4"' '"7.4"'; do
+            '"7.5"' '"8.1"' '"8.2"' '"8.3"' '"8.4"' \
+            '"9.1"' '"9.2"' '"9.3"' '"9.4"' '"9.5"' '"7.4"'; do
             grep -Fq "  ${node}:" .planning/TREE.yaml || {
               echo "TREE missing required implementation leaf ${node}"; exit 1;
             }
@@ -114,6 +115,7 @@ jobs:
           require_text '# AI Investigation Pack' docs/AI_INVESTIGATION_PACK.md
           require_text '# Market Flow US — IBKR Order Service Contract' docs/IBKR_ORDER_SERVICE.md
           require_text '# Market Flow US — IBKR Order Service Local Security Contract' docs/IBKR_ORDER_SERVICE_SECURITY.md
+          require_text '# Market Recording + Replay Contract' docs/MARKET_REPLAY.md
 
           require_text 'ScreenerHulPaging3' docs/DATA_CONTRACT.md
           require_text 'schema v4' docs/TECHNICAL_SPEC.md
@@ -124,6 +126,9 @@ jobs:
           require_text 'demo.buy.ai-pack.create' docs/TECHNICAL_SPEC.md
           require_text 'cycle_id > buy_cycle_id' docs/TECHNICAL_SPEC.md
           require_text 'cycle_id > buy_cycle_id' docs/DATA_CONTRACT.md
+          require_text 'Replay time projection' docs/DATA_CONTRACT.md
+          require_text 'server is replay-unaware' .planning/MARKET_REPLAY_MINI_PROJECT.md
+          require_text 'remain replay-unaware' docs/MARKET_REPLAY.md
           require_text '256 KiB' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text 'retained columns <= 64' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text 'Refresh observation' docs/DEMO_BUY_UX.md
@@ -137,11 +142,12 @@ jobs:
           require_text 'canary secret/session' docs/TEST_STRATEGY.md
           require_text 'D-US-032' .planning/DECISIONS.md
           require_text 'D-US-033' .planning/DECISIONS.md
-
           require_text 'D-US-034' .planning/DECISIONS.md
           require_text 'D-US-036' .planning/DECISIONS.md
           require_text 'D-US-037' .planning/DECISIONS.md
           require_text 'D-US-039' .planning/DECISIONS.md
+          require_text 'D-US-040' .planning/DECISIONS.md
+          require_text 'D-US-045' .planning/DECISIONS.md
           require_text 'DRY_RUN' docs/IBKR_ORDER_SERVICE.md
           require_text 'ACKNOWLEDGEMENT_UNKNOWN' docs/IBKR_ORDER_SERVICE.md
           require_text '127.0.0.1:8770' docs/IBKR_ORDER_SERVICE_SECURITY.md
@@ -149,14 +155,16 @@ jobs:
           require_text 'PENDING_EXTERNAL_PERMISSION' docs/IBKR_ORDER_SERVICE.md
           require_text 'same requestId + same normalized intent' docs/IBKR_ORDER_SERVICE.md
           require_text 'no short opening' docs/PRODUCT_REQUIREMENTS.md
-          require_text '32 implementation leaves allocated exactly once' docs/TEST_STRATEGY.md
+          require_text '37 implementation leaves allocated exactly once' docs/TEST_STRATEGY.md
           require_text '8.1 / 8.2 / 8.3 / 8.4 done' docs/TEST_STRATEGY.md
+          require_text '9.1 / 9.2 / 9.3 / 9.4 / 9.5 done' docs/TEST_STRATEGY.md
           require_text 'R-US-DEMO-BUY-FINAL' .planning/REVIEWS.md
           require_text 'R-US-DEMO-BUY-EXTERNAL' .planning/REVIEWS.md
           require_text 'R-US-IBKR-ORDER-FINAL' .planning/IBKR_ORDER_REVIEWS.md
           require_text 'R-US-IBKR-ORDER-EXTERNAL' .planning/IBKR_ORDER_REVIEWS.md
 
           require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
+          require_text 'fresh replay DB/session' .planning/TREE.yaml
           require_text '4096' docs/TEST_STRATEGY.md
           require_text '180 end-to-end cycles' docs/TEST_STRATEGY.md
           require_text 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
@@ -240,8 +248,8 @@ jobs:
           }
           for (const leaf of leaves) visit(leaf);
 
-          if (ids.length !== 44) throw new Error(`Expected 44 TREE nodes after IBKR order-service replan, found ${ids.length}`);
-          if (leaves.length !== 32) throw new Error(`Expected 32 implementation leaves after IBKR order-service replan, found ${leaves.length}`);
+          if (ids.length !== 50) throw new Error(`Expected 50 TREE nodes after Market Replay replan, found ${ids.length}`);
+          if (leaves.length !== 37) throw new Error(`Expected 37 implementation leaves after Market Replay replan, found ${leaves.length}`);
 
           const planState = fs.readFileSync('.planning/STATUS.yaml', 'utf8')
             .match(/^plan_state: ([a-z_]+)$/m)?.[1];
@@ -258,6 +266,9 @@ jobs:
             }
             for (const marker of ['R-US-IBKR-ORDER-FINAL', 'R-US-IBKR-ORDER-EXTERNAL']) {
               if (!ibkrReviews.includes(marker)) throw new Error(`Frozen plan requires branch-8 review ${marker}`);
+            }
+            for (const marker of ['R-US-MARKET-REPLAY-FINAL', 'R-US-MARKET-REPLAY-EXTERNAL']) {
+              if (!reviews.includes(marker)) throw new Error(`Frozen plan requires branch-9 review ${marker}`);
             }
           }
 
