@@ -3,8 +3,8 @@ import test from "node:test";
 
 import { buildValidatedSnapshot } from "../../browser/provider/us-screener.js";
 import {
-  createRecordingFrame,
-  estimateFrameBytes,
+  approximateJsonBytes,
+  createReplayFrame,
   toRecordingSummary
 } from "../../browser/replay/recording-model.js";
 import { createMarketReplayRecorder } from "../../browser/replay/market-recorder.js";
@@ -49,9 +49,15 @@ function createMemoryStore({ failAppendAt = null } = {}) {
     recordings,
     async createRecording({ id, name, createdAtMs }) {
       const recording = {
-        id, name, createdAtMs, status: "incomplete",
-        firstFrameAtMs: null, lastFrameAtMs: null,
-        frameCount: 0, approximateBytes: 0, lastErrorCode: null
+        recordingId: id,
+        name,
+        createdAtMs,
+        status: "incomplete",
+        firstFrameAtMs: null,
+        lastFrameAtMs: null,
+        frameCount: 0,
+        approximateBytes: 0,
+        lastErrorCode: null
       };
       recordings.set(id, recording);
       return summary(recording);
@@ -63,10 +69,10 @@ function createMemoryStore({ failAppendAt = null } = {}) {
       }
       assert.equal(frame.sequence, recording.frameCount);
       frames.push(structuredClone(frame));
-      recording.firstFrameAtMs ??= frame.timing.completedAtMs;
-      recording.lastFrameAtMs = frame.timing.completedAtMs;
+      recording.firstFrameAtMs ??= frame.snapshot.timing.completedAtMs;
+      recording.lastFrameAtMs = frame.snapshot.timing.completedAtMs;
       recording.frameCount += 1;
-      recording.approximateBytes += estimateFrameBytes(frame);
+      recording.approximateBytes += approximateJsonBytes(frame);
       recording.lastErrorCode = null;
       return summary(recording);
     },
@@ -140,16 +146,16 @@ function recorderFor({ store, snapshots, scheduler, storageManager }) {
 
 test("Replay frames preserve deterministic order, exact membership and irregular provider timing", () => {
   const frames = [
-    createRecordingFrame({ recordingId: "r1", sequence: 0, snapshot: snapshot([row(2), row(1)], 1_000) }),
-    createRecordingFrame({ recordingId: "r1", sequence: 1, snapshot: snapshot([row(1), row(2)], 1_137) }),
-    createRecordingFrame({ recordingId: "r1", sequence: 2, snapshot: snapshot([row(1), row(2), row(3)], 1_911) }),
-    createRecordingFrame({ recordingId: "r1", sequence: 3, snapshot: snapshot([row(3), row(1)], 3_006) })
+    createReplayFrame({ recordingId: "r1", sequence: 0, snapshot: snapshot([row(2), row(1)], 1_000) }),
+    createReplayFrame({ recordingId: "r1", sequence: 1, snapshot: snapshot([row(1), row(2)], 1_137) }),
+    createReplayFrame({ recordingId: "r1", sequence: 2, snapshot: snapshot([row(1), row(2), row(3)], 1_911) }),
+    createReplayFrame({ recordingId: "r1", sequence: 3, snapshot: snapshot([row(3), row(1)], 3_006) })
   ];
 
   assert.deepEqual(frames.map((item) => item.sequence), [0, 1, 2, 3]);
-  assert.deepEqual(frames.map((item) => item.timing.completedAtMs), [1_000, 1_137, 1_911, 3_006]);
-  assert.deepEqual(frames.map((item) => item.responseIds), [["2", "1"], ["1", "2"], ["1", "2", "3"], ["3", "1"]]);
-  assert.deepEqual(frames.map((item) => item.membership), [["1", "2"], ["1", "2"], ["1", "2", "3"], ["1", "3"]]);
+  assert.deepEqual(frames.map((item) => item.snapshot.timing.completedAtMs), [1_000, 1_137, 1_911, 3_006]);
+  assert.deepEqual(frames.map((item) => item.snapshot.responseIds), [["2", "1"], ["1", "2"], ["1", "2", "3"], ["3", "1"]]);
+  assert.deepEqual(frames.map((item) => item.snapshot.membership), [["1", "2"], ["1", "2"], ["1", "2", "3"], ["1", "3"]]);
 });
 
 test("Replay frame projection is bounded and excludes unrelated sensitive/private fields", () => {
@@ -163,16 +169,30 @@ test("Replay frame projection is bounded and excludes unrelated sensitive/privat
     privateDom: "SECRET_DOM",
     browserStorageDump: "SECRET_STORAGE"
   };
-  const frame = createRecordingFrame({ recordingId: "r1", sequence: 0, snapshot: decorated });
+  const frame = createReplayFrame({ recordingId: "r1", sequence: 0, snapshot: decorated });
   const serialized = JSON.stringify(frame);
 
   for (const canary of ["SECRET_COOKIE", "SECRET_AUTH", "SECRET_ACCOUNT", "SECRET_HEADER", "SECRET_DOM", "SECRET_STORAGE"]) {
     assert.equal(serialized.includes(canary), false);
   }
-  assert.deepEqual(Object.keys(frame).sort(), [
-    "httpStatus", "membership", "recordCount", "recordingId", "records",
-    "responseIds", "sequence", "sourceMetadata", "timing"
+  assert.deepEqual(Object.keys(frame).sort(), ["recordingId", "sequence", "snapshot"]);
+  assert.deepEqual(Object.keys(frame.snapshot).sort(), [
+    "httpStatus", "membership", "recordCount", "records", "responseIds", "sourceMetadata", "timing"
   ]);
+});
+
+test("malformed/incomplete snapshot cannot become a Replay frame", () => {
+  const valid = snapshot([row(1)], 2_000);
+  assert.throws(() => createReplayFrame({
+    recordingId: "r1",
+    sequence: 0,
+    snapshot: { ...valid, recordCount: 2 }
+  }));
+  assert.throws(() => createReplayFrame({
+    recordingId: "r1",
+    sequence: 0,
+    snapshot: { ...valid, membership: ["999"] }
+  }));
 });
 
 test("provider failure creates no frame and the next complete snapshot can recover", async () => {
