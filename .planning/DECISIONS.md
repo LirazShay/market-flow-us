@@ -188,11 +188,11 @@ No background horizon updater/materialized result schema/new market DB/new marke
 
 ## D-US-025 — Demo Buy + AI Investigation precede final target-machine acceptance
 
-**Status:** resolved; sequence extended by D-US-039
+**Status:** resolved; sequence extended by D-US-039 and D-US-040
 
 Completed migration leaves through `7.3` remain historical evidence. The prior sequence implemented Demo Buy/AI, then `7.5`, then began `7.4`.
 
-Branch `8` was later requested before `7.4` completed. D-US-039 owns the new continuation order.
+Branch `8` was later requested before `7.4` completed, and branch `9` Market Recording + Replay was requested before `7.4` resumed. D-US-040 owns the current continuation order.
 
 ## D-US-026 — Capture preserves original Scanner meaning under bounded provenance
 
@@ -403,21 +403,74 @@ Short selling, options/futures/FX, bracket/OCA/algo orders and leverage optimiza
 
 ## D-US-039 — Branch 8 reclosure precedes resuming final 7.4 acceptance
 
-**Status:** resolved
+**Status:** resolved; superseded for sequencing by D-US-040
 
 The user requested the standalone IBKR mini-project after `7.5` was done and while `7.4` final acceptance was still unfinished.
 
-Current sequence is:
+Branch `8` completed and produced a reclosed candidate. Before `7.4` resumed, the user requested branch `9` Market Recording + Replay. D-US-040 owns the current continuation order; all branch-8 implementation evidence remains valid for what it proved.
+
+## D-US-040 — Branch 9 Replay reclosure precedes resuming final 7.4 acceptance
+
+**Status:** resolved
+
+Current continuation order is:
 
 ```text
-preserve all completed branch 1–7 implementation evidence
+preserve completed branch 1–8 implementation/evidence
 → keep 7.4 blocked/not-done
-→ implement 8.1 standalone service + dry-run authority
-→ implement 8.2 IBKR adapter + live-capable lifecycle
-→ implement 8.3 operator packaging + integration-ready boundary
-→ implement 8.4 deterministic branch-8 reclosure
-→ produce the new exact candidate truth
+→ plan/freeze branch 9 Market Recording + Replay
+→ implement 9.1–9.4
+→ implement 9.5 deterministic Replay reclosure
+→ pin the exact complete-product candidate
 → resume 7.4 final target-machine/provider acceptance
 ```
 
-Actual live-money order proof may remain exactly `PENDING_EXTERNAL_PERMISSION` when IBKR has not granted the user's trading permission. Permission-independent software proof must be complete; fake evidence must never be presented as live success.
+`7.4` must depend on branch `9.5`; it cannot use the older post-branch-8 candidate as final product truth.
+
+## D-US-041 — Replay records validated browser snapshots, not DB state
+
+**Status:** resolved
+
+Recording authority is the already-validated U.S. browser snapshot boundary before Node/DuckDB authority.
+
+Only complete validated snapshots become immutable recording frames. Recordings preserve provider market values and enough membership/timing metadata to reconstruct the normal U.S. collection candidate later.
+
+Do not record DuckDB tables/cycle IDs, Viewer/Scanner/Demo Buy state, DOM/auth/session/account material or raw authenticated browser dumps.
+
+Portable recordings use a versioned streaming-friendly line-oriented format with manifest/frame/footer agreement; malformed, truncated or unsupported files fail closed.
+
+## D-US-042 — Replay is a normal producer with external time rebasing
+
+**Status:** resolved
+
+The existing Market Flow US service and shared producer protocol remain replay-unaware. No replay mode, virtual clock, seek, speed, recording ID or load/reset operation is added to them.
+
+Initial playback is `1x` using the exact observed gaps between validated recorded frames. Provider/source fields stay unchanged. Local collection/cycle/chunk/security timestamps that live acquisition would stamp locally are rebased coherently to current wall-clock time before normal ProducerBridge emission.
+
+Pause emits no frames. Resume establishes a new contemporary timing segment while preserving the remaining inter-frame delay. A real pause may therefore appear as a real gap in replay history; this is preferable to a hidden server clock.
+
+## D-US-043 — Seek means fresh replay start, never hidden warm-up
+
+**Status:** resolved
+
+Seek resolves to a real recorded frame boundary and starts a fresh replay DB/session at that frame. No earlier frame is fast-forwarded or pre-rolled through the server.
+
+Missing prior 10s/20s/2m history after seek is a valid condition equivalent to starting the live application at that market time. If an existing query/surface crashes solely because prior history is absent, fix it as a generic live-start defect rather than adding replay-specific history synthesis.
+
+## D-US-044 — Replay Host owns lifecycle only and fails closed on foreign processes/data
+
+**Status:** resolved
+
+A small loopback Replay Host may orchestrate the unchanged market-data service for seek/reset, but it is not a market-data server.
+
+It may control only a service child it spawned and replay-only DB artifacts it explicitly owns. If the intended port/path is occupied or ambiguous, it fails closed. It never attaches to, stops, kills, opens, resets or deletes an unrelated process or the normal live DB.
+
+The Host uses exact allowed Origin plus an ephemeral per-run control credential and never accepts/persists market frames, writes market DuckDB tables, translates producer messages or executes Scanner SQL.
+
+## D-US-045 — Replay stays opt-in and does not tax ordinary verification
+
+**Status:** resolved
+
+Replay uses a dedicated browser entry/artifact, operator launcher and focused deterministic proof. Existing `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` keep their current semantics.
+
+Timing is proved primarily with deterministic/fake clocks plus a short real-wall-clock integration smoke. Multi-hour real-time playback is not a CI/local prerequisite. Existing Fast/Browser/Planning/Workload evidence remains required where materially affected, but Replay-specific waiting must not silently inflate ordinary local verification.
