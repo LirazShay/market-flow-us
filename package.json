@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build:browser": "node scripts/build-browser.mjs",
+    "build:replay": "node scripts/build-replay-browser.mjs",
     "test": "npm run test:fast",
     "test:unit": "node --test tests/unit/**/*.test.mjs",
     "test:service": "node --test tests/service/**/*.test.mjs",
