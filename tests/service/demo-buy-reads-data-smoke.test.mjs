@@ -53,7 +53,7 @@ function candidate(price, completedAtMs) {
   });
 }
 
-test("Demo Buy populated page evaluates directly through the trusted read layer", async () => {
+test("Demo Buy populated page evaluates directly and fails closed when its immutable baseline row is missing", async () => {
   const fixture = await createServiceFixture({
     now: () => 5000,
     openDatabase: openMarketFlowUsDatabase,
@@ -108,6 +108,21 @@ test("Demo Buy populated page evaluates directly through the trusted read layer"
     assert.equal(page.items.length, 1);
     assert.equal(page.items[0].securityId, "202");
     assert.equal(page.items[0].horizons.length, 10);
+
+    await fixture.service.database.writerConnection.run(
+      "DELETE FROM history WHERE cycle_id = 1 AND security_id = '202'"
+    );
+
+    const targeted = await viewer.request("demo.buy.observation.get", {
+      captureId: 1,
+      securityId: "202"
+    });
+    assert.equal(targeted.type, "response.error");
+    assert.equal(targeted.payload.code, "DEMO_BUY_BASELINE_INTEGRITY");
+
+    const corruptPage = await viewer.request("demo.buy.page", { cursor: null });
+    assert.equal(corruptPage.type, "response.error");
+    assert.equal(corruptPage.payload.code, "DEMO_BUY_BASELINE_INTEGRITY");
   } finally {
     await fixture.cleanup();
   }
