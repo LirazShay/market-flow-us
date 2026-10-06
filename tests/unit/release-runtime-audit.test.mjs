@@ -109,10 +109,14 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-8 
   }
 
   const acceptedCandidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
-  assert.match(plan, /post-order-service candidate/i);
-  assert.match(plan, /FR-2 proves the target machine is checked out to that SHA/);
+  assert.match(plan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
+  assert.match(plan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
+  assert.match(plan, /Chat 21/);
   assert.match(runbook, new RegExp(acceptedCandidate));
+  assert.match(runbook, /אין דרישת checkout מקומי ב־FR-0/);
   assert.match(runbook, new RegExp(`git switch --detach ${acceptedCandidate}`));
+  assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
+  assert.doesNotMatch(runbook, /branch הוא `main`|accepted `main` SHA/);
   assert.doesNotMatch(runbook, /f2789a4ec43e0878688aa9ea29c647e40a1154b6/);
 
   assert.match(runbook, /SETUP\.cmd/);
@@ -132,9 +136,8 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-8 
   assert.match(runbook, /PRE-MARKET READINESS = PASS/);
   assert.match(runbook, /FR-13 = PENDING MARKET MOVEMENT/);
   assert.match(runbook, /NO_MARKET_MOVEMENT_OBSERVED/);
-  assert.match(runbook, /ממשיכים ישירות ל־FR-13/);
-  assert.match(runbook, /movement\.status = "PENDING"/);
-  assert.match(runbook, /movement\.status = "PASS"/);
+  assert.match(runbook, /אין צורך לחזור על FR-0\.\.FR-12/);
+  assert.match(runbook, /pending\/inconclusive/);
   assert.match(runbook, /movement\.status = "FAIL"/);
 
   assert.match(plan, /Two-pass first run is valid/);
