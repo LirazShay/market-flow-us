@@ -17,6 +17,8 @@ export const ERROR_CODES = Object.freeze({
   CURSOR_INVALID: "CURSOR_INVALID",
   DEMO_BUY_CURSOR_INVALID: "DEMO_BUY_CURSOR_INVALID",
   DEMO_BUY_BASELINE_INTEGRITY: "DEMO_BUY_BASELINE_INTEGRITY",
+  DEMO_BUY_AI_PACK_INTEGRITY: "DEMO_BUY_AI_PACK_INTEGRITY",
+  DEMO_BUY_AI_PACK_EXPORT_ERROR: "DEMO_BUY_AI_PACK_EXPORT_ERROR",
   NOT_FOUND: "NOT_FOUND",
   SCANNER_EMPTY_SQL: "SCANNER_EMPTY_SQL",
   SCANNER_MULTIPLE_STATEMENTS: "SCANNER_MULTIPLE_STATEMENTS",
@@ -44,6 +46,8 @@ const SAFE_MESSAGES = Object.freeze({
   [ERROR_CODES.CURSOR_INVALID]: "History cursor is invalid.",
   [ERROR_CODES.DEMO_BUY_CURSOR_INVALID]: "Demo Buy cursor is invalid.",
   [ERROR_CODES.DEMO_BUY_BASELINE_INTEGRITY]: "Demo Buy baseline authority is missing.",
+  [ERROR_CODES.DEMO_BUY_AI_PACK_INTEGRITY]: "AI Investigation evidence integrity check failed.",
+  [ERROR_CODES.DEMO_BUY_AI_PACK_EXPORT_ERROR]: "AI Investigation pack export failed safely.",
   [ERROR_CODES.NOT_FOUND]: "Requested item was not found.",
   [ERROR_CODES.SCANNER_EMPTY_SQL]: "Scanner SQL is empty.",
   [ERROR_CODES.SCANNER_MULTIPLE_STATEMENTS]: "Scanner accepts exactly one statement.",
@@ -80,7 +84,8 @@ const VIEWER_OPERATIONS = new Set([
   "demo.buy.capture",
   "demo.buy.page",
   "demo.buy.observation.get",
-  "demo.buy.capture.get"
+  "demo.buy.capture.get",
+  "demo.buy.ai-pack.create"
 ]);
 
 export const REQUEST_TYPES = Object.freeze([
@@ -262,7 +267,8 @@ const PAYLOAD_VALIDATORS = Object.freeze({
   "demo.buy.capture": validateDemoBuyCapture,
   "demo.buy.page": validateDemoBuyPage,
   "demo.buy.observation.get": validateDemoBuyObservationGet,
-  "demo.buy.capture.get": validateDemoBuyCaptureGet
+  "demo.buy.capture.get": validateDemoBuyCaptureGet,
+  "demo.buy.ai-pack.create": validateDemoBuyObservationGet
 });
 
 export function isOperationAllowed(role, type) {
