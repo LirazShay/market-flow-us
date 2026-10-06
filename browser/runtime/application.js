@@ -15,6 +15,10 @@ import { createCurrentSurface } from "../viewer/current-surface.js";
 import { US_DETAIL_PROFILE } from "../viewer/detail-model.js";
 import { createDetailSurface } from "../viewer/detail-surface.js";
 import { createViewerClient } from "../viewer/client.js";
+import {
+  createDemoBuyCaptureController,
+  DEMO_BUY_AUTO_MODE
+} from "../viewer/demo-buy-capture-controller.js";
 import { createViewerRefreshController } from "../viewer/refresh-controller.js";
 import { createScannerSurface } from "../viewer/scanner-surface.js";
 import { createProducerBridge } from "./producer-bridge.js";
@@ -57,6 +61,7 @@ function createShellDocument(viewerWindow) {
     .market-flow-us-shell { max-width: 1600px; margin: 0 auto; padding: 16px; }
     .market-flow-us-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .market-flow-us-toolbar button { padding: 8px 12px; cursor: pointer; }
+    .market-flow-us-auto-demo-buy { display: inline-flex; gap: 6px; align-items: center; }
     .market-flow-us-runtime-status { margin: 12px 0; }
     .market-flow-us-view { margin-top: 12px; }
     table { border-collapse: collapse; width: 100%; }
@@ -92,7 +97,11 @@ function createShellDocument(viewerWindow) {
   const refreshControls = document.createElement("span");
   refreshControls.className = "market-flow-us-refresh-controls";
 
-  toolbar.append(currentButton, scannerButton, refreshControls);
+  const autoDemoBuyIndicator = document.createElement("span");
+  autoDemoBuyIndicator.className = "market-flow-us-auto-demo-buy";
+  autoDemoBuyIndicator.setAttribute("aria-live", "polite");
+
+  toolbar.append(currentButton, scannerButton, refreshControls, autoDemoBuyIndicator);
 
   const diagnostics = document.createElement("section");
   diagnostics.setAttribute("aria-label", "אבחון תפעולי");
@@ -136,6 +145,7 @@ function createShellDocument(viewerWindow) {
     currentButton,
     scannerButton,
     refreshControls,
+    autoDemoBuyIndicator,
     diagnostics,
     operationalDiagnostics,
     supportDiagnostics,
@@ -165,9 +175,11 @@ function createViewerShell({
     clientInstanceId: `market-flow-us-viewer-${Date.now()}`,
     diagnosticTracker
   });
+  const demoBuyController = createDemoBuyCaptureController({ client, now });
 
   let refreshController;
   let disposed = false;
+  let unsubscribeDemoBuy = null;
 
   const currentSurface = createCurrentSurface({
     root: elements.currentRoot,
@@ -202,11 +214,43 @@ function createViewerShell({
   const scannerSurface = createScannerSurface({
     root: elements.scannerRoot,
     client,
+    demoBuyController,
     onOpenSecurity(securityId) {
       elements.scannerRoot.hidden = true;
       void refreshController.openDetail(securityId);
     }
   });
+
+  function renderAutoDemoBuyIndicator(state) {
+    elements.autoDemoBuyIndicator.replaceChildren();
+    if (state.autoMode === DEMO_BUY_AUTO_MODE.OFF) return;
+
+    const label = elements.document.createElement("span");
+    label.textContent = state.autoMode === DEMO_BUY_AUTO_MODE.ALL
+      ? "Auto Demo Buy: All"
+      : `Auto Demo Buy: Top ${state.autoTopX}`;
+    elements.autoDemoBuyIndicator.append(label);
+
+    if (state.autoBlockedReason) {
+      const blocked = elements.document.createElement("span");
+      blocked.textContent = `Blocked for current result: ${state.autoBlockedReason}`;
+      elements.autoDemoBuyIndicator.append(blocked);
+    } else if (state.captureBusy) {
+      const busy = elements.document.createElement("span");
+      busy.textContent = "capture in progress";
+      elements.autoDemoBuyIndicator.append(busy);
+    }
+
+    const turnOffButton = elements.document.createElement("button");
+    turnOffButton.type = "button";
+    turnOffButton.textContent = "Turn off";
+    turnOffButton.addEventListener("click", () => {
+      demoBuyController.turnAutoOff();
+    });
+    elements.autoDemoBuyIndicator.append(turnOffButton);
+  }
+
+  unsubscribeDemoBuy = demoBuyController.subscribe(renderAutoDemoBuyIndicator);
 
   let runtimeState = "ready";
 
@@ -228,13 +272,19 @@ function createViewerShell({
     const refreshState = refreshController.getState();
     const detailState = detailSurface.getState();
     const scannerState = scannerSurface.getState().scheduler;
+    const demoBuyState = demoBuyController.getState();
     return {
       runtimeState,
       viewerSurface: elements.scannerRoot.hidden
         ? refreshState.activeSurface
         : "SCANNER",
       selectedSecurityIdPresent: detailState.selectedSecurityId !== null,
-      scannerActive: scannerState.activeSql !== null && scannerState.stopped !== true
+      scannerActive: scannerState.activeSql !== null && scannerState.stopped !== true,
+      autoDemoBuyMode: demoBuyState.autoMode,
+      autoDemoBuyBusySkippedCount: demoBuyState.autoBusySkippedCount,
+      demoBuyCaptureBusy: demoBuyState.captureBusy,
+      demoBuyCaptureLocked: demoBuyState.captureLocked,
+      demoBuyLastCaptureStatus: demoBuyState.lastCapture?.status ?? null
     };
   }
 
@@ -335,6 +385,8 @@ function createViewerShell({
   function dispose() {
     if (disposed) return;
     disposed = true;
+    unsubscribeDemoBuy?.();
+    unsubscribeDemoBuy = null;
     refreshController.close();
     scannerSurface.destroy();
     client.close();
@@ -536,6 +588,7 @@ export function createMarketScopeRuntime({
       operation: "provider.cycle.collect",
       operationId: "provider-cycle",
       checkpoint: "provider.cycle.collected",
+      lastSuccessfulCheckpoint: diagnosticTracker.snapshot().lastSuccessfulCheckpoint,
       error: {
         code: ERROR_CODES.CYCLE_INVALID,
         name: "CycleCollectionError",
