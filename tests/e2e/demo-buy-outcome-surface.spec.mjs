@@ -269,7 +269,8 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
   await expect(page.getByText("UNAVAILABLE ⚠", { exact: true })).toBeVisible();
   await expect(page.getByText("future Price unavailable", { exact: true })).toBeVisible();
   await expect(page.getByText("Pending / ממתין", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("4 / 10", { exact: true })).toBeVisible();
+  const mixedRow = page.locator('tr[data-security-id="1003"]');
+  await expect(mixedRow.getByText("4 / 10", { exact: true }).first()).toBeVisible();
 
   const firstSticky = page.getByRole("table", { name: "Demo Buy capture 10" }).locator("tbody td").first();
   await expect(firstSticky).toHaveCSS("position", "sticky");
