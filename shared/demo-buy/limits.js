@@ -5,6 +5,7 @@ export const DEMO_BUY_CONTEXT_MAX_ROWS = 50;
 export const DEMO_BUY_CONTEXT_MAX_COLUMNS = 64;
 export const DEMO_BUY_CONTEXT_MAX_CELL_BYTES = 128;
 export const DEMO_BUY_CONTEXT_MAX_BYTES = 256 * 1024;
+export const DEMO_BUY_MAX_ENCODED_REQUEST_BYTES = 16 * 1024 * 1024;
 
 export const DEMO_BUY_IDENTITY_COLUMN_NAMES = Object.freeze([
   "securityId",
