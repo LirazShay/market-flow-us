@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 18
-  node: "8.2"
-  title: "Real CPGW lifecycle and fail-closed LIVE gates"
-  status: in_progress
+  chat: 19
+  node: "8.3"
+  title: "Order-service packaging and integration seam"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -36,8 +36,8 @@ planning_completion:
 execution:
   chats_total: 21
   implementation_leaves_total: 32
-  current_chat: 18
-  current_node: "8.2"
+  current_chat: 19
+  current_node: "8.3"
   final_acceptance_node: "7.4"
 
 blockers: []
