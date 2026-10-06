@@ -6,7 +6,7 @@ current:
   chat: 10
   node: "4.3.2"
   title: "Demo Buy capture authority / protocol"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
