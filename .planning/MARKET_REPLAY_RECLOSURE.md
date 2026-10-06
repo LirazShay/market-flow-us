@@ -69,11 +69,9 @@ Existing proof was strong per component but did not connect one deterministic sc
 - day-B local collection/cycle timing;
 - Demo Buy future evidence only from later replay cycles.
 
-`tests/service/replay-reclosure.test.mjs` supplies that integrated proof. The proof passes through the real service/DuckDB path.
+`tests/service/replay-reclosure.test.mjs` supplies that integrated proof through the real service/DuckDB path.
 
 ### 2. Missing focused Replay acceptance command — repaired
-
-`docs/TEST_STRATEGY.md` requires dedicated/minimal Replay acceptance without changing ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` or `START_MARKET_FLOW_US.cmd` semantics.
 
 `package.json` now exposes:
 
@@ -81,13 +79,11 @@ Existing proof was strong per component but did not connect one deterministic sc
 npm run test:acceptance:replay
 ```
 
-It aggregates existing Replay unit/service/browser proof plus the integrated reclosure proof without adding long Replay waits to ordinary acceptance.
+It aggregates focused Replay unit/service/browser proof without changing ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` or `START_MARKET_FLOW_US.cmd` semantics.
 
 ### 3. Release-truth drift after branch 9 — repaired
 
-The first-run/final-acceptance documents carried branch-8-era truth including Chat 21 ownership and the old post-branch-8 candidate.
-
-They now require:
+First-run/final-acceptance truth now requires:
 
 ```text
 TREE 9.5 closed
@@ -99,75 +95,72 @@ The historical branch-8 candidate is explicitly ineligible for final post-Replay
 
 ### 4. Technical-spec opening drift — repaired
 
-`docs/TECHNICAL_SPEC.md` now includes the isolated Replay lane in the top-level architecture and explicitly preserves these boundaries:
+`docs/TECHNICAL_SPEC.md` now includes the isolated Replay lane in the top-level architecture and explicitly preserves:
 
-- unchanged Market Flow US service is the only replay-run market DB writer;
-- shared producer protocol remains replay-unaware;
-- Replay Host orchestrates only its own service child and replay-owned DB;
-- normal live DB is never owned/reset/deleted by Replay;
-- ordinary runtime/acceptance commands retain normal semantics;
-- final candidate is post-branch-9 and must include dedicated Replay proof.
+- unchanged Market Flow US service as the only replay-run market DB writer;
+- replay-unaware shared producer protocol/service;
+- Replay Host ownership limited to its service child and replay-owned DB;
+- no normal-live DB ownership/reset/delete by Replay;
+- unchanged ordinary runtime/acceptance commands;
+- post-branch-9 final-candidate acceptance.
 
-### 5. Release drift guard still pinned Branch-8 truth — repaired
+### 5. Release drift guard pinned old truth — repaired
 
-Fast CI exposed that `tests/unit/release-runtime-audit.test.mjs` still asserted Chat 21 and the old hard-coded branch-8 candidate. That guard was corrected to protect the new truth instead:
+Fast CI exposed that `tests/unit/release-runtime-audit.test.mjs` still asserted Chat 21 and the historical branch-8 candidate. The guard now protects the post-branch-9 handoff model, dedicated Replay acceptance/build and Replay-owned DB isolation. A follow-up wording mismatch (`Replay-owned DBs` versus canonical `Replay-owned DuckDBs`) was also corrected without runtime behavior change.
 
-- Chat 25 / post-branch-9 handoff model;
-- no hard-coded historical branch-8 candidate in the runbook;
-- dedicated Replay acceptance/build;
-- Replay-owned DB isolation.
+### 6. Backlog sequencing drift during closure — repaired
 
-A follow-up assertion wording mismatch (`Replay-owned DBs` versus canonical `Replay-owned DuckDBs`) was also corrected without changing product behavior.
+While recording the newly requested Replay hardening and BUY mini-projects, final diff review found that the existing B-US-001..004 sequencing note had been replaced rather than preserved. The old query-development sequencing note and the new B-US-005/B-US-006 sequencing are now both retained explicitly.
 
-## CI evidence so far
+## Green branch evidence
 
-On branch head `77e1327ad34e8c9150bcfb0555ccd7c076e77a6d`, after the release-guard root-cause repairs:
+The final substantive/reclosure branch head before this evidence-only update is:
 
 ```text
-Fast CI       #465  PASS
-Browser CI    #423  PASS
-Planning Docs #597  PASS
-Workload      #251  PASS
+4892e3235b6dd6790625db7ecf247e55a26ed567
 ```
 
-The following documentation-only Technical Spec reclosure commit is:
+That exact head passed all required broad gates:
 
 ```text
-e5792f86d330533506739967fcf3ea371b8909e7
+Fast CI       #468  PASS
+Browser CI    #426  PASS
+Planning Docs #600  PASS
+Workload      #254  PASS
 ```
 
-Planning Docs #598 and Workload #252 are green on that head; Fast/Browser are rerunning before closure.
+Browser CI includes the full Chromium E2E lane and bounded Local Fake acceptance. Fast includes the Replay reclosure service proof and release-drift guards. The service lane remained green; Chat 24 failures were deterministic stale/drift assertions and were root-caused/fixed at the contract guard rather than waived.
 
-The service lane has repeatedly remained green, including the new integrated Replay reclosure test. The failures encountered during Chat 24 were deterministic release-drift assertions, not Replay runtime/service defects, and were fixed at their root source.
+This evidence-only commit must itself pass the repository-required PR checks before merge. No product/runtime behavior is changed by this final evidence update.
 
 ## Additional future work recorded without changing current allocation
 
-Per user direction, `.planning/BACKLOG.md` now records two future mini-projects that do **not** authorize work inside TREE `9.5`:
+`.planning/BACKLOG.md` records:
 
 ```text
 B-US-005 Replay pre-user-run hardening audit
 B-US-006 Basic in-product BUY via existing order API
 ```
 
-`B-US-005` is intended immediately after Replay reclosure and requires a second static + unit + service + browser/composition + broad-gate audit of the complete Replay feature before relying on the user's own run.
+`B-US-005` is intended immediately after TREE `9.5` and requires a second full static + unit + service + browser/composition + broad-gate audit of Replay before relying on the user's target-machine run.
 
-`B-US-006` is intentionally a small MVP: one explicit user BUY action through the existing authenticated `ibkr-order-service`, driven by simple configuration, with deeper order-product behavior deferred for later planning.
+`B-US-006` is intentionally an MVP: one explicit user BUY action through the existing authenticated `ibkr-order-service`, driven by simple configuration; deeper order/API behavior remains for later planning.
 
-## Execution state
+## Current closure state
 
-During Chat 24 start-up, root `STATUS.yaml`, `.planning/STATUS.yaml` and `.planning/EXECUTION.yaml` were aligned to `9.5 = in_progress`.
+TREE `9.5` remains `in_progress` until PR #53 is merged, main CI is green and the exact squash-merged post-branch-9 candidate can be pinned in durable handoff/status truth.
 
-## Remaining TREE 9.5 work
+Remaining closure:
 
 ```text
-wait for Fast/Browser on current head to be green
-review complete PR diff for unintended drift
-update this evidence record with final head/gates
-mark 9.5 done only with success_evidence satisfied
-make PR #53 ready and squash-merge
-require main CI green + clean open-PR audit
-pin exact accepted post-branch-9 product candidate in STATUS / EXECUTION / handoff truth
-advance to the next authorized truth without skipping the separate Replay hardening backlog requirement
+final evidence-only CI green
+→ final PR diff/status review
+→ mark PR #53 ready
+→ squash-merge
+→ verify main Fast/Browser/Planning/Workload green
+→ verify open-PR state
+→ pin exact accepted post-branch-9 product SHA in STATUS / EXECUTION / EXECUTOR_HANDOFF
+→ advance to the next authorized truth
 ```
 
-No final accepted product candidate is pinned yet. Entry/intermediate PR SHAs are evidence only until the reclosure is merged and the required post-merge truth is green.
+No final accepted product candidate is pinned before merge; branch/intermediate SHAs are evidence only.
