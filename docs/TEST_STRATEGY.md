@@ -495,3 +495,181 @@ When permission later exists, any real-order verification must remain explicitly
 ## 35. Completion rule
 
 Unit/service correctness, browser composition, deterministic local target-machine behavior, authenticated market-provider compatibility, market-open movement, standalone order-service correctness and optional real IBKR permission-dependent execution are separate evidence families; none substitutes for another.
+
+## 36. Unit/browser — Market Recorder and IndexedDB
+
+Replay verification begins at the validated browser-snapshot seam, not at DuckDB.
+
+Prove:
+
+- only complete validated ScreenerHulPaging3 snapshots become recording frames;
+- deterministic frame sequence and original irregular completion gaps are preserved;
+- same/reordered/add/remove membership remains exact;
+- provider failure/incomplete response cannot create a valid frame;
+- Record/Stop/reopen/library/delete state is deterministic;
+- quota/write failure stops visibly while all prior committed frames remain readable;
+- storage usage/quota display degrades honestly when `navigator.storage.estimate()` is unavailable;
+- recordings and recorder diagnostics contain no credentials, cookies, auth/session/account identifiers, headers, private DOM/storage or authenticated dumps.
+
+Use small synthetic frames for ordinary unit/browser proof. Do not add multi-hour real recording waits to existing Browser CI.
+
+## 37. Portable recording format / file-source proof
+
+Prove the versioned line-oriented format with deterministic fixtures:
+
+```text
+manifest
+ordered frame records
+required footer/final count
+```
+
+Cover supported version, wrong version, malformed JSON, truncation, missing footer, duplicate/out-of-order frame index, manifest/footer count mismatch and invalid embedded snapshot. A rejected file never becomes partially playable.
+
+Prove streaming export reads the IndexedDB recording incrementally and does not require one giant in-memory JSON document. Prove a selected portable file can be validated/indexed and played directly without copying the complete file into IndexedDB first.
+
+IndexedDB-backed and File-backed sources must produce semantically equivalent ordered frames and deterministic seek-to-real-frame resolution.
+
+## 38. Player clock / normal producer proof
+
+Use a deterministic fake clock/scheduler as the primary timing authority.
+
+Prove:
+
+1. exact irregular recorded inter-frame gaps are preserved at `1x`;
+2. one playback segment applies one coherent local timestamp offset across universe/cycle/chunk/security local times;
+3. provider/source fields, including `TradeDateTime` and raw market row, remain unchanged;
+4. locally rebased timestamps satisfy the existing producer/cycle ordering constraints;
+5. Pause emits nothing and freezes recording position;
+6. Resume creates a contemporary segment and preserves the remaining schedule from that point;
+7. Stop/Seek/Pause generation changes cancel stale scheduled emissions;
+8. normal `client.hello`, producer session/universe/cycle/heartbeat/stop messages and ACK semantics are used unchanged;
+9. shared protocol/server receives no replay mode, virtual clock, speed, recording ID or seek payload.
+
+Add one short real-wall-clock integration smoke only to prove scheduling composition. Real-time replay duration must remain bounded to seconds, not minutes/hours.
+
+## 39. Replay Host isolation/security
+
+Using temporary replay DB paths and a spawned real Market Flow US service prove:
+
+- Replay Host binds loopback only;
+- mutation/control actions require exact allowed Origin plus the ephemeral per-run control credential;
+- foreign Origin/wrong/missing credential causes zero lifecycle/file mutation;
+- the Host controls only a service child it spawned and DB artifacts explicitly created under its replay-owned path;
+- occupied/ambiguous service port fails closed instead of attaching to or killing a foreign process;
+- the normal live DB path is never opened/reset/deleted by Host control;
+- seek/stop waits for owned child shutdown before replay DB replacement;
+- Host does not accept/persist market frames, write market tables, run Scanner SQL or translate producer messages;
+- credentials/control-token values never appear in persisted data, diagnostics or reports.
+
+Use unmistakably temporary/synthetic paths and canary files around the replay directory to prove delete/reset boundaries.
+
+## 40. Chromium/composed replay journey
+
+Through the dedicated Replay entry plus normal service/Viewer prove:
+
+```text
+open IndexedDB recording or portable file
+→ start isolated replay service
+→ Play
+→ Current updates
+→ Detail/History accumulates emitted frames
+→ Scanner executes normal built-ins/saved/user SQL
+→ Pause/Resume
+→ Seek
+→ fresh replay DB/session
+→ selected frame becomes first authority
+→ continue
+```
+
+The Viewer/Scanner/Demo Buy/AI surfaces receive no `isReplay` flag.
+
+A mid-recording start with zero prior replay history must prove:
+
+- Current is valid after the first committed frame;
+- History contains only actually emitted post-start frames;
+- staged Scanner executes without crash while earlier anchors are absent/null;
+- anchors populate naturally as enough replay history arrives;
+- Demo Buy can capture against replay authority and future horizons use only later replay cycles.
+
+If this scenario exposes an existing missing-history crash, classify/fix it as a generic normal-live-start defect and add regression proof outside replay-specific server logic.
+
+## 41. Next-day replay / timing semantics
+
+Use a recording whose original local/provider facts represent day A and execute replay under a controlled day-B clock.
+
+Prove:
+
+- replay-local collection/cycle/chunk/security timing is contemporary day-B/current timing;
+- source/provider fields remain the original recording facts;
+- Scanner time-delta/anchor queries based on `collected_at_ms` work normally;
+- Demo Buy `captured_at_ms` and future-horizon matching remain coherent with later replay cycles;
+- a human Pause may create a real replay-history gap but cannot create stale/future local timestamps;
+- no day-A local timestamp drives false stale/future behavior after rebasing.
+
+A query that explicitly selects source `TradeDateTime` continues to observe its recorded source value by design; that is not a replay-timing failure.
+
+## 42. Branch-9 deterministic acceptance
+
+One command or a minimal dedicated set of commands must prove the permission-independent Replay journey without changing ordinary launch/test semantics:
+
+```text
+create/load synthetic validated recording
+→ IndexedDB recording proof
+→ streaming portable export
+→ file validation/index
+→ start Replay Host + unchanged service on replay-only DB
+→ play irregular frames at 1x
+→ Current/History/Scanner proof
+→ Pause/Resume
+→ Seek to middle
+→ fresh DB with no preroll
+→ progressive Scanner anchors
+→ Demo Buy future evidence
+→ day-A/day-B rebase case
+→ live-DB/process isolation canaries
+→ sanitized diagnostics/report
+→ clean stop
+```
+
+Replay-specific deterministic timing should use fake clocks. The composed real-wall-clock portion must be short and bounded.
+
+Existing `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` retain their current meaning. Dedicated Replay proof must not silently become a long wait inside those ordinary commands.
+
+## 43. Branch-9 planning / release gates
+
+Before branch-9 implementation authorization:
+
+```text
+plan frozen
+TREE structurally valid
+37 implementation leaves allocated exactly once
+R-US-MARKET-REPLAY-FINAL recorded
+R-US-MARKET-REPLAY-EXTERNAL recorded
+Planning Docs CI green
+planning PR reviewed and merged
+main Planning CI green
+open-PR audit clean
+```
+
+Before final `7.4` acceptance resumes:
+
+```text
+9.1 / 9.2 / 9.3 / 9.4 / 9.5 done
+8.1 / 8.2 / 8.3 / 8.4 done
+focused Replay acceptance green
+Fast green where materially affected
+Browser green where materially affected
+Planning green
+bounded Workload green
+ordinary Local Fake Leumi acceptance green
+branch-9 reclosure PR merged
+main green
+open-PR audit clean
+exact post-branch-9 candidate SHA recorded
+```
+
+## 44. Current completion rule
+
+Market Recording + Replay is now an additional evidence family. Recorder/storage correctness, portable-format correctness, Player timing, Host isolation, composed replay behavior, normal market-analysis behavior, standalone order-service behavior and authenticated target-machine/provider proof are distinct; none substitutes for another.
+
+Overall product completion requires the exact post-branch-9 candidate to satisfy all assigned leaves and required deterministic gates before `7.4` supplies final target-machine/provider acceptance.
