@@ -3,6 +3,6 @@ plan_state: frozen
 current_stage: "implementation"
 current_node: "4.3.2"
 blockers: []
-next_action: "Chat 10 / TREE 4.3.2 is next after 4.3.1 is merged and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement Demo Buy capture authority/protocol without advancing to 4.3.3."
+next_action: "Chat 10 / TREE 4.3.2 is in progress. Follow AGENTS.md → TREE → contracts → success_evidence; implement Demo Buy capture authority/protocol without advancing to 4.3.3."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
