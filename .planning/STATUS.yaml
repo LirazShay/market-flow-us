@@ -1,8 +1,8 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "7.5"
+current_node: "7.4"
 blockers: []
-next_action: "Chat 16 / TREE 7.5 is in progress after Chat 15 / 4.5.2 merged and main deterministic CI is green. Reclose the post-feature candidate: align canonical/user/Scanner/AI docs, extend bounded local/workload acceptance for Demo Buy + AI Investigation, run full deterministic gates, merge, then point Chat 17 / 7.4 at the exact accepted SHA."
+next_action: "Chat 17 / TREE 7.4 is ready. Run final target-machine/local Fake Leumi/Demo Buy/AI/new-day/authenticated acceptance against the exact accepted product candidate e0af9d105004f175a44ec33fa481fba0631773bf from PR #27. Handoff-only metadata commits after that SHA do not replace the accepted product candidate."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
