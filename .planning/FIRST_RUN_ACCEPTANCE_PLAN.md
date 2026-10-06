@@ -72,7 +72,7 @@ Chat 17 executes this runbook with the user on the target Windows machine, one c
 2. **Stop on first FAIL.** Do not continue downstream to collect unrelated failures.
 3. **Root cause before retry.** A discovered blocking defect stays with Chat 17 until fix + regression proof + affected verification are green.
 4. **Resume from last valid green checkpoint.** Do not restart the whole sequence unless a fix invalidates earlier evidence.
-5. **Exact SHA matters.** Heavy/authenticated evidence is valid only for the accepted product candidate it names.
+5. **Exact SHA matters.** FR-0 freezes the release-level accepted product SHA from fresh GitHub truth; FR-2 proves the target machine is actually checked out to that exact SHA. Heavy/authenticated evidence is valid only for that candidate.
 6. **No secret evidence.** Never store credentials, cookies, tokens, auth/session data, account identifiers, raw authenticated dumps or private browser state.
 7. **Existing launchers first.** Prefer `SETUP.cmd`, `RUN_TESTS.cmd`, `START_DEMO.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `NEW_TRADING_DAY.cmd`, `START_MARKET_FLOW_US.cmd`, and `PREPARE_LIVE_VERIFICATION.cmd`.
 8. **No silent assumptions.** Check prerequisites before the stage that depends on them.
@@ -123,18 +123,18 @@ A later checkpoint never excuses an earlier failure.
 
 ## FR-0 — Freeze exact candidate
 
-**Goal:** prove which exact product candidate is being installed and prevent accidental testing of a moving branch or later metadata-only commit.
+**Goal:** freeze the exact product candidate from fresh GitHub release truth before asking the target machine to install or test anything. FR-0 is a release-level checkpoint, not a local-checkout checkpoint.
 
-**Required state:** release/post-feature deterministic reclosure complete; accepted candidate SHA recorded in `.planning/EXECUTOR_HANDOFF.md`; no unexpected release PR or unmerged product work.
+**Required state:** fresh `main` shows release/post-feature deterministic reclosure complete and TREE `7.4` current; the accepted candidate SHA is recorded in `.planning/EXECUTOR_HANDOFF.md`; no unexpected release PR or unmerged product work replaces it.
 
 **PASS evidence:**
 
-- clean working tree;
-- expected checkout/ref;
-- exact accepted product SHA captured;
-- no unexpected open PR or unmerged release work.
+- exact accepted product SHA captured from the handoff;
+- current `main`/status still authorizes TREE `7.4`;
+- later planning/docs-only commits, if any, are explicitly not substituted for the accepted product SHA;
+- no unexpected open PR or unmerged product work replaces the candidate.
 
-**FAIL:** dirty tree, wrong product SHA, unexpected release work. Stop before setup.
+**FAIL:** candidate identity is ambiguous/missing, current GitHub truth no longer authorizes `7.4`, or unexpected product/release work supersedes the candidate. Stop before target-machine preflight.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -154,14 +154,17 @@ PASS is a concise sanitized version/capability report. Do not run `npm ci` befor
 
 ## FR-2 — Acquire/update repository
 
-Clone `LirazShay/market-flow-us` once or update the existing checkout to the accepted candidate.
+Clone `LirazShay/market-flow-us` once or update the existing checkout, then pin the working tree to the exact accepted SHA frozen in FR-0. Fresh `main` remains release metadata/source-of-truth; it is not silently substituted as the product under test when later metadata-only commits exist.
+
+For an existing checkout, stop first if the working tree is dirty. After fetch/update, use an exact-SHA checkout (a detached checkout is valid and preferred for acceptance) rather than requiring the branch name `main`.
 
 PASS:
 
 - repository path known;
-- `HEAD` equals FR-0 candidate;
-- working tree clean before generated outputs/tests;
-- lockfile, launchers, docs and required planning files present.
+- working tree was clean before switching candidate and remains clean before generated outputs/tests;
+- `HEAD` equals the exact FR-0 candidate;
+- the checkout is not silently using a later metadata-only `main` SHA;
+- lockfile, launchers and runtime files required by that candidate are present.
 
 ## FR-3 — Deterministic dependency install
 

@@ -104,6 +104,15 @@ test("first-run acceptance plan and user runbook stay reclosed through pre-marke
     assert.match(runbook, new RegExp(`FR-${subCheckpoint}\\b`));
   }
 
+  const acceptedCandidate = "f2789a4ec43e0878688aa9ea29c647e40a1154b6";
+  assert.match(plan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
+  assert.match(plan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
+  assert.match(runbook, new RegExp(acceptedCandidate));
+  assert.match(runbook, /אין דרישת checkout מקומי ב־FR-0/);
+  assert.match(runbook, new RegExp(`git switch --detach ${acceptedCandidate}`));
+  assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
+  assert.doesNotMatch(runbook, /branch הוא `main`|accepted `main` SHA/);
+
   assert.match(runbook, /SETUP\.cmd/);
   assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd provider-recovery/);
   assert.match(runbook, /RUN_LOCAL_ACCEPTANCE\.cmd demo-buy-runtime/);
