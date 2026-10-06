@@ -29,6 +29,7 @@
     "test:workload:target-day": "node scripts/run-workload-profile.mjs target-day",
     "test:workload:custom": "node scripts/run-workload-profile.mjs custom",
     "service": "node local-service/server/index.js",
+    "replay-host": "node replay-host/index.js",
     "order-service": "node ibkr-order-service/index.js",
     "order-service:session-check": "node scripts/check-ibkr-cpgw-session.mjs",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
