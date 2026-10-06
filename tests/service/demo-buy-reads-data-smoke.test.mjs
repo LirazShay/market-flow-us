@@ -53,7 +53,7 @@ function candidate(price, completedAtMs) {
   });
 }
 
-test("Demo Buy populated page evaluates directly and fails closed when its immutable baseline row is missing", async () => {
+test("Demo Buy populated page proves delayed observation timing and fails closed when its immutable baseline row is missing", async () => {
   const fixture = await createServiceFixture({
     now: () => 5000,
     openDatabase: openMarketFlowUsDatabase,
@@ -101,6 +101,13 @@ test("Demo Buy populated page evaluates directly and fails closed when its immut
     });
     assert.equal(captured.type, "response.ok");
 
+    const delayedFuture = candidate(21, 16000);
+    const futureCommit = await producer.request("producer.cycle.commit", {
+      universeRevision: 1,
+      cycle: delayedFuture.cycle
+    });
+    assert.equal(futureCommit.type, "response.ok");
+
     const reads = createDemoBuyReads({
       connection: fixture.service.database.viewerReadConnection
     });
@@ -108,6 +115,17 @@ test("Demo Buy populated page evaluates directly and fails closed when its immut
     assert.equal(page.items.length, 1);
     assert.equal(page.items[0].securityId, "202");
     assert.equal(page.items[0].horizons.length, 10);
+
+    const delayedTenSecond = page.items[0].horizons.find(
+      (entry) => entry.horizonMs === 10000
+    );
+    assert.ok(delayedTenSecond);
+    assert.equal(delayedTenSecond.targetAtMs, 15000);
+    assert.equal(delayedTenSecond.observedAtMs, 16000);
+    assert.equal(delayedTenSecond.actualElapsedMs, 11000);
+    assert.equal(delayedTenSecond.price, 21);
+    assert.equal(delayedTenSecond.outcome, "UP");
+    assert.equal(delayedTenSecond.unavailableReason, null);
 
     await fixture.service.database.writerConnection.run(
       "DELETE FROM history WHERE cycle_id = 1 AND security_id = '202'"
