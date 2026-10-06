@@ -6,14 +6,17 @@ import {
   VARCHAR
 } from "@duckdb/node-api";
 
-const BULK_TABLES = new Set(["history", "latest"]);
+const BULK_TABLES = new Set(["history", "latest", "demo_buy_items"]);
 const DATA_CHUNK_ROWS = 2048;
 const BIGINT_PARAMETERS = new Set([
   "cycleId",
   "universeRevision",
   "cycleStartedAtMs",
   "chunkReceivedAtMs",
-  "collectedAtMs"
+  "collectedAtMs",
+  "captureId",
+  "resultRank",
+  "buyCycleId"
 ]);
 const INTEGER_PARAMETERS = new Set(["chunkIndex"]);
 const STRING_PARAMETERS = new Set([
@@ -74,7 +77,7 @@ function createInsertPlan(sql) {
   if (typeof sql !== "string") return null;
 
   const match = sql.match(
-    /^\s*INSERT\s+INTO\s+(history|latest)\s*\([\s\S]*?\)\s*VALUES\s*\(([\s\S]*?)\)\s*$/i
+    /^\s*INSERT\s+INTO\s+(history|latest|demo_buy_items)\s*\([\s\S]*?\)\s*VALUES\s*\(([\s\S]*?)\)\s*$/i
   );
   if (!match) return null;
 
