@@ -174,6 +174,7 @@ export function createScannerScheduler({
 
   function stop() {
     if (stopped) return getState();
+    // Stop invalidates the current generation and future timer only; Activate remains resumable from the latest draft.
     stopped = true;
     generation += 1;
     clearScheduledTimer();
