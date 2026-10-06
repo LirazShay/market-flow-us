@@ -1,4 +1,5 @@
 import { createMarketReplayRecorder } from "./market-recorder.js";
+import { exportRecordingToUserFile } from "./portable-recording.js";
 import { openReplayRecordingStore } from "./recording-store.js";
 import { createReplayRecordingSurface } from "./recording-surface.js";
 
@@ -30,7 +31,8 @@ function showStartupFailure(documentRef = globalThis.document) {
 export async function startReplayRecordingRuntime({
   indexedDb = globalThis.indexedDB,
   documentRef = globalThis.document,
-  storageManager = globalThis.navigator?.storage
+  storageManager = globalThis.navigator?.storage,
+  globalRef = globalThis
 } = {}) {
   const existing = globalThis[REPLAY_RUNTIME_KEY];
   if (existing) {
@@ -44,7 +46,17 @@ export async function startReplayRecordingRuntime({
 
   const store = await openReplayRecordingStore({ indexedDb });
   const recorder = createMarketReplayRecorder({ store, storageManager });
-  const surface = createReplayRecordingSurface({ recorder, documentRef });
+  const surface = createReplayRecordingSurface({
+    recorder,
+    documentRef,
+    exportRecording: ({ id, name }) => exportRecordingToUserFile({
+      store,
+      recordingId: id,
+      recordingName: name,
+      globalRef,
+      documentRef
+    })
+  });
   const runtime = Object.freeze({ store, recorder, surface });
   globalThis[REPLAY_RUNTIME_KEY] = runtime;
 

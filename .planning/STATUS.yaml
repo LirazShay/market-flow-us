@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "9.2"
+current_node: "9.3"
 blockers: []
-next_action: "TREE 9.1 implementation and success_evidence are complete on Chat 21 PR #46. Merge the green 9.1 closure, verify main CI and open-PR state, then continue Chat 21 with TREE 9.2 from fresh main. Preserve the server-unaware replay boundary, normal live DB/test isolation and all docs/MARKET_REPLAY.md invariants."
+next_action: "TREE 9.2 implementation and success_evidence are complete on Chat 21 PR #48. After PR #48 squash-merge, verify main Fast/Browser/Planning/Workload CI and clean open-PR state, then start Chat 22 / TREE 9.3 from fresh main. Preserve the server-unaware replay boundary, normal live DB/test isolation and all docs/MARKET_REPLAY.md invariants."
 last_review: "R-US-MARKET-REPLAY-EXTERNAL"
 implementation_authorized: true

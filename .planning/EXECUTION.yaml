@@ -66,7 +66,7 @@ chats:
 
   "14":
     nodes:
-      "4.5.1": { state: done, result: "Node now generates deterministic 10-file AI Investigation Packs through demo.buy.ai-pack.create with authority-watermarked 30-minute prediction history, post-watermark 10-minute outcome history, trusted evaluator reuse, sharing-safe history/baseline/context projections, verbatim QUERY.sql, bounded anti-hindsight prompt, product-owned relative export paths and atomic collision-safe publication without DB mutation. Focused unit/real-DuckDB/real-service proofs cover canary disclosure boundaries, PARTIAL→COMPLETE regeneration, position>50 reduced context, write-fault cleanup, no-overwrite behavior and representative 64x240 active-day export timing; PR #25 candidate d4b0a63e80debde01d330eb19dd2b03ee0d6451b passed Fast, Browser, Planning Docs and bounded Workload CI before closure." }
+      "4.5.1": { state: done, result: "Node now generates deterministic 10-file AI Investigation Packs through demo.buy.ai-pack.create with authority-watermarked 30-minute prediction history, post-watermark 10-minute outcome history, trusted evaluator reuse, sharing-safe history/baseline/context/market evidence, verbatim QUERY.sql, bounded anti-hindsight prompt, product-owned relative export paths and atomic collision-safe publication without DB mutation. Focused unit/real-DuckDB/real-service proofs cover canary disclosure boundaries, PARTIAL→COMPLETE regeneration, position>50 reduced context, write-fault cleanup, no-overwrite behavior and representative 64x240 active-day export timing; PR #25 candidate d4b0a63e80debde01d330eb19dd2b03ee0d6451b passed Fast, Browser, Planning Docs and bounded Workload CI before closure." }
 
   "15":
     nodes:
@@ -95,7 +95,7 @@ chats:
   "21":
     nodes:
       "9.1": { state: done, result: "Dedicated browser-only Market Replay recording authority reuses the validated ScreenerHulPaging3 candidate boundary, stores deterministic immutable frames plus bounded public-safe metadata in IndexedDB, exposes Record/Stop/library/rename/delete/quota state, fails safe on provider/storage faults, preserves original irregular timing and exact membership, and keeps the normal service/runtime replay-unaware. PR #46 head 6a38f9ff411ac89a54e6399511615cbd75b6e0cd passed Fast #411, Browser #374 including real Chromium IndexedDB reopen/delete/quota proof, Planning Docs #543 and Workload #202 before closure." }
-      "9.2": { state: pending, result: null }
+      "9.2": { state: done, result: "Portable Replay v1 implements strict line-oriented manifest/frame/footer validation, streaming IndexedDB export, direct File-backed byte-offset playback source, common IndexedDB/File source semantics, deterministic seek and a bounded download fallback without automatic browser-copy deletion. PR #48 implementation head 57f2777595025bee0cf97dde1e31f39d0baccd18 passed Fast #418, Browser #381 including full Chromium plus bounded Local Fake, Planning Docs #550 and Workload #209 before closure." }
 
   "22":
     nodes:

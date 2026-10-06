@@ -63,6 +63,12 @@ function assertNonNegativeSafeInteger(value, name) {
   }
 }
 
+function recordingKeyRange(recordingId) {
+  const keyRange = globalThis.IDBKeyRange?.only(recordingId);
+  if (!keyRange) throw new Error("IDBKeyRange is required for Replay recording storage.");
+  return keyRange;
+}
+
 function openDatabase(indexedDb, dbName) {
   if (!indexedDb || typeof indexedDb.open !== "function") {
     throw new Error("IndexedDB is required for Market Replay recording storage.");
@@ -208,6 +214,47 @@ export async function openReplayRecordingStore({
         .map(cloneSummary);
     },
 
+    async getFrame(recordingId, sequence) {
+      assertNonEmptyString(recordingId, "recordingId");
+      assertNonNegativeSafeInteger(sequence, "sequence");
+      const transaction = database.transaction(FRAMES_STORE, "readonly");
+      const done = transactionDone(transaction);
+      const frame = await requestResult(
+        transaction.objectStore(FRAMES_STORE).get([recordingId, sequence])
+      );
+      await done;
+      return frame ?? null;
+    },
+
+    async readFrameIndex(recordingId) {
+      assertNonEmptyString(recordingId, "recordingId");
+      const transaction = database.transaction(FRAMES_STORE, "readonly");
+      const done = transactionDone(transaction);
+      const index = transaction.objectStore(FRAMES_STORE).index(FRAMES_BY_RECORDING_INDEX);
+      const entries = [];
+
+      await new Promise((resolve, reject) => {
+        const request = index.openCursor(recordingKeyRange(recordingId));
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (!cursor) {
+            resolve();
+            return;
+          }
+          const frame = cursor.value;
+          entries.push({
+            sequence: frame.sequence,
+            completedAtMs: frame.snapshot?.timing?.completedAtMs
+          });
+          cursor.continue();
+        };
+        request.onerror = () => reject(request.error ?? new Error("Failed to index Replay frames."));
+      });
+
+      await done;
+      return entries.sort((left, right) => left.sequence - right.sequence);
+    },
+
     async readFrames(recordingId) {
       assertNonEmptyString(recordingId, "recordingId");
       const transaction = database.transaction(FRAMES_STORE, "readonly");
@@ -220,9 +267,6 @@ export async function openReplayRecordingStore({
 
     async deleteRecording(recordingId) {
       assertNonEmptyString(recordingId, "recordingId");
-      const keyRange = globalThis.IDBKeyRange?.only(recordingId);
-      if (!keyRange) throw new Error("IDBKeyRange is required for Replay deletion.");
-
       const transaction = database.transaction([RECORDINGS_STORE, FRAMES_STORE], "readwrite");
       const done = transactionDone(transaction);
       const recordings = transaction.objectStore(RECORDINGS_STORE);
@@ -231,7 +275,7 @@ export async function openReplayRecordingStore({
 
       const index = frames.index(FRAMES_BY_RECORDING_INDEX);
       await new Promise((resolve, reject) => {
-        const request = index.openCursor(keyRange);
+        const request = index.openCursor(recordingKeyRange(recordingId));
         request.onsuccess = () => {
           const cursor = request.result;
           if (!cursor) {
