@@ -23,11 +23,15 @@ function text(documentRef, tagName, value, className) {
 
 export function createReplayRecordingSurface({
   recorder,
+  exportRecording = null,
   documentRef = globalThis.document,
   rootId = "market-flow-us-replay-recorder"
 }) {
   if (!recorder || typeof recorder.subscribe !== "function") {
     throw new TypeError("recorder is required.");
+  }
+  if (exportRecording !== null && typeof exportRecording !== "function") {
+    throw new TypeError("exportRecording must be a function when supplied.");
   }
   if (!documentRef?.body) throw new Error("document.body is required.");
 
@@ -42,7 +46,7 @@ export function createReplayRecordingSurface({
       :host { all: initial; }
       .panel { position: fixed; z-index: 2147483647; top: 16px; right: 16px; width: min(430px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; box-sizing: border-box; background: #111827; color: #f9fafb; border: 1px solid #374151; border-radius: 12px; box-shadow: 0 18px 48px rgba(0,0,0,.35); padding: 14px; font: 14px/1.45 Arial, sans-serif; direction: rtl; }
       h1 { font-size: 18px; margin: 0 0 10px; }
-      .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+      .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
       input { min-width: 0; flex: 1; box-sizing: border-box; border: 1px solid #4b5563; border-radius: 7px; background: #1f2937; color: inherit; padding: 7px 8px; }
       button { border: 1px solid #4b5563; border-radius: 7px; background: #374151; color: inherit; padding: 7px 10px; cursor: pointer; }
       button:disabled { opacity: .45; cursor: default; }
@@ -51,6 +55,7 @@ export function createReplayRecordingSurface({
       .label { color: #9ca3af; font-size: 12px; }
       .value { font-weight: 700; }
       .error { color: #fca5a5; min-height: 20px; }
+      .notice { color: #86efac; min-height: 20px; }
       .library { display: grid; gap: 7px; margin-top: 8px; }
       .library-item { display: grid; gap: 5px; }
       .library-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
@@ -72,6 +77,7 @@ export function createReplayRecordingSurface({
       </div>
       <div class="storage"></div>
       <div class="error"></div>
+      <div class="notice"></div>
       <div class="row"><strong>הקלטות</strong><button class="refresh" type="button">רענן</button></div>
       <div class="library"></div>
     </div>`;
@@ -88,6 +94,7 @@ export function createReplayRecordingSurface({
     bytes: shadow.querySelector(".bytes"),
     storage: shadow.querySelector(".storage"),
     error: shadow.querySelector(".error"),
+    notice: shadow.querySelector(".notice"),
     refresh: shadow.querySelector(".refresh"),
     library: shadow.querySelector(".library")
   };
@@ -142,6 +149,7 @@ export function createReplayRecordingSurface({
       renameButton.addEventListener("click", async () => {
         const nextName = renameInput.value.trim();
         if (!nextName) return;
+        elements.notice.textContent = "";
         setBusy(true);
         try {
           await recorder.renameRecording(item.id, nextName);
@@ -152,11 +160,37 @@ export function createReplayRecordingSurface({
           setBusy(false);
         }
       });
+
+      const exportButton = text(documentRef, "button", "ייצוא");
+      exportButton.type = "button";
+      exportButton.disabled = busy || item.status !== "complete" || exportRecording === null;
+      exportButton.addEventListener("click", async () => {
+        if (!exportRecording) return;
+        elements.notice.textContent = "";
+        setBusy(true);
+        try {
+          await exportRecording({ id: item.id, name: item.name });
+          elements.error.textContent = "";
+          elements.notice.textContent = "הייצוא הושלם ונבדק. עותק הדפדפן נשאר ולא נמחק.";
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            elements.notice.textContent = "הייצוא בוטל.";
+          } else if (error?.code === "REPLAY_EXPORT_STREAMING_REQUIRED") {
+            elements.error.textContent = "ההקלטה גדולה מדי לייצוא בזיכרון. נדרש דפדפן עם שמירה ישירה לקובץ.";
+          } else {
+            elements.error.textContent = "ייצוא ההקלטה נכשל. עותק הדפדפן נשאר ללא שינוי.";
+          }
+        } finally {
+          setBusy(false);
+        }
+      });
+
       const deleteButton = text(documentRef, "button", "מחק", "danger");
       deleteButton.type = "button";
       deleteButton.disabled = busy || (item.id === activeRecordingId && ["recording", "stopping"].includes(activeStatus));
       deleteButton.addEventListener("click", async () => {
         if (!globalThis.confirm?.(`למחוק את ההקלטה “${item.name}”?`)) return;
+        elements.notice.textContent = "";
         setBusy(true);
         try {
           await recorder.deleteRecording(item.id);
@@ -167,7 +201,7 @@ export function createReplayRecordingSurface({
           setBusy(false);
         }
       });
-      actions.append(renameInput, renameButton, deleteButton);
+      actions.append(renameInput, renameButton, exportButton, deleteButton);
       card.append(titleRow, meta, actions);
       elements.library.append(card);
     }
@@ -198,6 +232,7 @@ export function createReplayRecordingSurface({
   }
 
   elements.record.addEventListener("click", async () => {
+    elements.notice.textContent = "";
     setBusy(true);
     try {
       await recorder.start({ name: elements.name.value });
@@ -210,6 +245,7 @@ export function createReplayRecordingSurface({
   });
 
   elements.stop.addEventListener("click", async () => {
+    elements.notice.textContent = "";
     setBusy(true);
     try {
       await recorder.stop();
