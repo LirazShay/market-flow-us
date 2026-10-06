@@ -31,6 +31,7 @@ export const DIAGNOSTIC_CHECKPOINTS = Object.freeze({
   "demo_buy.read": "demo_buy",
   "demo_buy.provenance_read": "demo_buy",
   "demo_buy.observation_read": "demo_buy",
+  "demo_buy.ai_pack_export": "demo_buy",
   "demo.runtime.built": "demo",
   "demo.fake_market.ready": "demo",
   "demo.stack.ready": "demo"
@@ -57,6 +58,9 @@ const ALLOWED_CONTEXT_KEYS = new Set([
   "itemCount",
   "hasMore",
   "timingAnomaly",
+  "fileCount",
+  "targetInScannerContext",
+  "outcomeEvidenceStatus",
   "requested",
   "received",
   "unique",
