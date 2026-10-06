@@ -15,6 +15,10 @@ import { resetDemoState } from "../../scripts/demo-reset.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
+function npmCommandForPlatform(platform = process.platform) {
+  return platform === "win32" ? "npm.cmd" : "npm";
+}
+
 async function openClient({ url, origin, role, clientInstanceId }) {
   const socket = new WebSocket(url, { origin });
   await once(socket, "open");
@@ -52,7 +56,7 @@ async function openClient({ url, origin, role, clientInstanceId }) {
 }
 
 async function startDemoCommand() {
-  const child = spawn("npm", ["run", "demo:fake-market"], {
+  const child = spawn(npmCommandForPlatform(), ["run", "demo:fake-market"], {
     cwd: ROOT,
     env: process.env,
     stdio: ["ignore", "pipe", "pipe"],
@@ -183,6 +187,12 @@ async function commitOneDemoCycle(handle) {
     await producer.close();
   }
 }
+
+test("demo subprocess command maps npm to npm.cmd on Windows", () => {
+  assert.equal(npmCommandForPlatform("win32"), "npm.cmd");
+  assert.equal(npmCommandForPlatform("linux"), "npm");
+  assert.equal(npmCommandForPlatform("darwin"), "npm");
+});
 
 test("npm run demo:fake-market starts the normal stack and prints one useful URL", async () => {
   await rm(path.join(ROOT, ".demo"), { recursive: true, force: true });
