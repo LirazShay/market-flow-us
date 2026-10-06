@@ -43,9 +43,17 @@ function isObject(value) {
 function assertExactKeys(value, expectedKeys, label) {
   const actualKeys = Object.keys(value).sort();
   const expected = [...expectedKeys].sort();
-  if (actualKeys.length !== expected.length
-      || actualKeys.some((key, index) => key !== expected[index])) {
-    invalid(`${label} keys are invalid; expected exactly ${expected.join(", ")}`);
+  const actual = new Set(actualKeys);
+  const expectedSet = new Set(expected);
+  const missing = expected.filter((key) => !actual.has(key));
+  const unexpected = actualKeys.filter((key) => !expectedSet.has(key));
+
+  if (missing.length > 0 || unexpected.length > 0) {
+    const details = [
+      missing.length > 0 ? `missing: ${missing.join(", ")}` : null,
+      unexpected.length > 0 ? `unexpected: ${unexpected.join(", ")}` : null
+    ].filter(Boolean).join("; ");
+    invalid(`${label} keys are invalid; ${details}`);
   }
 }
 
