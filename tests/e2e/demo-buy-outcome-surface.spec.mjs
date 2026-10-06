@@ -217,10 +217,25 @@ async function mount(page, { empty = false } = {}) {
       }
     };
 
+    const controllerState = Object.freeze({ aiExportBusy: false, aiExportTargetKey: null });
+    const demoBuyController = {
+      getState() {
+        return controllerState;
+      },
+      subscribe(listener) {
+        listener(controllerState);
+        return () => {};
+      },
+      async createAiPack() {
+        return Object.freeze({ started: false, reason: "AI_EXPORT_UNAVAILABLE" });
+      }
+    };
+
     globalThis.__demoBuyCalls = calls;
     globalThis.__surface = globalThis.__createDemoBuySurface({
       root: document.querySelector("#root"),
-      client
+      client,
+      demoBuyController
     });
     globalThis.__surface.start();
   }, {
