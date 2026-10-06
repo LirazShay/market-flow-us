@@ -1,9 +1,9 @@
 version: 2
-plan_state: active
+plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "planning"
-current_node: "8"
+current_node: "8.1"
 blockers: []
-next_action: "IBKR order-service durable contract is now defined in docs/IBKR_ORDER_SERVICE.md and .planning/GOAL.md. The execution boundary is isolated Node 24 + loopback API, DRY_RUN by default, live submission fail-closed behind explicit process+request enablement and provider session/account/permission/what-if checks; credentials/account IDs/session material remain forbidden from repo/persistence/diagnostics; Scanner/Demo Buy/AI are not wired to live orders. Planning remains active and implementation unauthorized. Next: mechanically align PRODUCT_REQUIREMENTS/PRODUCT_SPEC/TECHNICAL_SPEC/TEST_STRATEGY, add durable D-US order decisions and IBKR planning reviews, extend TREE from seven to eight branches with leaves 8.1-8.4, update Planning CI structural counts/invariants, allocate execution/handoff, run whole-goal/final/external review, then freeze and merge planning truth before any production code. Existing 7.4 stays blocked/not-done and will resume after branch 8 reclosure."
-last_review: "R-US-DEMO-BUY-EXTERNAL"
+next_action: "Branch-8 standalone IBKR order-service planning is fully aligned and frozen: 8.1 local service/dry-run authority -> 8.2 CPGW/live-capable lifecycle -> 8.3 operator packaging/integration seam -> 8.4 deterministic reclosure -> 7.4 final target-machine/provider acceptance. R-US-IBKR-ORDER-FINAL and R-US-IBKR-ORDER-EXTERNAL are PASS. Implementation remains unauthorized until this frozen planning PR passes Planning Docs CI, receives final diff review, is squash-merged, main Planning Docs CI is green and open-PR audit is clean. After those gates, advance root phase to implementation, implementation_authorized=true, Chat 17 / TREE 8.1 pending as the first executable leaf."
+last_review: "R-US-IBKR-ORDER-EXTERNAL"
 implementation_authorized: false

@@ -4,9 +4,9 @@ overall_status: in_progress
 
 current:
   chat: 17
-  node: "8"
-  title: "Standalone IBKR order-service planning"
-  status: in_progress
+  node: "8.1"
+  title: "Standalone IBKR order-service implementation pending authorization"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -15,6 +15,7 @@ authority:
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
   ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
   ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
+  ibkr_order_security_contract: "docs/IBKR_ORDER_SERVICE_SECURITY.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
@@ -23,20 +24,20 @@ planning_completion:
   st_tree_review: pass
   second_pass_adversarial_review: pass
   final_planning_review: pass
-  external_user_from_zero_review: pass_after_corrections
+  external_user_from_zero_review: pass
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: paused_for_ibkr_extension
-  ibkr_order_extension: in_progress
+  handoff_verification: pending_ci
+  implementation_authorization: pending_main_planning_gate
+  ibkr_order_extension: planned
   ibkr_order_durable_contract: pass
-  ibkr_order_tree_freeze: pending
+  ibkr_order_tree_freeze: pass
 
 execution:
-  chats_total: 17
-  implementation_leaves_total: 28
+  chats_total: 21
+  implementation_leaves_total: 32
   current_chat: 17
-  current_node: "8"
-  paused_node: "7.4"
+  current_node: "8.1"
+  final_acceptance_node: "7.4"
 
 blockers: []

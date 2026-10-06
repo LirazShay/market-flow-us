@@ -3,21 +3,23 @@ root: "0"
 nodes:
   "0":
     status: approved
-    strategy: Market Flow US is a complete local U.S.-market analysis product that preserves the proven operating model, validates Scanner candidates with Demo Buy, and exports disciplined local evidence for AI-assisted query improvement before real order execution exists.
-    tactic: Complete seven necessary capability branches covering acquisition, authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, and release/target-machine acceptance.
+    strategy: Market Flow US is a complete local U.S.-market product that preserves the proven analysis/validation model and adds one isolated, permission-gated IBKR order-execution sidecar without giving Scanner, Demo Buy or AI Investigation automatic trading authority.
+    tactic: Complete eight necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, release/target-machine acceptance, and the standalone IBKR order service.
     parallel_assumptions:
       - Preserve proven mechanisms unless current evidence requires change.
-      - Scanner SQL remains strategy authority; Demo Buy and AI Investigation are evidence layers.
+      - Scanner SQL remains strategy authority; Demo Buy and AI Investigation remain evidence layers.
+      - IBKR execution is a separate local boundary and future integration must consume that boundary explicitly.
     necessary_assumptions: []
     sufficiency_assumptions:
-      - All seven branches are required to deliver a usable and verifiable product without adding real execution or Phase-2 liquidity analysis.
+      - All eight branches are required to deliver the current product scope while keeping analysis and execution authority deliberately separated.
     success_evidence:
       - Every implementation leaf satisfies its success evidence.
-      - Current, Detail/History, Scanner, Demo Buy and AI Investigation operate over final schema-v4 authority.
-      - Fast, Browser, Planning and bounded Workload gates are green on the post-feature candidate.
-      - Final target-machine/provider acceptance passes on that exact candidate.
+      - Current, Detail/History, Scanner, Demo Buy and AI Investigation operate over final schema-v4 market authority.
+      - Standalone IBKR BUY/SELL dry-run/live-capable lifecycle is deterministically proven with authenticated localhost caller protection and public-safe diagnostics.
+      - Fast, Browser, Planning, required order-service and bounded Workload gates are green on the post-branch-8 candidate.
+      - Final target-machine/provider acceptance passes on that exact candidate, with actual live IBKR submission either proven when permission exists or recorded exactly as PENDING_EXTERNAL_PERMISSION.
     depends_on: []
-    children: ["1", "2", "3", "4", "5", "6", "7"]
+    children: ["1", "2", "3", "4", "5", "6", "7", "8"]
 
   "1":
     status: approved
@@ -163,7 +165,7 @@ nodes:
     strategy: Scanner remains editable strategy authority; Demo Buy validates short-horizon outcomes and AI Investigation exports bounded anti-hindsight evidence for improving Scanner SQL.
     tactic: Preserve Scanner, add Demo Buy backend/UX, then add deterministic local AI Investigation export/UX.
     parallel_assumptions:
-      - No Strategy Engine or real execution is introduced.
+      - No Strategy Engine or direct broker execution is introduced inside this analytical branch.
       - Demo Buy derives outcomes from existing history; AI Investigation packages evidence rather than becoming authority.
     necessary_assumptions:
       - Candidate selection, outcome validation and disciplined post-outcome investigation are all required by the current scope.
@@ -498,16 +500,16 @@ nodes:
 
   "7":
     status: approved
-    strategy: The product is deterministically re-closed after all requested development, then accepted on the exact final target-machine/provider candidate.
-    tactic: Preserve completed U.S. migration evidence, implement Demo Buy + AI Investigation, rerun deterministic release closure, then perform final user-dependent acceptance.
+    strategy: The product is deterministically re-closed after requested development and then accepted on the exact final target-machine/provider candidate.
+    tactic: Preserve completed U.S. migration/Demo Buy/AI evidence, require branch-8 reclosure before resuming the final user-dependent acceptance leaf.
     parallel_assumptions:
       - Target-machine/authenticated checks remain last.
     necessary_assumptions:
-      - Older release evidence predates the new feature scope.
+      - Final acceptance must execute against the candidate that includes the standalone IBKR sidecar.
     sufficiency_assumptions:
-      - Completed migration proof + new feature leaves + 7.5 + 7.4 establish end-to-end completion.
+      - Completed historical proof + branch-8 leaves + final 7.4 establish end-to-end completion.
     success_evidence:
-      - Final candidate has green deterministic gates, accurate docs, local acceptance including sharing-safe AI pack, and final target-machine/provider PASS.
+      - Final candidate has green deterministic gates, accurate docs, local market-analysis acceptance, deterministic standalone order-service proof and final target-machine/provider evidence.
     depends_on: []
     children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
 
@@ -550,25 +552,24 @@ nodes:
   "7.5":
     status: approved
     strategy: After Demo Buy and AI Investigation are implemented, one exact release candidate has coherent schema-v4 contracts/docs and passes all deterministic repository gates.
-    tactic: Align canonical/user/Scanner/AI docs to implementation, extend bounded workload/local acceptance, run full deterministic gates, review/merge and point final acceptance to the exact candidate SHA.
+    tactic: Align canonical/user/Scanner/AI docs to implementation, extend bounded workload/local acceptance, run full deterministic gates, review/merge and point final acceptance to the exact accepted product candidate of that scope.
     parallel_assumptions:
-      - Previously green 7.1–7.3 evidence remains historical but the accepted SHA must include all new features.
+      - This completed historical reclosure remains valid evidence but is superseded as final-candidate authority after branch 8 changes product runtime scope.
     necessary_assumptions:
-      - Final acceptance must not run against an un-reclosed feature candidate.
+      - Branch 8 may depend on the completed post-Demo-Buy/AI baseline rather than reopening those implementation leaves.
     sufficiency_assumptions: []
     success_evidence:
-      - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, DEMO_BUY_VALIDATION, DEMO_BUY_PROTOCOL_LIMITS, DEMO_BUY_UX and AI_INVESTIGATION_PACK plus USER_GUIDE/SCANNER_SQL_GUIDE match implementation.
-      - Full Fast, Browser, Planning Docs and bounded Workload verification are green.
-      - Local Fake Leumi proves Demo Buy progressive/targeted refresh plus AI pack generation/regeneration, ordered-vs-unordered result-position semantics and no operational/session canary leakage without huge redundant matrices.
-      - No blocking defect/unexpected open PR; feature/reclosure PR is reviewed, squash-merged and main CI is green.
-      - STATUS/EXECUTION/handoff point 7.4 at the exact accepted-candidate SHA.
+      - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY, DEMO_BUY_VALIDATION, DEMO_BUY_PROTOCOL_LIMITS, DEMO_BUY_UX and AI_INVESTIGATION_PACK plus USER_GUIDE/SCANNER_SQL_GUIDE match that implemented scope.
+      - Full Fast, Browser, Planning Docs and bounded Workload verification were green.
+      - Local Fake Leumi proved Demo Buy progressive/targeted refresh plus AI pack generation/regeneration and sharing safety.
+      - Historical reclosure PR was reviewed/merged and main CI was green.
     depends_on: ["4.4.1", "4.4.2", "4.5.2", "7.3"]
     children: []
 
   "7.4":
     status: approved
-    strategy: The exact final post-feature candidate is accepted on the user's target machine through local day-bounded proof, AI Investigation usability, authenticated static compatibility and market-open movement.
-    tactic: Run final target-machine local acceptance first, then static authenticated smoke, then market-open SHA-bound gate.
+    strategy: The exact final post-branch-8 candidate is accepted on the user's target machine through local day-bounded market proof, AI Investigation usability, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
+    tactic: Run final target-machine local market/order-service acceptance first, then authenticated market-data static smoke and market-open SHA-bound gate; run real IBKR live-order proof only when external permission exists.
     parallel_assumptions: []
     necessary_assumptions:
       - Automated fake proof cannot establish actual target-machine/browser/provider compatibility or heavy performance.
@@ -576,9 +577,103 @@ nodes:
     success_evidence:
       - Local Fake Leumi static/moving/failure/restart PASS.
       - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful sharing-safe AI Investigation generation/copy/regeneration on the final SHA.
+      - Standalone IBKR service starts independently, protects localhost caller access, proves DRY_RUN/provider-session diagnostics/restart-safe idempotency on the final SHA, and does not expose credentials/account/session material.
       - 4096x180 and isolated one-day probes pass target-machine criteria.
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
-      - Authenticated static smoke and market-open movement gates pass with sanitized SHA-bound reports.
-      - No private credential/session material enters repo/reports or generated shareable AI pack artifacts.
+      - Authenticated market-data static smoke and market-open movement gates pass with sanitized SHA-bound reports.
+      - Real IBKR order submission is either explicitly proven when trading permission exists or recorded exactly as PENDING_EXTERNAL_PERMISSION; synthetic proof is never mislabeled as live success.
+      - No private credential/session/account material enters repo/reports or generated shareable artifacts.
+    depends_on: ["7.5", "8.4"]
+    children: []
+
+  "8":
+    status: approved
+    strategy: Market Flow US gains a standalone, integration-ready IBKR BUY/SELL order service whose permission-independent behavior is fully testable before the user's account receives trading permission.
+    tactic: Build the safe local service/dry-run authority, add the real CPGW adapter and live-capable lifecycle, package the operator/integration boundary, then deterministically re-close the repository before final target-machine acceptance resumes.
+    parallel_assumptions:
+      - Existing market-analysis runtime remains independently runnable.
+      - Scanner, Demo Buy, AI Investigation and Current do not automatically submit broker orders in this branch.
+    necessary_assumptions:
+      - The user needs implementation ready before IBKR grants actual trading permission.
+    sufficiency_assumptions:
+      - 8.1–8.4 cover local authority/security, provider lifecycle, operator/integration usability and release reclosure without inventing a strategy execution engine.
+    success_evidence:
+      - Deterministic synthetic proof covers BUY/SELL preview, submission lifecycle, reply/cancel/fills, uncertain acknowledgement reconciliation, no-short-opening protection, caller security and restart-safe idempotency.
+      - Real CPGW compatibility can be diagnosed without storing credentials/account identifiers or bypassing provider permission.
+      - Packaging keeps DRY_RUN default and requires deliberate LIVE enablement.
+      - Branch-8 reclosure produces the exact new candidate used by 7.4.
+    depends_on: []
+    children: ["8.1", "8.2", "8.3", "8.4"]
+
+  "8.1":
+    status: approved
+    strategy: A standalone Node 24 order service owns strict normalized intents, authenticated localhost access, deterministic DRY_RUN behavior and restart-safe local idempotency without requiring IBKR trading permission.
+    tactic: Implement loopback HTTP API, ephemeral caller token/origin/body security, order-intent validation/fingerprinting, separate minimal DuckDB execution store and deterministic fake adapter with DRY_RUN/preview authority.
+    parallel_assumptions:
+      - Real CPGW submit behavior belongs to 8.2.
+    necessary_assumptions:
+      - Provider integration is unsafe without a proven local authority/security/idempotency boundary first.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Unit/service tests prove exact STK/USD/SMART BUY/SELL LMT/MKT DAY/GTC validation and exact fake-provider payload shaping.
+      - Service binds only 127.0.0.1:8770; protected endpoints require high-entropy per-run caller auth, reject browser Origin/default CORS and unsupported/oversized mutation bodies before adapter calls.
+      - DRY_RUN cannot call submit and returns deterministic synthetic preview/what-if-style evidence.
+      - requestId same-intent replay is idempotent; different-intent reuse rejects; restart preserves safe execution facts while invalidating generated caller token.
+      - Execution persistence/diagnostics contain no credentials, cookies/session tokens, provider account IDs, caller token or raw authenticated dumps.
     depends_on: ["7.5"]
+    children: []
+
+  "8.2":
+    status: approved
+    strategy: The service can speak the documented Client Portal Web API lifecycle and is technically live-capable while remaining fail-closed whenever any local/provider gate is missing.
+    tactic: Implement the CPGW adapter for session/accounts/instrument/snapshot/what-if/submit/reply/orders/trades/cancel/keepalive, independent LIVE gates, SELL long-position guard and acknowledgement-unknown reconciliation.
+    parallel_assumptions:
+      - Manual CPGW browser authentication remains user-owned.
+    necessary_assumptions:
+      - A DRY_RUN-only local core is not ready for future permission without the real provider lifecycle and failure semantics.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Adapter proof covers documented session/account/contract/snapshot/what-if/submit/reply/order/trade/cancel/keepalive sequence with stable sanitized failures.
+      - Actual submit is impossible unless caller auth + process LIVE + request LIVE + session + tradable account + provider permission + exact instrument + snapshot + what-if + local risk guards all pass.
+      - Provider REPLY_REQUIRED is explicit; unknown questions fail closed; explicit confirmation continues the flow.
+      - Pre-submit failure is conclusive; post-submit transport loss becomes ACKNOWLEDGEMENT_UNKNOWN and never blind-resubmits before provider reconciliation.
+      - Cancel, partial fill and full fill observation are distinct; cancellation never claims already-filled quantity was cancelled.
+      - LIVE SELL rejects when known long coverage is insufficient/unavailable/ambiguous.
+      - Any localhost CPGW TLS exception is scoped only to that loopback client; no process-global TLS disable exists.
+    depends_on: ["8.1"]
+    children: []
+
+  "8.3":
+    status: approved
+    strategy: The standalone service is operable on Windows and exposes one stable future-integration boundary without coupling the existing analytical runtime to live execution.
+    tactic: Add thin operator launcher/docs/config, explicit DRY_RUN/LIVE startup semantics, deterministic standalone acceptance and stable authenticated local API documentation for a later integration project.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Correct backend code is not usable or safely integrable without an explicit operator path and stable boundary.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Windows/operator startup is DRY_RUN by default and LIVE requires deliberate opt-in; no committed config contains provider account/authentication material.
+      - Service starts/stops independently of Market Flow US market runtime and generated caller token is never persisted/logged.
+      - Deterministic acceptance proves auth failures, BUY/SELL preview, idempotency+restart, fake-LIVE submit/reply/ack-unknown reconciliation/cancel/fills, no-short guard, sanitized report and clean stop.
+      - Docs define how future integration consumes the authenticated localhost API and explicitly forbid direct Scanner/Demo Buy/AI provider calls.
+      - Real CPGW session compatibility can be checked safely without requiring order permission; live submit remains permission-gated.
+    depends_on: ["8.2"]
+    children: []
+
+  "8.4":
+    status: approved
+    strategy: One exact post-order-service candidate has coherent contracts/docs and passes all permission-independent deterministic repository gates before final target-machine/provider acceptance resumes.
+    tactic: Align implementation/docs, run focused order-service proof plus full affected Fast/Browser/Planning/bounded Workload/local acceptance, review/merge, require green main and pin the new exact candidate in status/handoff/acceptance truth.
+    parallel_assumptions:
+      - Actual live IBKR submission may remain external-permission-dependent.
+    necessary_assumptions:
+      - 7.4 must not resume against the older pre-order-service candidate.
+    sufficiency_assumptions: []
+    success_evidence:
+      - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, TECHNICAL_SPEC, TEST_STRATEGY, IBKR_ORDER_SERVICE and IBKR_ORDER_SERVICE_SECURITY match implementation.
+      - Focused order unit/service/acceptance plus full affected Fast, Browser, Planning and bounded Workload gates are green without redundant giant matrices.
+      - Existing market-analysis Local Fake acceptance remains green and standalone order-service deterministic acceptance is green with sanitized reports.
+      - No blocking defect/unexpected open PR; implementation/reclosure PRs are reviewed, squash-merged and main CI is green.
+      - STATUS/EXECUTION/handoff/final-acceptance truth point 7.4 at the exact new candidate SHA, while real order proof remains explicitly PENDING_EXTERNAL_PERMISSION if unavailable.
+    depends_on: ["8.3"]
     children: []
