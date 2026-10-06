@@ -2,12 +2,12 @@
 
 ## 1. Architecture
 
-Preserve the proven MarketScope-derived market-analysis topology and extend only the new execution boundary required by branch `8`:
+Preserve the proven MarketScope-derived market-analysis topology, the isolated branch-8 execution sidecar, and the branch-9 Market Recording + Replay lane:
 
 ```text
 authenticated provider browser
   ├─ U.S. ScreenerHulPaging3 adapter
-  ├─ Recorder / Producer Bridge
+  ├─ live Recorder / Producer Bridge
   └─ Viewer
        ├─ Current
        ├─ Detail / History
@@ -34,9 +34,18 @@ ibkr-order-service
   ├─ authenticated local caller boundary
   ├─ isolated execution DuckDB facts only
   └─ HTTPS localhost Client Portal Gateway → Interactive Brokers
+
+separate Market Recording + Replay lane
+validated browser snapshots
+  → IndexedDB recording and/or validated portable file
+  → Market Player
+  → existing ProducerBridge / protocol
+  → Replay Host-owned unchanged Market Flow US service child
+  → replay-only DuckDB
+  → existing Viewer / Current / Detail-History / Scanner / Demo Buy / AI surfaces
 ```
 
-Do not add a cloud backend, replace the existing market-data transport, create a second market-data authority, add a Strategy Engine, background horizon worker or automatic AI integration. The branch-8 local HTTP API is an intentional **execution sidecar**, not a replacement market-data/Viewer transport.
+Do not add a cloud backend, replace the existing market-data transport, create a second market-data authority/persistence implementation, add a Strategy Engine, background horizon worker or automatic AI integration. The branch-8 local HTTP API is an intentional **execution sidecar**. The branch-9 Replay Host is lifecycle orchestration only; it is not a second market-data server, and the shared producer protocol/service remain replay-unaware.
 
 ## 2. Runtime/tooling baseline
 
@@ -52,7 +61,7 @@ node:test
 @playwright/test / Chromium
 ```
 
-The order service reuses Node 24/native ESM and the existing DuckDB dependency where durable execution facts are required. Do not add another database package without implementation evidence.
+The order service reuses Node 24/native ESM and the existing DuckDB dependency where durable execution facts are required. Replay reuses the same browser build/test stack and unchanged Market Flow US service rather than introducing a second market-data persistence package. Do not add another database package without implementation evidence.
 
 ## 3. Canonical identity
 
@@ -82,7 +91,7 @@ complete validated ScreenerHulPaging3 response
 
 `history` remains keyed by `(cycle_id, security_id)` and `latest` by `security_id`.
 
-Demo Buy never mutates market authority. IBKR execution facts are stored separately and never become market authority.
+Demo Buy never mutates market authority. IBKR execution facts are stored separately and never become market authority. Replay recordings are source artifacts before Node authority; during Replay, only cycles committed normally by the unchanged service into the replay-only DuckDB become authority for that replay run.
 
 ## 5. Schema v4
 
@@ -120,7 +129,7 @@ A v3 DB containing partial Demo Buy structures fails closed; do not normalize it
 
 No speculative `history` index is introduced before representative measurement proves one necessary.
 
-The branch-8 order service does **not** add order tables to this market-day DB. Any execution persistence is a separate local DuckDB owned by the order service.
+The branch-8 order service does **not** add order tables to this market-day DB. Any execution persistence is a separate local DuckDB owned by the order service. Replay adds no market schema tables/columns; Replay Host starts the unchanged service against a separate replay-owned DB path.
 
 ## 6. Demo Buy persisted schema
 
@@ -174,6 +183,8 @@ demo.buy.ai-pack.create
 ```
 
 No second market-analysis API/transport is introduced.
+
+Replay adds no shared-protocol operation or field for `replayMode`, virtual clock, speed, recording identity, seek, load/reset or fast-forward. Market Player emits only the existing producer session/universe/cycle/heartbeat/stop contract and remains ACK-gated exactly like live acquisition.
 
 ## 8. `demo.buy.capture`
 
@@ -284,6 +295,8 @@ baselineAgeMs     = captured-baselineCollected when non-negative else null
 ```
 
 Negative relationships set a bounded `timingAnomaly` indicator. Never clamp to zero or reorder authority using timestamps.
+
+Replay preserves provider/source fields exactly while rebasing locally owned collection/cycle timestamps to the current replay timing segment. This keeps Scanner/Demo Buy wall-clock semantics coherent without introducing a service virtual clock.
 
 ## 12. Capture acknowledgement semantics
 
@@ -542,7 +555,7 @@ Auto changes apply only to future successful Scanner generations. Enabling Auto 
 
 A persistent top-level indicator exposes `Auto Demo Buy: All/Top X` and `Turn off` even while Scanner is hidden. Turn off prevents future generations; it does not pretend to cancel an already in-flight capture.
 
-Scanner/Demo Buy does not acquire an order-service caller token and does not submit an IBKR order in branch `8`.
+Scanner/Demo Buy does not acquire an order-service caller token and does not submit an IBKR order in branch `8`/`9`.
 
 ## 22. Resumable Scanner Stop
 
@@ -614,7 +627,7 @@ At most one Generate/Regenerate request is in flight per Viewer. Additional expo
 
 Clipboard follows existing support-snapshot behavior: `navigator.clipboard.writeText`, with visible/selectable fallback text when clipboard access is unavailable.
 
-No automatic AI call/upload or SQL activation exists. AI Investigation cannot submit broker orders in branch `8`.
+No automatic AI call/upload or SQL activation exists. AI Investigation cannot submit broker orders in branch `8`/`9`.
 
 ## 25. Viewer transport sequencing
 
@@ -622,7 +635,7 @@ Keep existing per-socket FIFO; do not redesign market-analysis transport solely 
 
 Demo Buy/AI requests are bounded and application-level capture/export slots prevent a second unbounded queue. Workload/Browser proof must ensure bounded Demo Buy refresh/export does not materially starve intended recurring Scanner use.
 
-The order-service HTTP transport is process-separated and does not share this FIFO.
+The order-service HTTP transport is process-separated and does not share this FIFO. Replay Viewer reads use the same normal Viewer WebSocket/service path against the Replay Host-owned service child.
 
 ## 26. Diagnostics
 
@@ -642,6 +655,8 @@ Support Snapshot may include bounded operational state such as active top-level 
 Never include SQL text, Scanner rows, history rows, AI prompt/evidence, redacted source values, credentials/session data or raw authenticated dumps.
 
 The order service uses the same diagnosability pattern but may keep a separate component namespace such as `ibkr_order.*`; it exposes only product-owned local IDs, lifecycle state, stable error/checkpoint, and sanitized cause. Local caller token, provider account ID, credentials, provider session material and raw provider bodies are forbidden in diagnostics.
+
+Replay diagnostics may expose bounded recording/frame/player/Host/run/position/storage/checkpoint state only. Replay Host control credentials, provider auth/session/account material and private page state are forbidden in diagnostics or durable recordings.
 
 ## 27. Fake Market / workload
 
@@ -674,7 +689,7 @@ Hosted CI remains correctness-first and bounded. Heavy target-machine profile re
 737280 history rows
 ```
 
-IBKR order proof uses a separate deterministic synthetic gateway/adapter rather than changing Fake Market semantics.
+IBKR order proof uses a separate deterministic synthetic gateway/adapter rather than changing Fake Market semantics. Replay proof uses small deterministic synthetic recordings/fake clocks plus bounded real-service/browser composition; ordinary local acceptance must not acquire long real-time Replay waits.
 
 ## 28. New-day lifecycle
 
@@ -695,7 +710,7 @@ inspect source without mutation
 
 Fresh v4 starts with empty Demo Buy tables. Demo Buy horizons never cross into the new active DB. v4 archive remains self-contained with its history/provenance; v3 archive remains a valid pre-feature historical DB.
 
-Order-service local execution state is not part of New Trading Day.
+Order-service local execution state and replay-owned DuckDBs are not part of New Trading Day.
 
 ## 29. Build/local artifacts
 
@@ -706,6 +721,8 @@ exports/ai-investigations/
 ```
 
 Branch `8` adds a standalone Windows/operator launcher/config surface for `ibkr-order-service`. The launcher must make DRY_RUN explicit and must require deliberate enablement for LIVE. No committed config may contain provider account identity or authentication data.
+
+Branch `9` adds a dedicated Replay browser build/runtime and `START_MARKET_REPLAY.cmd` operator launcher. Ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` retain their existing semantics and never auto-load Replay.
 
 ## 30. Security boundary
 
@@ -729,13 +746,27 @@ Local caller authorization is independent from the process/request LIVE gate and
 
 If localhost CPGW TLS verification must be relaxed, scope that exception only to the configured loopback CPGW client. Never use process-global TLS disable such as `NODE_TLS_REJECT_UNAUTHORIZED=0`.
 
+Replay Host security is independently normative:
+
+```text
+bind control only to loopback
+require exact configured provider Origin
+require a high-entropy ephemeral per-run control credential
+use one-run bootstrap/pairing without persisting/logging that credential
+spawn/stop only the unchanged Market Flow service child it owns
+own/reset only replay DB artifacts it created
+foreign port/process/path ambiguity → fail closed
+normal live DB path/bytes → never reset or deleted by Replay
+```
+
 ## 31. Final acceptance
 
-The deterministic post-order-service candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic local Fake Leumi Demo Buy/AI proof and deterministic standalone IBKR order-service proof.
+The deterministic post-branch-9 candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic Local Fake Leumi Demo Buy/AI proof, deterministic standalone IBKR order-service proof, and dedicated Replay acceptance covering recorder/file/player/Host composition, arbitrary middle-frame start without preroll, next-day local-time rebase, normal Current/History/Scanner/Demo Buy behavior and live-DB isolation.
 
 Final target-machine acceptance additionally proves the existing market-analysis path:
 
 ```text
+focused Replay acceptance on the exact candidate
 local Demo Buy progressive + targeted observation refresh
 local AI pack generation/copy/regeneration
 AI pack sharing-safe projection / no operational-session leakage
@@ -747,7 +778,7 @@ authenticated market-open movement gate
 
 The order-service target-machine gate proves startup, local caller protection, DRY_RUN/preview/restart/idempotency and CPGW session diagnostics. Actual live order placement is required only when external IBKR trading permission is available; otherwise record `PENDING_EXTERNAL_PERMISSION` without substituting fake live evidence.
 
-All acceptance evidence remains SHA-bound to the exact final candidate.
+All acceptance evidence remains SHA-bound to the exact final post-branch-9 candidate.
 
 ## 32. Explicit non-goals
 
@@ -766,6 +797,12 @@ multi-day active market analytics
 background horizon materialization
 speculative history index
 capture replay queue
+server/shared-protocol Replay awareness
+server virtual clock
+Replay preroll/hidden fast-forward
+Replay speed other than initial 1x
+cloud Replay storage
+Replay into the normal active live DB
 AI provider/API key integration
 automatic AI SQL editing/activation
 web enrichment inside pack generation
