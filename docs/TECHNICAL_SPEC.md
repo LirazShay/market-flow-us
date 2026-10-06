@@ -2,7 +2,7 @@
 
 ## 1. Architecture
 
-Preserve the proven MarketScope-derived topology and extend only existing boundaries:
+Preserve the proven MarketScope-derived market-analysis topology and extend only the new execution boundary required by branch `8`:
 
 ```text
 authenticated provider browser
@@ -16,7 +16,7 @@ authenticated provider browser
                      │
                      │ ws://127.0.0.1:8765
                      ▼
-localhost Node.js
+localhost Market Flow US Node.js
   ├─ WebSocket protocol/service
   ├─ producer/session authority
   ├─ one serialized writer
@@ -27,9 +27,16 @@ localhost Node.js
   ├─ Demo Buy capture persistence
   ├─ Demo Buy evaluator/read model
   └─ deterministic local AI-pack exporter
+
+separate process
+ibkr-order-service
+  ├─ http://127.0.0.1:8770
+  ├─ authenticated local caller boundary
+  ├─ isolated execution DuckDB facts only
+  └─ HTTPS localhost Client Portal Gateway → Interactive Brokers
 ```
 
-Do not add a cloud backend, second transport, second DB authority, Strategy Engine, background horizon worker or automatic AI integration for this increment.
+Do not add a cloud backend, replace the existing market-data transport, create a second market-data authority, add a Strategy Engine, background horizon worker or automatic AI integration. The branch-8 local HTTP API is an intentional **execution sidecar**, not a replacement market-data/Viewer transport.
 
 ## 2. Runtime/tooling baseline
 
@@ -45,15 +52,19 @@ node:test
 @playwright/test / Chromium
 ```
 
+The order service reuses Node 24/native ESM and the existing DuckDB dependency where durable execution facts are required. Do not add another database package without implementation evidence.
+
 ## 3. Canonical identity
 
 ```text
 securityId = String(PaperId)
 ```
 
-after fail-closed source-type validation. `Symbol`, row order, names and `PaperIdYatab` never become primary identity.
+after fail-closed source-type validation. `Symbol`, row order, names and `PaperIdYatab` never become primary **market-data** identity.
 
 Demo Buy/AI targets use canonical `security_id` only.
+
+The IBKR sidecar intentionally has a separate instrument-resolution boundary because provider `conid` is not Market Flow US market-data identity. The local order intent starts from bounded U.S.-equity symbol/secType/currency/exchange fields and resolves provider identity through the adapter; provider account identity never becomes durable product identity.
 
 ## 4. Existing market authority remains unchanged
 
@@ -71,11 +82,11 @@ complete validated ScreenerHulPaging3 response
 
 `history` remains keyed by `(cycle_id, security_id)` and `latest` by `security_id`.
 
-Demo Buy never mutates market authority.
+Demo Buy never mutates market authority. IBKR execution facts are stored separately and never become market authority.
 
 ## 5. Schema v4
 
-After this feature ships the active schema is **schema v4**.
+After the Demo Buy feature ships the active market DB is **schema v4**.
 
 Tables:
 
@@ -91,7 +102,7 @@ demo_buy_captures
 demo_buy_items
 ```
 
-Fresh DBs bootstrap directly as v4.
+Fresh market DBs bootstrap directly as v4.
 
 Valid v3 migration:
 
@@ -108,6 +119,8 @@ validate exact v3 prerequisites
 A v3 DB containing partial Demo Buy structures fails closed; do not normalize it with `IF NOT EXISTS`. Fault injection must prove migration rollback leaves the original v3 usable.
 
 No speculative `history` index is introduced before representative measurement proves one necessary.
+
+The branch-8 order service does **not** add order tables to this market-day DB. Any execution persistence is a separate local DuckDB owned by the order service.
 
 ## 6. Demo Buy persisted schema
 
@@ -146,11 +159,11 @@ Use simple DuckDB CHECK constraints for direct row-shape/mode invariants where t
 
 A physical FK is not required in Phase 1; capture establishes the semantic baseline link and reads treat a missing link as corruption.
 
-## 7. Protocol
+## 7. Market-analysis protocol
 
 Keep protocol version `1` unless implementation proves incompatibility.
 
-Add Viewer-role operations:
+Viewer-role Demo Buy operations remain:
 
 ```text
 demo.buy.capture
@@ -160,7 +173,7 @@ demo.buy.capture.get
 demo.buy.ai-pack.create
 ```
 
-No second API/transport is introduced.
+No second market-analysis API/transport is introduced.
 
 ## 8. `demo.buy.capture`
 
@@ -529,6 +542,8 @@ Auto changes apply only to future successful Scanner generations. Enabling Auto 
 
 A persistent top-level indicator exposes `Auto Demo Buy: All/Top X` and `Turn off` even while Scanner is hidden. Turn off prevents future generations; it does not pretend to cancel an already in-flight capture.
 
+Scanner/Demo Buy does not acquire an order-service caller token and does not submit an IBKR order in branch `8`.
+
 ## 22. Resumable Scanner Stop
 
 Scanner must expose a user-level **Stop recurring scan** distinct from terminal Viewer destruction.
@@ -599,24 +614,25 @@ At most one Generate/Regenerate request is in flight per Viewer. Additional expo
 
 Clipboard follows existing support-snapshot behavior: `navigator.clipboard.writeText`, with visible/selectable fallback text when clipboard access is unavailable.
 
-No automatic AI call/upload or SQL activation exists.
+No automatic AI call/upload or SQL activation exists. AI Investigation cannot submit broker orders in branch `8`.
 
 ## 25. Viewer transport sequencing
 
-Keep existing per-socket FIFO; do not redesign transport solely for Demo Buy.
+Keep existing per-socket FIFO; do not redesign market-analysis transport solely for Demo Buy.
 
 Demo Buy/AI requests are bounded and application-level capture/export slots prevent a second unbounded queue. Workload/Browser proof must ensure bounded Demo Buy refresh/export does not materially starve intended recurring Scanner use.
 
+The order-service HTTP transport is process-separated and does not share this FIFO.
+
 ## 26. Diagnostics
 
-Reuse the existing diagnostic tracker. Stable concepts include:
+Reuse the existing diagnostic tracker for the market-analysis runtime. Stable concepts include:
 
 ```text
 demo_buy.capture
 demo_buy.evaluate
 demo_buy.read
 demo_buy.observation_read
-demo_buy.provenance_read
 demo_buy.ai_pack
 demo_buy.viewer
 ```
@@ -625,9 +641,11 @@ Support Snapshot may include bounded operational state such as active top-level 
 
 Never include SQL text, Scanner rows, history rows, AI prompt/evidence, redacted source values, credentials/session data or raw authenticated dumps.
 
+The order service uses the same diagnosability pattern but may keep a separate component namespace such as `ibkr_order.*`; it exposes only product-owned local IDs, lifecycle state, stable error/checkpoint, and sanitized cause. Local caller token, provider account ID, credentials, provider session material and raw provider bodies are forbidden in diagnostics.
+
 ## 27. Fake Market / workload
 
-Reuse the shared configurable U.S. synthetic generator.
+Reuse the shared configurable U.S. synthetic generator for the market-analysis lane.
 
 Deterministic Demo Buy/AI scenarios cover:
 
@@ -656,9 +674,11 @@ Hosted CI remains correctness-first and bounded. Heavy target-machine profile re
 737280 history rows
 ```
 
+IBKR order proof uses a separate deterministic synthetic gateway/adapter rather than changing Fake Market semantics.
+
 ## 28. New-day lifecycle
 
-Active DB = one trading day.
+Active market DB = one trading day.
 
 After schema v4 ships, new-day accepts valid v3 or valid v4 source DB and rejects v1/v2, running sessions and partial/corrupt states.
 
@@ -675,29 +695,45 @@ inspect source without mutation
 
 Fresh v4 starts with empty Demo Buy tables. Demo Buy horizons never cross into the new active DB. v4 archive remains self-contained with its history/provenance; v3 archive remains a valid pre-feature historical DB.
 
+Order-service local execution state is not part of New Trading Day.
+
 ## 29. Build/local artifacts
 
-Existing artifact names remain canonical Market Flow US names. Add only:
+Existing artifact names remain canonical Market Flow US names. Existing AI export root remains:
 
 ```text
-AI exports: exports/ai-investigations/
+exports/ai-investigations/
 ```
 
-`exports/` must be git-ignored.
+Branch `8` adds a standalone Windows/operator launcher/config surface for `ibkr-order-service`. The launcher must make DRY_RUN explicit and must require deliberate enablement for LIVE. No committed config may contain provider account identity or authentication data.
 
 ## 30. Security boundary
 
-Preserve loopback-only service, exact allowed Origin, hardened DuckDB, no credential/session persistence in market evidence, sanitized synthetic fixtures and no raw authenticated dumps.
+Preserve loopback-only market service, exact allowed Origin, hardened DuckDB, no credential/session persistence in market evidence, sanitized synthetic fixtures and no raw authenticated dumps.
 
 Generated AI packs are explicit local user artifacts and are designed for optional sharing. Therefore they use the sharing-safe projection from `DATA_CONTRACT.md` / `AI_INVESTIGATION_PACK.md`, never raw `SELECT *` DB rows or raw persisted Scanner context. System-owned operational/session identifiers are excluded by construction; redacted contents are not copied into prompt/manifest/diagnostics. Exact user-authored SQL remains verbatim and requires the visible pre-share reminder.
 
-Packs are never committed automatically and never placed in Support Snapshot.
+The order-service security supplement is normative:
+
+```text
+bind exactly 127.0.0.1:8770
+GET /health may be unauthenticated only if non-sensitive
+all other endpoints require high-entropy per-run local caller token
+reject requests carrying browser Origin by default
+no wildcard/credentialed CORS
+JSON-only bounded mutation bodies
+unauthorized request performs zero provider calls and zero state mutation
+```
+
+Local caller authorization is independent from the process/request LIVE gate and all provider session/account/permission/what-if/reply/risk checks.
+
+If localhost CPGW TLS verification must be relaxed, scope that exception only to the configured loopback CPGW client. Never use process-global TLS disable such as `NODE_TLS_REJECT_UNAUTHORIZED=0`.
 
 ## 31. Final acceptance
 
-The post-feature deterministic candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic local Fake Leumi Demo Buy/AI proof.
+The deterministic post-order-service candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic local Fake Leumi Demo Buy/AI proof and deterministic standalone IBKR order-service proof.
 
-Final target-machine acceptance additionally proves:
+Final target-machine acceptance additionally proves the existing market-analysis path:
 
 ```text
 local Demo Buy progressive + targeted observation refresh
@@ -709,22 +745,24 @@ authenticated static smoke
 authenticated market-open movement gate
 ```
 
-All on the exact final candidate SHA.
+The order-service target-machine gate proves startup, local caller protection, DRY_RUN/preview/restart/idempotency and CPGW session diagnostics. Actual live order placement is required only when external IBKR trading permission is available; otherwise record `PENDING_EXTERNAL_PERMISSION` without substituting fake live evidence.
+
+All acceptance evidence remains SHA-bound to the exact final candidate.
 
 ## 32. Explicit non-goals
 
 Do not add:
 
 ```text
-real order placement
-manual buy price
-fill simulation
-fees/slippage
-sell rules
-portfolio/risk state
-trade quantity/liquidity proof
+automatic Scanner -> live order placement
+Demo Buy -> live order placement
+AI Investigation -> live order placement
+manual Demo Buy price
+Demo Buy fill simulation
+fees/slippage or portfolio/risk state inside the analytical lane
+trade quantity/liquidity proof from Demo Buy
 aggregate strategy scorecards
-multi-day active analytics
+multi-day active market analytics
 background horizon materialization
 speculative history index
 capture replay queue
@@ -732,4 +770,210 @@ AI provider/API key integration
 automatic AI SQL editing/activation
 web enrichment inside pack generation
 OS file-manager integration
+short selling
+options/futures/FX execution
+bracket/OCA/algo orders
+margin/leverage optimization
+credential storage
+automated CPGW login
+permission/authentication bypass
+cloud order service
 ```
+
+## 33. IBKR order-service local API
+
+The branch-8 target API is:
+
+```text
+GET  /health
+GET  /session
+POST /session/init
+POST /instruments/resolve
+POST /orders/preview
+POST /orders
+POST /orders/{localOrderId}/confirm
+POST /orders/{localOrderId}/cancel
+GET  /orders
+GET  /orders/{localOrderId}
+GET  /trades
+```
+
+All except strictly non-sensitive `/health` are protected by the ephemeral local caller credential before parsing can reach provider/session/order logic.
+
+No endpoint accepts provider username/password, cookie/session token, real account ID as durable request state, or browser-chosen persistence path.
+
+## 34. Canonical order intent
+
+Initial normalized shape:
+
+```json
+{
+  "requestId": "caller-generated-idempotency-key",
+  "instrument": {
+    "symbol": "AAPL",
+    "secType": "STK",
+    "currency": "USD",
+    "exchange": "SMART"
+  },
+  "side": "BUY",
+  "quantity": 1,
+  "orderType": "LMT",
+  "limitPrice": 100.0,
+  "tif": "DAY",
+  "executionMode": "DRY_RUN"
+}
+```
+
+Supported initially:
+
+```text
+STK / USD / SMART
+BUY | SELL
+LMT | MKT
+DAY | GTC
+positive finite quantity
+```
+
+`LMT` requires positive finite `limitPrice`; `MKT` forbids it. Unsupported combinations fail closed.
+
+## 35. Runtime modes and independent gates
+
+`DRY_RUN` is default and can validate/translate/simulate plus optionally perform safe real gateway read/what-if checks. It must never call the provider order-submit endpoint.
+
+Actual submit requires all of:
+
+```text
+valid local caller authorization
+process explicitly started LIVE-enabled
+request explicitly says LIVE
+authenticated brokerage session
+tradable account selected in memory
+required provider permission
+unambiguous instrument resolution
+snapshot preflight
+successful provider what-if
+local validation / SELL guard
+```
+
+Any missing condition is a stable rejection. There is no fallback/bypass.
+
+## 36. Provider adapter workflow
+
+Use the first-party Client Portal Web API through Client Portal Gateway.
+
+Normal flow:
+
+```text
+/iserver/auth/status
+→ init/reinit when explicitly requested and allowed
+→ /iserver/accounts
+→ resolve symbol/provider contract
+→ marketdata snapshot prerequisite
+→ /orders/whatif
+→ submit only after all LIVE gates
+→ immediate result OR provider reply-required
+→ explicit reply confirmation
+→ open-order/trade reconciliation
+→ cancellation when requested
+→ /tickle keepalive as required
+```
+
+Manual CPGW browser authentication remains user-owned. Session expiry returns a diagnosable state; the service never automates credential login.
+
+## 37. Idempotency and acknowledgement-unknown
+
+`requestId` is mandatory for order creation.
+
+```text
+same requestId + same normalized intent
+→ return/reconcile existing local result
+
+same requestId + different normalized intent
+→ reject
+```
+
+Transport loss after actual provider submit creates `ACKNOWLEDGEMENT_UNKNOWN` unless the provider result is conclusively known. Never auto-resubmit. Reconcile against provider open-order/trade state before any later explicit retry decision.
+
+A product-owned `localOrderId` is the stable local reference and does not expose provider account identity.
+
+## 38. Reply/cancel/fill lifecycle
+
+Local lifecycle must preserve the semantics of at least:
+
+```text
+DRY_RUN_COMPLETE
+PREVIEW_REJECTED
+READY_TO_SUBMIT
+REPLY_REQUIRED
+SUBMITTED
+PROVIDER_REJECTED
+ACKNOWLEDGEMENT_UNKNOWN
+CANCELLED
+PARTIALLY_FILLED
+FILLED
+```
+
+Exact internal names may differ if observable semantics remain equivalent.
+
+Unknown/unmodeled provider reply questions fail closed; the service does not globally suppress provider warnings/questions.
+
+Cancellation reconciles provider state before/after the request and never claims an already-filled quantity was cancelled.
+
+## 39. No-short-opening SELL guard
+
+Before LIVE SELL, the adapter must obtain/reconcile enough provider position information to establish the requested quantity does not exceed the known long quantity under the initial contract.
+
+If position authority is unavailable/ambiguous, LIVE SELL fails closed.
+
+This is a narrow safety gate, not a portfolio/risk subsystem.
+
+## 40. Execution persistence
+
+Use the smallest separate DuckDB store needed for restart-safe idempotency/reconciliation.
+
+Persist only:
+
+```text
+requestId
+normalized-intent fingerprint
+product-owned localOrderId
+sanitized provider order/reference identifier when required
+last known lifecycle state
+bounded timestamps/diagnostic checkpoints
+```
+
+Never persist:
+
+```text
+provider account identifier
+username/password
+cookies/session tokens
+raw authenticated provider response
+local caller token
+```
+
+## 41. Deterministic synthetic provider contract
+
+A single configurable fake IBKR adapter/gateway must cover:
+
+```text
+disconnected / unauthenticated / authenticated
+empty / non-empty tradable accounts
+exact / missing / ambiguous instrument
+snapshot prerequisite
+what-if success / rejection
+BUY / SELL payload translation
+immediate submit success
+reply-required + confirm success/rejection
+provider failure before submit
+transport loss after submit
+open-order reconciliation
+cancel success/failure
+partial/full fill observation
+session timeout / keepalive
+no-short-opening SELL guard
+restart-safe requestId idempotency
+local caller auth/origin rejection
+```
+
+All fixtures are synthetic/public-safe.
