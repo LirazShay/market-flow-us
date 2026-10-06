@@ -6,7 +6,7 @@ current:
   chat: 18
   node: "8.2"
   title: "Real CPGW lifecycle and fail-closed LIVE gates"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
