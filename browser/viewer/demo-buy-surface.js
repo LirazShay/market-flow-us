@@ -1,3 +1,4 @@
+import { DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT } from "./client.js";
 import {
   DEMO_BUY_HORIZON_LABELS,
   DEMO_BUY_VIEW_STATE,
@@ -71,6 +72,17 @@ function observedDetails(horizon) {
   return parts.join("\n");
 }
 
+function currentEvidenceStatus(observation) {
+  const tenMinute = observation.horizons.find((horizon) => horizon.horizonMs === 600000);
+  return tenMinute?.observedAtMs !== null && tenMinute?.observedAtMs !== undefined
+    ? "COMPLETE_OUTCOME"
+    : "PARTIAL_OUTCOME";
+}
+
+function expectedTargetInScannerContext(observation) {
+  return observation.resultRank <= 50;
+}
+
 const STICKY_RIGHT = Object.freeze([0, 88, 280, 430]);
 
 function makeSticky(cell, index) {
@@ -91,9 +103,13 @@ export function createDemoBuySurface({ root, client } = {}) {
   let destroyed = false;
   let refreshBusy = false;
   let continuationBusy = false;
+  let aiExportBusy = false;
+  let aiExportTargetKey = null;
   const observationBusy = new Set();
   const openObservationDetails = new Set();
   const openProvenance = new Set();
+  const openInvestigations = new Set();
+  const investigations = new Map();
 
   const shell = document.createElement("section");
   shell.className = "market-flow-us-demo-buy";
@@ -137,6 +153,32 @@ export function createDemoBuySurface({ root, client } = {}) {
       const value = scroll.get(element.dataset.demoBuyScrollKey);
       if (typeof value === "number") element.scrollLeft = value;
     }
+  }
+
+  function investigationState(key) {
+    return investigations.get(key) ?? {
+      result: null,
+      error: null,
+      copyStatus: null,
+      fallback: null
+    };
+  }
+
+  function updateInvestigation(key, patch) {
+    investigations.set(key, {
+      ...investigationState(key),
+      ...patch
+    });
+  }
+
+  function findObservation(captureId, securityId) {
+    const key = demoBuyObservationKey(captureId, securityId);
+    for (const page of model.pages) {
+      for (const item of page.items) {
+        if (demoBuyObservationKey(item.capture.captureId, item.securityId) === key) return item;
+      }
+    }
+    return null;
   }
 
   function renderProvenance(captureId) {
@@ -306,6 +348,198 @@ export function createDemoBuySurface({ root, client } = {}) {
     return wrapper;
   }
 
+  function renderCopyFallback(item, state) {
+    if (!state.fallback) return null;
+    const wrapper = document.createElement("div");
+    wrapper.className = "market-flow-us-demo-buy-ai-copy-fallback";
+    wrapper.append(text(
+      document,
+      "p",
+      state.fallback.kind === "prompt"
+        ? "Automatic copy is unavailable. Copy the AI prompt manually:"
+        : "Automatic copy is unavailable. Copy the folder path manually:"
+    ));
+    const textarea = document.createElement("textarea");
+    textarea.readOnly = true;
+    textarea.value = state.fallback.text;
+    textarea.rows = state.fallback.kind === "prompt" ? 8 : 2;
+    textarea.dir = "ltr";
+    textarea.dataset.aiCopyFallback = state.fallback.kind;
+    textarea.dataset.captureId = String(item.capture.captureId);
+    textarea.dataset.securityId = item.securityId;
+    textarea.setAttribute(
+      "aria-label",
+      state.fallback.kind === "prompt" ? "AI prompt manual copy" : "AI folder path manual copy"
+    );
+    wrapper.append(textarea);
+    return wrapper;
+  }
+
+  function renderInvestigationPanel(item) {
+    const key = demoBuyObservationKey(item.capture.captureId, item.securityId);
+    const state = investigationState(key);
+    const panel = document.createElement("section");
+    panel.className = "market-flow-us-demo-buy-ai-investigation";
+    panel.setAttribute(
+      "aria-label",
+      `AI Investigation capture ${item.capture.captureId} security ${item.securityId}`
+    );
+
+    const progress = demoBuyHorizonProgress(item);
+    const generated = state.result?.status === DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.CREATED
+      ? state.result
+      : null;
+    const targetInContext = generated?.targetInScannerContext
+      ?? expectedTargetInScannerContext(item);
+    const evidenceStatus = generated?.outcomeEvidenceStatus ?? currentEvidenceStatus(item);
+
+    panel.append(text(
+      document,
+      "p",
+      `Capture #${item.capture.captureId} · securityId ${item.securityId} · Scanner returned position ${item.resultRank}`
+    ));
+
+    const summary = document.createElement("dl");
+    summary.className = "market-flow-us-demo-buy-ai-fields";
+    summary.append(
+      field(document, "Target in retained Scanner context", targetInContext ? "Yes" : "No"),
+      field(document, "Outcome evidence", evidenceStatus),
+      field(document, "Horizon progress", `${progress.observed} / ${progress.total}`)
+    );
+    panel.append(summary);
+
+    if (!targetInContext) {
+      panel.append(text(
+        document,
+        "p",
+        "This returned position is outside the retained Top-50 Scanner context. Exact target-row / peer-order reconstruction is limited, but SQL, target history and outcome investigation remain available."
+      ));
+    }
+
+    const warning = text(
+      document,
+      "p",
+      "Before sharing: the pack contains your exact Scanner SQL and market evidence. Do not place secrets in Scanner SQL; review generated files before uploading them externally. Market Flow US does not call or upload to an AI provider automatically.",
+      "market-flow-us-demo-buy-warning"
+    );
+    panel.append(warning);
+
+    const refreshBeforeGenerate = document.createElement("button");
+    refreshBeforeGenerate.type = "button";
+    refreshBeforeGenerate.textContent = observationBusy.has(key)
+      ? "Refreshing observation…"
+      : "Refresh observation";
+    refreshBeforeGenerate.disabled = observationBusy.has(key) || aiExportBusy;
+    refreshBeforeGenerate.addEventListener("click", () => {
+      void refreshObservation(item.capture.captureId, item.securityId);
+    });
+    panel.append(refreshBeforeGenerate);
+
+    if (typeof client.createDemoBuyAiPack !== "function") {
+      const unavailable = text(document, "p", "AI Investigation pack generation is unavailable in this Viewer build.");
+      unavailable.setAttribute("role", "alert");
+      panel.append(unavailable);
+      return panel;
+    }
+
+    const generate = document.createElement("button");
+    generate.type = "button";
+    generate.textContent = aiExportBusy
+      ? (aiExportTargetKey === key ? "Generating AI Investigation Pack…" : "Another AI export is in progress")
+      : generated
+        ? "Regenerate"
+        : "Generate AI Investigation Pack";
+    generate.disabled = aiExportBusy;
+    generate.addEventListener("click", () => {
+      void generateInvestigationPack(item.capture.captureId, item.securityId);
+    });
+    panel.append(generate);
+
+    if (state.error) {
+      const alert = text(document, "p", `AI Investigation export error: ${state.error}`);
+      alert.setAttribute("role", "alert");
+      panel.append(alert);
+    }
+
+    if (state.result?.status === DEMO_BUY_AI_PACK_ACKNOWLEDGEMENT.UNKNOWN) {
+      const unknown = text(
+        document,
+        "p",
+        "The pack may already have been generated locally. Relaunch the Viewer after the service is available; it is safe to generate again because AI export does not mutate Demo Buy database authority."
+      );
+      unknown.setAttribute("role", "status");
+      panel.append(unknown);
+    }
+
+    if (generated) {
+      const resultFields = document.createElement("dl");
+      resultFields.className = "market-flow-us-demo-buy-ai-fields";
+      resultFields.append(
+        field(document, "Pack status", generated.outcomeEvidenceStatus),
+        field(document, "Target in Scanner context", generated.targetInScannerContext ? "Yes" : "No"),
+        field(document, "Relative folder", generated.exportPathRelative),
+        field(document, "Pack files", String(generated.fileCount))
+      );
+      panel.append(resultFields);
+
+      if (generated.outcomeEvidenceStatus === "PARTIAL_OUTCOME") {
+        panel.append(text(
+          document,
+          "p",
+          "Later committed evidence is still incomplete. Regenerate later to update outcome-dependent files; immutable query/context/baseline authority remains the same."
+        ));
+      } else {
+        panel.append(text(
+          document,
+          "p",
+          "Database authority has progressed through the full ten-minute evidence boundary. Individual horizons may still be unavailable for explicit data reasons; this does not prove execution or profitability."
+        ));
+      }
+
+      const actions = document.createElement("div");
+      actions.className = "market-flow-us-demo-buy-ai-actions";
+
+      const copyPrompt = document.createElement("button");
+      copyPrompt.type = "button";
+      copyPrompt.textContent = "Copy AI Prompt";
+      copyPrompt.addEventListener("click", () => {
+        void copyInvestigationText(item, "prompt", generated.promptText);
+      });
+
+      const copyPath = document.createElement("button");
+      copyPath.type = "button";
+      copyPath.textContent = "Copy folder path";
+      copyPath.addEventListener("click", () => {
+        void copyInvestigationText(item, "path", generated.exportPathRelative);
+      });
+
+      actions.append(copyPrompt, copyPath);
+      panel.append(actions);
+
+      const instructions = document.createElement("ol");
+      for (const instruction of [
+        "Copy the AI prompt.",
+        "Open the shown folder under your Market Flow US project folder.",
+        "Attach/upload the files from that folder to the AI you choose.",
+        "Paste/send the prompt with those files."
+      ]) {
+        instructions.append(text(document, "li", instruction));
+      }
+      panel.append(instructions);
+    }
+
+    if (state.copyStatus) {
+      const status = text(document, "p", state.copyStatus);
+      status.setAttribute("role", "status");
+      panel.append(status);
+    }
+
+    const fallback = renderCopyFallback(item, state);
+    if (fallback) panel.append(fallback);
+
+    return panel;
+  }
+
   function renderGroup(group, pageIndex, groupIndex) {
     const section = document.createElement("section");
     section.className = "market-flow-us-demo-buy-capture";
@@ -400,6 +634,16 @@ export function createDemoBuySurface({ root, client } = {}) {
       const summary = text(document, "summary", "Observation details");
       details.append(summary, renderObservationDetails(item));
       action.append(details);
+
+      const investigation = document.createElement("details");
+      investigation.open = openInvestigations.has(key);
+      investigation.addEventListener("toggle", () => {
+        if (investigation.open) openInvestigations.add(key);
+        else openInvestigations.delete(key);
+      });
+      const investigationSummary = text(document, "summary", "Investigate with AI");
+      investigation.append(investigationSummary, renderInvestigationPanel(item));
+      action.append(investigation);
       tr.append(action);
 
       tbody.append(tr);
@@ -416,7 +660,11 @@ export function createDemoBuySurface({ root, client } = {}) {
     const horizontalScroll = captureHorizontalScroll();
     refreshButton.disabled = refreshBusy;
     refreshButton.textContent = refreshBusy ? "Refreshing latest…" : "Refresh latest";
-    globalStatus.textContent = continuationBusy ? "Loading more…" : "";
+    globalStatus.textContent = continuationBusy
+      ? "Loading more…"
+      : aiExportBusy
+        ? "Generating AI Investigation Pack…"
+        : "";
 
     if (model.state === DEMO_BUY_VIEW_STATE.LOADING && model.pages.length === 0) {
       const loading = text(document, "p", "Loading Demo Buy observations…");
@@ -494,16 +742,18 @@ export function createDemoBuySurface({ root, client } = {}) {
   }
 
   async function refreshLatest() {
-    if (destroyed || refreshBusy) return;
+    if (destroyed || refreshBusy) return false;
     refreshBusy = true;
     render();
     try {
       const page = await client.getDemoBuyPage(null);
-      if (destroyed) return;
+      if (destroyed) return false;
       model = applyDemoBuyFirstPage(model, page);
+      return true;
     } catch (error) {
-      if (destroyed) return;
+      if (destroyed) return false;
       model = applyDemoBuyFirstPageError(model, error);
+      return false;
     } finally {
       refreshBusy = false;
       render();
@@ -511,19 +761,21 @@ export function createDemoBuySurface({ root, client } = {}) {
   }
 
   async function loadMorePage() {
-    if (destroyed || continuationBusy) return;
+    if (destroyed || continuationBusy) return false;
     const cursor = currentDemoBuyContinuation(model);
-    if (cursor === null) return;
+    if (cursor === null) return false;
 
     continuationBusy = true;
     render();
     try {
       const page = await client.getDemoBuyPage(cursor);
-      if (destroyed) return;
+      if (destroyed) return false;
       model = applyDemoBuyContinuation(model, page);
+      return true;
     } catch (error) {
-      if (destroyed) return;
+      if (destroyed) return false;
       model = applyDemoBuyContinuationError(model, error);
+      return false;
     } finally {
       continuationBusy = false;
       render();
@@ -531,22 +783,81 @@ export function createDemoBuySurface({ root, client } = {}) {
   }
 
   async function refreshObservation(captureId, securityId) {
-    if (destroyed) return;
+    if (destroyed) return false;
     const key = demoBuyObservationKey(captureId, securityId);
-    if (observationBusy.has(key)) return;
+    if (observationBusy.has(key)) return false;
 
     observationBusy.add(key);
     render();
     try {
       const observation = await client.getDemoBuyObservation(captureId, securityId);
-      if (destroyed) return;
+      if (destroyed) return false;
       model = replaceDemoBuyObservation(model, observation);
+      return true;
     } catch (error) {
-      if (destroyed) return;
+      if (destroyed) return false;
       model = applyDemoBuyObservationError(model, captureId, securityId, error);
+      return false;
     } finally {
       observationBusy.delete(key);
       render();
+    }
+  }
+
+  async function generateInvestigationPack(captureId, securityId) {
+    if (destroyed || aiExportBusy || typeof client.createDemoBuyAiPack !== "function") return;
+    const key = demoBuyObservationKey(captureId, securityId);
+    aiExportBusy = true;
+    aiExportTargetKey = key;
+    updateInvestigation(key, { error: null, copyStatus: null, fallback: null });
+    render();
+
+    try {
+      await refreshObservation(captureId, securityId);
+      if (destroyed) return;
+      const result = await client.createDemoBuyAiPack(captureId, securityId);
+      if (destroyed) return;
+      updateInvestigation(key, { result, error: null, copyStatus: null, fallback: null });
+    } catch (error) {
+      if (destroyed) return;
+      updateInvestigation(key, {
+        error: error instanceof Error ? error.message : "AI Investigation pack generation failed.",
+        copyStatus: null,
+        fallback: null
+      });
+    } finally {
+      aiExportBusy = false;
+      aiExportTargetKey = null;
+      render();
+    }
+  }
+
+  async function copyInvestigationText(item, kind, value) {
+    const key = demoBuyObservationKey(item.capture.captureId, item.securityId);
+    if (typeof value !== "string" || value.length === 0) return;
+    try {
+      const clipboard = document.defaultView?.navigator?.clipboard;
+      if (typeof clipboard?.writeText !== "function") throw new Error("Clipboard unavailable");
+      await clipboard.writeText(value);
+      updateInvestigation(key, {
+        copyStatus: kind === "prompt" ? "AI prompt copied." : "Folder path copied.",
+        fallback: null
+      });
+      render();
+    } catch {
+      updateInvestigation(key, {
+        copyStatus: "Automatic copy is unavailable; use the selectable text below.",
+        fallback: { kind, text: value }
+      });
+      render();
+      const textarea = [...(content.querySelectorAll?.("textarea[data-ai-copy-fallback]") ?? [])]
+        .find((candidate) => (
+          candidate.dataset.captureId === String(item.capture.captureId)
+          && candidate.dataset.securityId === item.securityId
+          && candidate.dataset.aiCopyFallback === kind
+        ));
+      textarea?.focus?.();
+      textarea?.select?.();
     }
   }
 
@@ -560,6 +871,8 @@ export function createDemoBuySurface({ root, client } = {}) {
     destroyed = true;
     openObservationDetails.clear();
     openProvenance.clear();
+    openInvestigations.clear();
+    investigations.clear();
     observationBusy.clear();
   }
 
@@ -572,6 +885,11 @@ export function createDemoBuySurface({ root, client } = {}) {
     loadMore: loadMorePage,
     refreshObservation,
     destroy,
-    getState: () => model
+    getState: () => model,
+    getAiState: () => Object.freeze({
+      busy: aiExportBusy,
+      targetKey: aiExportTargetKey,
+      investigations: investigations.size
+    })
   });
 }
