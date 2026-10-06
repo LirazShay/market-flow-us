@@ -54,10 +54,11 @@ function observation({
   securityId,
   symbol,
   price = 100,
+  captureOverrides = {},
   horizons = HORIZONS.map((value) => horizon(value))
 }) {
   return {
-    capture: capture(captureId),
+    capture: capture(captureId, captureOverrides),
     resultRank,
     securityId,
     buyCycleId: 77,
@@ -118,11 +119,23 @@ const MIXED = observation({
   })
 });
 
-const OLD = observation({
+const OLD_HEAD = observation({
   captureId: 9,
   resultRank: 1,
+  securityId: "9000",
+  symbol: "OLDHEAD",
+  captureOverrides: { capturedItemCount: 2 },
+  horizons: HORIZONS.map((value, index) => index < 1
+    ? horizon(value)
+    : horizon(value, { observed: false }))
+});
+
+const OLD = observation({
+  captureId: 9,
+  resultRank: 2,
   securityId: "9001",
   symbol: "OLD",
+  captureOverrides: { capturedItemCount: 2 },
   horizons: HORIZONS.map((value, index) => index < 2
     ? horizon(value)
     : horizon(value, { observed: false }))
@@ -130,9 +143,10 @@ const OLD = observation({
 
 const OLD_REFRESHED = observation({
   captureId: 9,
-  resultRank: 1,
+  resultRank: 2,
   securityId: "9001",
   symbol: "OLD",
+  captureOverrides: { capturedItemCount: 2 },
   horizons: HORIZONS.map((value, index) => index < 7
     ? horizon(value, { outcome: "DOWN", price: 98, changePercent: -2 })
     : horizon(value, { observed: false }))
@@ -158,14 +172,14 @@ test.beforeAll(async () => {
 async function mount(page, { empty = false } = {}) {
   await page.setContent('<main id="root"></main>');
   await page.addScriptTag({ content: viewerBundle });
-  await page.evaluate(({ empty, up, down, mixed, old, oldRefreshed }) => {
+  await page.evaluate(({ empty, up, down, mixed, oldHead, old, oldRefreshed }) => {
     const calls = [];
     let latestCount = 0;
     let provenanceAttempts = 0;
 
     const pageOne = empty
       ? { items: [], hasMore: false, nextCursor: null }
-      : { items: [up, down, mixed], hasMore: true, nextCursor: "cursor-old" };
+      : { items: [up, down, mixed, oldHead], hasMore: true, nextCursor: "cursor-old" };
     const pageTwo = { items: [old], hasMore: false, nextCursor: null };
     const refreshedLatest = {
       items: [{
@@ -214,6 +228,7 @@ async function mount(page, { empty = false } = {}) {
     up: UP,
     down: DOWN,
     mixed: MIXED,
+    oldHead: OLD_HEAD,
     old: OLD,
     oldRefreshed: OLD_REFRESHED
   });
@@ -254,7 +269,7 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
   await expect(page.getByText("SELECT security_id FROM latest ORDER BY security_id", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "Load more" }).click();
-  await expect(page.getByRole("heading", { name: "Capture #9" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Capture #9 · continued" })).toBeVisible();
   const oldRow = page.locator('tr[data-security-id="9001"]');
   await expect(oldRow).toContainText("2 / 10");
 
@@ -280,7 +295,8 @@ test("Demo Buy outcome surface renders grouped progressive evidence and isolates
 
 test("Demo Buy empty state gives actionable guidance without inventing outcomes", async ({ page }) => {
   await mount(page, { empty: true });
-  await expect(page.getByText(/אין עדיין תצפיות Demo Buy/)).toBeVisible();
-  await expect(page.getByText(/Scanner/)).toBeVisible();
+  const guidance = page.getByText(/אין עדיין תצפיות Demo Buy/);
+  await expect(guidance).toBeVisible();
+  await expect(guidance).toContainText("Scanner");
   await expect(page.getByRole("table")).toHaveCount(0);
 });
