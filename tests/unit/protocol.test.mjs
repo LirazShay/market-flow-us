@@ -112,11 +112,14 @@ const validCases = [
   ["scanner.queries.create", { name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
   ["scanner.queries.update", { queryId: "user:1", name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
   ["scanner.queries.delete", { queryId: "user:1" }, "viewer"],
-  ["demo.buy.capture", demoBuyPayload(), "viewer"]
+  ["demo.buy.capture", demoBuyPayload(), "viewer"],
+  ["demo.buy.page", { cursor: null }, "viewer"],
+  ["demo.buy.observation.get", { captureId: 1, securityId: "42" }, "viewer"],
+  ["demo.buy.capture.get", { captureId: 1 }, "viewer"]
 ];
 
 test("every protocol-v1 operation has an explicit valid payload boundary", () => {
-  assert.equal(REQUEST_TYPES.length, 18);
+  assert.equal(REQUEST_TYPES.length, 21);
   for (const [type, payload, role] of validCases) {
     assert.equal(validateRequest(request(type, payload), { role, helloComplete: true }).type, type);
   }
@@ -143,7 +146,12 @@ test("operation validators reject wrong or extra fields", () => {
     ["scanner.queries.create", { name: "One", sql: 1, intervalMs: 5000 }, "viewer"],
     ["scanner.queries.update", { queryId: "", name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
     ["scanner.queries.delete", { queryId: "user:1", extra: true }, "viewer"],
-    ["demo.buy.capture", invalidDemoBuy, "viewer"]
+    ["demo.buy.capture", invalidDemoBuy, "viewer"],
+    ["demo.buy.page", { cursor: 10 }, "viewer"],
+    ["demo.buy.page", { cursor: null, extra: true }, "viewer"],
+    ["demo.buy.observation.get", { captureId: 0, securityId: "42" }, "viewer"],
+    ["demo.buy.observation.get", { captureId: 1, securityId: "" }, "viewer"],
+    ["demo.buy.capture.get", { captureId: 0 }, "viewer"]
   ];
 
   for (const [type, payload, role] of badCases) {
@@ -159,6 +167,9 @@ test("role permissions are closed and exact", () => {
   assert.equal(isOperationAllowed("producer", "viewer.current.get"), false);
   assert.equal(isOperationAllowed("viewer", "scanner.execute"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.capture"), true);
+  assert.equal(isOperationAllowed("viewer", "demo.buy.page"), true);
+  assert.equal(isOperationAllowed("viewer", "demo.buy.observation.get"), true);
+  assert.equal(isOperationAllowed("viewer", "demo.buy.capture.get"), true);
   assert.equal(isOperationAllowed("viewer", "producer.cycle.commit"), false);
 
   assertCode(
