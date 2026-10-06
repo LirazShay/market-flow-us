@@ -20,7 +20,8 @@ echo Market Flow US - New Trading Day
 echo ========================================
 echo Stop Market Flow US before continuing.
 echo The current active DB will be archived under data\archive\.
-echo Saved Scanner queries will be copied into a fresh schema-v3 active DB.
+echo Saved Scanner queries will be copied into a fresh schema-v4 active DB.
+echo Demo Buy capture/item state will start clean for the new day.
 echo.
 
 call npm run db:new-day
