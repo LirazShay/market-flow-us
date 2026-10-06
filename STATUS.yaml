@@ -4,8 +4,8 @@ overall_status: in_progress
 
 current:
   chat: 25
-  node: "7.4"
-  title: "Replan pre-final acceptance sequencing"
+  node: "9.6"
+  title: "Replay hardening awaiting planning authorization"
   status: blocked
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -16,8 +16,11 @@ authority:
   ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
   ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
   ibkr_order_security_contract: "docs/IBKR_ORDER_SERVICE_SECURITY.md"
+  basic_buy_contract: "docs/BASIC_BUY_INTEGRATION.md"
   market_replay_mini_project: ".planning/MARKET_REPLAY_MINI_PROJECT.md"
   market_replay_contract: "docs/MARKET_REPLAY.md"
+  replay_hardening_contract: "docs/REPLAY_HARDENING.md"
+  replay_buy_extension_review: ".planning/REPLAY_BUY_EXTENSION_REVIEW.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
@@ -29,21 +32,22 @@ planning_completion:
   external_user_from_zero_review: pass
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: pass
+  handoff_verification: pending_validation
+  implementation_authorization: pending_planning_pr_main_gates
   ibkr_order_extension: implementation
   ibkr_order_durable_contract: pass
   ibkr_order_tree_freeze: pass
   market_replay_extension: implementation
   market_replay_durable_contract: pass
   market_replay_tree_freeze: pass
-  replay_hardening_buy_extension: planning
+  replay_hardening_buy_extension: frozen_pending_planning_gates
 
 execution:
-  chats_total: 25
-  implementation_leaves_total: 37
+  chats_total: 27
+  implementation_leaves_total: 39
   current_chat: 25
-  current_node: "7.4"
+  current_node: "9.6"
   final_acceptance_node: "7.4"
 
-blockers: []
+blockers:
+  - "Implementation remains unauthorized until the extension planning PR is reviewed/merged, main Planning Docs CI is green and open-PR state is clean."
