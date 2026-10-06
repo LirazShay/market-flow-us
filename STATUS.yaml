@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 10
-  node: "4.3.2"
-  title: "Demo Buy capture authority / protocol"
-  status: in_progress
+  chat: 11
+  node: "4.3.3"
+  title: "Demo Buy outcome evaluator / trusted reads"
+  status: pending
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -31,7 +31,7 @@ planning_completion:
 execution:
   chats_total: 17
   implementation_leaves_total: 28
-  current_chat: 10
-  current_node: "4.3.2"
+  current_chat: 11
+  current_node: "4.3.3"
 
 blockers: []
