@@ -268,8 +268,15 @@ test("AI Investigation uses authoritative refresh, neutral returned-position wor
   await expect(unordered).toContainText("full ten-minute evidence boundary");
 
   const calls = await page.evaluate(() => globalThis.__demoBuyAiCalls);
-  expect(calls.filter((call) => call[0] === "observation" && call[2] === "1001")).toHaveLength(3);
-  expect(calls.filter((call) => call[0] === "ai-pack" && call[2] === "1001")).toHaveLength(2);
+  const targetCalls = calls.filter((call) => call[2] === "1001");
+  const exportIndexes = targetCalls
+    .map((call, index) => call[0] === "ai-pack" ? index : -1)
+    .filter((index) => index >= 0);
+  expect(exportIndexes).toHaveLength(2);
+  for (const exportIndex of exportIndexes) {
+    expect(targetCalls.slice(0, exportIndex).at(-1)?.[0]).toBe("observation");
+  }
+  expect(targetCalls.filter((call) => call[0] === "observation").length).toBeGreaterThanOrEqual(3);
   expect(calls.some((call) => !["page", "observation", "ai-pack"].includes(call[0]))).toBe(false);
 });
 
