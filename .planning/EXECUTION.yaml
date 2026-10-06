@@ -94,7 +94,7 @@ chats:
 
   "21":
     nodes:
-      "9.1": { state: in_progress, result: null }
+      "9.1": { state: done, result: "Dedicated browser-only Market Replay recording authority reuses the validated ScreenerHulPaging3 candidate boundary, stores deterministic immutable frames plus bounded public-safe metadata in IndexedDB, exposes Record/Stop/library/rename/delete/quota state, fails safe on provider/storage faults, preserves original irregular timing and exact membership, and keeps the normal service/runtime replay-unaware. PR #46 head 6a38f9ff411ac89a54e6399511615cbd75b6e0cd passed Fast #411, Browser #374 including real Chromium IndexedDB reopen/delete/quota proof, Planning Docs #543 and Workload #202 before closure." }
       "9.2": { state: pending, result: null }
 
   "22":
