@@ -68,7 +68,6 @@ test("Player UI exposes source/timeline/frame/readiness and keeps Play blocked u
       pause() {},
       async stop() {}
     };
-    globalThis.__controller = controller;
     globalThis.__setReplayPlayerState = (patch) => {
       state = { ...state, ...patch };
       publish();
@@ -83,7 +82,7 @@ test("Player UI exposes source/timeline/frame/readiness and keeps Play blocked u
   await expect(host.getByText("Morning capture", { exact: true })).toBeVisible();
   await expect(host.getByText("מקור: IndexedDB", { exact: true })).toBeVisible();
   await expect(host.getByRole("button", { name: "Play" })).toBeDisabled();
-  await expect(host.getByText("0 / 4", { exact: true })).toBeVisible();
+  await expect(host.getByText("1 / 4", { exact: true })).toBeVisible();
   await expect(host.getByText("המקור מוכן. Replay Host/producer מבודד עדיין לא מוכן; Play נשאר חסום כדי לא לגעת ב־DB הרגיל.", { exact: true })).toBeVisible();
 
   await page.evaluate(() => globalThis.__setReplayPlayerState({
