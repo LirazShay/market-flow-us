@@ -1,9 +1,9 @@
 version: 2
-plan_state: frozen
+plan_state: active
 replan_mode: execution_reopen
-current_stage: "implementation"
+current_stage: "planning"
 current_node: "7.4"
 blockers: []
-next_action: "TREE 9.5 is complete. PR #53 squash-merged as exact post-branch-9 candidate 243f4f2e78e434378ff2202ba95af7b8626a0369; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on main and the open-PR audit was clean. Under the currently frozen plan Chat 25 / TREE 7.4 is next; a user-requested Replay hardening plus basic BUY integration extension will be handled only through an explicit execution_reopen replan before 7.4 begins."
+next_action: "Reopen the smallest pre-final-acceptance planning area. Preserve all completed work, block 7.4 temporarily, convert B-US-005 Replay hardening and B-US-006 basic in-product BUY into reviewed TREE leaves/contracts, repair allocation/dependencies, freeze again, and only then resume implementation."
 last_review: "R-US-MARKET-REPLAY-EXTERNAL"
-implementation_authorized: true
+implementation_authorized: false
