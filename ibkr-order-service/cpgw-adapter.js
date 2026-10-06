@@ -447,6 +447,7 @@ export class CpgwAdapter {
       path: "/iserver/auth/ssodh/init",
       body: { publish: true, compete: false }
     });
+    await this.#sleep(2_000);
     return normalizedSession(body);
   }
 
