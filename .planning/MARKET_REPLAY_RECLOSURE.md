@@ -4,7 +4,7 @@
 
 This is the durable audit/evidence record for TREE `9.5`.
 
-The reclosure verifies that completed Replay nodes `9.1` through `9.4`, the normal Market Flow US surfaces, normative contracts and final-acceptance truth form one coherent post-branch-9 candidate before TREE `7.4` resumes. It does not create another Replay subsystem and must not add Replay semantics to the normal service/shared producer protocol.
+The reclosure verifies that completed Replay nodes `9.1` through `9.4`, the normal Market Flow US surfaces, normative contracts and final-acceptance truth form one coherent post-branch-9 candidate before later execution continues. It does not create another Replay subsystem and must not add Replay semantics to the normal service/shared producer protocol.
 
 ## Entry truth
 
@@ -25,7 +25,7 @@ At entry:
 
 The focused branch is `chat24-replay-reclosure`, PR #53.
 
-## Contract audit so far
+## Contract audit
 
 Audited together:
 
@@ -40,7 +40,7 @@ docs/TEST_STRATEGY.md
 docs/FIRST_RUN_ACCEPTANCE.md
 ```
 
-The Replay data/product contracts are largely coherent with the implemented branch-9 architecture:
+The implemented architecture is reclosed as:
 
 ```text
 validated recording source
@@ -52,11 +52,11 @@ validated recording source
 → unchanged Viewer / Current / History / Scanner / Demo Buy / AI surfaces
 ```
 
-No Replay-specific shared protocol/server mode is required.
+No Replay-specific shared protocol/server mode is required or allowed.
 
-## Reclosure gaps discovered
+## Reclosure gaps discovered and repaired
 
-### 1. Missing integrated mid-start/next-day proof
+### 1. Missing integrated mid-start/next-day proof — repaired
 
 Existing proof was strong per component but did not connect one deterministic scenario through the real ProducerBridge/service authority into Current, History, staged Scanner and Demo Buy while simultaneously proving:
 
@@ -69,11 +69,11 @@ Existing proof was strong per component but did not connect one deterministic sc
 - day-B local collection/cycle timing;
 - Demo Buy future evidence only from later replay cycles.
 
-`tests/service/replay-reclosure.test.mjs` now supplies that integrated proof. Initial Fast CI on commit `3b9e231ee3b3faa857b3405959ef94d93b08fa88` passed.
+`tests/service/replay-reclosure.test.mjs` supplies that integrated proof. The proof passes through the real service/DuckDB path.
 
-### 2. Missing focused Replay acceptance command
+### 2. Missing focused Replay acceptance command — repaired
 
-`docs/TEST_STRATEGY.md` requires a dedicated/minimal Replay acceptance set without changing ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` or `START_MARKET_FLOW_US.cmd` semantics.
+`docs/TEST_STRATEGY.md` requires dedicated/minimal Replay acceptance without changing ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` or `START_MARKET_FLOW_US.cmd` semantics.
 
 `package.json` now exposes:
 
@@ -81,19 +81,77 @@ Existing proof was strong per component but did not connect one deterministic sc
 npm run test:acceptance:replay
 ```
 
-It aggregates existing Replay unit/service/browser proof plus the new reclosure integration proof. It does not add long Replay waits to ordinary acceptance.
+It aggregates existing Replay unit/service/browser proof plus the integrated reclosure proof without adding long Replay waits to ordinary acceptance.
 
-### 3. Release-truth drift after branch 9
+### 3. Release-truth drift after branch 9 — repaired
 
-The first-run/final-acceptance documents still carry branch-8-era truth, including Chat 21 ownership and the old post-branch-8 candidate. Final acceptance must instead be owned by Chat 25 / TREE `7.4` and must consume the exact post-branch-9 candidate pinned only after TREE `9.5` merges and main is green.
+The first-run/final-acceptance documents carried branch-8-era truth including Chat 21 ownership and the old post-branch-8 candidate.
 
-This drift is a TREE `9.5` release-truth repair and remains pending in the next reclosure segment; it must be fixed before `9.5` can be marked done.
+They now require:
 
-### 4. Technical-spec opening drift
+```text
+TREE 9.5 closed
+→ exact post-branch-9 candidate from EXECUTOR_HANDOFF
+→ target-machine final acceptance only on that exact candidate
+```
 
-Later `TECHNICAL_SPEC` Replay sections are coherent, but its opening architecture wording still describes only the branch-8 execution extension. The smallest contract repair is to make the top-level architecture acknowledge the already-approved isolated Replay lane without changing the later mechanics.
+The historical branch-8 candidate is explicitly ineligible for final post-Replay acceptance. Replay deterministic acceptance/build and replay-owned DB isolation are explicit first-run requirements.
 
-This repair remains pending in the next reclosure segment.
+### 4. Technical-spec opening drift — repaired
+
+`docs/TECHNICAL_SPEC.md` now includes the isolated Replay lane in the top-level architecture and explicitly preserves these boundaries:
+
+- unchanged Market Flow US service is the only replay-run market DB writer;
+- shared producer protocol remains replay-unaware;
+- Replay Host orchestrates only its own service child and replay-owned DB;
+- normal live DB is never owned/reset/deleted by Replay;
+- ordinary runtime/acceptance commands retain normal semantics;
+- final candidate is post-branch-9 and must include dedicated Replay proof.
+
+### 5. Release drift guard still pinned Branch-8 truth — repaired
+
+Fast CI exposed that `tests/unit/release-runtime-audit.test.mjs` still asserted Chat 21 and the old hard-coded branch-8 candidate. That guard was corrected to protect the new truth instead:
+
+- Chat 25 / post-branch-9 handoff model;
+- no hard-coded historical branch-8 candidate in the runbook;
+- dedicated Replay acceptance/build;
+- Replay-owned DB isolation.
+
+A follow-up assertion wording mismatch (`Replay-owned DBs` versus canonical `Replay-owned DuckDBs`) was also corrected without changing product behavior.
+
+## CI evidence so far
+
+On branch head `77e1327ad34e8c9150bcfb0555ccd7c076e77a6d`, after the release-guard root-cause repairs:
+
+```text
+Fast CI       #465  PASS
+Browser CI    #423  PASS
+Planning Docs #597  PASS
+Workload      #251  PASS
+```
+
+The following documentation-only Technical Spec reclosure commit is:
+
+```text
+e5792f86d330533506739967fcf3ea371b8909e7
+```
+
+Planning Docs #598 and Workload #252 are green on that head; Fast/Browser are rerunning before closure.
+
+The service lane has repeatedly remained green, including the new integrated Replay reclosure test. The failures encountered during Chat 24 were deterministic release-drift assertions, not Replay runtime/service defects, and were fixed at their root source.
+
+## Additional future work recorded without changing current allocation
+
+Per user direction, `.planning/BACKLOG.md` now records two future mini-projects that do **not** authorize work inside TREE `9.5`:
+
+```text
+B-US-005 Replay pre-user-run hardening audit
+B-US-006 Basic in-product BUY via existing order API
+```
+
+`B-US-005` is intended immediately after Replay reclosure and requires a second static + unit + service + browser/composition + broad-gate audit of the complete Replay feature before relying on the user's own run.
+
+`B-US-006` is intentionally a small MVP: one explicit user BUY action through the existing authenticated `ibkr-order-service`, driven by simple configuration, with deeper order-product behavior deferred for later planning.
 
 ## Execution state
 
@@ -102,16 +160,14 @@ During Chat 24 start-up, root `STATUS.yaml`, `.planning/STATUS.yaml` and `.plann
 ## Remaining TREE 9.5 work
 
 ```text
-repair first-run/final-acceptance ownership + candidate truth
-repair TECHNICAL_SPEC top-level architecture drift
-run npm run test:acceptance:replay
-run materially affected Browser / Planning / bounded Workload / ordinary Local Fake gates
-review PR diff
+wait for Fast/Browser on current head to be green
+review complete PR diff for unintended drift
+update this evidence record with final head/gates
 mark 9.5 done only with success_evidence satisfied
-squash-merge PR #53
-require main green + clean open-PR audit
-pin exact post-branch-9 candidate in STATUS / EXECUTION / handoff / first-run truth
-hand off Chat 25 / TREE 7.4
+make PR #53 ready and squash-merge
+require main CI green + clean open-PR audit
+pin exact accepted post-branch-9 product candidate in STATUS / EXECUTION / handoff truth
+advance to the next authorized truth without skipping the separate Replay hardening backlog requirement
 ```
 
-No final candidate is pinned yet. The entry SHA and intermediate PR SHAs are evidence only until all closure gates pass.
+No final accepted product candidate is pinned yet. Entry/intermediate PR SHAs are evidence only until the reclosure is merged and the required post-merge truth is green.
