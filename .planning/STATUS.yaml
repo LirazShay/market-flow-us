@@ -1,8 +1,8 @@
 version: 2
 plan_state: frozen
 current_stage: "implementation"
-current_node: "4.3.3"
+current_node: "4.4.1"
 blockers: []
-next_action: "Chat 11 / TREE 4.3.3 is in progress. Follow AGENTS.md → TREE → contracts → success_evidence; implement and prove the authoritative Demo Buy outcome evaluator/trusted reads without advancing to 4.4.1."
+next_action: "Chat 12 / TREE 4.4.1 is next after Chat 11 / 4.3.3 merges and main CI is green. Follow AGENTS.md → TREE → contracts → success_evidence; implement Scanner Demo Buy capture/Auto/Stop UX without advancing to 4.4.2."
 last_review: "R-US-DEMO-BUY-EXTERNAL"
 implementation_authorized: true
