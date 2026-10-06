@@ -5,7 +5,7 @@ overall_status: in_progress
 current:
   chat: 17
   node: "8"
-  title: "Standalone IBKR order-service mini-project planning"
+  title: "Standalone IBKR order-service planning"
   status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -14,6 +14,7 @@ authority:
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
   ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
+  ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
 
 planning_completion:
   file_audit_and_change_summary: pass
@@ -28,6 +29,8 @@ planning_completion:
   handoff_verification: pass
   implementation_authorization: paused_for_ibkr_extension
   ibkr_order_extension: in_progress
+  ibkr_order_durable_contract: pass
+  ibkr_order_tree_freeze: pending
 
 execution:
   chats_total: 17
