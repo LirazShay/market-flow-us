@@ -6,7 +6,7 @@ current:
   chat: 13
   node: "4.4.2"
   title: "Demo Buy outcome screen / progressive outcomes UX"
-  status: pending
+  status: in_progress
 
 authority:
   product_truth: "LirazShay/market-flow-us main"
