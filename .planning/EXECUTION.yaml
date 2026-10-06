@@ -20,7 +20,7 @@ chats:
 
   "4":
     nodes:
-      "4.1": { state: done, result: "Explicit pre-cutover Market Flow US Scanner built-ins cover bounded all-current-fields, practical U.S. ranking and staged-candidate SQL over schema v3; real DuckDB/Scanner and guide drift proof validate contiguous stage credit, missing-history stop, target lookup and deterministic tie-breaks while normal legacy composition remains unchanged until 5.2." }
+      "4.1": { state: done, result: "Explicit pre-cutover Market Flow US Scanner built-ins cover bounded all-current-fields, practical U.S. ranking and staged-candidate SQL over schema v3; real DuckDB/Scanner and guide drift proof validate contiguous stage credit, missing-history stop, target lookup and deterministic tie-breakers while normal legacy composition remains unchanged until 5.2." }
       "4.2": { state: done, result: "Existing Scanner scheduler/query-library/UI behavior remains intact with the U.S. target profile: Unit proves Draft/Persisted/Active isolation through copy/save/rename/delete, schema-v3 service tests keep admission/execution green, and Chromium proves staged built-in Draft-only load plus securityId navigation into US_DETAIL_PROFILE; required Fast/Browser/Planning CI are green." }
 
   "5":
@@ -66,7 +66,7 @@ chats:
 
   "14":
     nodes:
-      "4.5.1": { state: pending, result: null }
+      "4.5.1": { state: in_progress, result: null }
 
   "15":
     nodes:
