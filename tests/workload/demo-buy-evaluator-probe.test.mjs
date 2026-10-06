@@ -6,8 +6,13 @@ import { performance } from "node:perf_hooks";
 import test from "node:test";
 
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
+import {
+  AI_PACK_PROMPT_MAX_BYTES,
+  createDemoBuyAiPackExporter
+} from "../../local-service/exports/demo-buy-ai-pack.js";
 import { createDemoBuyReads } from "../../local-service/reads/demo-buy-reads.js";
 import { createScannerAuthority } from "../../local-service/scanner/scanner.js";
+import { shapeDemoBuyScannerContext } from "../../shared/demo-buy/context.js";
 import {
   GENERAL_SCANNER_QUERIES,
   distribution,
@@ -27,6 +32,17 @@ const CAPTURE_ITEM_COUNT = 50;
 const CAPTURED_AT_MS = EPOCH_MS + (CAPTURE_CYCLE_ID * CADENCE_MS);
 
 async function seedAuthority(connection) {
+  const scannerContext = shapeDemoBuyScannerContext({
+    columns: [
+      { name: "security_id", type: "VARCHAR" },
+      { name: "score", type: "DOUBLE" }
+    ],
+    rows: Array.from({ length: SECURITY_COUNT }, (_, securityIndex) => [
+      String(1000000 + securityIndex),
+      SECURITY_COUNT - securityIndex
+    ])
+  });
+
   await connection.run(`
     INSERT INTO cycles (
       cycle_id,
@@ -91,8 +107,8 @@ async function seedAuthority(connection) {
     WHERE cycle_id = ${CYCLE_COUNT}
   `);
 
-  await connection.run(`
-    INSERT INTO demo_buy_captures (
+  await connection.run(
+    `INSERT INTO demo_buy_captures (
       capture_id,
       captured_at_ms,
       source_query_id,
@@ -111,17 +127,18 @@ async function seedAuthority(connection) {
       ${CAPTURED_AT_MS},
       'workload:demo-buy',
       'Bounded Demo Buy workload',
-      'SELECT security_id FROM latest ORDER BY security_id',
+      'SELECT security_id, score FROM latest ORDER BY score DESC, security_id',
       ${CADENCE_MS},
       ${CAPTURED_AT_MS - 200},
       ${CAPTURED_AT_MS - 100},
       ${SECURITY_COUNT},
-      CAST('{"version":1,"fixture":"bounded-workload"}' AS JSON),
+      $sourceResultContextJson,
       'all',
       false,
       NULL
-    )
-  `);
+    )`,
+    { sourceResultContextJson: JSON.stringify(scannerContext) }
+  );
 
   await connection.run(`
     INSERT INTO demo_buy_items (
@@ -139,9 +156,10 @@ async function seedAuthority(connection) {
   `);
 }
 
-test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-compatible", { timeout: 120000 }, async () => {
+test("bounded active-day Demo Buy evaluator and AI export timing stay set-wise and Scanner-compatible", { timeout: 120000 }, async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-demo-buy-workload-"));
   const dbPath = path.join(tempDir, "demo-buy-workload.duckdb");
+  const exportRoot = path.join(tempDir, "exports", "ai-investigations");
   const database = await openMarketFlowUsDatabase({
     dbPath,
     productVersion: "market-flow-us-demo-buy-workload"
@@ -157,11 +175,14 @@ test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-co
       historyRows: SECURITY_COUNT * CYCLE_COUNT,
       captureItems: CAPTURE_ITEM_COUNT,
       horizonTargetsPerPage: CAPTURE_ITEM_COUNT * 10,
+      aiPackTargetBeforeRows: CAPTURE_CYCLE_ID,
+      aiPackTargetAfterRows: 200,
       logicalMinutes: roundMs((CYCLE_COUNT * CADENCE_MS) / 60000)
     },
     seedMs: null,
     pageLatencyMs: null,
     observationLatencyMs: null,
+    aiPackExportLatencyMs: null,
     scannerCoexistenceMs: null,
     wallClockMs: null,
     error: null
@@ -179,6 +200,12 @@ test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-co
     });
     const scanner = await createScannerAuthority({
       connection: database.scannerConnection
+    });
+    const exporter = createDemoBuyAiPackExporter({
+      connection: database.viewerReadConnection,
+      demoBuyReads: reads,
+      exportRoot,
+      productVersion: "market-flow-us-demo-buy-workload"
     });
 
     const warmPage = await reads.page(null);
@@ -208,6 +235,21 @@ test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-co
     }
     report.observationLatencyMs = distribution(observationSamples);
 
+    const warmPack = await exporter.create(1, "1000000");
+    assert.equal(warmPack.outcomeEvidenceStatus, "COMPLETE_OUTCOME");
+    assert.equal(warmPack.targetInScannerContext, true);
+    assert.equal(warmPack.recordCounts.targetBefore, CAPTURE_CYCLE_ID);
+    assert.equal(warmPack.recordCounts.targetAfter, 200);
+    assert.ok(Buffer.byteLength(warmPack.promptText, "utf8") <= AI_PACK_PROMPT_MAX_BYTES);
+
+    const exportSamples = [];
+    for (let index = 0; index < 3; index += 1) {
+      const pack = await measure(exportSamples, () => exporter.create(1, "1000000"));
+      assert.equal(pack.fileCount, 10);
+      assert.equal(pack.outcomeEvidenceStatus, "COMPLETE_OUTCOME");
+    }
+    report.aiPackExportLatencyMs = distribution(exportSamples);
+
     const scannerSamples = [];
     const scannerResult = await measure(scannerSamples, () =>
       scanner.execute(GENERAL_SCANNER_QUERIES.windowRank));
@@ -218,10 +260,14 @@ test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-co
     assert.equal(afterScanner.items.length, CAPTURE_ITEM_COUNT);
     assert.equal(afterScanner.items[0].capture.captureId, 1);
 
-    for (const metric of [report.pageLatencyMs, report.observationLatencyMs]) {
-      assert.equal(metric.samples, 5);
+    for (const metric of [
+      report.pageLatencyMs,
+      report.observationLatencyMs,
+      report.aiPackExportLatencyMs
+    ]) {
+      assert.ok(metric.samples >= 3);
       assert.ok(Number.isFinite(metric.maxMs));
-      assert.ok(metric.maxMs < 10000, "bounded Demo Buy read exceeded catastrophic hosted-CI guard");
+      assert.ok(metric.maxMs < 10000, "bounded Demo Buy/AI operation exceeded catastrophic hosted-CI guard");
     }
 
     report.result = "pass";
@@ -230,7 +276,7 @@ test("bounded active-day Demo Buy evaluator timing stays set-wise and Scanner-co
     report.result = "fail";
     report.error = {
       name: error instanceof Error ? error.name : "Error",
-      message: "Bounded Demo Buy workload failed."
+      message: "Bounded Demo Buy/AI workload failed."
     };
   } finally {
     report.wallClockMs = roundMs(performance.now() - started);

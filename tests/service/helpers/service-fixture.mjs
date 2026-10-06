@@ -94,11 +94,13 @@ export async function createServiceFixture({
   origin = DEFAULT_TEST_ORIGIN,
   config = {},
   persistenceFault = createPersistenceFaultInjector(),
+  aiPackFault = createPersistenceFaultInjector(),
   now = () => Date.now(),
   openDatabase = undefined
 } = {}) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-service-"));
   const dbPath = path.join(tempDir, "fixture.duckdb");
+  const aiPackExportRoot = path.join(tempDir, "exports", "ai-investigations");
   const clients = new Set();
 
   let service;
@@ -117,6 +119,8 @@ export async function createServiceFixture({
       },
       serviceVersion: "test-version",
       persistenceFault,
+      aiPackExportRoot,
+      aiPackFault,
       now,
       openDatabase
     });
@@ -130,11 +134,13 @@ export async function createServiceFixture({
   return {
     tempDir,
     dbPath,
+    aiPackExportRoot,
     port: service.port,
     url,
     origin,
     service,
     persistenceFault,
+    aiPackFault,
     async connect(role, clientInstanceId = `${role}-fixture`) {
       const client = await openClient({ url, origin, role, clientInstanceId });
       clients.add(client);
