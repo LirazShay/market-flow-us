@@ -9,7 +9,7 @@ chats:
   "2":
     nodes:
       "2.1": { state: done, result: "Fresh Market Flow US DBs bootstrap as hardened schema v3 under the new market-flow-us.duckdb seam with exact U.S. authority columns and saved queries; reopen/recovery is preserved and v1/v2 DBs fail closed with DB_SCHEMA_UNSUPPORTED without mutation." }
-      "2.2": { state: done, result: "U.S. complete-cycle persistence keeps exact typed projection plus raw source fidelity, exact current membership, append-only history/full latest replacement and serialized session/cycle authority; real DuckDB tests prove repeated commits and F1-F5 rollback preservation." }
+      "2.2": { state: done, result: "U.S. complete-cycle persistence keeps exact typed projection plus raw source fidelity, exact current membership, append-only history/full latest replacement and serialized session/cycle authority; real-DuckDB tests prove repeated commits and F1-F5 rollback preservation." }
       "2.3": { state: done, result: "The U.S. Recorder drives the real ProducerBridge/WebSocket/service/DuckDB path with cadence-only producer config and protocol-safe universe metadata; real-service proof covers first ACK+commit, revisions 1/1/2, failure recording, heartbeat and restart recovery while pre-cutover normal composition remains Browser-CI green." }
 
   "3":
@@ -50,7 +50,7 @@ chats:
   "10":
     nodes:
       "4.3.1": { state: done, result: "Schema v4 adds only Demo Buy capture/item persistence, migrates valid v3 transactionally with rollback/fail-closed partial-structure proof, preserves active-day Demo Buy state across restart, accepts v3/v4 New Trading Day sources while archiving the source unchanged and installing clean v4, adds deterministic bounded Scanner-context provenance shaping with explicit 256 KiB failure, and keeps existing U.S. read/Scanner/workload behavior green. PR #19 candidate 71cfa6dc20aaf1767739385adbcb026a700d6f81 passed Planning, Fast, Browser and both bounded Workload jobs after root-cause regression fixes." }
-      "4.3.2": { state: pending, result: null }
+      "4.3.2": { state: in_progress, result: null }
 
   "11":
     nodes:
