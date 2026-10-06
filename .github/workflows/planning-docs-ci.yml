@@ -43,7 +43,7 @@ jobs:
           required=(
             AGENTS.md README.md STATUS.yaml
             .planning/README.md .planning/FRAMEWORK.md .planning/GOAL.md .planning/TREE.yaml
-            .planning/DECISIONS.md .planning/REVIEWS.md .planning/STATUS.yaml
+            .planning/DECISIONS.md .planning/REVIEWS.md .planning/IBKR_ORDER_REVIEWS.md .planning/STATUS.yaml
             .planning/EXECUTION.yaml .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
             .planning/IBKR_ORDER_MINI_PROJECT.md
             docs/US_MIGRATION_AUDIT.md docs/US_MIGRATION_FILE_MAP.md docs/US_CONTRACT_REVIEW.md
@@ -151,8 +151,10 @@ jobs:
           require_text 'no short opening' docs/PRODUCT_REQUIREMENTS.md
           require_text '32 implementation leaves allocated exactly once' docs/TEST_STRATEGY.md
           require_text '8.1 / 8.2 / 8.3 / 8.4 done' docs/TEST_STRATEGY.md
-          require_text 'R-US-IBKR-ORDER-FINAL' .planning/REVIEWS.md
-          require_text 'R-US-IBKR-ORDER-EXTERNAL' .planning/REVIEWS.md
+          require_text 'R-US-DEMO-BUY-FINAL' .planning/REVIEWS.md
+          require_text 'R-US-DEMO-BUY-EXTERNAL' .planning/REVIEWS.md
+          require_text 'R-US-IBKR-ORDER-FINAL' .planning/IBKR_ORDER_REVIEWS.md
+          require_text 'R-US-IBKR-ORDER-EXTERNAL' .planning/IBKR_ORDER_REVIEWS.md
 
           require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
           require_text '4096' docs/TEST_STRATEGY.md
@@ -250,13 +252,12 @@ jobs:
               throw new Error('Frozen TREE must contain only approved nodes');
             }
             const reviews = fs.readFileSync('.planning/REVIEWS.md', 'utf8');
-            for (const marker of [
-              'R-US-DEMO-BUY-FINAL',
-              'R-US-DEMO-BUY-EXTERNAL',
-              'R-US-IBKR-ORDER-FINAL',
-              'R-US-IBKR-ORDER-EXTERNAL'
-            ]) {
-              if (!reviews.includes(marker)) throw new Error(`Frozen plan requires review ${marker}`);
+            const ibkrReviews = fs.readFileSync('.planning/IBKR_ORDER_REVIEWS.md', 'utf8');
+            for (const marker of ['R-US-DEMO-BUY-FINAL', 'R-US-DEMO-BUY-EXTERNAL']) {
+              if (!reviews.includes(marker)) throw new Error(`Frozen plan requires historical review ${marker}`);
+            }
+            for (const marker of ['R-US-IBKR-ORDER-FINAL', 'R-US-IBKR-ORDER-EXTERNAL']) {
+              if (!ibkrReviews.includes(marker)) throw new Error(`Frozen plan requires branch-8 review ${marker}`);
             }
           }
 
