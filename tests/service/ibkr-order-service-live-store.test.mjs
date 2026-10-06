@@ -178,8 +178,8 @@ test("duplicate LIVE identity rolls back provider-state insert and persistence e
     assert.equal(await store.getProviderState(DUPLICATE_ORDER_ID), null);
     assert.equal((await store.getByRequestId("req-live-duplicate")).localOrderId, LIVE_ORDER_ID);
 
-    assert.throws(
-      () => store.updateLiveState({
+    await assert.rejects(
+      store.updateLiveState({
         localOrderId: LIVE_ORDER_ID,
         lifecycleState: FILLED,
         filledQuantity: 2
