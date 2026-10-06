@@ -84,6 +84,7 @@ async function createLegacyV1Database(dbPath) {
     throw error;
   } finally {
     connection.closeSync();
+    instance.closeSync();
   }
 }
 
@@ -113,6 +114,7 @@ async function rawFingerprint(dbPath) {
     };
   } finally {
     connection.closeSync();
+    instance.closeSync();
   }
 }
 
