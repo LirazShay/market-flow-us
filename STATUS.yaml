@@ -6,7 +6,7 @@ current:
   chat: 19
   node: "8.3"
   title: "Order-service packaging and integration seam"
-  status: pending
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
