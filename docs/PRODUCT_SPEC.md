@@ -2,23 +2,34 @@
 
 ## 1. Runtime topology
 
-Preserve the proven local topology:
+Preserve the proven market-analysis topology and add one isolated execution sidecar:
 
 ```text
-authenticated provider page
+authenticated market provider page
 → browser producer + Viewer
 → ws://127.0.0.1:8765
-→ localhost Node.js
+→ localhost Market Flow US Node.js
 → native DuckDB
+
+separate execution sidecar
+→ authenticated local caller
+→ http://127.0.0.1:8770
+→ Node.js ibkr-order-service
+→ HTTPS localhost Client Portal Gateway
+→ Interactive Brokers
 ```
 
-Provider authentication remains browser-owned. Final post-feature schema is v4.
+Market-provider authentication remains browser-owned. IBKR CPGW authentication is separately user-owned/manual. Final market-data schema is v4.
+
+Scanner, Demo Buy, AI Investigation and Current do not call the order service automatically in branch `8`.
 
 ## 2. Product identity and market authority
 
-Canonical security identity is validated `String(PaperId)`. `Symbol` and names are metadata only.
+Canonical market-data security identity is validated `String(PaperId)`. `Symbol` and names are metadata only.
 
 Successful committed market cycles remain the only market authority. Demo Buy adds analytical observation/provenance facts; AI Investigation adds derivative local export files.
+
+The IBKR order service has separate local execution state for idempotency/reconciliation only; it does not become market-data authority and does not change schema-v4 market-day semantics.
 
 ## 3. Existing U.S. flows retained
 
@@ -34,7 +45,7 @@ The product continues to provide:
 - deterministic Fake Market/runtime/service/DuckDB proof;
 - one-day active-DB lifecycle and saved-query preservation.
 
-Schema/provider field details remain owned by `DATA_CONTRACT.md` and `TECHNICAL_SPEC.md`.
+Schema/provider field details remain owned by `DATA_CONTRACT.md` and `TECHNICAL_SPEC.md`. The standalone order lane is owned by `IBKR_ORDER_SERVICE.md` and `IBKR_ORDER_SERVICE_SECURITY.md`.
 
 ## 4. Scanner lifecycle
 
@@ -61,6 +72,8 @@ columns / rows
 ```
 
 A generation is Demo-Buy-capable only with exactly one recognized `securityId` or `security_id` column.
+
+Scanner has no direct live-order authority in this mini-project.
 
 ## 5. Demo Buy selection/capture flow
 
@@ -305,6 +318,8 @@ Valid v3 migrates transactionally to v4. Suspicious partial v3+Demo structures f
 
 No new `history` index is part of the initial contract; add one only after measured evidence and focused replan.
 
+The order service does not add order tables to this market-day schema. Its smallest durable idempotency/reconciliation store is separate from market authority.
+
 ## 14. Scanner comparison context
 
 The exact context contract is owned by `DEMO_BUY_PROTOCOL_LIMITS.md`.
@@ -353,6 +368,8 @@ The pack marks `targetInScannerContext`. A target outside retained Top-50 remain
 
 One Viewer-wide AI-export slot prevents repeated Generate/Regenerate queueing.
 
+AI Investigation cannot submit orders in branch `8`.
+
 ## 16. AI-pack publication
 
 Use a product-controlled ignored root:
@@ -381,11 +398,15 @@ New Trading Day accepts structurally valid v3 or v4 source DBs, rejects v1/v2, c
 
 Prior-day Demo Buy evidence never bridges into the new DB.
 
+Order-service execution state is not part of this rollover.
+
 ## 19. Diagnostics and privacy
 
-Diagnostics may expose bounded operational state such as current surface, Auto mode, capture/export busy flags, skip counts and last outcome categories.
+Market-analysis diagnostics may expose bounded operational state such as current surface, Auto mode, capture/export busy flags, skip counts and last outcome categories.
 
 Never include SQL text, Scanner rows, history rows, pack prompt/evidence, credentials, cookies, auth/session data or raw authenticated dumps.
+
+The order service follows the same public-safe discipline and additionally excludes provider account identifiers and local caller-token values. Order diagnostics expose only product-owned local IDs, bounded lifecycle state, stable error code/checkpoint and sanitized causal messages.
 
 ## 20. Performance discipline
 
@@ -398,10 +419,121 @@ static SQL preflight
 → optimize only on evidence
 ```
 
-Do not add background horizon materialization, a second transport/DB, a speculative history index or Strategy Engine before evidence requires it.
+Do not add background horizon materialization, another market-data transport/DB, a speculative history index or Strategy Engine before evidence requires it.
 
-## 21. Release boundary
+The isolated local order HTTP API is a deliberate new execution boundary; it is not a replacement transport for market-data/Viewer traffic.
+
+## 21. Standalone IBKR order-service topology
+
+The sidecar listens only on:
+
+```text
+127.0.0.1:8770
+```
+
+`GET /health` may be unauthenticated only when it returns no provider/account/session/order facts. Every other endpoint requires the high-entropy per-run local caller credential before body/route/provider processing. Browser `Origin` requests are rejected by default; wildcard or credentialed CORS is forbidden.
+
+Target local API:
+
+```text
+GET  /health
+GET  /session
+POST /session/init
+POST /instruments/resolve
+POST /orders/preview
+POST /orders
+POST /orders/{localOrderId}/confirm
+POST /orders/{localOrderId}/cancel
+GET  /orders
+GET  /orders/{localOrderId}
+GET  /trades
+```
+
+No endpoint accepts provider credentials or durable account IDs.
+
+## 22. Order intent and provider workflow
+
+Initial normalized order scope:
+
+```text
+instrument: U.S. STK / USD / SMART
+side:       BUY | SELL
+quantity:   positive finite
+orderType:  LMT | MKT
+tif:        DAY | GTC
+executionMode: DRY_RUN | LIVE
+requestId:  mandatory caller idempotency key
+```
+
+`LMT` requires positive finite `limitPrice`; `MKT` forbids it. No short opening is supported.
+
+Provider-capable workflow:
+
+```text
+local caller auth
+→ local intent validation/idempotency
+→ gateway/session/account checks
+→ contract resolution
+→ market-data snapshot prerequisite
+→ what-if preview
+→ local preview/risk validation
+→ actual submit only if process LIVE + request LIVE + provider permission
+→ immediate result OR REPLY_REQUIRED
+→ explicit confirmation when required
+→ reconciliation/open-order/trade observation
+→ explicit cancellation when requested
+```
+
+Unknown provider confirmation questions fail closed.
+
+## 23. Order acknowledgement/idempotency
+
+Same `requestId` + same normalized intent returns/reconciles the existing local order result. Same `requestId` + different normalized intent is rejected.
+
+Transport loss after a provider submit is not assumed to be failure. The service records `ACKNOWLEDGEMENT_UNKNOWN`, performs no blind resubmit and reconciles against provider order/trade state before a later explicit action.
+
+Local lifecycle semantics must distinguish at least dry-run complete, preview rejected/ready-to-submit, reply required, submitted, provider rejected, acknowledgement unknown, cancelled, partially filled and filled.
+
+## 24. SELL safety guard
+
+Before LIVE SELL the service must establish enough current provider position information to prove the requested quantity does not exceed the known long position covered by the initial contract. If it cannot establish that fact, LIVE SELL fails closed.
+
+This is a narrow no-short-opening guard, not a portfolio/risk engine.
+
+## 25. Provider/session/privacy boundary
+
+The service uses first-party IBKR Client Portal Web API through Client Portal Gateway. Manual gateway authentication stays user-owned on the same machine; the service never automates login.
+
+The runtime account identifier may exist in memory only as needed for provider calls. It is not persisted or logged.
+
+A localhost CPGW certificate exception, if required, must be scoped to the loopback CPGW client only; process-global TLS verification disable is forbidden.
+
+## 26. Order persistence
+
+Reuse the existing DuckDB dependency for the smallest separate local execution store unless implementation evidence proves unsuitable.
+
+Persist only facts needed for restart-safe idempotency/reconciliation: request ID/fingerprint, product-owned local order ID, sanitized provider reference when required, last lifecycle state and bounded timestamps/diagnostics.
+
+Never persist provider account identity, credentials, cookies/session tokens or raw authenticated responses.
+
+## 27. Synthetic IBKR proof
+
+One deterministic fake provider must cover disconnected/not-authenticated/authenticated session states; empty/non-empty accounts; exact/missing/ambiguous contract resolution; snapshot preflight; what-if success/rejection; exact BUY/SELL payload translation; immediate submit; reply-required confirm success/rejection; pre-submit provider failure; post-submit transport loss; reconciliation; cancellation; partial/full fill; session timeout/keepalive; long-position SELL guard; local caller security and restart-safe request-id idempotency.
+
+All fixtures are synthetic/public-safe.
+
+## 28. Standalone packaging / future integration
+
+Provide a Windows/operator launcher that makes DRY_RUN obvious and requires explicit opt-in to enable LIVE. No committed config contains account identity or authentication data.
+
+The existing Market Flow US runtime starts independently.
+
+A future Scanner/strategy integration must consume this authenticated local API and must not bypass it to call IBKR directly.
+
+## 29. Release boundary
 
 Deterministic implementation/reclosure completes before final target-machine/authenticated acceptance.
 
-The exact final candidate must prove Demo Buy capture/evaluation, Auto operability, targeted refresh and AI Investigation pack generation/regeneration locally before authenticated provider acceptance is considered complete.
+The exact final candidate must prove Demo Buy capture/evaluation, Auto operability, targeted refresh, AI Investigation pack generation/regeneration, and the permission-independent standalone IBKR order-service contract locally before final acceptance is considered complete.
+
+Actual live order submission may remain `PENDING_EXTERNAL_PERMISSION` when IBKR permission is not yet available; no live-success evidence may be fabricated.
