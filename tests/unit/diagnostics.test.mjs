@@ -81,8 +81,9 @@ test("diagnostic tracker keeps bounded public-safe checkpoint evidence", () => {
   }
 });
 
-test("checkpoint ownership is strict and includes saved-query library", () => {
+test("checkpoint ownership is strict and includes saved-query and AI export boundaries", () => {
   assert.equal(DIAGNOSTIC_CHECKPOINTS["scanner.query_library"], "scanner");
+  assert.equal(DIAGNOSTIC_CHECKPOINTS["demo_buy.ai_pack_export"], "demo_buy");
   const tracker = createDiagnosticTracker();
 
   assert.throws(() => tracker.recordSuccess({
@@ -91,6 +92,34 @@ test("checkpoint ownership is strict and includes saved-query library", () => {
     operationId: "wrong-owner",
     checkpoint: "scanner.query_library"
   }), /does not belong/);
+
+  const exportRecord = tracker.recordSuccess({
+    component: "demo_buy",
+    operation: "demo.buy.ai-pack.create",
+    operationId: "ai-export-1",
+    checkpoint: "demo_buy.ai_pack_export",
+    context: {
+      captureId: 7,
+      fileCount: 10,
+      targetInScannerContext: true,
+      outcomeEvidenceStatus: "PARTIAL_OUTCOME",
+      securityId: "SENTINEL_SECURITY_ID",
+      sql: "SELECT SENTINEL_SQL",
+      promptText: "SENTINEL_PROMPT",
+      exportPath: "C:\\Users\\private\\exports"
+    }
+  });
+  assert.deepEqual(exportRecord.context, {
+    captureId: 7,
+    fileCount: 10,
+    targetInScannerContext: true,
+    outcomeEvidenceStatus: "PARTIAL_OUTCOME"
+  });
+  const serialized = JSON.stringify(exportRecord);
+  assert.equal(serialized.includes("SENTINEL_SECURITY_ID"), false);
+  assert.equal(serialized.includes("SENTINEL_SQL"), false);
+  assert.equal(serialized.includes("SENTINEL_PROMPT"), false);
+  assert.equal(serialized.includes("Users"), false);
 });
 
 test("support snapshot remains useful when Node is unavailable and does not copy raw failure", async () => {
