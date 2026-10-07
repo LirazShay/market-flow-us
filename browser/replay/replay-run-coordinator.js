@@ -26,8 +26,13 @@ export function createReplayRunCoordinator({
 
   let generation = 0;
   let activeRunId = null;
+  let lifecycle = Promise.resolve();
 
-  async function startFreshRun({ reason = "replay-fresh-run", selectedSequence = 0 } = {}) {
+  function staleGenerationError() {
+    return new Error("Replay run generation changed during startup.");
+  }
+
+  function startFreshRun({ reason = "replay-fresh-run", selectedSequence = 0 } = {}) {
     const viewerWindow = target.open("", VIEWER_WINDOW_NAME);
     if (!viewerWindow) {
       const error = new Error("Market Flow US Replay Viewer popup was blocked.");
@@ -38,39 +43,48 @@ export function createReplayRunCoordinator({
     generation += 1;
     const currentGeneration = generation;
 
-    await hostClient.stopRun(`replace-${reason}`);
-    const run = await hostClient.startRun(reason);
-    if (currentGeneration !== generation) {
-      await hostClient.stopRun("stale-run-generation");
-      throw new Error("Replay run generation changed during startup.");
-    }
+    const operation = lifecycle.then(async () => {
+      if (currentGeneration !== generation) throw staleGenerationError();
 
-    activeRunId = run.runId;
-    const producerBridge = producerBridgeFactory({
-      url: run.serviceUrl,
-      productVersion,
-      clientInstanceId: `market-flow-us-replay-producer-${currentGeneration}`
-    });
+      await hostClient.stopRun(`replace-${reason}`);
+      if (currentGeneration !== generation) throw staleGenerationError();
 
-    const viewerRuntime = viewerRuntimeFactory({
-      target,
-      serviceUrl: run.serviceUrl,
-      productVersion,
-      openWindow: () => viewerWindow,
-      collectCandidate: async () => {
-        throw new Error("Replay Viewer runtime must never acquire provider market data.");
+      const run = await hostClient.startRun(reason);
+      if (currentGeneration !== generation) {
+        await hostClient.stopRun("stale-run-generation");
+        throw staleGenerationError();
       }
-    });
-    const viewer = viewerRuntime.openViewer({ rebuild: true });
-    if (viewer.opened !== true) {
-      await hostClient.stopRun("viewer-open-failed");
-      activeRunId = null;
-      const error = new Error("Market Flow US Replay Viewer could not open.");
-      error.code = "REPLAY_VIEWER_OPEN_FAILED";
-      throw error;
-    }
 
-    return producerBridge;
+      activeRunId = run.runId;
+      const producerBridge = producerBridgeFactory({
+        url: run.serviceUrl,
+        productVersion,
+        clientInstanceId: `market-flow-us-replay-producer-${currentGeneration}`
+      });
+
+      const viewerRuntime = viewerRuntimeFactory({
+        target,
+        serviceUrl: run.serviceUrl,
+        productVersion,
+        openWindow: () => viewerWindow,
+        collectCandidate: async () => {
+          throw new Error("Replay Viewer runtime must never acquire provider market data.");
+        }
+      });
+      const viewer = viewerRuntime.openViewer({ rebuild: true });
+      if (viewer.opened !== true) {
+        await hostClient.stopRun("viewer-open-failed");
+        activeRunId = null;
+        const error = new Error("Market Flow US Replay Viewer could not open.");
+        error.code = "REPLAY_VIEWER_OPEN_FAILED";
+        throw error;
+      }
+
+      return producerBridge;
+    });
+
+    lifecycle = operation.catch(() => {});
+    return operation;
   }
 
   return Object.freeze({
