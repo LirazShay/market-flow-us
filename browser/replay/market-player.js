@@ -329,7 +329,15 @@ export function createMarketReplayPlayer({
 
   async function resume() {
     if (status !== "paused") throw new Error("Replay Player is not paused.");
-    if (nextSequence >= summary.frameCount) return snapshotState();
+    if (nextSequence >= summary.frameCount) {
+      pausedOriginalPositionMs = null;
+      status = "completed";
+      const expectedGeneration = invalidateGeneration();
+      notify();
+      await closeCompletedSession(expectedGeneration);
+      notify();
+      return snapshotState();
+    }
 
     segment = Object.freeze({
       originalReferenceMs: pausedOriginalPositionMs ?? originalAt(nextSequence),
