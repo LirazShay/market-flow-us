@@ -63,7 +63,7 @@ if (unallocated) {
 }
 
 const chatMatches = [...execution.matchAll(
-  /^  "(\d+)":\n    nodes:\n((?:      "[^"]+": \{ state: [a-z_]+, result: (?:null|"[^"]*") \}\n)+)/gm
+  /^  "(\d+)":\n    nodes:\n((?:      "[^"]+": \{ state: [a-z_]+, result: (?:null|"[^"]*") \}(?:\n|$))+)/gm
 )];
 
 if (!chatMatches.length) {

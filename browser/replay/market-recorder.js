@@ -65,6 +65,7 @@ export function createMarketReplayRecorder({
   let token = 0;
   let timerHandle = null;
   let activeAttempt = null;
+  let startOperation = null;
 
   function publish(patch) {
     state = Object.freeze({ ...state, ...patch });
@@ -157,37 +158,51 @@ export function createMarketReplayRecorder({
   }
 
   async function start({ name } = {}) {
-    if (state.status === "recording" || state.status === "stopping") {
+    if (startOperation !== null || state.status === "recording" || state.status === "stopping") {
       throw new Error("A Replay recording is already active.");
     }
 
-    cancelTimer();
-    const createdAtMs = now();
-    if (!Number.isSafeInteger(createdAtMs) || createdAtMs < 0) {
-      throw new Error("now() must return a non-negative safe integer.");
+    const operation = (async () => {
+      cancelTimer();
+      const createdAtMs = now();
+      if (!Number.isSafeInteger(createdAtMs) || createdAtMs < 0) {
+        throw new Error("now() must return a non-negative safe integer.");
+      }
+      const recordingId = createId({ nowMs: createdAtMs });
+      const recordingName = typeof name === "string" && name.trim().length > 0
+        ? name.trim()
+        : defaultRecordingName(createdAtMs);
+      const summary = await store.createRecording({ id: recordingId, name: recordingName, createdAtMs });
+
+      token += 1;
+      const activeToken = token;
+      applySummary(summary, {
+        status: "recording",
+        providerFailureCount: 0,
+        latestErrorCode: null
+      });
+      await Promise.allSettled([refreshLibrary(), refreshStorageEstimate()]);
+
+      activeAttempt = captureOnce(activeToken).finally(() => {
+        activeAttempt = null;
+      });
+      return summary;
+    })();
+
+    startOperation = operation;
+    try {
+      return await operation;
+    } finally {
+      if (startOperation === operation) startOperation = null;
     }
-    const recordingId = createId({ nowMs: createdAtMs });
-    const recordingName = typeof name === "string" && name.trim().length > 0
-      ? name.trim()
-      : defaultRecordingName(createdAtMs);
-    const summary = await store.createRecording({ id: recordingId, name: recordingName, createdAtMs });
-
-    token += 1;
-    const activeToken = token;
-    applySummary(summary, {
-      status: "recording",
-      providerFailureCount: 0,
-      latestErrorCode: null
-    });
-    await Promise.allSettled([refreshLibrary(), refreshStorageEstimate()]);
-
-    activeAttempt = captureOnce(activeToken).finally(() => {
-      activeAttempt = null;
-    });
-    return summary;
   }
 
   async function stop() {
+    const pendingStart = startOperation;
+    if (pendingStart !== null) {
+      await pendingStart.catch(() => {});
+    }
+
     if (state.status !== "recording" && state.status !== "stopping") return null;
     if (state.status === "recording") {
       publish({ status: "stopping" });

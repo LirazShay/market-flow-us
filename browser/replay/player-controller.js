@@ -52,6 +52,8 @@ export function createReplayPlayerController({
   let bridge = producerBridge;
   let player = null;
   let playerState = null;
+  let playerGeneration = 0;
+  let sourceLoadGeneration = 0;
   let selectedSequence = 0;
   let latestError = null;
   const listeners = new Set();
@@ -101,22 +103,32 @@ export function createReplayPlayerController({
     notify();
   }
 
-  function rebuildPlayer() {
+  function discardPlayer({ preserveState = false } = {}) {
+    playerGeneration += 1;
     player = null;
-    playerState = null;
+    if (!preserveState) playerState = null;
+  }
+
+  function rebuildPlayer() {
+    discardPlayer();
     if (!source || !bridge) {
       notify();
       return;
     }
 
-    player = createPlayer({
+    const currentGeneration = playerGeneration;
+    const nextPlayer = createPlayer({
       source,
       producerBridge: bridge,
       now,
       setTimer,
       clearTimer,
-      onStateChange: (state) => refreshPlayerState(state)
+      onStateChange: (state) => {
+        if (currentGeneration !== playerGeneration) return;
+        refreshPlayerState(state);
+      }
     });
+    player = nextPlayer;
     if (summary.frameCount > 0 && selectedSequence > 0) {
       player.select(selectedSequence);
     }
@@ -164,10 +176,13 @@ export function createReplayPlayerController({
   }
 
   async function withSourceLoad(operation) {
+    const currentGeneration = ++sourceLoadGeneration;
     try {
       const nextSource = await operation();
+      if (currentGeneration !== sourceLoadGeneration) return snapshotState();
       return setSource(nextSource);
     } catch (error) {
+      if (currentGeneration !== sourceLoadGeneration) return snapshotState();
       latestError = normalizeError(error);
       notify();
       throw error;
@@ -200,8 +215,7 @@ export function createReplayPlayerController({
       throw new Error("Cannot detach the Replay producer bridge while a run is active.");
     }
     bridge = null;
-    player = null;
-    playerState = null;
+    discardPlayer();
     notify();
     return snapshotState();
   }
@@ -235,7 +249,7 @@ export function createReplayPlayerController({
 
       if (runCoordinator !== null) {
         bridge = null;
-        player = null;
+        discardPlayer({ preserveState: true });
         await provisionFreshRun("seek");
       } else {
         refreshPlayerState(seekState);
@@ -265,7 +279,7 @@ export function createReplayPlayerController({
           }
           const reason = current.status === "stopped" ? "play-after-stop" : "fresh-run-required";
           bridge = null;
-          player = null;
+          discardPlayer({ preserveState: true });
           playerState = current;
           await provisionFreshRun(reason);
         }

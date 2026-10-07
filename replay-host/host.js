@@ -215,8 +215,15 @@ export async function startReplayHost({
   let runSequence = 0;
   let activeRun = null;
   let closing = false;
+  let lifecycle = Promise.resolve();
 
-  async function startRun() {
+  function serializeLifecycle(operation) {
+    const result = lifecycle.then(operation, operation);
+    lifecycle = result.catch(() => {});
+    return result;
+  }
+
+  async function startRunOperation() {
     if (activeRun !== null) {
       throw new ReplayHostError("REPLAY_RUN_ALREADY_ACTIVE", 409);
     }
@@ -270,7 +277,7 @@ export async function startReplayHost({
     });
   }
 
-  async function stopRun() {
+  async function stopRunOperation() {
     const owned = activeRun;
     if (owned === null) {
       return Object.freeze({ status: "stopped", runId: null, hadActiveRun: false });
@@ -279,6 +286,14 @@ export async function startReplayHost({
     await stopOwnedChild(owned.child);
     if (activeRun?.child === owned.child) activeRun = null;
     return Object.freeze({ status: "stopped", runId: owned.runId, hadActiveRun: true });
+  }
+
+  function startRun() {
+    return serializeLifecycle(startRunOperation);
+  }
+
+  function stopRun() {
+    return serializeLifecycle(stopRunOperation);
   }
 
   const server = http.createServer((request, response) => {
