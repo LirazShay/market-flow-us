@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "7.4"
+current_node: "7.6.1"
 blockers: []
-next_action: "Chat 27 executes TREE 7.4 final target-machine/provider acceptance from fresh main after Chat 26 / TREE 8.5 merges green."
-last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
+next_action: "Chat 27 executes TREE 7.6.1 through 7.6.5 pre-acceptance extension code audit/reclosure; Chat 28 resumes TREE 7.4 only after 7.6.5 is done."
+last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN"
 implementation_authorized: true
