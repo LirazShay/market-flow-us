@@ -65,7 +65,7 @@ export function createMarketReplayRecorder({
   let token = 0;
   let timerHandle = null;
   let activeAttempt = null;
-  let startPending = false;
+  let startOperation = null;
 
   function publish(patch) {
     state = Object.freeze({ ...state, ...patch });
@@ -158,12 +158,11 @@ export function createMarketReplayRecorder({
   }
 
   async function start({ name } = {}) {
-    if (startPending || state.status === "recording" || state.status === "stopping") {
+    if (startOperation !== null || state.status === "recording" || state.status === "stopping") {
       throw new Error("A Replay recording is already active.");
     }
 
-    startPending = true;
-    try {
+    const operation = (async () => {
       cancelTimer();
       const createdAtMs = now();
       if (!Number.isSafeInteger(createdAtMs) || createdAtMs < 0) {
@@ -188,15 +187,22 @@ export function createMarketReplayRecorder({
         activeAttempt = null;
       });
       return summary;
+    })();
+
+    startOperation = operation;
+    try {
+      return await operation;
     } finally {
-      startPending = false;
+      if (startOperation === operation) startOperation = null;
     }
   }
 
   async function stop() {
-    if (startPending && state.status !== "recording" && state.status !== "stopping") {
-      throw new Error("Replay recording startup is still in progress.");
+    const pendingStart = startOperation;
+    if (pendingStart !== null) {
+      await pendingStart.catch(() => {});
     }
+
     if (state.status !== "recording" && state.status !== "stopping") return null;
     if (state.status === "recording") {
       publish({ status: "stopping" });
