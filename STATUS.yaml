@@ -4,8 +4,8 @@ overall_status: in_progress
 
 current:
   chat: null
-  node: "7"
-  title: "Test-system hardening focused replan"
+  node: "7.7"
+  title: "Test-system hardening TREE/contract promotion"
   status: planning
 
 authority:
@@ -16,6 +16,7 @@ authority:
   test_system_hardening_replan: ".planning/TEST_SYSTEM_HARDENING_REPLAN.md"
   test_system_hardening_tree_proposal: ".planning/TEST_SYSTEM_HARDENING_TREE_PROPOSAL.md"
   test_system_coverage_ledger: ".planning/TEST_SYSTEM_COVERAGE_LEDGER.md"
+  test_system_hardening_review: ".planning/TEST_SYSTEM_HARDENING_REVIEW.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
@@ -54,7 +55,10 @@ planning_completion:
   test_system_hardening_structural_map: pass
   test_system_hardening_decomposition: pass
   test_system_hardening_coverage_ledger: pass
-  test_system_hardening_reviews: pending
+  test_system_hardening_coherent_review: pass_after_corrections
+  test_system_hardening_outside_in_review: pass_after_corrections
+  test_system_hardening_tree_promotion: pending
+  test_system_hardening_final_planning_review: pending
   test_system_hardening_freeze: pending
   test_system_hardening_allocation: pending
 
@@ -67,4 +71,4 @@ execution:
 
 blockers:
   - "7.4 remains blocked while the focused test-system hardening replan is active and implementation_authorized=false."
-  - "The proposed 7.7 subtree is not execution authority until review/freeze mutates TREE, validates allocation and re-authorizes implementation."
+  - "Reviewed 7.7 remains proposal-only until TREE/contracts/Planning Docs are promoted, final planning review passes, freeze/no-drift proof passes, allocation is validated and implementation is re-authorized."
