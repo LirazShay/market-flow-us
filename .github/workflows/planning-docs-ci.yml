@@ -14,9 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
 
@@ -45,6 +45,10 @@ jobs:
             .planning/README.md .planning/FRAMEWORK.md .planning/GOAL.md .planning/TREE.yaml
             .planning/DECISIONS.md .planning/REVIEWS.md .planning/IBKR_ORDER_REVIEWS.md .planning/STATUS.yaml
             .planning/EXECUTION.yaml .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
+            .planning/ST_PLANNER_INSTALL.json .planning/check-framework-update.mjs
+            .planning/executor-authority.mjs .planning/execution-guidance.mjs
+            .planning/validate-allocation.mjs .planning/verify-freeze-baseline.mjs
+            .planning/CI-RCA-POLICY.md .planning/validate-ci-hygiene.mjs
             .planning/IBKR_ORDER_MINI_PROJECT.md .planning/MARKET_REPLAY_MINI_PROJECT.md
             .planning/REPLAY_BUY_EXTENSION_REVIEW.md
             .planning/PRE_ACCEPTANCE_CODE_AUDIT.md
@@ -181,12 +185,6 @@ jobs:
           require_text 'R-US-REPLAY-BUY-EXTENSION-FINAL' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
           require_text 'TREE nodes:              52' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
           require_text 'implementation leaves:   39' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
-
-          # Current execution truth after the pre-acceptance audit replan.
-          require_text 'Chat 25: 9.6 Replay pre-user-run hardening — done' .planning/EXECUTOR_HANDOFF.md
-          require_text 'Chat 26: 8.5 basic in-product BUY — done' .planning/EXECUTOR_HANDOFF.md
-          require_text 'Chat 27: 7.6.1 → 7.6.5 pre-acceptance extension code audit/reclosure' .planning/EXECUTOR_HANDOFF.md
-          require_text 'Chat 28: 7.4 final target-machine/provider acceptance' .planning/EXECUTOR_HANDOFF.md
           require_text 'R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
 
           require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
@@ -342,6 +340,7 @@ jobs:
             }
           fi
 
+          node .planning/validate-ci-hygiene.mjs
           node .planning/verify-handoff.mjs
 
           echo "Market Flow US planning validation passed."

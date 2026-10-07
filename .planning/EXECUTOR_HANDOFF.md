@@ -1,41 +1,164 @@
-# Market Flow US Executor Handoff
+# Executor Handoff Bootstrap
 
-This is the compact GitHub-only bootstrap for numbered implementation chats.
+This file is the portable entry contract for executor conversations.
 
-`.planning/TREE.yaml` owns Strategy/Tactic/dependencies/success evidence. `.planning/EXECUTION.yaml` owns chat allocation/state. GitHub `main` is the source of truth between chats.
+It explains **how to resume execution from repository state only**. It does not duplicate task content from `TREE.yaml` or allocation/state from `EXECUTION.yaml`.
+
+## Framework freshness gate
+
+Before starting or resuming S&T execution, run:
+
+```text
+node .planning/check-framework-update.mjs
+```
+
+- if it reports the installed framework is current, continue;
+- if it reports a newer `recommended` release, surface the version/summary to the user and continue unless an upgrade is chosen;
+- if it reports a newer `required` release, do not start new S&T planning/execution work until the explicit framework upgrade is completed and the checker reports current;
+- if network access is unavailable, report that freshness could not be verified and continue from the installed framework rather than claiming it is current.
+
+Framework upgrade is an explicit operation. It may replace only framework-managed files and must never overwrite active cycle state (`GOAL.md`, `TREE.yaml`, `DECISIONS.md`, `REVIEWS.md`, `STATUS.yaml`, `EXECUTION.yaml`). See `.planning/ST_PLANNER_INSTALL.json` and the source `docs/FRAMEWORK-UPDATES.md`.
 
 ## Authorization gate
 
-Production implementation is allowed only when all are true:
+Before reading implementation details, read `.planning/STATUS.yaml`.
 
-```text
-.planning/STATUS.yaml -> plan_state: frozen
-.planning/STATUS.yaml -> implementation_authorized: true
-STATUS.yaml -> phase: implementation
-.planning/EXECUTION.yaml -> allocated
+Execution is allowed only when all three values in **`.planning/STATUS.yaml`** are satisfied:
+
+```yaml
+cycle_state: active
+plan_state: frozen
+implementation_authorized: true
 ```
 
-Otherwise do not code.
+If any condition is false:
 
-## Fresh executor read order
+- do not start or mark any node `in_progress`;
+- do not improvise missing planning;
+- report the repository-visible reason execution is unavailable.
 
-For `אני צאט N תתחיל`:
+A `completed` or `abandoned` cycle is terminal and cannot execute even if stale planning/execution data remains in the repository. Terminal cycles must have `implementation_authorized: false`.
 
-1. fetch fresh `main`;
-2. read `AGENTS.md`;
-3. read `STATUS.yaml`;
-4. read `.planning/STATUS.yaml`;
-5. read this file;
-6. read `.planning/EXECUTION.yaml` and locate Chat N;
-7. read only assigned TREE leaves + direct dependencies;
-8. verify every dependency is `done` in EXECUTION;
-9. load only the contracts/tests/code routed below;
-10. if Chat N/current node/dependencies do not authorize work, report blocker and do not code;
-11. otherwise create one focused feature branch and execute assigned leaves in order.
+## Execution authority vs project projections
 
-Do not ask the user to restate the plan.
+For executor work, authoritative state is:
 
-## Contract routing
+1. `.planning/EXECUTION.yaml` for chat allocation and node execution state;
+2. `TREE.yaml -> depends_on` for execution prerequisites;
+3. `.planning/STATUS.yaml` for cycle/planning/implementation authorization.
+
+A target repository may also keep `STATUS.yaml`, `current_chat`, `current_node`, phase pointers, dashboards, or other human/tooling projections. Those are **not peer execution authorities** for S&T Planner.
+
+Use `.planning/execution-guidance.mjs` as the executable reference for deriving runnable chats/nodes from `TREE.yaml + EXECUTION.yaml`.
+
+If a target-owned current pointer differs from the derived runnable state:
+
+- diagnose it as projection drift;
+- repair or regenerate the projection when useful;
+- do not let that mismatch alone stop otherwise-safe implementation;
+- never mutate authoritative EXECUTION merely to make a projection look right.
+
+A hard stop is reserved for genuinely unsafe authority problems such as disabled implementation authorization, an unallocated executor, invalid/duplicate allocation, broken dependency state, or another contradiction inside authoritative S&T state.
+
+## Conversation identity — allocation is not activation
+
+Repository allocation and conversation identity are separate concepts.
+
+A numbered executor becomes active in a conversation only after an explicit startup message, for example:
+
+```text
+אני צאט 17 תתחיל
+```
+
+Established forms such as `אני צ'אט מספר 17` / `I am chat 17` also count as explicit startup.
+
+A generic continuation such as:
+
+```text
+תמשיך לשלב הבא
+continue
+next
+```
+
+is never enough to activate a different executor merely because repository state or a target pointer now mentions that chat.
+
+While an executor is actively working before a handoff boundary, do not switch that conversation to another Chat N. Finish/handoff the current executor first.
+
+### After a handoff
+
+A `[[SEQUENCE_RUNNER_NEW_CHAT]] ... [[/SEQUENCE_RUNNER_NEW_CHAT]]` handoff means:
+
+- the current executor scope has ended;
+- a fresh conversation is **recommended** for focus and clean context;
+- a generic `continue` in the old conversation must **not** silently adopt the next chat;
+- the user is not forced to open a new conversation if they prefer continuity.
+
+If, after handoff, the user explicitly sends a valid startup such as:
+
+```text
+אני צאט 18 תתחיל
+```
+
+then the same conversation may intentionally **re-bootstrap** Chat 18, but only after fresh repository checks confirm implementation authorization, Chat 18 allocation, and its runnable dependencies. Treat this as a new executor bootstrap, not as implicit identity mutation.
+
+Therefore the accidental case remains prevented:
+
+```text
+Chat 17 handoff emitted
+repo/project pointer moves to Chat 18
+user: תמשיך לשלב הבא
+```
+
+Result: do not execute Chat 18 implicitly. Recommend the startup command. If the user explicitly starts Chat 18, re-bootstrap it safely.
+
+`.planning/executor-authority.mjs` is the executable reference for these semantics.
+
+## Executor read order
+
+For an explicit Chat N startup or re-bootstrap:
+
+1. read target `AGENTS.md` and its routing/source-of-truth rules;
+2. read this `.planning/EXECUTOR_HANDOFF.md`;
+3. run `.planning/check-framework-update.mjs` and resolve any required framework update;
+4. establish the explicitly requested conversation executor identity N;
+5. read `.planning/STATUS.yaml` and confirm the authorization gate;
+6. read `.planning/EXECUTION.yaml` and confirm Chat N is allocated;
+7. read only Chat N's assigned `TREE.yaml` leaves and their `depends_on` prerequisites;
+8. derive runnable work from authoritative TREE/EXECUTION state, not a target `current_chat` projection;
+9. load only decisions/specs/code/tests materially required by the assigned runnable work, using the Market Flow US routing appendix below.
+
+Do not preload all planning history or the whole repository.
+
+## Determine what can run
+
+For each assigned node:
+
+- if its state is `pending` or `in_progress` and every `depends_on` node is `done`, it is runnable;
+- if any prerequisite is not `done`, leave a pending node pending;
+- an unmet dependency is not itself a blocker state;
+- a `blocked` node is not runnable;
+- independent chats may be runnable at the same time; chat numbering does not itself create serial order.
+
+If no assigned node is available, report the exact prerequisite/blocker. Do not advance target pointers or EXECUTION merely to satisfy the requested chat number.
+
+## Context routing
+
+The target repository remains authoritative for its own implementation rules and product/technical contracts.
+
+Use this order:
+
+1. target `AGENTS.md` / project routing rules;
+2. the assigned S&T node, ancestor reasoning needed to understand why it exists, and materially relevant decisions;
+3. directly relevant target specs/code/tests routed below;
+4. history or unrelated areas only when a concrete uncertainty requires them.
+
+An external/reference/source repository is read-only context unless the target repository explicitly says otherwise or the assigned node explicitly requires changing it.
+
+Do not copy Strategy/Tactic text into this handoff file.
+
+## Market Flow US contract routing
+
+This target-specific appendix preserves the repository's narrow context-loading contract while keeping allocation and task content authoritative in `TREE.yaml` / `EXECUTION.yaml`.
 
 | Node | Primary durable truth |
 |---|---|
@@ -55,8 +178,9 @@ Do not ask the user to restate the plan.
 | `6.2` diagnostics/live | AGENTS diagnosability, TECHNICAL_SPEC diagnostics/live, TEST_STRATEGY authenticated gates |
 | `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC performance, shared generator, AGENTS SQL preflight |
 | `7.1`–`7.3` historical closure | TREE evidence + existing release/local acceptance contracts |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact audited/reclosed final candidate |
 | `7.5` historical post-Demo-Buy reclosure | Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + historical deterministic gates |
-| `7.6.*` pre-acceptance extension audit | PRE_ACCEPTANCE_CODE_AUDIT; BASIC_BUY_INTEGRATION; IBKR_ORDER_SERVICE + SECURITY; MARKET_REPLAY + REPLAY_HARDENING; exact delta `e0af9d...93a48`; changed production/tests/launchers/shared seams |
+| `7.6.*` pre-acceptance extension audit | PRE_ACCEPTANCE_CODE_AUDIT; BASIC_BUY_INTEGRATION; IBKR_ORDER_SERVICE + SECURITY; MARKET_REPLAY + REPLAY_HARDENING; changed production/tests/launchers/shared seams |
 | `8.1` local order authority | IBKR_ORDER_SERVICE §§1,3,5–8,10,14,17–18; IBKR_ORDER_SERVICE_SECURITY; PRODUCT_REQUIREMENTS §15; TECHNICAL_SPEC §§33–35,37,40–41; TEST_STRATEGY §§24–25,28 |
 | `8.2` real CPGW lifecycle | IBKR_ORDER_SERVICE §§2,4,5,9,11–16; DECISIONS D-US-035/037/038; TECHNICAL_SPEC §§35–39; TEST_STRATEGY §§26–30 |
 | `8.3` packaging/integration seam | IBKR_ORDER_SERVICE §§19–21; IBKR_ORDER_SERVICE_SECURITY §10; PRODUCT_SPEC/TECHNICAL_SPEC packaging; TEST_STRATEGY §§31–32 |
@@ -68,427 +192,110 @@ Do not ask the user to restate the plan.
 | `9.4` Replay Host/isolation | MARKET_REPLAY Stop/Seek/Host/Viewer sections; D-US-043/044; TEST_STRATEGY Stop/Seek/isolation/bootstrap; existing service `--db`/`--port`/`--allowed-origin` seams |
 | `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad gates + PR/main/open-PR truth |
 | `9.6` Replay hardening | REPLAY_HARDENING; MARKET_REPLAY; extension review; existing Replay tests/code only as routed by the hardening contract |
-| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact audited/reclosed final candidate after completed `7.6.5` |
 
-TREE `success_evidence` is always definition-of-done.
+TREE `success_evidence` remains the definition of done; this appendix is context routing only and must not duplicate allocation or execution state.
 
-## Current serial allocation
+## Branch and verification behavior
 
-```text
-Chats 1–24: completed historical implementation through 9.5
-Chat 25: 9.6 Replay pre-user-run hardening — done
-Chat 26: 8.5 basic in-product BUY — done
-Chat 27: 7.6.1 → 7.6.5 pre-acceptance extension code audit/reclosure
-Chat 28: 7.4 final target-machine/provider acceptance
-```
+Follow the target repository's existing Git, branch, PR, testing, and verification rules.
 
-This serial order does not create a false dependency between completed `9.6` and `8.5`. The new `7.6` family is deliberately downstream of both because it audits their combined final composition before user-dependent acceptance.
+S&T Planner does not impose a branch/PR workflow when the target project does not have one.
 
-Current dependency truth is:
+Before marking a node `done`:
 
-```text
-9.6 depends on 9.5
-8.5 depends on 3.3 + 8.4
-7.6.1 depends on 7.5 + 8.5 + 9.6
-7.6.2 depends on 7.6.1
-7.6.3 depends on 7.6.2
-7.6.4 depends on 7.6.3
-7.6.5 depends on 7.6.4
-7.4 depends on 7.5 + 8.5 + 9.6 + 7.6.5
-```
+- execute within the assigned node's planned scope;
+- verify its `success_evidence` using the target project's appropriate tests/inspection;
+- write only a short result/evidence reference to `EXECUTION.yaml`.
 
-Do not skip forward. Final acceptance is intentionally paused until the user-requested pre-acceptance extension audit is deterministically re-closed.
+## Mandatory CI warning/error RCA gate
 
-TREE `9.5` completed and pinned this historical post-branch-9 product candidate entering `9.6`:
+If CI emits **any warning or error**, pause progression before the next implementation step and follow `.planning/CI-RCA-POLICY.md`.
 
-```text
-243f4f2e78e434378ff2202ba95af7b8626a0369
-```
+A green rerun after changing the immediately failing line is not sufficient closure. The executor must establish:
 
-PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later runtime work superseded it.
+1. what happened;
+2. why it happened at root cause level;
+3. why existing prevention/detection allowed it to reach CI;
+4. the smallest reusable prevention/detection improvement;
+5. materially analogous areas that may contain the same underlying weakness;
+6. verification evidence that closes the original signal and every analogous instance found.
 
-The exact runtime candidate entering `7.6` is:
+When reporting the incident to the user, explicitly say that progression is paused for RCA and that a local symptom fix alone is not considered closure. Only continue implementation after the RCA is closed.
 
-```text
-93a48c8b0a36433e58f09f6a607ec7cd366c9aea
-```
+## Completion transition and projections
 
-The audit compares the recent extension delta from completed post-Demo-Buy/AI reclosure `e0af9d105004f175a44ec33fa481fba0631773bf` through this runtime candidate. If `7.6` fixes runtime code, the resulting merged runtime SHA supersedes `93a48...` for final acceptance.
+Node completion is an authoritative EXECUTION transition.
 
-## Current extension boundaries
+The safe default is:
 
-### Chat 25 / TREE 9.6 — completed
+1. re-read authoritative execution state before writing;
+2. confirm this chat still owns the node and prerequisites remain valid;
+3. persist the node's `done` state + result in `.planning/EXECUTION.yaml`;
+4. re-read/derive runnable work from `TREE + EXECUTION`;
+5. update target-owned status/current projections only as secondary summaries when the target project requires them;
+6. if a projection update fails or temporarily lags, report/repair it, but do not rewrite valid authoritative EXECUTION merely to match it.
 
-Replay adversarial hardening is complete and remains reusable evidence. `7.6.3` independently reviews the final combined Replay code and may reuse exact `9.6` executable evidence only where it actually proves the current risk.
+When the available Git mutation path cannot safely keep several peer representations synchronized, prefer the framework design above: mutate the single authoritative EXECUTION state and derive secondary current/next information from it.
 
-### Chat 26 / TREE 8.5 — completed
+Do not intentionally create a process where correctness depends on committing `STATUS.current`, `.planning/STATUS.current_node`, and EXECUTION in a particular file-by-file order.
 
-The narrow basic BUY is implemented under `docs/BASIC_BUY_INTEGRATION.md`:
+## User-facing completion handoff
 
-```text
-current Detail only
-BUY only
-positive finite run-configured quantity
-STK / USD / SMART
-MKT / DAY
-DRY_RUN by default; LIVE only by explicit operator opt-in
-```
+After finishing all currently runnable work assigned to this chat and persisting authoritative `EXECUTION.yaml` state:
 
-The provider-page Viewer may prepare an immutable short-lived ticket from `securityId`, but performs no sidecar/provider mutation. Actual execution requires the trusted product-owned loopback confirmation page with explicit confirmation and CSRF/ticket protections. The `ibkr-order-service` caller token stays Node-memory-only and is never exposed to browser code. Scanner, Demo Buy, AI Investigation, Current and Replay remain disconnected from automatic execution.
+1. re-read `EXECUTION.yaml` and relevant TREE dependencies;
+2. derive runnable chats/nodes (use `execution-guidance.mjs` when useful);
+3. if this same chat still has another runnable assigned node, continue with it;
+4. otherwise identify the other runnable executor chat ID(s);
+5. recommend a fresh chat and emit the configured handoff when the surrounding workflow uses it;
+6. provide the exact startup command, e.g. `אני צאט 3 תתחיל`;
+7. if the user prefers to stay in the same conversation, require that explicit startup before re-bootstrap; never treat generic `continue` as the next executor startup;
+8. if several independent chats are runnable, say so instead of manufacturing serial order;
+9. if no pending chat is runnable, state the exact dependency/blocker;
+10. if all required execution leaves are `done`, do **not** infer `cycle_state: completed`. Direct the user to Cycle Closure Review.
 
-### Chat 27 / TREE 7.6.1–7.6.5
+Never require the user to inspect YAML to choose the next action.
 
-Execute `.planning/PRE_ACCEPTANCE_CODE_AUDIT.md` in order:
+## Planning defect discovered during execution
 
-```text
-7.6.1 exact delta inventory + contract/proof map
-7.6.2 IBKR order service + Basic BUY deep audit
-7.6.3 Recording/Replay/Host deep audit
-7.6.4 shared integration/regression audit
-7.6.5 adversarial verification + deterministic reclosure
-```
+If implementation reveals a material planning gap or contradiction:
 
-Static review must cover every material production/runtime file in the exact recent extension delta, not just headline classes. Inspect implementation and tests together. A green prior CI result is evidence, not a substitute for code review.
+1. stop the affected node;
+2. mark it `blocked` with a short factual reason in `.planning/EXECUTION.yaml`;
+3. keep `.planning/STATUS.yaml -> cycle_state: active`;
+4. set `.planning/STATUS.yaml -> plan_state: active`;
+5. set `.planning/STATUS.yaml -> implementation_authorized: false`;
+6. stop starting new execution work;
+7. return the smallest affected S&T area to planning.
 
-Any blocking defect stays with Chat 27 through:
+Do not redesign the plan inside an executor chat.
 
-```text
-root cause
-→ smallest sufficient fix
-→ regression proof
-→ affected verification
-→ resume audit
-```
+After correction, re-freeze alone is not enough. Record the corrected reviewed baseline, pass freeze no-drift verification again, run allocation validation in `--resume` mode, rerun the required execution/handoff verification, and only then explicitly restore implementation authorization.
 
-Maintain `.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md` as the durable PASS/BLOCKED matrix. Do not claim literal zero-bug certainty; completion means no known material defect or material unproved review risk remains after exhaustive scoped review and deterministic reclosure.
+## Mandatory execution/handoff verification before authorization
 
-### Chat 28 / TREE 7.4
-
-Final target-machine/provider acceptance starts only after `7.6.5` is `done` and durable truth points to the exact audited/reclosed product candidate. The integrated Detail BUY path must be proven in DRY_RUN; real LIVE submission occurs only when external permission exists and remains `PENDING_EXTERNAL_PERMISSION` otherwise.
-
-## Branch-9 architectural boundary
-
-Replay is external to the normal market authority:
+After allocation, first require a clean mechanical allocation validation:
 
 ```text
-recording source (IndexedDB or validated portable file)
-→ Market Player
-→ existing ProducerBridge / protocol
-→ unchanged Market Flow US service
-→ replay-only DuckDB
-→ existing Viewer / Scanner / Demo Buy / AI surfaces
+node .planning/validate-allocation.mjs --initial
 ```
 
-The existing service/shared protocol must not gain `replayMode`, virtual clock, seek/reset/load-recording messages or hidden fast-forward behavior.
+Use `--resume` when re-authorizing after execution/replanning, and add `--serial-chats` only when numbered chats are explicitly serial.
 
-### Recording authority
+Then simulate representative executor behavior from repository state.
 
-Only complete validated ScreenerHulPaging3 snapshots become recording frames. Recording contains provider market facts + bounded reconstruction/timing metadata, never auth/session/account/private-page material or DuckDB authority state.
+Verify:
 
-### Portable recordings
+1. **first available executor** — explicit startup finds its assignment and runnable work;
+2. **dependency-blocked executor** — identifies unmet prerequisites without mutating state;
+3. **parallel availability** — independent chats may both be reported runnable;
+4. **projection drift** — target `current_chat/current_node` differs from derived TREE/EXECUTION state; result is warning/repair guidance, not a framework execution blocker by itself;
+5. **old-conversation accidental rollover** — Chat N emits handoff, a target pointer moves to N+1, then generic `continue` is sent in the same conversation; N+1 is not bootstrapped or mutated;
+6. **explicit post-handoff re-bootstrap** — after the same handoff, explicit `אני צאט N+1 תתחיל` may activate N+1 in the same conversation when allocation/authorization/dependencies permit;
+7. **fresh-conversation activation** — explicit Chat N startup in a fresh conversation works from repository truth alone;
+8. **invalid authority** — unallocated chat, invalid allocation, disabled authorization, or unmet dependency remains fail-closed;
+9. **final implementation completion** — no runnable executor is invented after all required leaves are done; transition goes to Cycle Closure Review.
 
-Versioned line-oriented manifest/frame/footer validation fails closed on malformed/truncated/count/order/version mismatch. Large export/file playback must not require whole-recording memory or mandatory re-import into IndexedDB.
+Warnings such as target projection drift do **not** keep implementation unauthorized. Only failed authoritative allocation/authorization/dependency/context checks do.
 
-### Time projection
-
-Playback is `1x` only in initial scope and preserves observed irregular frame gaps. Provider/source facts remain unchanged. Local collection/cycle/chunk/security/universe timestamps are rebased coherently to contemporary wall time before normal producer emission.
-
-Pause/Resume continues one replay run/DB. Pause emits no frames and Resume preserves the remaining schedule while starting a contemporary timing segment.
-
-### Stop / Play / Seek
-
-Stop closes the current replay run; the closed DB may remain readable for inspection. A later Play starts a fresh replay-owned service/DB before any selected frame is emitted again. Seek likewise starts a fresh replay DB at a real recorded frame boundary with zero preroll/fast-forward.
-
-Missing earlier history is ordinary startup state. If a normal query/surface breaks solely because earlier history is absent, fix it as a generic live-start defect, never with replay-specific server behavior.
-
-### Replay Host
-
-Replay Host is lifecycle orchestration only:
-
-```text
-loopback control
-exact allowed Origin
-per-run ephemeral credential
-one-run bootstrap/pairing to the dedicated Replay UI
-spawn unchanged Market Flow service child
-pass existing --db / --port / --allowed-origin
-own/reset only replay DB artifacts
-stop only its own child
-```
-
-It never persists market frames, writes market DuckDB tables, translates producer messages, executes Scanner SQL, attaches to/kills unrelated processes or opens/resets/deletes the normal live DB.
-
-If port/path ownership is ambiguous or occupied by a foreign process, fail closed. Credential values are never committed, persisted or logged; unauthorized/stale control must reject.
-
-### Normal verification isolation
-
-Replay remains opt-in with its own browser artifact/operator path/focused tests. Existing ordinary launchers and local acceptance keep their semantics. Timing correctness is deterministic/fake-clock first with only a short real-wall-clock smoke; no multi-hour replay wait becomes an ordinary suite prerequisite.
-
-## Branch-8 architectural boundary
-
-The market-analysis lane remains independently runnable:
-
-```text
-browser producer/Viewer
-→ ws://127.0.0.1:8765
-→ Market Flow US service
-→ market-flow-us DuckDB schema v4
-```
-
-The execution lane remains the existing sidecar boundary:
-
-```text
-authorized local caller
-→ http://127.0.0.1:8770
-→ ibkr-order-service
-→ HTTPS localhost Client Portal Gateway
-→ Interactive Brokers
-```
-
-TREE `8.5` consumes this sidecar only through the trusted Node-owned confirmation seam defined above. Scanner, Demo Buy, AI Investigation, Current and Replay still do not automatically submit orders.
-
-## IBKR order invariants
-
-### Initial scope
-
-```text
-U.S. STK / USD / SMART
-BUY | SELL
-LMT | MKT
-DAY | GTC
-positive finite quantity
-no short opening
-```
-
-`LMT` requires positive finite `limitPrice`; `MKT` forbids it.
-
-### DRY_RUN default / LIVE fail-closed
-
-`DRY_RUN` must never call the provider submit endpoint.
-
-Actual submit requires every independent gate:
-
-```text
-valid local caller authorization
-process explicitly LIVE-enabled
-request explicitly executionMode=LIVE
-valid brokerage session
-tradable runtime account
-provider permission
-unambiguous instrument
-snapshot preflight
-successful what-if
-local validation
-SELL long-position coverage when SELL
-```
-
-No missing gate may be bypassed or treated as a warning.
-
-### Localhost security
-
-Loopback binding is not authorization.
-
-```text
-bind exactly 127.0.0.1:8770
-GET /health unauthenticated only when strictly non-sensitive
-all other endpoints require high-entropy per-run caller token
-browser Origin rejected by default
-no wildcard/credentialed CORS
-bounded JSON-only state-changing requests
-unauthorized request -> zero provider calls + zero state mutation
-```
-
-Caller token is never hard-coded, persisted, logged, reported or sent to IBKR and is invalidated by process exit.
-
-### Provider authentication / privacy
-
-Manual Client Portal Gateway authentication is user-owned. Never automate credential login or store credentials, cookies/session tokens, real account identifiers, private browser state or raw authenticated provider dumps.
-
-A provider account ID may exist only in process memory for required provider calls and must be redacted from diagnostics.
-
-If CPGW localhost TLS verification must be relaxed, scope the exception to that loopback client only. Never use process-global TLS disable.
-
-### Idempotency / unknown acknowledgement
-
-`requestId` is mandatory.
-
-```text
-same requestId + same normalized intent
-→ return/reconcile existing local result
-
-same requestId + different normalized intent
-→ reject
-```
-
-After possible provider submit, transport loss is `ACKNOWLEDGEMENT_UNKNOWN` unless the remote outcome is conclusively known. Never blind-resubmit. Reconcile provider open-order/trade state first.
-
-### Reply / cancel / fills
-
-Provider `REPLY_REQUIRED` is surfaced explicitly. Unknown/unmodeled reply questions fail closed. No global warning suppression.
-
-Cancellation reconciles provider state and never claims already-filled quantity was cancelled. Partial fill and fill remain distinct lifecycle states.
-
-### SELL guard
-
-Before LIVE SELL, prove requested quantity is covered by known long position. Insufficient, unavailable or ambiguous position authority fails closed. This is not a portfolio/risk engine.
-
-## Demo Buy invariants preserved
-
-### Selection/provenance
-
-```text
-choose source rows
-→ validate every identity
-→ browser dedupe by first chosen occurrence
-→ preserve original resultRank
-```
-
-Exact bounds live in `DEMO_BUY_PROTOCOL_LIMITS.md`: 5000 items, 1 MiB SQL, first 50 context rows, <=64 retained columns with canonical identity mandatory, 128-byte clipped textual/serialized cells, <=256 KiB context.
-
-Node rejects malformed duplicates/order/context and cross-checks every selected returned position <=50 against retained context identity.
-
-### Authority
-
-No browser-supplied price.
-
-```text
-baseline = history(buy_cycle_id, security_id)
-prediction-time authority: cycle_id <= buy_cycle_id
-post-capture authority:    cycle_id > buy_cycle_id
-```
-
-Horizon match must also satisfy `cycle_id > buy_cycle_id` and `collected_at_ms >= captured_at_ms + H`.
-
-Wall-clock timestamps are diagnostics only. Preserve raw values; negative derived durations/latencies/ages become null + timing anomaly, never authority reordering.
-
-### Capture acknowledgement
-
-```text
-CONFIRMED_COMMITTED
-CONFIRMED_REJECTED
-ACKNOWLEDGEMENT_UNKNOWN
-```
-
-Never blindly replay acknowledgement-unknown capture.
-
-### Backpressure
-
-One Viewer-wide capture slot. Busy Auto generations are visibly skipped, not queued. One Viewer-wide AI-export slot; extra Generate/Regenerate actions do not queue.
-
-## Scanner/Viewer UX invariants preserved
-
-- Scanner result capture always refers to the exact rendered active generation, not edited draft text.
-- Capture freezes generation + row selection synchronously before async submit.
-- Checkbox/control interaction must not trigger row-to-Detail navigation.
-- Auto is Viewer-session state, visible across surfaces and directly switchable Off.
-- Auto changes apply only to future generations; Off does not cancel an already in-flight capture.
-- Scanner has a **resumable** Stop recurring scan distinct from terminal Viewer destroy; later Activate works.
-- Demo Buy page uses capture groups, sticky identity/baseline columns and one compact cell per horizon.
-- `NO_FUTURE_OBSERVATION` is shown as Pending; other unavailable reasons remain warnings.
-- `Refresh latest` resets page one; `Load more` continues keyset walk; `Refresh observation` uses `demo.buy.observation.get` and does not reset pagination.
-
-## AI Investigation invariants preserved
-
-AI Investigation is local evidence packaging only:
-
-```text
-Demo Buy observation
-→ deterministic local pack
-→ user copies/uploads to AI of choice
-```
-
-No AI credential/cloud call/web enrichment/automatic Scanner mutation and no broker-order authority.
-
-Prediction-time and outcome evidence obey the same `buy_cycle_id` watermark. `OUTCOME.json` reuses the trusted Demo Buy evaluator.
-
-Exporter accepts no browser path, publishes temp-dir→atomic-rename under `exports/ai-investigations/`, returns a product-relative path, never overwrites a successful pack and mutates no DB.
-
-A lost export ACK may be regenerated after reconnect because export is non-mutating/collision-safe. Clipboard operations require manual-copy fallback.
-
-## Schema/new-day invariants preserved
-
-Valid v3 migrates transactionally to market schema v4; suspicious partial-v3 Demo structures fail closed. Fresh market DB boots v4. No speculative history index is added without evidence.
-
-New Trading Day accepts valid v3 or v4 source, rejects v1/v2/corrupt/running states, preserves saved queries only, optionally archives source unchanged and installs fresh v4 with empty Demo Buy state. It does not own the separate IBKR execution store.
-
-## Performance / KISS
-
-Do not add Strategy Engine, automatic Scanner-to-order subsystem, portfolio engine, background horizon updater, materialized horizon columns, another market-data authority/transport, cross-day strategy warehouse, capture replay/idempotency subsystem, AI-agent subsystem or cloud order service.
-
-The separate order-service HTTP API/minimal execution DuckDB and branch-9 Replay Host/replay-only DB are explicitly approved narrow boundaries. Replay Host must not become a second market persistence implementation; the existing Market Flow service remains the only market DB writer.
-
-If recurring verification is materially slow:
-
-```text
-localize dominant cost
-→ remove duplication/waste
-→ preserve proof
-→ remeasure
-```
-
-Hosted CI is correctness-first; heavy 4096×180/day-bounded performance remains target-machine evidence.
-
-## Diagnostics/security
-
-Preserve the existing checkpoint/support architecture; do not add parallel logging.
-
-Order diagnostics may use an `ibkr_order.*` component namespace; Replay may use bounded recorder/player/host component names. Both expose only stable checkpoint/code, product-owned local IDs where needed, bounded lifecycle state and sanitized cause.
-
-Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence, AI prompt contents, Replay Host control credentials, BUY confirmation tickets or anti-CSRF nonce values.
-
-## Work-unit lifecycle
-
-For each leaf:
-
-```text
-set in_progress
-→ proof/test first when practical
-→ smallest sufficient implementation
-→ focused verification
-→ required broader gates
-→ satisfy success_evidence
-→ set done/result
-→ update STATUS/EXECUTION
-→ PR
-→ CI green
-→ diff review
-→ squash merge
-→ main CI green
-→ open-PR audit
-```
-
-A blocking defect stays with the discovering chat: root cause → fix → regression/proof → affected verification → green.
-
-If frozen planning is proven wrong, stop coding, block affected execution, reopen the smallest planning area per FRAMEWORK, repair/review/freeze, then continue.
-
-If required GitHub Actions/CI is unavailable, do not merge unverified work or start the next implementation unit.
-
-## Final acceptance
-
-The earlier product candidates remain historical evidence only after later branches extend product scope.
-
-Branch `8.4` completed against the post-order-service baseline:
-
-```text
-28e950afc1c4bfe4322d0593f483d05d92553e2d
-```
-
-TREE `9.5` completed deterministic Replay reclosure against:
-
-```text
-243f4f2e78e434378ff2202ba95af7b8626a0369
-```
-
-The combined post-hardening/post-basic-BUY runtime candidate entering the new audit is:
-
-```text
-93a48c8b0a36433e58f09f6a607ec7cd366c9aea
-```
-
-Chat 27 / TREE `7.6.1`–`7.6.5` must now audit and deterministically re-close the exact recent extension delta before acceptance. If it changes runtime code, the resulting merged runtime SHA becomes the new acceptance candidate.
-
-Chat 28 / TREE `7.4` then performs final user-dependent target-machine acceptance against that exact audited candidate.
-
-Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
-
-Overall completion requires every assigned leaf done, the pre-acceptance extension audit/reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
+Record the verification result in `.planning/REVIEWS.md`.

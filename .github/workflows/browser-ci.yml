@@ -43,9 +43,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -57,7 +57,7 @@ jobs:
       # allowed because a partial browser-version match is not a valid executable cache.
       - name: Restore exact Playwright Chromium cache
         id: browser-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
@@ -91,7 +91,7 @@ jobs:
 
       - name: Upload sanitized Browser failure evidence
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: market-flow-us-browser-failure-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
