@@ -170,7 +170,77 @@ test("ACKNOWLEDGEMENT_UNKNOWN keeps only same-request reconciliation available a
   }
 });
 
-test("provider-reply uncertainty reconciles through the original immutable request instead of repeating reply confirmation", async () => {
+test("successful HTTP acknowledgement-unknown result stays reconcilable with the same immutable request", async () => {
+  const requestIds = [];
+  let calls = 0;
+  const fixture = await harness({
+    executeConfirmedBuy: async (currentTicket) => {
+      calls += 1;
+      requestIds.push(currentTicket.intent.requestId);
+      return calls === 1 ? result("ACKNOWLEDGEMENT_UNKNOWN") : result("SUBMITTED");
+    }
+  });
+
+  try {
+    const nonce = await fixture.pageNonce();
+    await inspect(fixture, nonce);
+
+    const uncertain = await fixture.post("/buy/confirm/execute", nonce, {
+      ticketId: "ticket-ack-1"
+    });
+    assert.equal(uncertain.status, 200);
+    assert.equal(uncertain.payload.result.lifecycleState, "ACKNOWLEDGEMENT_UNKNOWN");
+
+    const reconciled = await fixture.post("/buy/confirm/execute", nonce, {
+      ticketId: "ticket-ack-1"
+    });
+    assert.equal(reconciled.status, 200);
+    assert.equal(reconciled.payload.result.lifecycleState, "SUBMITTED");
+    assert.deepEqual(requestIds, ["buy-request-ack-1", "buy-request-ack-1"]);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("reconciliation failure keeps the same recovery session available for a later status check", async () => {
+  let calls = 0;
+  const fixture = await harness({
+    executeConfirmedBuy: async () => {
+      calls += 1;
+      if (calls === 1) return result("ACKNOWLEDGEMENT_UNKNOWN");
+      if (calls === 2) throw new BasicBuySidecarError("BASIC_BUY_SIDECAR_NOT_READY");
+      return result("SUBMITTED");
+    }
+  });
+
+  try {
+    const nonce = await fixture.pageNonce();
+    await inspect(fixture, nonce);
+
+    const uncertain = await fixture.post("/buy/confirm/execute", nonce, {
+      ticketId: "ticket-ack-1"
+    });
+    assert.equal(uncertain.status, 200);
+    assert.equal(uncertain.payload.result.lifecycleState, "ACKNOWLEDGEMENT_UNKNOWN");
+
+    const unavailable = await fixture.post("/buy/confirm/execute", nonce, {
+      ticketId: "ticket-ack-1"
+    });
+    assert.equal(unavailable.status, 503);
+    assert.deepEqual(unavailable.payload, { code: "BASIC_BUY_SIDECAR_NOT_READY" });
+
+    const reconciled = await fixture.post("/buy/confirm/execute", nonce, {
+      ticketId: "ticket-ack-1"
+    });
+    assert.equal(reconciled.status, 200);
+    assert.equal(reconciled.payload.result.lifecycleState, "SUBMITTED");
+    assert.equal(calls, 3);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("provider-reply local transport uncertainty maps to ACKNOWLEDGEMENT_UNKNOWN and reconciles through the original request", async () => {
   const createRequestIds = [];
   let createCalls = 0;
   let replyCalls = 0;
@@ -182,7 +252,7 @@ test("provider-reply uncertainty reconciles through the original immutable reque
     },
     confirmProviderReply: async () => {
       replyCalls += 1;
-      throw new BasicBuySidecarError("ACKNOWLEDGEMENT_UNKNOWN");
+      throw new BasicBuySidecarError("BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN");
     }
   });
 
