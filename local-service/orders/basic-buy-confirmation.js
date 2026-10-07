@@ -217,15 +217,30 @@ const APP_JS = `(() => {
     const payload = await response.json();
     if (!response.ok) {
       const detail = payload.orderServiceCode ? ":" + payload.orderServiceCode : "";
-      throw new Error((payload.code || "BASIC_BUY_CONFIRMATION_FAILED") + detail);
+      const error = new Error((payload.code || "BASIC_BUY_CONFIRMATION_FAILED") + detail);
+      error.code = payload.code || "BASIC_BUY_CONFIRMATION_FAILED";
+      throw error;
     }
     return payload;
   }
 
+  function showUnknownAcknowledgement(message = "Order acknowledgement is unknown. Do not create another BUY. Use Check status to reconcile the same order request.") {
+    status.textContent = message;
+    confirm.textContent = "Check status";
+    confirm.disabled = false;
+    replyConfirm.hidden = true;
+    replyConfirm.disabled = true;
+  }
+
   function renderExecution(execution) {
     result.textContent = JSON.stringify(execution, null, 2);
+    replyConfirm.hidden = true;
+    replyConfirm.disabled = true;
+    confirm.disabled = true;
     status.textContent = "Execution state: " + execution.lifecycleState;
-    if (execution.lifecycleState === "REPLY_REQUIRED") {
+    if (execution.lifecycleState === "ACKNOWLEDGEMENT_UNKNOWN") {
+      showUnknownAcknowledgement();
+    } else if (execution.lifecycleState === "REPLY_REQUIRED") {
       replyConfirm.hidden = false;
       replyConfirm.disabled = false;
       status.textContent = "Provider reply required. Review the result and explicitly confirm the provider reply.";
@@ -247,12 +262,15 @@ const APP_JS = `(() => {
 
   confirm.addEventListener("click", async () => {
     confirm.disabled = true;
-    result.textContent = "Confirming...";
+    result.textContent = confirm.textContent === "Check status" ? "Reconciling..." : "Confirming...";
     try {
       const confirmed = await post("/buy/confirm/execute", { ticketId });
       renderExecution(confirmed.result);
     } catch (error) {
       result.textContent = error.message;
+      if (error.code === "ACKNOWLEDGEMENT_UNKNOWN") {
+        showUnknownAcknowledgement();
+      }
     }
   });
 
@@ -264,6 +282,9 @@ const APP_JS = `(() => {
       renderExecution(confirmed.result);
     } catch (error) {
       result.textContent = error.message;
+      if (error.code === "ACKNOWLEDGEMENT_UNKNOWN") {
+        showUnknownAcknowledgement("Provider reply acknowledgement is unknown. Do not submit again. Use Check status to reconcile the same order request.");
+      }
     }
   });
 
@@ -325,6 +346,10 @@ function safeExecutionResult(result) {
   });
 }
 
+function isAcknowledgementUnknown(error) {
+  return error instanceof BasicBuySidecarError && error.code === "ACKNOWLEDGEMENT_UNKNOWN";
+}
+
 export function createBasicBuyConfirmationHandler({
   tickets,
   getLocalOrigin,
@@ -384,6 +409,7 @@ export function createBasicBuyConfirmationHandler({
       expiresAtMs,
       phase: "new",
       ticketId: null,
+      ticket: null,
       localOrderId: null
     }));
     return nonce;
@@ -435,20 +461,41 @@ export function createBasicBuyConfirmationHandler({
     const ticketId = validatedTicketId(body.ticketId);
 
     if (executeConfirmedBuy === null) fail("BASIC_BUY_EXECUTION_UNAVAILABLE", 503);
-    if (session.phase !== "reviewed" || session.ticketId !== ticketId) {
+
+    let ticket;
+    if (session.phase === "reviewed" && session.ticketId === ticketId) {
+      ticket = tickets.consume(ticketId);
+      if (!ticket) fail("BASIC_BUY_TICKET_INVALID", 410);
+    } else if (
+      session.phase === "ack_unknown"
+      && session.ticketId === ticketId
+      && session.ticket
+    ) {
+      ticket = session.ticket;
+    } else {
       fail("BASIC_BUY_CONFIRMATION_STATE_INVALID", 409);
     }
 
-    const ticket = tickets.consume(ticketId);
-    if (!ticket) fail("BASIC_BUY_TICKET_INVALID", 410);
-    const executing = replaceSession(nonce, session, { phase: "executing" });
+    const executing = replaceSession(nonce, session, {
+      phase: "executing",
+      ticketId,
+      ticket
+    });
 
     try {
       const result = safeExecutionResult(await executeConfirmedBuy(ticket));
-      if (result.lifecycleState === "REPLY_REQUIRED") {
+      if (result.lifecycleState === "ACKNOWLEDGEMENT_UNKNOWN") {
+        replaceSession(nonce, executing, {
+          phase: "ack_unknown",
+          ticketId,
+          ticket,
+          localOrderId: result.localOrderId
+        });
+      } else if (result.lifecycleState === "REPLY_REQUIRED") {
         replaceSession(nonce, executing, {
           phase: "reply_required",
-          ticketId: null,
+          ticketId,
+          ticket,
           localOrderId: result.localOrderId
         });
       } else {
@@ -456,7 +503,15 @@ export function createBasicBuyConfirmationHandler({
       }
       writeJson(response, 200, { result });
     } catch (error) {
-      sessions.delete(nonce);
+      if (isAcknowledgementUnknown(error)) {
+        replaceSession(nonce, executing, {
+          phase: "ack_unknown",
+          ticketId,
+          ticket
+        });
+      } else {
+        sessions.delete(nonce);
+      }
       throw error;
     }
   }
@@ -468,14 +523,21 @@ export function createBasicBuyConfirmationHandler({
     await readExactJson(request, []);
 
     if (confirmProviderReply === null) fail("BASIC_BUY_REPLY_UNAVAILABLE", 503);
-    if (session.phase !== "reply_required" || !session.localOrderId) {
+    if (session.phase !== "reply_required" || !session.localOrderId || !session.ticket) {
       fail("BASIC_BUY_CONFIRMATION_STATE_INVALID", 409);
     }
 
     const executing = replaceSession(nonce, session, { phase: "executing_reply" });
     try {
       const result = safeExecutionResult(await confirmProviderReply(session.localOrderId));
-      if (result.lifecycleState === "REPLY_REQUIRED") {
+      if (result.lifecycleState === "ACKNOWLEDGEMENT_UNKNOWN") {
+        replaceSession(nonce, executing, {
+          phase: "ack_unknown",
+          ticketId: session.ticketId,
+          ticket: session.ticket,
+          localOrderId: result.localOrderId
+        });
+      } else if (result.lifecycleState === "REPLY_REQUIRED") {
         replaceSession(nonce, executing, {
           phase: "reply_required",
           localOrderId: result.localOrderId
@@ -485,7 +547,16 @@ export function createBasicBuyConfirmationHandler({
       }
       writeJson(response, 200, { result });
     } catch (error) {
-      sessions.delete(nonce);
+      if (isAcknowledgementUnknown(error)) {
+        replaceSession(nonce, executing, {
+          phase: "ack_unknown",
+          ticketId: session.ticketId,
+          ticket: session.ticket,
+          localOrderId: session.localOrderId
+        });
+      } else {
+        sessions.delete(nonce);
+      }
       throw error;
     }
   }
