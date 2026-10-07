@@ -1,0 +1,81 @@
+name: Market Flow US Replay CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "browser/replay/**"
+      - "replay-host/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/build-replay-browser.mjs"
+      - "tests/unit/replay-*.test.mjs"
+      - "tests/service/replay-*.test.mjs"
+      - "tests/e2e/replay-*.spec.mjs"
+      - "START_MARKET_REPLAY.cmd"
+      - "docs/MARKET_REPLAY.md"
+      - "docs/REPLAY_HARDENING.md"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/replay-ci.yml"
+  pull_request:
+    paths:
+      - "browser/replay/**"
+      - "replay-host/**"
+      - "shared/**"
+      - "local-service/**"
+      - "scripts/build-replay-browser.mjs"
+      - "tests/unit/replay-*.test.mjs"
+      - "tests/service/replay-*.test.mjs"
+      - "tests/e2e/replay-*.spec.mjs"
+      - "START_MARKET_REPLAY.cmd"
+      - "docs/MARKET_REPLAY.md"
+      - "docs/REPLAY_HARDENING.md"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/replay-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: market-flow-us-replay-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    name: Replay build + acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Restore exact Playwright Chromium cache
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ms-playwright-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium and system dependencies on cache miss
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify cached Chromium on cache hit
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install chromium
+
+      - name: Build Replay browser runtime
+        run: npm run build:replay
+
+      - name: Run Replay acceptance contract
+        run: npm run test:acceptance:replay
