@@ -3,15 +3,17 @@ phase: planning
 overall_status: in_progress
 
 current:
-  chat: 28
-  node: "7.4"
-  title: "Final target-machine/provider acceptance"
-  status: pending
+  chat: null
+  node: "7"
+  title: "Test-system hardening focused replan"
+  status: planning
+
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
+  test_system_hardening_replan: ".planning/TEST_SYSTEM_HARDENING_REPLAN.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
@@ -55,4 +57,5 @@ execution:
   current_node: "7.4"
   final_acceptance_node: "7.4"
 
-blockers: []
+blockers:
+  - "7.4 remains blocked while the focused test-system hardening replan is active and implementation_authorized=false."
