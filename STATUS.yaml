@@ -3,9 +3,9 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 27
-  node: "7.6.5"
-  title: "Pre-acceptance extension code audit"
+  chat: 28
+  node: "7.4"
+  title: "Final target-machine/provider acceptance"
   status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
@@ -50,8 +50,8 @@ planning_completion:
 execution:
   chats_total: 28
   implementation_leaves_total: 44
-  current_chat: 27
-  current_node: "7.6.5"
+  current_chat: 28
+  current_node: "7.4"
   final_acceptance_node: "7.4"
 
 blockers: []
