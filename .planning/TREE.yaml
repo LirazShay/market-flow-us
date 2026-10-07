@@ -503,21 +503,22 @@ nodes:
 
   "7":
     status: approved
-    strategy: The product is deterministically re-closed after every requested capability extension, receives one final scoped code-centric audit of the recent extension delta, and only then is accepted on the exact final target-machine/provider candidate.
-    tactic: Preserve completed U.S. migration/Demo Buy/AI/standalone-order/Replay evidence, complete Replay hardening and the narrow in-product BUY integration, audit/reclose the combined recent extension code, then resume final user-dependent acceptance.
+    strategy: The product is deterministically re-closed after every requested capability extension, receives one final scoped code-centric audit of the recent extension delta, hardens repository verification/completeness/performance, and only then is accepted on the exact final target-machine/provider candidate.
+    tactic: Preserve completed U.S. migration/Demo Buy/AI/standalone-order/Replay evidence, complete Replay hardening and the narrow in-product BUY integration, audit/reclose the combined recent extension code, harden and reclose the verification system through `7.7`, then resume final user-dependent acceptance.
     parallel_assumptions:
       - Target-machine/authenticated checks remain last.
-      - The pre-acceptance code audit is deterministic and does not replace user-dependent acceptance.
+      - The pre-acceptance code audit and verification-system hardening are deterministic and do not replace user-dependent acceptance.
     necessary_assumptions:
-      - Final acceptance must execute against a candidate that includes completed Replay hardening and Basic BUY and has received the requested combined code-centric audit/reclosure.
+      - Final acceptance must execute against a candidate that includes completed Replay hardening and Basic BUY, has received the requested combined code-centric audit/reclosure, and has a reclosed comprehensive deterministic verification system.
     sufficiency_assumptions:
-      - Completed historical proof + `9.6` + `8.5` + `7.6.1`–`7.6.5` + final `7.4` establish end-to-end completion of the current requested scope.
+      - Completed historical proof + `9.6` + `8.5` + `7.6.1`–`7.6.5` + `7.7.1`–`7.7.4` + final `7.4` establish end-to-end completion of the current requested scope.
     success_evidence:
       - Final candidate has green deterministic gates, accurate docs, hardened Replay, deterministic standalone order-service proof and deterministic Detail BUY integration proof.
       - The exact recent extension delta is fully mapped and code-reviewed with no known material defect or material unproved review risk remaining; every discovered blocker is root-caused, fixed and regression-proven.
+      - Verification ownership/completeness, deterministic lifecycle behavior and recurring proof topology are explicitly reclosed with no unexplained material gap.
       - Final target-machine/provider evidence passes on the exact audited/reclosed candidate.
     depends_on: []
-    children: ["7.1", "7.2", "7.3", "7.5", "7.6", "7.4"]
+    children: ["7.1", "7.2", "7.3", "7.5", "7.6", "7.7", "7.4"]
 
   "7.1":
     status: approved
@@ -675,6 +676,206 @@ nodes:
     depends_on: ["7.6.4"]
     children: []
 
+  "7.7":
+    status: approved
+    strategy: Before final target-machine/provider acceptance, repository verification is comprehensive, deterministic, maintainable and fast enough for repeated use, with each material contract/risk owned by the narrowest faithful proof and no known material coverage or verification-topology gap.
+    tactic: Establish explicit proof ownership and a durable verification policy; use one planning coverage ledger to audit current proof; re-audit current product capability and the test/harness system itself for missing material proof or quality gaps; remove lifecycle/wait/process and service-suite waste without weakening isolation; remove duplicate Browser/Acceptance/Replay execution while preserving named evidence and path-trigger completeness; then reclose one exact candidate through all affected deterministic gates.
+    parallel_assumptions:
+      - Branches after `7.7.1.1` may be technically parallel; later serial chat allocation may order them for merge safety without falsifying dependency truth.
+      - Target-machine/authenticated evidence remains owned by `7.4` and is not converted into hosted-CI proof.
+    necessary_assumptions:
+      - A green existing suite does not prove that all material contract/risk areas are owned or that recent features have no proof gaps.
+      - Test code can itself accumulate duplicated/stale assertions, nondeterministic waits, hidden retries, weak cleanup or routing gaps even when product code is correct.
+      - Final acceptance should not be the first place where deterministic repository defects, race/lifecycle leaks or CI-routing gaps are discovered.
+      - Recurring verification speed affects engineering quality because slow suites are run less often and encourage weaker feedback loops.
+    sufficiency_assumptions:
+      - `7.7.1` closes verification ownership, product/test-system completeness and maintainability.
+      - `7.7.2` closes Fast/service determinism and recurring cost.
+      - `7.7.3` closes Browser/Acceptance/Replay/Workload topology and specialized proof routing.
+      - `7.7.4` proves the integrated result on one exact candidate before `7.4` resumes.
+    success_evidence:
+      - Every material durable contract/risk has an explicit authoritative proof owner or explicit justified target-machine-only disposition.
+      - No known material current-feature or test-system quality gap remains unexplained.
+      - Known deterministic lifecycle/duplicate-execution waste is removed or explicitly justified by distinct evidence value.
+      - Fast, Browser, Replay, Workload, Planning Docs and required order/local acceptance evidence are coherent and green on one exact candidate.
+      - `7.4` is pointed to that exact candidate and remains the only user-dependent acceptance stage.
+    depends_on: []
+    children: ["7.7.1", "7.7.2", "7.7.3", "7.7.4"]
+
+  "7.7.1":
+    status: approved
+    strategy: Verification completeness is explicit and outside-in rather than inferred from test count or line coverage, and test/harness quality is part of the verification contract.
+    tactic: First define the durable contract/risk/proof ownership model and CI routing contract; then re-audit current product surfaces, recent extensions and the test code/harnesses themselves against that model and close material gaps at the narrowest faithful layer.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Proof ownership must exist before product/test-system gaps can be closed consistently.
+    sufficiency_assumptions:
+      - `7.7.1.1` defines durable ownership/routing and `7.7.1.2` closes product/test-system gaps against that model.
+    success_evidence:
+      - Durable ownership/routing policy and the full product/test-system hygiene audit are both complete.
+    depends_on: []
+    children: ["7.7.1.1", "7.7.1.2"]
+
+  "7.7.1.1":
+    status: approved
+    strategy: One durable verification policy states what is being proved, which recurring command/workflow owns it, what evidence is target-machine-only, and which source/test/helper/config paths must trigger that owner.
+    tactic: Use `.planning/TEST_SYSTEM_COVERAGE_LEDGER.md` as the current-cycle audit/closure ledger, while making `docs/TEST_STRATEGY.md` the durable policy/ownership authority; align package scripts and workflow routing; validate source→proof ownership; replace brittle planning total-count checks with structural/freeze-baseline checks; evaluate lightweight Node built-in source coverage only as secondary telemetry, without arbitrary percentage targets.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Verification optimization and gap closure require one explicit recurring proof owner per material risk family.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Every material TREE/product contract family is mapped to primary proof layer, recurring owner, relevant command/workflow and acceptance/target disposition.
+      - Every shared helper/harness/source/config family that can invalidate a proof triggers at least one authoritative owner; no path-filter hole is known.
+      - Duplicate proof is classified as either intentional independent evidence or avoidable rerun; no duplicate is kept merely because it historically existed.
+      - Planning Docs validates TREE structure, parent/dependency correctness, required durable markers and frozen baseline without a hard-coded current total such as `58/44` or the new `69/51`.
+      - Source coverage telemetry, if retained, is documented as a gap-finding backstop; no 100% line/branch target becomes release authority.
+      - `.planning/TEST_SYSTEM_COVERAGE_LEDGER.md` remains audit/closure evidence rather than a second framework; `docs/TEST_STRATEGY.md` states the durable proof ownership, determinism, hygiene and performance rules.
+    depends_on: ["7.6.5"]
+    children: []
+
+  "7.7.1.2":
+    status: approved
+    strategy: Every material current capability is rechecked for normal, boundary, invalid/failure, recovery/lifecycle, security, race/concurrency and user-visible proof as applicable, while the tests/harnesses themselves are audited for maintainability and deterministic best practices.
+    tactic: Perform an outside-in audit spanning acquisition/universe, DB lifecycle/transactions, trusted reads, Current/Detail, Scanner, Demo Buy, AI Investigation, diagnostics/new-day, Replay recording/storage/portable source/Player/Host/isolation, standalone IBKR execution, Basic BUY confirmation/security, shared process/DB boundaries, build/package/operator/config seams and the entire test/helper/harness topology. Identify duplicated or stale tests/helpers, unowned `skip`/`todo`/`.only`, retry-based flake masking, arbitrary sleeps, weak assertions, over-mocking where real integration is authoritative, cleanup leaks, oversized/non-deterministic fixtures, poor failure diagnostics or unclear ownership. Add/refactor only where the change improves contract proof, determinism, clarity, reuse, diagnostics or runtime; use table-driven/generative-style cases with existing tooling where appropriate; audit interactive surfaces for material keyboard/semantic/accessibility gaps before considering a new library.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Durable proof ownership alone is insufficient until every material product/test-system gap is audited against it.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Every ledger row is PASS, TARGET_ONLY with explicit rationale, or routed to a later `7.7` leaf for a known implementation/topology change; no unexplained material GAP/AUDIT remains at leaf close.
+      - Replay, Basic BUY, IBKR, Demo Buy, AI Investigation, Current/Detail/Scanner, provider recovery/restart, diagnostics/support snapshot and Chat-27 hardening regressions each have current explicit proof mapping.
+      - Build/replay-build, operator launch/config and test-selection/config seams have an explicit proof/routing owner where failure is material.
+      - Missing negative/boundary/failure/recovery/race/security cases found by the audit receive deterministic public-safe regressions at the narrowest layer.
+      - Test inventory has no unowned focused/disabled/todo state and no retry introduced merely to hide flakiness; any intentional exclusion has explicit rationale/owner.
+      - Redundant tests/helpers are consolidated only when proof ownership remains visible; helper abstraction does not hide critical setup/assertion semantics.
+      - Fixed sleeps are replaced by deterministic clocks/gates/events where faithful; fixtures remain synthetic/public-safe and as small as the owning proof permits.
+      - Browser interaction semantics that materially affect usability have focused keyboard/semantic/state proof with existing Playwright where feasible; no library is added solely to satisfy a category checklist.
+      - Failure output remains actionable and sanitized; refactoring for speed does not remove the evidence required for RCA.
+      - Any blocking product or test-system defect discovered stays in this leaf through RCA → fix → regression → analogous-area sweep → affected verification → green.
+    depends_on: ["7.7.1.1"]
+    children: []
+
+  "7.7.2":
+    status: approved
+    strategy: Fast feedback removes causal lifecycle/wait waste first, then optimizes real service integration only where measurement proves remaining cost.
+    tactic: Eliminate referenced timers/process tails and avoidable real waits with deterministic lifecycle control; then profile service files/fixtures/bootstrap and optimize dominant recurring work without weakening real DuckDB/WebSocket/HTTP/filesystem isolation.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Deterministic lifecycle cleanup must precede service-suite optimization so profiling is not dominated by known timer/process tails.
+    sufficiency_assumptions:
+      - `7.7.2.1` closes lifecycle/wait defects and `7.7.2.2` closes the remaining measured service-suite cost.
+    success_evidence:
+      - Known lifecycle/process-tail waste is removed and remaining Fast/service cost is measured and optimized without weakening integration authority.
+    depends_on: []
+    children: ["7.7.2.1", "7.7.2.2"]
+
+  "7.7.2.1":
+    status: approved
+    strategy: Short test bodies must not leave referenced timers, child processes, sockets or arbitrary sleeps that extend process lifetime or create flaky timing.
+    tactic: Fix the known Replay Host losing `Promise.race` timeout so the losing 5-second timer cannot retain the process; add regression proof; sweep production/test helpers for the same timer/process-lifecycle family; replace avoidable fixed sleeps/cadence waits with fake time, explicit gates/events or cancellable/unrefed bounded timers where semantics permit.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - The known lifecycle defect must be removed before service profiling can represent intrinsic suite cost.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Replay Host child-stop success exits without the observed ~4.4–5 s referenced-timer tail and still escalates correctly on a genuinely stuck child.
+      - A regression fails on the old timer-retention behavior and passes the fix without relying on a long real sleep.
+      - Analogous `Promise.race`/timeout, child-process, socket/server and timer cleanup sites are enumerated and each has PASS/FIX/NOT_APPLICABLE disposition.
+      - Test-only timing seams do not create production bypasses or weaken real timeout behavior.
+      - Before/after process/runtime evidence is recorded and affected unit/service/replay proof is green.
+    depends_on: ["7.7.1.1"]
+    children: []
+
+  "7.7.2.2":
+    status: approved
+    strategy: Real service integration remains authoritative where it catches persistence/protocol/lifecycle risk, but its setup and repeated work are measured and minimized.
+    tactic: Profile service execution by file/fixture/bootstrap/DB/process phase after timer-tail removal; optimize dominant setup or oversized fixture work with the smallest change; preserve fresh temp DB/service isolation unless evidence proves a safer reusable boundary; evaluate file-level or other concurrency only after repeat/stress proof demonstrates independence and net wall-clock benefit.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Profiling must occur after lifecycle cleanup so optimization targets the real remaining bottleneck.
+    sufficiency_assumptions: []
+    success_evidence:
+      - A repeatable profile identifies dominant service costs instead of treating the 175-test aggregate as one number.
+      - Fresh real DuckDB/service/WebSocket isolation remains for tests whose risk requires it; any fixture reuse has explicit contamination/order-independence proof.
+      - No optimization converts a real integration contract into a mock-only assertion merely for speed.
+      - Any concurrency change is stress/repeat proven, has no shared port/path/DB/process race and produces a measured net win; otherwise concurrency is explicitly rejected with evidence.
+      - Fast CI and local Fast commands retain complete unit/service/order proof with before/after runtime evidence and no material regression hidden by timeout increases or retries.
+    depends_on: ["7.7.2.1"]
+    children: []
+
+  "7.7.3":
+    status: approved
+    strategy: Browser and specialized gates each execute unique proof once per recurring path while preserving named acceptance evidence and focused subsystem ownership.
+    tactic: Deduplicate full Chromium versus Local Fake checkpoint execution through exact same-candidate proof reuse; then align Replay/Fast/Workload/Order path routing so specialized workflows add distinct evidence rather than rerunning the same lower-layer suite.
+    parallel_assumptions:
+      - Browser/Acceptance topology and Replay/Fast/Workload/Order topology can be changed independently after proof ownership is explicit.
+    necessary_assumptions:
+      - Specialized CI cannot be optimized safely until lower-layer proof ownership and trigger routing are explicit.
+    sufficiency_assumptions:
+      - `7.7.3.1` closes Browser/Local Acceptance duplication and `7.7.3.2` closes Replay/Fast/Workload/Order routing/deduplication.
+    success_evidence:
+      - Specialized gates preserve named evidence while avoidable lower-layer duplicate execution is removed or explicitly justified.
+    depends_on: []
+    children: ["7.7.3.1", "7.7.3.2"]
+
+  "7.7.3.1":
+    status: approved
+    strategy: FR-7/FR-8 acceptance checkpoints remain first-class evidence, but Browser CI does not execute the identical Playwright scenarios once in full E2E and again solely to relabel them.
+    tactic: Make the full Chromium run emit or expose a sanitized exact-test proof manifest/result that Local Acceptance can validate into its existing FR report for the same candidate/run; preserve standalone Local Acceptance execution for explicit operator use; fail closed on missing/stale/different-SHA/incomplete evidence. Prefer the simplest same-run mechanism; if proof-reuse plumbing is more brittle than the saved execution, retain the distinct rerun and document why.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Named acceptance evidence may be reused only when exact same-candidate test identity/freshness is fail-closed.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Browser CI runs each FR-7/FR-8 Playwright scenario once when reliable same-run proof reuse is implemented, while still producing the current named acceptance checkpoint report.
+      - Acceptance reuse binds to exact test identity and candidate SHA/run evidence and cannot silently consume stale prior-run output.
+      - `RUN_LOCAL_ACCEPTANCE`/individual profiles still execute the requested scenario when invoked independently and preserve failure diagnostics.
+      - AI-pack safety and any non-browser subcheck are either consumed from trustworthy same-run proof or deliberately retained as a small distinct check with documented ownership.
+      - Full Browser behavior, including material new interactive semantics from the completeness audit, is green and measured wall time shows the duplicate-execution cost removed without weaker evidence; if dedup is rejected after proof, the measured reason is recorded rather than hidden.
+    depends_on: ["7.7.1.1"]
+    children: []
+
+  "7.7.3.2":
+    status: approved
+    strategy: Replay, Workload and Order gates remain specialized evidence; lower-layer unit/service work has exactly one recurring owner for each relevant source-path change.
+    tactic: Expand/repair workflow path ownership so Fast reliably runs Replay unit/service proof for relevant Replay/Host/shared/helper/config changes, then focus Replay CI on Replay build and Replay-specific browser/cross-layer acceptance; preserve Order acceptance as distinct sidecar lifecycle proof; keep Workload bounded correctness/performance profiles separate from heavy target-machine authority; close helper/path-filter holes.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Replay lower-layer dedup is legal only after Fast is guaranteed to own those proofs for all relevant changes.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Replay-affecting production/shared/helper/config paths cannot change without triggering the authoritative unit/service owner.
+      - Replay CI no longer reruns Replay unit/service proof only when Fast is guaranteed to be the authoritative lower-layer owner for the same candidate; Replay still proves build and Replay-specific cross-layer/browser contracts.
+      - Release/reclosure requires both same-candidate evidence families, so green specialized Replay proof cannot substitute for failing or missing Fast lower-layer proof.
+      - Order acceptance remains explicit and synthetic/public-safe because it proves an operable sidecar lifecycle not reducible to individual unit cases.
+      - Workload CI retains bounded end-to-end plus isolated persistence/read/Scanner/Demo Buy sanity and does not absorb target-machine 4096×180 authority.
+      - Workflow path matrices cover production code, shared helpers, test harnesses and relevant config/package files; a regression test or planning validation guards the routing invariants where practical.
+      - Recurring workflow runtimes are measured after topology changes and no warning/error is waived without full RCA.
+    depends_on: ["7.7.1.1"]
+    children: []
+
+  "7.7.4":
+    status: approved
+    strategy: One exact post-hardening candidate proves comprehensive deterministic repository correctness and acceptable feedback topology before any user-dependent final acceptance resumes.
+    tactic: Re-run focused regressions and all affected authoritative gates; reconcile the coverage ledger; compare recurring runtime and duplicate-execution topology to baseline; run bounded repeat/stress proof for materially changed timing/race/lifecycle/topology paths; close every warning/error RCA; review final diff/contracts/planning truth; merge and verify main CI/open-PR state; pin the exact candidate for `7.4`.
+    parallel_assumptions:
+      - Heavy 4096x180 and authenticated/provider truth remain final `7.4` responsibilities.
+    necessary_assumptions:
+      - Final target-machine acceptance must not resume until verification ownership/completeness/performance/topology changes are integrated and reclosed on one exact candidate.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Unit, real-service, standalone order acceptance, browser build/full Chromium, Replay build/specialized acceptance, bounded Local Fake evidence, Planning Docs and bounded Workload gates are green according to the final ownership topology.
+      - `.planning/TEST_SYSTEM_COVERAGE_LEDGER.md` contains no unexplained material GAP or AUDIT; target-machine-only rows are explicitly deferred to `7.4` and are not mislabeled as repository PASS.
+      - Materially changed race/timing/lifecycle/topology proof survives bounded repeat/stress execution without retry-based green masking.
+      - Known Replay Host timer-tail and Browser duplicate-execution findings are closed with before/after evidence; remaining expensive proof is justified by distinct risk value.
+      - All CI warnings/errors encountered during this mini-project have recorded complete RCA: signal, root cause, prevention/detection failure, reusable prevention, analogous-area sweep and closing evidence.
+      - Final docs/scripts/workflows/tests agree on the same verification topology; no stale historical count or old command claims release authority.
+      - Final hardening PR is reviewed/squash-merged; required main CI is green; open PR audit is clean; exact final SHA is recorded.
+      - `7.4` is updated to depend on `7.7.4` and resumes only against that exact merged candidate.
+    depends_on: ["7.7.1.2", "7.7.2.2", "7.7.3.1", "7.7.3.2"]
+    children: []
+
   "7.4":
     status: approved
     strategy: The exact final audited/reclosed candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, integrated Detail BUY compatibility, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
@@ -694,7 +895,7 @@ nodes:
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
       - Authenticated market-data static smoke and market-open movement gates pass with sanitized SHA-bound reports.
       - No private credential/session/account material enters repo/reports, recordings, BUY browser surfaces or generated shareable artifacts.
-    depends_on: ["7.5", "8.5", "9.6", "7.6.5"]
+    depends_on: ["7.5", "8.5", "9.6", "7.6.5", "7.7.4"]
     children: []
 
   "8":
