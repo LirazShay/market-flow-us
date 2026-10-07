@@ -6,7 +6,7 @@ current:
   chat: 25
   node: "9.6"
   title: "Replay pre-user-run hardening"
-  status: ready
+  status: in_progress
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
