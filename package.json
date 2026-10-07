@@ -6,6 +6,9 @@
   "engines": {
     "node": "24.x"
   },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  },
   "scripts": {
     "build:browser": "node scripts/build-browser.mjs",
     "build:replay": "node scripts/build-replay-browser.mjs",
