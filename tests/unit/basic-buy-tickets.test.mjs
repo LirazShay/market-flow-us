@@ -29,7 +29,8 @@ function createFixture({
   enabled = true,
   ready = true,
   quantity = 3,
-  mode = "DRY_RUN"
+  mode = "DRY_RUN",
+  localOrigin = "http://127.0.0.1:8765"
 } = {}) {
   let nowMs = 1_000;
   let readCount = 0;
@@ -45,7 +46,7 @@ function createFixture({
     viewerReads,
     buyConfig: { enabled, quantity, mode },
     isReady: () => ready,
-    getLocalOrigin: () => "http://127.0.0.1:8765",
+    getLocalOrigin: () => localOrigin,
     now: () => nowMs,
     randomId: () => ids.shift()
   });
@@ -148,6 +149,17 @@ test("basic BUY preparation rejects historical-only, missing and malformed curre
     );
     assert.equal(fixture.authority.diagnostics().pendingTicket, false);
   }
+});
+
+test("basic BUY preparation rejects a non-loopback confirmation Origin without retaining a ticket", async () => {
+  const fixture = createFixture({ localOrigin: "https://example.test" });
+
+  await assert.rejects(
+    fixture.authority.prepare("1001"),
+    /loopback http Origin/
+  );
+
+  assert.equal(fixture.authority.diagnostics().pendingTicket, false);
 });
 
 test("basic BUY tickets are short-lived, memory-only and disappear after expiry", async () => {
