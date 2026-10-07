@@ -105,6 +105,7 @@ export async function startMarketScopeService({
   aiPackExportRoot = undefined,
   aiPackFault = null,
   basicBuyReadiness = () => false,
+  basicBuyExecution = null,
   diagnosticTracker = createDiagnosticTracker({ productVersion: serviceVersion, now })
 }) {
   if (!config || !Array.isArray(config.allowedOrigins) || config.allowedOrigins.length === 0) {
@@ -112,6 +113,16 @@ export async function startMarketScopeService({
   }
   if (typeof basicBuyReadiness !== "function") {
     throw new TypeError("basicBuyReadiness must be a function");
+  }
+  if (
+    basicBuyExecution !== null
+    && (
+      typeof basicBuyExecution !== "object"
+      || typeof basicBuyExecution.createOrder !== "function"
+      || typeof basicBuyExecution.confirmReply !== "function"
+    )
+  ) {
+    throw new TypeError("basicBuyExecution must expose createOrder and confirmReply");
   }
 
   const allowedOrigins = new Set(config.allowedOrigins);
@@ -171,6 +182,12 @@ export async function startMarketScopeService({
     ? createBasicBuyConfirmationHandler({
       tickets: basicBuyTickets,
       getLocalOrigin: () => basicBuyLocalOrigin,
+      executeConfirmedBuy: basicBuyExecution === null
+        ? null
+        : async (ticket) => await basicBuyExecution.createOrder(ticket.intent),
+      confirmProviderReply: basicBuyExecution === null
+        ? null
+        : async (localOrderId) => await basicBuyExecution.confirmReply(localOrderId),
       now
     })
     : null;
