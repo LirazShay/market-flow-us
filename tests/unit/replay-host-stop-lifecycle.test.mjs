@@ -32,16 +32,18 @@ function createFakeTimers() {
 }
 
 class FakeChild extends EventEmitter {
-  constructor({ exitOnSignal } = {}) {
+  constructor({ exitOnSignal, onKill } = {}) {
     super();
     this.exitCode = null;
     this.signalCode = null;
     this.killSignals = [];
     this.exitOnSignal = exitOnSignal ?? null;
+    this.onKill = onKill ?? (() => {});
   }
 
   kill(signal) {
     this.killSignals.push(signal);
+    this.onKill(signal);
     if (signal === this.exitOnSignal) {
       queueMicrotask(() => {
         this.exitCode = 0;
@@ -68,20 +70,27 @@ test("Replay Host cancels the losing stop timer when SIGTERM exits promptly", as
 
 test("Replay Host cancels the second stop timer when SIGKILL exits promptly", async () => {
   const timers = createFakeTimers();
-  const child = new FakeChild({ exitOnSignal: "SIGKILL" });
+  let signalKillSent;
+  const signalKill = new Promise((resolve) => {
+    signalKillSent = resolve;
+  });
+  const child = new FakeChild({
+    exitOnSignal: "SIGKILL",
+    onKill(signal) {
+      if (signal === "SIGKILL") signalKillSent();
+    }
+  });
 
   const stopped = stopOwnedChild(child, {
     setTimer: timers.setTimer.bind(timers),
     clearTimer: timers.clearTimer.bind(timers)
   });
 
-  await Promise.resolve();
   assert.deepEqual(child.killSignals, ["SIGTERM"]);
   assert.equal(timers.pending.size, 1);
   timers.fireNext();
 
-  await Promise.resolve();
-  await Promise.resolve();
+  await signalKill;
   assert.deepEqual(child.killSignals, ["SIGTERM", "SIGKILL"]);
 
   await stopped;
