@@ -28,7 +28,7 @@ Verified hardening runtime/test candidate: `52becaaeaddde01457199d17c88dd6ce61c9
 
 - Files/boundary reviewed: `portable-recording.js`, `recording-source.js`, `player-controller.js`, portable format/unit tests.
 - Material risks checked: manifest/frame/footer/version/count/order agreement, malformed/truncated/duplicate/out-of-order input, streaming export, byte-slice file reads, seek boundaries, concurrent source replacement behavior.
-- Proof used: existing portable recording tests covering malformed/truncated/wrong-version/count/order failures and seek/read slices, plus `tests/unit/replay-source-load-hardening.test.mjs`.
+- Proof used: existing portable recording tests covering malformed/truncated/wrong-version/count/order failures and seek/read slices, plus `tests/unit/replay-player-controller-source-hardening.test.mjs`.
 - Finding/fix: two concurrent source loads could finish out of order and let an older slower load overwrite the newer selected source. Controller source loading is now generation-owned: only the latest load may publish source/error state, while a stale completion is rejected without replacing the current source.
 - Final result: `PASS`.
 
