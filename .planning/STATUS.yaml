@@ -2,11 +2,11 @@ version: 2
 cycle_state: active
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "planning_review"
+current_stage: "tree_promotion"
 current_node: "7.7"
 blockers:
-  - "Final target-machine/provider acceptance 7.4 is blocked until the test-system hardening replan is reviewed, frozen, allocated, re-authorized, implemented and reclosed."
-  - "The proposed 7.7 subtree and 69-node/51-leaf totals are not authority until TREE mutation and freeze; current EXECUTION remains preserved historical truth."
-next_action: "Perform coherent-slice S&T challenge of the proposed 7.7 decomposition and coverage ledger, then execute a whole-plan outside-in coverage audit. Resolve any gaps or over/under-decomposition before mutating TREE. After review, update durable decisions/test strategy, mutate TREE and 7.4 dependency, repair Planning Docs structural validation without hard-coded total counts, run final planning review and freeze/no-drift proof. Do not implement test refactors yet."
-last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
+  - "Final target-machine/provider acceptance 7.4 is blocked until the test-system hardening replan is promoted into authoritative TREE/contracts, finally reviewed, frozen, allocated, re-authorized, implemented and reclosed."
+  - "Current EXECUTION remains preserved historical truth; the reviewed 7.7 proposal is not implementation authority yet."
+next_action: "Promote the corrected 7.7 proposal into .planning/TREE.yaml and add 7.7.4 to 7.4 dependencies; update durable DECISIONS and docs/TEST_STRATEGY ownership/hygiene/performance rules; repair Planning Docs structural validation without hard-coded total counts and require the new review artifacts. Then run a final adversarial planning review, freeze/no-drift proof, resume allocation validation and handoff simulation before implementation authorization. Do not implement test refactors yet."
+last_review: "R-US-TEST-SYSTEM-HARDENING-OUTSIDE-IN"
 implementation_authorized: false
