@@ -503,18 +503,21 @@ nodes:
 
   "7":
     status: approved
-    strategy: The product is deterministically re-closed after every requested capability extension and then accepted on the exact final target-machine/provider candidate.
-    tactic: Preserve completed U.S. migration/Demo Buy/AI/standalone-order/Replay evidence, complete Replay hardening and the narrow in-product BUY integration, then resume final user-dependent acceptance.
+    strategy: The product is deterministically re-closed after every requested capability extension, receives one final scoped code-centric audit of the recent extension delta, and only then is accepted on the exact final target-machine/provider candidate.
+    tactic: Preserve completed U.S. migration/Demo Buy/AI/standalone-order/Replay evidence, complete Replay hardening and the narrow in-product BUY integration, audit/reclose the combined recent extension code, then resume final user-dependent acceptance.
     parallel_assumptions:
       - Target-machine/authenticated checks remain last.
+      - The pre-acceptance code audit is deterministic and does not replace user-dependent acceptance.
     necessary_assumptions:
-      - Final acceptance must execute against the candidate that includes completed Replay hardening and the first in-product BUY integration rather than the historical post-branch-9 baseline.
+      - Final acceptance must execute against a candidate that includes completed Replay hardening and Basic BUY and has received the requested combined code-centric audit/reclosure.
     sufficiency_assumptions:
-      - Completed historical proof + `9.6` + `8.5` + final `7.4` establish end-to-end completion of the current requested scope.
+      - Completed historical proof + `9.6` + `8.5` + `7.6.1`–`7.6.5` + final `7.4` establish end-to-end completion of the current requested scope.
     success_evidence:
-      - Final candidate has green deterministic gates, accurate docs, hardened Replay, deterministic standalone order-service proof, deterministic Detail BUY integration proof and final target-machine/provider evidence.
+      - Final candidate has green deterministic gates, accurate docs, hardened Replay, deterministic standalone order-service proof and deterministic Detail BUY integration proof.
+      - The exact recent extension delta is fully mapped and code-reviewed with no known material defect or material unproved review risk remaining; every discovered blocker is root-caused, fixed and regression-proven.
+      - Final target-machine/provider evidence passes on the exact audited/reclosed candidate.
     depends_on: []
-    children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
+    children: ["7.1", "7.2", "7.3", "7.5", "7.6", "7.4"]
 
   "7.1":
     status: approved
@@ -569,9 +572,112 @@ nodes:
     depends_on: ["4.4.1", "4.4.2", "4.5.2", "7.3"]
     children: []
 
+  "7.6":
+    status: approved
+    strategy: Before user-dependent acceptance, the complete recent extension delta is code-reviewed and deterministically re-closed so final acceptance is not the first discovery point for material defects introduced by IBKR/order, Basic BUY, Replay or their shared integration seams.
+    tactic: Execute the five-stage audit in `.planning/PRE_ACCEPTANCE_CODE_AUDIT.md`: exact delta inventory, order/BUY deep audit, Replay deep audit, shared integration audit, then adversarial verification/reclosure with root-cause fixes for every blocker.
+    parallel_assumptions:
+      - Completed feature/reclosure evidence is reusable only where it proves the exact reviewed risk; prior green CI does not replace code review.
+      - The audit does not claim literal impossibility of all bugs; it closes known material defects and material unproved review risks in the exact scoped delta.
+    necessary_assumptions:
+      - The user explicitly requires all recently added feature code to receive a serious staged review before acceptance.
+      - Combining completed branch 8 and branch 9 code creates cross-feature/shared seams that earlier feature-specific reviews may not have assessed as one final composition.
+    sufficiency_assumptions:
+      - `7.6.1`–`7.6.5` cover inventory, both major capability families, shared integration and deterministic reclosure without reopening unrelated historical implementation.
+    success_evidence:
+      - `.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md` maps every material production/runtime file in exact delta `e0af9d105004f175a44ec33fa481fba0631773bf..93a48c8b0a36433e58f09f6a607ec7cd366c9aea` (or its audited successor) to contract/risk/proof/disposition.
+      - Every discovered blocking defect is root-caused, fixed, regression-proven and affected verification is green before audit resumes.
+      - No known material defect or material unproved review risk remains when `7.6.5` closes.
+      - One exact audited/reclosed runtime candidate is pinned for `7.4`, with PR/main CI green and open-PR audit clean.
+    depends_on: []
+    children: ["7.6.1", "7.6.2", "7.6.3", "7.6.4", "7.6.5"]
+
+  "7.6.1":
+    status: approved
+    strategy: The audit begins from a complete exact inventory rather than sampling headline files.
+    tactic: Compare the exact post-Demo-Buy/AI reclosure SHA to the current runtime candidate, classify every production/runtime change, map each material file to governing contracts/existing proof and identify cross-feature or under-proven seams.
+    parallel_assumptions: []
+    necessary_assumptions: []
+    sufficiency_assumptions: []
+    success_evidence:
+      - Exact base/head and complete changed production/runtime inventory are recorded.
+      - Every material scoped file is classified as order service, Basic BUY, Replay/Recording/Host, shared integration or packaging/verification.
+      - Every material scoped file has explicit contract/risk/proof routing and no shared seam is omitted because it is small.
+      - Initial audit report matrix exists with explicit PENDING/PASS/BLOCKED disposition.
+    depends_on: ["7.5", "8.5", "9.6"]
+    children: []
+
+  "7.6.2":
+    status: approved
+    strategy: Standalone IBKR execution plus the trusted Basic BUY consumer are deeply reviewed as one security/idempotency/lifecycle boundary.
+    tactic: Review intent validation, caller security, config/LIVE gates, CPGW lifecycle, DuckDB idempotency/provider-state persistence, acknowledgement reconciliation, shutdown/restart, ticket/confirmation/CSRF semantics, Node-only sidecar token ownership and child-process cleanup; add/fix deterministic regressions for material gaps.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Execution defects have higher consequence and must fail closed before user acceptance.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Every material IBKR/order/Basic-BUY production file in scope is reviewed against contract and tests.
+      - Security, LIVE gates, duplicate/retry/idempotency, reply/cancel/fill/acknowledgement-unknown, restart/token invalidation and child ownership paths have deterministic proof.
+      - Normal runtime/Scanner/Demo Buy/AI/Replay remain unable to execute orders except the explicit trusted Detail BUY composition.
+      - No known material order/BUY defect or material unproved risk remains.
+    depends_on: ["7.6.1"]
+    children: []
+
+  "7.6.3":
+    status: approved
+    strategy: Recording/Replay/Host are independently re-read as final combined code, including error, cleanup and race paths beyond feature happy paths.
+    tactic: Review recorder/storage/portable source/Player/ProducerBridge/Host/coordinator/UI/launcher code against MARKET_REPLAY + REPLAY_HARDENING, reusing prior proof only where exact; add/fix deterministic regressions for any material gap.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - Earlier `9.6` hardening is strong evidence but the final combined post-BUY composition still merits an independent pre-acceptance code pass requested by the user.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Every material Replay/Recording/Host production file in scope is reviewed against contract and tests.
+      - Malformed/storage/quota handling, scheduler/generation races, Stop/Play/Seek/Pause semantics, Host credentials/process ownership, fresh-DB/isolation and progressive missing-history paths have deterministic proof.
+      - Shared server/protocol remain replay-unaware and live DB/process authority remains untouched.
+      - No known material Replay defect or material unproved risk remains.
+    depends_on: ["7.6.2"]
+    children: []
+
+  "7.6.4":
+    status: approved
+    strategy: Shared code changed by the new features is reviewed for cross-feature regressions that feature-local tests can miss.
+    tactic: Audit changed service config/index/service, Viewer client/Detail, shared protocol/diagnostics, launchers/build/package/New Trading Day boundaries and CI/test routing; prove ordinary runtime, analysis surfaces and data ownership remain correct.
+    parallel_assumptions: []
+    necessary_assumptions:
+      - A correct sidecar and correct Replay subsystem can still regress the product through shared composition seams.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Ordinary `START_MARKET_FLOW_US.cmd` remains execution-disabled and Replay remains opt-in/external.
+      - BUY integration exposes no generic Viewer execution proxy or browser sidecar credential.
+      - Replay/order/new-day DB/process ownership boundaries remain disjoint and fail closed.
+      - Detail/History, Current, Scanner, Demo Buy and AI ordinary behavior has affected regression proof.
+      - Diagnostics remain sanitized and no test-only bypass exists in production composition.
+      - No known material shared-integration defect or material unproved risk remains.
+    depends_on: ["7.6.3"]
+    children: []
+
+  "7.6.5":
+    status: approved
+    strategy: One exact candidate is deterministically re-closed after the staged code audit and all discovered fixes before target-machine acceptance resumes.
+    tactic: Run focused regressions plus full unit/service/order/replay acceptance, browser/replay builds, full Chromium, materially affected Local Fake, Planning and bounded Workload gates; inspect recurring cost, final diff, PR/main CI and open-PR state, then pin exact audited runtime SHA.
+    parallel_assumptions:
+      - Heavy 4096x180 and authenticated provider evidence remain final target-machine acceptance responsibilities.
+    necessary_assumptions:
+      - Static review without fresh executable reclosure is insufficient after code changes or newly identified risk.
+    sufficiency_assumptions: []
+    success_evidence:
+      - `npm run test:unit`, `npm run test:service`, `npm run test:acceptance:replay`, `npm run test:acceptance:order`, `npm run build:browser`, `npm run build:replay` and full Chromium E2E are green.
+      - Materially affected bounded Local Fake, Planning Docs and Workload sanity are green without avoidable redundant long-running work.
+      - Audit report records exact reviewed range, every defect/root cause/fix/regression, all stage dispositions and exact final runtime candidate.
+      - Audit work PR is reviewed/squash-merged, required main CI is green and open-PR audit is clean.
+      - `7.4` is re-pointed to the exact audited candidate and remains the only user-dependent final acceptance work.
+    depends_on: ["7.6.4"]
+    children: []
+
   "7.4":
     status: approved
-    strategy: The exact final post-hardening/post-basic-BUY candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, integrated Detail BUY compatibility, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
+    strategy: The exact final audited/reclosed candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, integrated Detail BUY compatibility, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
     tactic: Run final target-machine local market/order/replay acceptance first, including the Detail BUY confirmation path, then authenticated market-data static smoke and market-open SHA-bound gate; run real IBKR live-order proof only when external permission exists.
     parallel_assumptions: []
     necessary_assumptions:
@@ -588,7 +694,7 @@ nodes:
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
       - Authenticated market-data static smoke and market-open movement gates pass with sanitized SHA-bound reports.
       - No private credential/session/account material enters repo/reports, recordings, BUY browser surfaces or generated shareable artifacts.
-    depends_on: ["7.5", "8.5", "9.6"]
+    depends_on: ["7.5", "8.5", "9.6", "7.6.5"]
     children: []
 
   "8":

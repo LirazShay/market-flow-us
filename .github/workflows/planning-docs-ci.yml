@@ -47,6 +47,9 @@ jobs:
             .planning/EXECUTION.yaml .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
             .planning/IBKR_ORDER_MINI_PROJECT.md .planning/MARKET_REPLAY_MINI_PROJECT.md
             .planning/REPLAY_BUY_EXTENSION_REVIEW.md
+            .planning/PRE_ACCEPTANCE_CODE_AUDIT.md
+            .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
+            .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md
             docs/US_MIGRATION_AUDIT.md docs/US_MIGRATION_FILE_MAP.md docs/US_CONTRACT_REVIEW.md
             docs/US_PRODUCT_DIRECTION.md docs/US_SOURCE_EVIDENCE.md
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md
@@ -90,7 +93,8 @@ jobs:
 
           for node in \
             '"4.3.1"' '"4.3.2"' '"4.3.3"' '"4.4.1"' '"4.4.2"' '"4.5.1"' '"4.5.2"' \
-            '"7.5"' '"8.1"' '"8.2"' '"8.3"' '"8.4"' '"8.5"' \
+            '"7.5"' '"7.6.1"' '"7.6.2"' '"7.6.3"' '"7.6.4"' '"7.6.5"' \
+            '"8.1"' '"8.2"' '"8.3"' '"8.4"' '"8.5"' \
             '"9.1"' '"9.2"' '"9.3"' '"9.4"' '"9.5"' '"9.6"' '"7.4"'; do
             grep -Fq "  ${node}:" .planning/TREE.yaml || {
               echo "TREE missing required implementation leaf ${node}"; exit 1;
@@ -120,6 +124,9 @@ jobs:
           require_text '# Market Recording + Replay Contract' docs/MARKET_REPLAY.md
           require_text '# Replay Pre-User-Run Hardening Contract' docs/REPLAY_HARDENING.md
           require_text '# Basic In-Product BUY Integration Contract' docs/BASIC_BUY_INTEGRATION.md
+          require_text '# Market Flow US — Pre-Acceptance Extension Code Audit' .planning/PRE_ACCEPTANCE_CODE_AUDIT.md
+          require_text '# R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
+          require_text '# Market Flow US — Pre-Acceptance Extension Code Audit Report' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md
 
           require_text 'ScreenerHulPaging3' docs/DATA_CONTRACT.md
           require_text 'schema v4' docs/TECHNICAL_SPEC.md
@@ -162,6 +169,8 @@ jobs:
           require_text 'PENDING_EXTERNAL_PERMISSION' docs/IBKR_ORDER_SERVICE.md
           require_text 'same requestId + same normalized intent' docs/IBKR_ORDER_SERVICE.md
           require_text 'no short opening' docs/PRODUCT_REQUIREMENTS.md
+
+          # Historical reviews remain historical evidence and keep their historical counts/text.
           require_text '37 implementation leaves allocated exactly once' docs/TEST_STRATEGY.md
           require_text '8.1 / 8.2 / 8.3 / 8.4 done' docs/TEST_STRATEGY.md
           require_text '9.1 / 9.2 / 9.3 / 9.4 / 9.5 done' docs/TEST_STRATEGY.md
@@ -172,9 +181,13 @@ jobs:
           require_text 'R-US-REPLAY-BUY-EXTENSION-FINAL' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
           require_text 'TREE nodes:              52' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
           require_text 'implementation leaves:   39' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
-          require_text 'Chat 25: 9.6 Replay pre-user-run hardening' .planning/EXECUTOR_HANDOFF.md
-          require_text 'Chat 26: 8.5 basic in-product BUY' .planning/EXECUTOR_HANDOFF.md
-          require_text 'Chat 27: 7.4 final target-machine/provider acceptance' .planning/EXECUTOR_HANDOFF.md
+
+          # Current execution truth after the pre-acceptance audit replan.
+          require_text 'Chat 25: 9.6 Replay pre-user-run hardening — done' .planning/EXECUTOR_HANDOFF.md
+          require_text 'Chat 26: 8.5 basic in-product BUY — done' .planning/EXECUTOR_HANDOFF.md
+          require_text 'Chat 27: 7.6.1 → 7.6.5 pre-acceptance extension code audit/reclosure' .planning/EXECUTOR_HANDOFF.md
+          require_text 'Chat 28: 7.4 final target-machine/provider acceptance' .planning/EXECUTOR_HANDOFF.md
+          require_text 'R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
 
           require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
           require_text 'fresh replay DB/session' .planning/TREE.yaml
@@ -261,8 +274,8 @@ jobs:
           }
           for (const leaf of leaves) visit(leaf);
 
-          if (ids.length !== 52) throw new Error(`Expected 52 TREE nodes after hardening/BUY replan, found ${ids.length}`);
-          if (leaves.length !== 39) throw new Error(`Expected 39 implementation leaves after hardening/BUY replan, found ${leaves.length}`);
+          if (ids.length !== 58) throw new Error(`Expected 58 TREE nodes after pre-acceptance audit replan, found ${ids.length}`);
+          if (leaves.length !== 44) throw new Error(`Expected 44 implementation leaves after pre-acceptance audit replan, found ${leaves.length}`);
 
           const planState = fs.readFileSync('.planning/STATUS.yaml', 'utf8')
             .match(/^plan_state: ([a-z_]+)$/m)?.[1];
@@ -275,6 +288,7 @@ jobs:
             const reviews = fs.readFileSync('.planning/REVIEWS.md', 'utf8');
             const ibkrReviews = fs.readFileSync('.planning/IBKR_ORDER_REVIEWS.md', 'utf8');
             const extensionReview = fs.readFileSync('.planning/REPLAY_BUY_EXTENSION_REVIEW.md', 'utf8');
+            const auditReplanReview = fs.readFileSync('.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md', 'utf8');
             for (const marker of ['R-US-DEMO-BUY-FINAL', 'R-US-DEMO-BUY-EXTERNAL']) {
               if (!reviews.includes(marker)) throw new Error(`Frozen plan requires historical review ${marker}`);
             }
@@ -286,6 +300,9 @@ jobs:
             }
             if (!extensionReview.includes('R-US-REPLAY-BUY-EXTENSION-FINAL')) {
               throw new Error('Frozen plan requires hardening/BUY extension review');
+            }
+            if (!auditReplanReview.includes('R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN')) {
+              throw new Error('Frozen plan requires pre-acceptance audit replan review');
             }
           }
 

@@ -4,14 +4,16 @@ overall_status: in_progress
 
 current:
   chat: 27
-  node: "7.4"
-  title: "Final target-machine/provider acceptance"
-  status: in_progress
+  node: "7.6.1"
+  title: "Pre-acceptance extension code audit"
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
+  pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
+  pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
@@ -43,12 +45,13 @@ planning_completion:
   market_replay_durable_contract: pass
   market_replay_tree_freeze: pass
   replay_hardening_buy_extension: pass
+  pre_acceptance_extension_audit_replan: pass
 
 execution:
-  chats_total: 27
-  implementation_leaves_total: 39
+  chats_total: 28
+  implementation_leaves_total: 44
   current_chat: 27
-  current_node: "7.4"
+  current_node: "7.6.1"
   final_acceptance_node: "7.4"
 
 blockers: []

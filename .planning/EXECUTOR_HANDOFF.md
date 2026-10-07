@@ -56,6 +56,7 @@ Do not ask the user to restate the plan.
 | `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC performance, shared generator, AGENTS SQL preflight |
 | `7.1`–`7.3` historical closure | TREE evidence + existing release/local acceptance contracts |
 | `7.5` historical post-Demo-Buy reclosure | Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + historical deterministic gates |
+| `7.6.*` pre-acceptance extension audit | PRE_ACCEPTANCE_CODE_AUDIT; BASIC_BUY_INTEGRATION; IBKR_ORDER_SERVICE + SECURITY; MARKET_REPLAY + REPLAY_HARDENING; exact delta `e0af9d...93a48`; changed production/tests/launchers/shared seams |
 | `8.1` local order authority | IBKR_ORDER_SERVICE §§1,3,5–8,10,14,17–18; IBKR_ORDER_SERVICE_SECURITY; PRODUCT_REQUIREMENTS §15; TECHNICAL_SPEC §§33–35,37,40–41; TEST_STRATEGY §§24–25,28 |
 | `8.2` real CPGW lifecycle | IBKR_ORDER_SERVICE §§2,4,5,9,11–16; DECISIONS D-US-035/037/038; TECHNICAL_SPEC §§35–39; TEST_STRATEGY §§26–30 |
 | `8.3` packaging/integration seam | IBKR_ORDER_SERVICE §§19–21; IBKR_ORDER_SERVICE_SECURITY §10; PRODUCT_SPEC/TECHNICAL_SPEC packaging; TEST_STRATEGY §§31–32 |
@@ -67,7 +68,7 @@ Do not ask the user to restate the plan.
 | `9.4` Replay Host/isolation | MARKET_REPLAY Stop/Seek/Host/Viewer sections; D-US-043/044; TEST_STRATEGY Stop/Seek/isolation/bootstrap; existing service `--db`/`--port`/`--allowed-origin` seams |
 | `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad gates + PR/main/open-PR truth |
 | `9.6` Replay hardening | REPLAY_HARDENING; MARKET_REPLAY; extension review; existing Replay tests/code only as routed by the hardening contract |
-| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact final candidate after completed `9.6` + `8.5` |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact audited/reclosed final candidate after completed `7.6.5` |
 
 TREE `success_evidence` is always definition-of-done.
 
@@ -75,22 +76,28 @@ TREE `success_evidence` is always definition-of-done.
 
 ```text
 Chats 1–24: completed historical implementation through 9.5
-Chat 25: 9.6 Replay pre-user-run hardening
-Chat 26: 8.5 basic in-product BUY
-Chat 27: 7.4 final target-machine/provider acceptance
+Chat 25: 9.6 Replay pre-user-run hardening — done
+Chat 26: 8.5 basic in-product BUY — done
+Chat 27: 7.6.1 → 7.6.5 pre-acceptance extension code audit/reclosure
+Chat 28: 7.4 final target-machine/provider acceptance
 ```
 
-This serial order does not create a false dependency between `9.6` and `8.5`.
+This serial order does not create a false dependency between completed `9.6` and `8.5`. The new `7.6` family is deliberately downstream of both because it audits their combined final composition before user-dependent acceptance.
 
 Current dependency truth is:
 
 ```text
 9.6 depends on 9.5
 8.5 depends on 3.3 + 8.4
-7.4 depends on 7.5 + 8.5 + 9.6
+7.6.1 depends on 7.5 + 8.5 + 9.6
+7.6.2 depends on 7.6.1
+7.6.3 depends on 7.6.2
+7.6.4 depends on 7.6.3
+7.6.5 depends on 7.6.4
+7.4 depends on 7.5 + 8.5 + 9.6 + 7.6.5
 ```
 
-Do not skip forward. The earlier Chat-25 allocation of `7.4` was deliberately repaired because the user requested Replay hardening and the basic in-product BUY before final acceptance.
+Do not skip forward. Final acceptance is intentionally paused until the user-requested pre-acceptance extension audit is deterministically re-closed.
 
 TREE `9.5` completed and pinned this historical post-branch-9 product candidate entering `9.6`:
 
@@ -98,19 +105,25 @@ TREE `9.5` completed and pinned this historical post-branch-9 product candidate 
 243f4f2e78e434378ff2202ba95af7b8626a0369
 ```
 
-PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later planning-only metadata commits do not replace this product candidate, and later runtime changes will supersede it as final-candidate authority.
+PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later runtime work superseded it.
+
+The exact runtime candidate entering `7.6` is:
+
+```text
+93a48c8b0a36433e58f09f6a607ec7cd366c9aea
+```
+
+The audit compares the recent extension delta from completed post-Demo-Buy/AI reclosure `e0af9d105004f175a44ec33fa481fba0631773bf` through this runtime candidate. If `7.6` fixes runtime code, the resulting merged runtime SHA supersedes `93a48...` for final acceptance.
 
 ## Current extension boundaries
 
-### Chat 25 / TREE 9.6
+### Chat 25 / TREE 9.6 — completed
 
-Run the adversarial Replay audit in `docs/REPLAY_HARDENING.md`. Reuse existing proof where it actually covers the risk; add the smallest deterministic regression for any newly identified material gap. A blocking defect remains Chat 25 responsibility through root cause, fix, regression proof and affected verification.
+Replay adversarial hardening is complete and remains reusable evidence. `7.6.3` independently reviews the final combined Replay code and may reuse exact `9.6` executable evidence only where it actually proves the current risk.
 
-`9.6` must not invent speculative Replay features or add replay-aware behavior to the shared protocol/server.
+### Chat 26 / TREE 8.5 — completed
 
-### Chat 26 / TREE 8.5
-
-Implement only the narrow basic BUY in `docs/BASIC_BUY_INTEGRATION.md`:
+The narrow basic BUY is implemented under `docs/BASIC_BUY_INTEGRATION.md`:
 
 ```text
 current Detail only
@@ -121,13 +134,37 @@ MKT / DAY
 DRY_RUN by default; LIVE only by explicit operator opt-in
 ```
 
-The provider-page Viewer may prepare an immutable short-lived ticket from `securityId`, but performs no sidecar/provider mutation. Actual execution requires the trusted product-owned loopback confirmation page with explicit confirmation and CSRF/ticket protections. The `ibkr-order-service` caller token stays Node-memory-only and is never exposed to browser code. Do not relax browser-Origin/CORS protection or add a generic Viewer order proxy.
+The provider-page Viewer may prepare an immutable short-lived ticket from `securityId`, but performs no sidecar/provider mutation. Actual execution requires the trusted product-owned loopback confirmation page with explicit confirmation and CSRF/ticket protections. The `ibkr-order-service` caller token stays Node-memory-only and is never exposed to browser code. Scanner, Demo Buy, AI Investigation, Current and Replay remain disconnected from automatic execution.
 
-Scanner, Demo Buy, AI Investigation, Current and Replay remain disconnected from automatic execution.
+### Chat 27 / TREE 7.6.1–7.6.5
 
-### Chat 27 / TREE 7.4
+Execute `.planning/PRE_ACCEPTANCE_CODE_AUDIT.md` in order:
 
-Final target-machine/provider acceptance starts only after `9.6` and `8.5` are `done` and durable truth points to the exact resulting product candidate. The integrated Detail BUY path must be proven in DRY_RUN; real LIVE submission occurs only when external permission exists and remains `PENDING_EXTERNAL_PERMISSION` otherwise.
+```text
+7.6.1 exact delta inventory + contract/proof map
+7.6.2 IBKR order service + Basic BUY deep audit
+7.6.3 Recording/Replay/Host deep audit
+7.6.4 shared integration/regression audit
+7.6.5 adversarial verification + deterministic reclosure
+```
+
+Static review must cover every material production/runtime file in the exact recent extension delta, not just headline classes. Inspect implementation and tests together. A green prior CI result is evidence, not a substitute for code review.
+
+Any blocking defect stays with Chat 27 through:
+
+```text
+root cause
+→ smallest sufficient fix
+→ regression proof
+→ affected verification
+→ resume audit
+```
+
+Maintain `.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md` as the durable PASS/BLOCKED matrix. Do not claim literal zero-bug certainty; completion means no known material defect or material unproved review risk remains after exhaustive scoped review and deterministic reclosure.
+
+### Chat 28 / TREE 7.4
+
+Final target-machine/provider acceptance starts only after `7.6.5` is `done` and durable truth points to the exact audited/reclosed product candidate. The integrated Detail BUY path must be proven in DRY_RUN; real LIVE submission occurs only when external permission exists and remains `PENDING_EXTERNAL_PERMISSION` otherwise.
 
 ## Branch-9 architectural boundary
 
@@ -436,18 +473,22 @@ Branch `8.4` completed against the post-order-service baseline:
 28e950afc1c4bfe4322d0593f483d05d92553e2d
 ```
 
-That SHA remains branch-8 evidence only.
-
-TREE `9.5` completed deterministic Replay reclosure and pinned the exact post-branch-9 historical product candidate:
+TREE `9.5` completed deterministic Replay reclosure against:
 
 ```text
 243f4f2e78e434378ff2202ba95af7b8626a0369
 ```
 
-That candidate passed focused Replay proof plus the materially affected Fast, Browser/Local Fake, Planning and bounded Workload gates on main; PR #53 was squash-merged and the open-PR audit was clean.
+The combined post-hardening/post-basic-BUY runtime candidate entering the new audit is:
 
-Under the currently frozen extension, Chat 25 / `9.6` hardens Replay first; Chat 26 / `8.5` then adds the narrow integrated Detail BUY; Chat 27 / `7.4` performs final user-dependent target-machine acceptance against the exact resulting product candidate.
+```text
+93a48c8b0a36433e58f09f6a607ec7cd366c9aea
+```
+
+Chat 27 / TREE `7.6.1`–`7.6.5` must now audit and deterministically re-close the exact recent extension delta before acceptance. If it changes runtime code, the resulting merged runtime SHA becomes the new acceptance candidate.
+
+Chat 28 / TREE `7.4` then performs final user-dependent target-machine acceptance against that exact audited candidate.
 
 Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
 
-Overall completion requires every assigned leaf done, Replay hardening, basic in-product BUY integration, final acceptance, PR/merge/main-green closure and no blocking defect.
+Overall completion requires every assigned leaf done, the pre-acceptance extension audit/reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
