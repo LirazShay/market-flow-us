@@ -43,8 +43,32 @@ if (/^## Current serial allocation$/m.test(handoff)) {
   );
 }
 
+const packageJson = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const approvedInstallScripts = packageJson.allowScripts ?? {};
+if (approvedInstallScripts["esbuild@0.28.2"] !== true) {
+  throw new Error(
+    "package.json must explicitly approve only the reviewed esbuild@0.28.2 install script"
+  );
+}
+
+const unexpectedApprovals = Object.entries(approvedInstallScripts)
+  .filter(([name, allowed]) => name !== "esbuild@0.28.2" || allowed !== true);
+if (unexpectedApprovals.length) {
+  throw new Error(
+    `Unexpected npm install-script approvals require explicit review: ${unexpectedApprovals.map(([name]) => name).join(", ")}`
+  );
+}
+
+const npmrc = fs.readFileSync(".npmrc", "utf8");
+if (!/^strict-allow-scripts=true$/m.test(npmrc)) {
+  throw new Error(
+    ".npmrc must fail closed on dependency install scripts that are not explicitly reviewed"
+  );
+}
+
 console.log("CI hygiene verified", {
   workflows: workflowNames.length,
   authority: "TREE + EXECUTION + planning STATUS",
-  handoff: "bootstrap/routing only"
+  handoff: "bootstrap/routing only",
+  installScripts: "strict; esbuild@0.28.2 reviewed"
 });
