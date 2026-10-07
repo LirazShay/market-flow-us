@@ -1,14 +1,12 @@
 # Replay Hardening Audit — TREE 9.6
 
-Status: IN PROGRESS
+Status: PASS
 
 This record is public-safe. It contains no credentials, private recordings, authenticated dumps, account identifiers, or browser/session data.
 
 Baseline entering hardening: `243f4f2e78e434378ff2202ba95af7b8626a0369`
 Execution branch: `chat-25-replay-hardening`
-Current branch head at initial audit capture: `5960880789566b5c5cda1f5417ceb370a5bf2da2`
-
-Final `PASS` is intentionally withheld until the executable gates in `docs/REPLAY_HARDENING.md` are green on the candidate SHA.
+Verified hardening runtime/test candidate: `7e0144b42371c3cc33ebcdafb8bca163bbd51df6`
 
 ## 4.1 Recording boundary
 
@@ -16,7 +14,7 @@ Final `PASS` is intentionally withheld until the executable gates in `docs/REPLA
 - Material risks checked: partial/unvalidated frames, non-deterministic membership/order, provider/validation failure, sensitive metadata, false completion after stop/failure, overlapping recorder lifecycle requests.
 - Proof used: existing Replay recording/unit coverage plus `tests/unit/replay-recorder-hardening.test.mjs`.
 - Finding/fix: overlapping `start()` / `stop()` or concurrent `start()` calls could cross the asynchronous recording creation boundary. `market-recorder.js` now serializes recorder lifecycle operations so the second start fails closed and stop waits for the in-flight start before completing.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Final result: `PASS`.
 
 ## 4.2 IndexedDB store/library
 
@@ -24,7 +22,7 @@ Final `PASS` is intentionally withheld until the executable gates in `docs/REPLA
 - Material risks checked: atomic append metadata+frame, quota/transaction failure, preservation of prior committed frames, bounded delete, stale async mutation after lifecycle changes.
 - Proof used: existing Replay recording/store tests including quota failure preservation, plus recorder lifecycle hardening proof.
 - Findings/fixes: no store-format redesign required. Recorder lifecycle serialization closes the material caller-side stale-start race found during audit.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Final result: `PASS`.
 
 ## 4.3 Portable format / file source
 
@@ -32,16 +30,18 @@ Final `PASS` is intentionally withheld until the executable gates in `docs/REPLA
 - Material risks checked: manifest/frame/footer/version/count/order agreement, malformed/truncated/duplicate/out-of-order input, streaming export, byte-slice file reads, seek boundaries, source replacement behavior.
 - Proof used: existing portable recording tests covering malformed/truncated/wrong-version/count/order failures and seek/read slices.
 - Findings/fixes: no format or parser defect found requiring product code changes.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Final result: `PASS`.
 
 ## 4.4 Player / time projection
 
 - Files/boundary reviewed: `market-player.js`, `player-controller.js`, Player lifecycle/error tests and controller tests.
 - Material risks checked: exact irregular 1x timing, contemporary local timestamp rebasing with provider facts unchanged, Pause/Resume timing, stale timers/promises/callbacks, ACK gating, terminal completion/error ownership.
-- Proof used: existing Player timing/ACK/generation tests plus `tests/unit/replay-hardening-races.test.mjs`.
-- Finding/fix 1: pausing while the final cycle ACK was in flight could leave the authoritative final frame committed while the Player remained paused. `market-player.js` now completes/closes the run on Resume when the final committed sequence has already reached the end.
-- Finding/fix 2: an old Player callback could update controller state after the controller had rebuilt around a new Player. `player-controller.js` now generation-guards Player callbacks and invalidates old ownership on rebuild/detach.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Proof used: existing Player timing/ACK/generation tests plus `tests/unit/replay-hardening-races.test.mjs` and `tests/unit/replay-player-authority-hardening.test.mjs`.
+- Finding/fix 1: pausing while the final cycle ACK was in flight could leave the authoritative final frame committed while the Player remained paused. Resume now reconciles that committed terminal frame exactly once.
+- Finding/fix 2: an old Player callback could update controller state after the controller had rebuilt around a new Player. `player-controller.js` now generation-guards callbacks and invalidates old ownership on rebuild/detach.
+- Finding/fix 3: Pause changed the scheduler generation, so an already-dispatched `acceptUniverse` / `commitCycle` failure could be mistaken for stale scheduling work and silently ignored; a quick Resume could also schedule duplicate authoritative emission while the prior ACK was unresolved. Player now separates scheduling generation from authority generation, tracks the in-flight authoritative boundary, preserves authoritative failures across Pause, prevents duplicate Resume emission, and still ignores source-read work cancelled before authority dispatch.
+- Finding/fix 4: Stop/Seek now invalidate authority synchronously, and a late session-start completion performs bounded stale-session cleanup rather than reviving a terminal lifecycle.
+- Final result: `PASS`.
 
 ## 4.5 Replay Host / lifecycle / security
 
@@ -50,51 +50,74 @@ Final `PASS` is intentionally withheld until the executable gates in `docs/REPLA
 - Proof used: existing Host security/isolation/foreign-port tests plus `tests/service/replay-host-race.test.mjs` and coordinator race proof in `tests/unit/replay-hardening-races.test.mjs`.
 - Finding/fix 1: concurrent Host start/stop requests could observe `activeRun === null` during child startup and allow a late-starting child to survive Stop. Host lifecycle mutations are now serialized.
 - Finding/fix 2: a stale browser coordinator generation could execute cleanup after a newer generation had already created a run. Coordinator transitions are now serialized while preserving synchronous viewer opening for browser user activation.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Verification correction: the first Host race regression used two event-loop turns as a startup assumption and was itself nondeterministic. It was corrected to wait on the exact fake-child spawn boundary before asserting Stop ordering; the runtime Host fix was unchanged.
+- Final result: `PASS`.
 
 ## 4.6 Shared service/protocol boundary
 
 - Files/boundary reviewed: shared request types, ProducerBridge Replay proof, service entry/config seams, Replay composition/build.
 - Material risks checked: `replayMode`, virtual clock, load-recording, seek/reset, hidden preroll/fast-forward leaking into shared authority.
 - Proof used: existing shared-protocol and real ProducerBridge/service Replay tests.
-- Findings/fixes: Replay remains an external producer lane; no Replay-specific shared protocol operation found or added.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Findings/fixes: Replay remains an external producer lane; no Replay-specific shared protocol operation was found or added.
+- Final result: `PASS`.
 
 ## 4.7 Product surfaces over arbitrary Replay start
 
 - Files/boundary reviewed: Replay reclosure/service proof for Current, History, Scanner and Demo Buy over arbitrary/middle-frame start.
 - Material risks checked: zero preroll, missing earlier anchors/history, progressive history, Detail/current coherence, Demo Buy baseline/future-horizon behavior from replayed authoritative cycles.
-- Proof used: existing Replay reclosure/service tests.
+- Proof used: existing Replay reclosure/service tests and Replay acceptance contract.
 - Findings/fixes: no Replay-specific synthesis or product-surface special mode required.
-- Final result: `BLOCKED` — static review complete; executable gate pending.
+- Final result: `PASS`.
 
 ## 4.8 Packaging / diagnostics / operator path
 
 - Files/boundary reviewed: `scripts/build-replay-browser.mjs`, Replay launcher, Replay docs/build tests, package scripts and CI workflows.
-- Material risks checked: dedicated Replay bundle/launcher, unchanged ordinary launch semantics, public-safe diagnostics, actionable lifecycle failures.
-- Proof used: existing Replay build/package tests; `npm run build:replay` and browser/CI gates still pending for this candidate.
-- Findings/fixes: no packaging subsystem change required by static audit.
-- Final result: `BLOCKED` — executable build/CI proof pending.
+- Material risks checked: dedicated Replay bundle/launcher, unchanged ordinary launch semantics, public-safe diagnostics, actionable lifecycle failures, explicit execution of the hardening contract commands.
+- Proof used: existing Replay build/package tests plus new `.github/workflows/replay-ci.yml` running `npm run build:replay` and `npm run test:acceptance:replay` directly.
+- Findings/fixes: the existing repository CI covered unit/service/full Browser behavior but did not run the two Replay contract commands as exact named gates. A focused Replay CI workflow was added instead of overloading Fast CI.
+- Final result: `PASS`.
 
-## Executable verification required before PASS
+## Verification evidence
 
-Required by the hardening contract:
+Exact runtime/test candidate:
 
 ```text
-npm run build:replay
-npm run test:acceptance:replay
-npm run test:unit
-npm run test:service
+7e0144b42371c3cc33ebcdafb8bca163bbd51df6
 ```
 
-Materially affected repository gates to verify through PR/main CI include Fast, Browser, Planning, Workload/local acceptance as selected by repository workflow/path rules and the changed files.
+Green PR runs on that SHA:
 
-## Open status
+```text
+Planning Docs #619  — success
+Workload #263       — success
+Fast CI #477        — success
+Replay CI #6        — success
+Browser CI #435     — success
+```
 
-- Static/adversarial audit: complete for all mandatory areas.
-- Blocking defects found: recorder lifecycle overlap; final-ACK Pause completion; stale controller callback; coordinator stale cleanup race; Host start/stop startup race.
-- Root-cause fixes: implemented on the execution branch.
-- Deterministic regressions: added on the execution branch.
-- Executable verification: pending.
-- Final hardening candidate SHA: pending executable green + final evidence update.
-- Overall result: `BLOCKED` until all required executable proof is green.
+The required hardening commands are therefore covered explicitly:
+
+```text
+npm run build:replay             -> Replay CI #6
+npm run test:acceptance:replay   -> Replay CI #6
+npm run test:unit                -> Fast CI #477
+npm run test:service             -> Fast CI #477
+```
+
+Browser CI #435 also passed full Chromium E2E plus bounded Local Fake acceptance. Workload #263 and Planning Docs #619 passed on the same candidate.
+
+## Additional verification defect repaired
+
+Planning Docs initially exposed a parser defect in `.planning/verify-handoff.mjs`: the allocated execution regex required a trailing newline after the final node line, so a valid EOF after Chat 27 made node `7.4` appear unallocated. The validator now accepts either newline or EOF for the final node. No allocation, dependency, authorization or execution semantics were changed.
+
+## Final status
+
+- Mandatory static/adversarial audit areas: all `PASS`.
+- Blocking Replay defects found: recorder lifecycle overlap; final-ACK Pause completion; stale controller callback; coordinator stale cleanup race; Host start/stop startup race; Pause/in-flight authority failure/duplicate-emission race.
+- Root-cause fixes: implemented.
+- Deterministic regressions: implemented and green.
+- Shared protocol/server: remains Replay-unaware.
+- Arbitrary-start / next-day / product-surface closure: green through Replay acceptance and existing service proof.
+- Required executable proof: green.
+- Known material untested Replay risk: none remaining from this hardening audit.
+- Overall result: `PASS`.
