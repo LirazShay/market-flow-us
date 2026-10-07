@@ -2,10 +2,11 @@ version: 2
 cycle_state: active
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "deep_planning"
-current_node: "7"
+current_stage: "planning_review"
+current_node: "7.7"
 blockers:
   - "Final target-machine/provider acceptance 7.4 is blocked until the test-system hardening replan is reviewed, frozen, allocated, re-authorized, implemented and reclosed."
-next_action: "Deeply decompose the resolved test-system structural map into a branch-7 subtree with exact dependencies and measurable success_evidence; build the contract/risk coverage ledger; update durable test strategy/decisions; perform coherent-slice and outside-in reviews before freeze. Do not implement test refactors yet."
+  - "The proposed 7.7 subtree and 69-node/51-leaf totals are not authority until TREE mutation and freeze; current EXECUTION remains preserved historical truth."
+next_action: "Perform coherent-slice S&T challenge of the proposed 7.7 decomposition and coverage ledger, then execute a whole-plan outside-in coverage audit. Resolve any gaps or over/under-decomposition before mutating TREE. After review, update durable decisions/test strategy, mutate TREE and 7.4 dependency, repair Planning Docs structural validation without hard-coded total counts, run final planning review and freeze/no-drift proof. Do not implement test refactors yet."
 last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
 implementation_authorized: false
