@@ -193,3 +193,39 @@ test("source read rejected after Pause is stale scheduling work, not an authorit
   assert.equal(result.committedFrameCount, 0);
   assert.deepEqual(calls, ["start"]);
 });
+
+test("Stop while session start is pending invalidates the late start before any Replay emission", async () => {
+  const startGate = deferred();
+  const calls = [];
+  const producer = {
+    getState: () => ({ state: "idle" }),
+    async startSession() {
+      calls.push("start");
+      await startGate.promise;
+    },
+    async acceptUniverse() {
+      calls.push("universe");
+    },
+    async commitCycle() {
+      calls.push("commit");
+    },
+    async stopSession(reason) {
+      calls.push(`stop:${reason}`);
+    }
+  };
+  const player = makePlayer(makeSource(), producer);
+
+  const playPromise = player.play();
+  await settle();
+  assert.deepEqual(calls, ["start"]);
+
+  const stopped = await player.stop();
+  assert.equal(stopped.status, "stopped");
+  assert.equal(stopped.requiresFreshRun, true);
+
+  startGate.resolve();
+  const stalePlay = await playPromise;
+  assert.equal(stalePlay.status, "stopped");
+  assert.equal(stalePlay.committedFrameCount, 0);
+  assert.deepEqual(calls, ["start", "stop:replay-stale-start"]);
+});
