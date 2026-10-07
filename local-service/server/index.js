@@ -5,7 +5,10 @@ import {
 } from "../../shared/diagnostics/index.js";
 import { ERROR_CODES } from "../../shared/protocol/index.js";
 import { openMarketFlowUsDatabase } from "../database/database.js";
-import { startBasicBuySidecar } from "../orders/basic-buy-sidecar.js";
+import {
+  BasicBuySidecarError,
+  startBasicBuySidecar
+} from "../orders/basic-buy-sidecar.js";
 import { parseServiceConfig } from "./config.js";
 import { startMarketScopeService } from "./service.js";
 
@@ -19,6 +22,12 @@ try {
   const config = parseServiceConfig(process.argv.slice(2));
   if (config.buy?.enabled === true) {
     basicBuySidecar = await startBasicBuySidecar({ buyConfig: config.buy });
+    diagnosticTracker.recordSuccess({
+      component: "basic_buy",
+      operation: "basic_buy.sidecar.start",
+      operationId: "basic-buy-sidecar-start",
+      checkpoint: "basic_buy.sidecar"
+    });
   }
 
   service = await startMarketScopeService({
@@ -47,20 +56,35 @@ try {
     basicBuySidecar = null;
   }
 
-  const diagnosticRecord = error?.diagnosticRecord ?? diagnosticTracker.recordError({
-    component: "node.service",
-    operation: "service.startup",
-    operationId: "service-startup",
-    checkpoint: "node.service.ready",
-    error: {
-      code: error?.code === ERROR_CODES.DB_SCHEMA_UNSUPPORTED
-        ? ERROR_CODES.DB_SCHEMA_UNSUPPORTED
-        : DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
-      name: "ServiceStartupError",
-      message: "Market Flow US service startup failed.",
-      retryable: false
-    }
-  });
+  const diagnosticRecord = error?.diagnosticRecord ?? (
+    error instanceof BasicBuySidecarError
+      ? diagnosticTracker.recordError({
+        component: "basic_buy",
+        operation: "basic_buy.sidecar.start",
+        operationId: "basic-buy-sidecar-start",
+        checkpoint: "basic_buy.sidecar",
+        error: {
+          code: error.code,
+          name: "BasicBuySidecarError",
+          message: "Basic BUY sidecar startup failed safely.",
+          retryable: false
+        }
+      })
+      : diagnosticTracker.recordError({
+        component: "node.service",
+        operation: "service.startup",
+        operationId: "service-startup",
+        checkpoint: "node.service.ready",
+        error: {
+          code: error?.code === ERROR_CODES.DB_SCHEMA_UNSUPPORTED
+            ? ERROR_CODES.DB_SCHEMA_UNSUPPORTED
+            : DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
+          name: "ServiceStartupError",
+          message: "Market Flow US service startup failed.",
+          retryable: false
+        }
+      })
+  );
 
   process.stderr.write(formatCliDiagnostic(diagnosticRecord) + "\n");
   process.exitCode = 1;
