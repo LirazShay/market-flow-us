@@ -1,9 +1,10 @@
 version: 2
-plan_state: frozen
+cycle_state: active
+plan_state: active
 replan_mode: execution_reopen
-current_stage: "implementation"
-current_node: "7.4"
+current_stage: "planning"
+current_node: "7"
 blockers: []
-next_action: "Chat 28 executes TREE 7.4 final target-machine/provider acceptance against exact audited runtime candidate d1ff24abfe72e55302c4c008030174f8923a6d48; begin from the earliest pending checkpoint in FINAL_ACCEPTANCE_EXECUTION.md."
+next_action: "Build the test-system hardening structural map and evidence inventory, then perform focused deep S&T replanning before final acceptance. Preserve valid completed execution and keep 7.4 pending until the replan is reviewed, frozen, allocation-validated and re-authorized."
 last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
-implementation_authorized: true
+implementation_authorized: false
