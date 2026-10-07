@@ -14,11 +14,12 @@ async function settle() {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-test("Replay recorder rejects overlapping Start and Stop while recording creation is pending", async () => {
+test("Replay recorder serializes Stop behind pending creation and rejects overlapping Start", async () => {
   const createGate = deferred();
   const captureGate = deferred();
   let createCount = 0;
-  const summary = {
+  let completeCount = 0;
+  const recordingSummary = {
     id: "hardening-recorder",
     name: "Hardening recorder",
     status: "recording",
@@ -29,17 +30,25 @@ test("Replay recorder rejects overlapping Start and Stop while recording creatio
     frameCount: 0,
     approximateBytes: 0
   };
+  const completedSummary = {
+    ...recordingSummary,
+    status: "complete"
+  };
   const store = {
     async createRecording() {
       createCount += 1;
       await createGate.promise;
-      return summary;
+      return recordingSummary;
     },
     async appendFrame() {
       throw new Error("appendFrame must not run in this startup proof");
     },
+    async completeRecording() {
+      completeCount += 1;
+      return completedSummary;
+    },
     async listRecordings() {
-      return [summary];
+      return [completeCount > 0 ? completedSummary : recordingSummary];
     }
   };
   const recorder = createMarketReplayRecorder({
@@ -59,15 +68,24 @@ test("Replay recorder rejects overlapping Start and Stop while recording creatio
     recorder.start({ name: "Overlapping recorder" }),
     /already active/u
   );
-  await assert.rejects(
-    recorder.stop(),
-    /startup is still in progress/u
-  );
-  assert.equal(createCount, 1);
+
+  let stopSettled = false;
+  const stopPromise = recorder.stop().finally(() => {
+    stopSettled = true;
+  });
+  await settle();
+  assert.equal(stopSettled, false, "Stop must wait for the pending recording creation boundary");
   assert.equal(recorder.getState().status, "idle");
 
   createGate.resolve();
   await firstStart;
-  assert.equal(recorder.getState().status, "recording");
+  await settle();
+  assert.equal(recorder.getState().status, "stopping");
+
+  captureGate.resolve(null);
+  const stopped = await stopPromise;
+  assert.equal(stopped.status, "complete");
+  assert.equal(completeCount, 1);
+  assert.equal(recorder.getState().status, "idle");
   assert.equal(recorder.getState().recordingId, "hardening-recorder");
 });
