@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "9.6"
+current_node: "8.5"
 blockers: []
-next_action: "Chat 25 executes TREE 9.6 Replay pre-user-run hardening from fresh main, following docs/REPLAY_HARDENING.md and the current executor handoff."
+next_action: "Chat 26 executes TREE 8.5 basic in-product BUY from fresh main, following docs/BASIC_BUY_INTEGRATION.md and the current executor handoff."
 last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
 implementation_authorized: true
