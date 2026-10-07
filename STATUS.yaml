@@ -14,6 +14,8 @@ authority:
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
   test_system_hardening_replan: ".planning/TEST_SYSTEM_HARDENING_REPLAN.md"
+  test_system_hardening_tree_proposal: ".planning/TEST_SYSTEM_HARDENING_TREE_PROPOSAL.md"
+  test_system_coverage_ledger: ".planning/TEST_SYSTEM_COVERAGE_LEDGER.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
@@ -49,6 +51,12 @@ planning_completion:
   replay_hardening_buy_extension: pass
   pre_acceptance_extension_audit_replan: pass
   test_system_hardening_replan: in_progress
+  test_system_hardening_structural_map: pass
+  test_system_hardening_decomposition: pass
+  test_system_hardening_coverage_ledger: pass
+  test_system_hardening_reviews: pending
+  test_system_hardening_freeze: pending
+  test_system_hardening_allocation: pending
 
 execution:
   chats_total: 28
@@ -59,3 +67,4 @@ execution:
 
 blockers:
   - "7.4 remains blocked while the focused test-system hardening replan is active and implementation_authorized=false."
+  - "The proposed 7.7 subtree is not execution authority until review/freeze mutates TREE, validates allocation and re-authorizes implementation."
