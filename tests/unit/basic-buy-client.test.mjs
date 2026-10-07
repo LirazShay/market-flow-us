@@ -97,13 +97,13 @@ test("Basic BUY client sends only securityId over the existing Viewer transport"
     expiresAtMs: 121000,
     summary: Object.freeze({
       securityId: "us:AAPL",
-      name: "Apple Inc.",
+      paperName: "Apple Inc.",
       symbol: "AAPL",
       quantity: 2,
       side: "BUY",
       orderType: "MKT",
       tif: "DAY",
-      mode: "DRY_RUN"
+      executionMode: "DRY_RUN"
     })
   });
   socket.respondOk(request, prepared);
