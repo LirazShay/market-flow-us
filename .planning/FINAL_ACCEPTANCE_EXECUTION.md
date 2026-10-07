@@ -36,18 +36,18 @@ Do not substitute historical branch-8/post-branch-9/pre-audit candidates or late
 | FR-3 deterministic dependency install | PENDING | Procedure preverified against exact runtime SHA: `SETUP.cmd` requires Node 24.x, runs pinned `npm ci`, then `npx playwright install chromium`, failing closed on any error. Target-machine execution remains blocked on FR-2 PASS. |
 | FR-4 unit/service/Replay/order deterministic acceptance | PENDING | Exact runtime SHA exposes the documented `test:unit`, `test:service`, `test:acceptance:replay` and `test:acceptance:order` scripts; target-machine execution remains pending. |
 | FR-5 normal + Replay build / Chromium E2E | PENDING | Exact runtime SHA exposes `build:browser`, `build:replay` and `test:e2e`; target-machine execution remains pending. |
-| FR-6 local UI smoke | PENDING | user target machine |
-| FR-7 Local Fake static | PENDING | user target machine |
-| FR-8A..H Local Fake / Demo Buy / AI closure | PENDING | user target machine |
-| FR-9 isolated + 4096x180 target workload | PENDING | user target machine |
-| FR-10 daily DB lifecycle | PENDING | user target machine |
-| FR-11A authenticated market-data deployment smoke | PENDING | user target machine/provider |
-| FR-11B standalone order service + real CPGW session compatibility | PENDING | user target machine/IBKR CPGW |
+| FR-6 local UI smoke | PENDING | Exact-SHA procedure preverified: `START_DEMO.cmd` is the human-visible smoke launcher; target-machine usability evidence remains required. |
+| FR-7 Local Fake static | PENDING | Exact-SHA procedure preverified: `RUN_LOCAL_ACCEPTANCE.cmd static`; target-machine execution remains required. |
+| FR-8A..H Local Fake / Demo Buy / AI closure | PENDING | Exact-SHA procedure preverified for `moving`, `membership`, `provider-recovery`, `restart`, `demo-buy-runtime`, `demo-buy-outcomes`, `ai-investigation-ui`, and `ai-pack-safety`; target-machine execution remains required. |
+| FR-9 isolated + 4096x180 target workload | PENDING | Exact-SHA procedure preverified: run `RUN_LOCAL_ACCEPTANCE.cmd isolated` then `RUN_LOCAL_ACCEPTANCE.cmd target`; target profile is 4096 securities × 180 completed cycles with a five-minute target-machine ceiling. |
+| FR-10 daily DB lifecycle | PENDING | Exact-SHA procedure preverified: with active market data + Demo Buy state + saved Scanner query and all DB owners stopped, run `NEW_TRADING_DAY.cmd`; target-machine archive/fresh-v4/preservation evidence remains required. |
+| FR-11A authenticated market-data deployment smoke | PENDING | Exact-SHA procedure preverified: `START_MARKET_FLOW_US.cmd` consumes only the user-supplied authenticated page URL/origin and must not copy authentication material; target-machine/provider evidence remains required. |
+| FR-11B standalone order service + real CPGW session compatibility | PENDING | Exact-SHA procedure preverified: `RUN_IBKR_ORDER_ACCEPTANCE.cmd`, then `CHECK_IBKR_SESSION.cmd` (or documented `INSECURE_LOCALHOST_TLS` loopback-only fallback if required). Real CPGW must already be running and manually authenticated; no real order is submitted by this compatibility check. |
 | Integrated Detail BUY DRY_RUN | PENDING | current Detail -> immutable ticket -> trusted confirmation -> order-service DRY_RUN |
 | Real IBKR LIVE order | PENDING_EXTERNAL_PERMISSION | PASS only if actually permissioned and explicitly user-initiated |
-| FR-12 authenticated static/pre-market | PENDING | user target machine/provider |
-| FR-13 authenticated market-open movement | PENDING | real market movement required |
-| FR-14 final evidence / handoff | PENDING | only after all required evidence above |
+| FR-12 authenticated static/pre-market | PENDING | Exact-SHA procedure preverified: `PREPARE_LIVE_VERIFICATION.cmd`; requires overall PASS with >=20 complete committed cycles spanning >=60s. `movement=PENDING/NO_MARKET_MOVEMENT_OBSERVED` is valid pre-market only while authority continues advancing. |
+| FR-13 authenticated market-open movement | PENDING | Exact-SHA procedure preverified: rerun the same SHA-bound gate during real movement; PASS requires observed provider-field change reflected in committed Current and History. No movement remains PENDING, never manually promoted. |
+| FR-14 final evidence / handoff | PENDING | Final closure procedure preverified; may close only after all required target-machine/provider evidence is green and final PR/merge/main-green/open-PR truth is clean. |
 
 ## Execution rule
 
