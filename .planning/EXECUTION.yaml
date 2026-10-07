@@ -115,7 +115,7 @@ chats:
 
   "26":
     nodes:
-      "8.5": { state: pending, result: null }
+      "8.5": { state: done, result: "Basic in-product BUY is complete as a current-Detail-only explicit flow with run-owned positive quantity, DRY_RUN default/explicit LIVE, Node-owned immutable MKT/DAY STK/USD/SMART intent, one-time ticket and trusted loopback confirmation with exact Origin/JSON/CSRF protections. Market Flow owns one authenticated order-service child/token in Node memory, stable requestId retry/idempotency, explicit REPLY_REQUIRED continuation and ACKNOWLEDGEMENT_UNKNOWN no-blind-resubmit semantics; restart invalidates ticket/nonce/token authority. Scanner, Demo Buy, AI, Current and Replay remain execution-isolated. Closure candidate 13c95846ef77034bb639e4bb84718f76bee58991 passed Fast #520, Browser #478, Replay #49, Planning Docs #662 and Workload #306; final diff/open-PR audit found no blocking defect and only PR #58 open." }
 
   "27":
     nodes:

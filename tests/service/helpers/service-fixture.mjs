@@ -96,7 +96,9 @@ export async function createServiceFixture({
   persistenceFault = createPersistenceFaultInjector(),
   aiPackFault = createPersistenceFaultInjector(),
   now = () => Date.now(),
-  openDatabase = undefined
+  openDatabase = undefined,
+  basicBuyReadiness = () => false,
+  basicBuyExecution = null
 } = {}) {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-scope-service-"));
   const dbPath = path.join(tempDir, "fixture.duckdb");
@@ -122,7 +124,9 @@ export async function createServiceFixture({
       aiPackExportRoot,
       aiPackFault,
       now,
-      openDatabase
+      openDatabase,
+      basicBuyReadiness,
+      basicBuyExecution
     });
   } catch (error) {
     await rm(tempDir, { recursive: true, force: true });

@@ -11,12 +11,13 @@ async function launcher(name) {
 }
 
 test("Windows launchers remain thin wrappers around canonical npm commands", async () => {
-  const [setup, demo, reset, tests, real, replay, live, newDay, order, sessionCheck, orderAcceptance] = await Promise.all([
+  const [setup, demo, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance] = await Promise.all([
     launcher("SETUP.cmd"),
     launcher("START_DEMO.cmd"),
     launcher("RESET_DEMO.cmd"),
     launcher("RUN_TESTS.cmd"),
     launcher("START_MARKET_FLOW_US.cmd"),
+    launcher("START_MARKET_FLOW_US_WITH_BUY.cmd"),
     launcher("START_MARKET_REPLAY.cmd"),
     launcher("PREPARE_LIVE_VERIFICATION.cmd"),
     launcher("NEW_TRADING_DAY.cmd"),
@@ -43,7 +44,23 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(real, /npm run build:browser/);
   assert.match(real, /npm run service -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
   assert.match(real, /market-flow-us\.bookmarklet\.txt/);
+  assert.doesNotMatch(real, /--buy-quantity|--buy-live/);
   assert.doesNotMatch(real, /MarketScope|MARKETSCOPE|market-scope/i);
+
+  assert.match(buy, /Default execution mode is DRY_RUN/);
+  assert.match(buy, /if \/I "%~1"=="LIVE"/);
+  assert.match(buy, /MARKET_FLOW_US_BUY_QUANTITY_RAW/);
+  assert.match(buy, /TryParse/);
+  assert.match(buy, /-gt 0/);
+  assert.match(buy, /--buy-quantity "%MARKET_FLOW_US_BUY_QUANTITY%"/);
+  assert.match(buy, /MARKET_FLOW_US_BUY_LIVE_ARG=--buy-live/);
+  assert.match(buy, /npm run service -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
+  assert.match(buy, /market-flow-us\.bookmarklet\.txt/);
+  assert.doesNotMatch(
+    buy,
+    /MARKET_FLOW_US_.*(?:TOKEN|SECRET|ACCOUNT)|--(?:caller-token|account-id|cookie)\b/i
+  );
+  assert.doesNotMatch(buy, /MarketScope|MARKETSCOPE|market-scope/i);
 
   assert.match(replay, /npm run build:replay/);
   assert.match(replay, /call npm run replay-host -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
@@ -84,7 +101,7 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(orderAcceptance, /synthetic-only/i);
   assert.match(orderAcceptance, /never requires or claims a real-money order/i);
 
-  for (const content of [setup, demo, reset, tests, real, replay, live, newDay, order, sessionCheck, orderAcceptance]) {
+  for (const content of [setup, demo, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance]) {
     assert.match(content, /pushd "%~dp0"/);
     assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }

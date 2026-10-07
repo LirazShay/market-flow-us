@@ -4,6 +4,8 @@ import { WebSocket, WebSocketServer } from "ws";
 import { openMarketScopeDatabase } from "../database/database.js";
 import { createSerializedWriter } from "../database/writer.js";
 import { createDemoBuyAiPackExporter } from "../exports/demo-buy-ai-pack.js";
+import { createBasicBuyConfirmationHandler } from "../orders/basic-buy-confirmation.js";
+import { createBasicBuyTicketAuthority } from "../orders/basic-buy-tickets.js";
 import { createProducerPersistence } from "../persistence/producer-authority.js";
 import { createCycleAuthorityPersistence } from "../persistence/cycle-authority.js";
 import { createDemoBuyCapturePersistence } from "../persistence/demo-buy-capture.js";
@@ -64,6 +66,23 @@ function operationError(code) {
   return new ProtocolValidationError(code);
 }
 
+function localHttpOrigin(host, port) {
+  const hostForUrl = host.includes(":") ? `[${host}]` : host;
+  return `http://${hostForUrl}:${port}`;
+}
+
+function writeHttpFailure(response, statusCode, body) {
+  if (response.headersSent) {
+    if (!response.writableEnded) response.destroy();
+    return;
+  }
+  response.writeHead(statusCode, {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store"
+  });
+  response.end(body);
+}
+
 async function closeWebSocket(socket) {
   if (socket.readyState === WebSocket.CLOSED) return;
 
@@ -85,10 +104,25 @@ export async function startMarketScopeService({
   persistenceFault = null,
   aiPackExportRoot = undefined,
   aiPackFault = null,
+  basicBuyReadiness = () => false,
+  basicBuyExecution = null,
   diagnosticTracker = createDiagnosticTracker({ productVersion: serviceVersion, now })
 }) {
   if (!config || !Array.isArray(config.allowedOrigins) || config.allowedOrigins.length === 0) {
     throw new TypeError("Service config with at least one allowed Origin is required");
+  }
+  if (typeof basicBuyReadiness !== "function") {
+    throw new TypeError("basicBuyReadiness must be a function");
+  }
+  if (
+    basicBuyExecution !== null
+    && (
+      typeof basicBuyExecution !== "object"
+      || typeof basicBuyExecution.createOrder !== "function"
+      || typeof basicBuyExecution.confirmReply !== "function"
+    )
+  ) {
+    throw new TypeError("basicBuyExecution must expose createOrder and confirmReply");
   }
 
   const allowedOrigins = new Set(config.allowedOrigins);
@@ -132,6 +166,31 @@ export async function startMarketScopeService({
     staleAfterMs: config.producerStaleAfterMs,
     historyPageSize: config.historyPageSize
   });
+  let basicBuyLocalOrigin = null;
+  const basicBuyTickets = createBasicBuyTicketAuthority({
+    viewerReads,
+    buyConfig: config.buy ?? {
+      enabled: false,
+      quantity: null,
+      mode: "DRY_RUN"
+    },
+    isReady: basicBuyReadiness,
+    getLocalOrigin: () => basicBuyLocalOrigin,
+    now
+  });
+  const basicBuyConfirmation = config.buy?.enabled === true
+    ? createBasicBuyConfirmationHandler({
+      tickets: basicBuyTickets,
+      getLocalOrigin: () => basicBuyLocalOrigin,
+      executeConfirmedBuy: basicBuyExecution === null
+        ? null
+        : async (ticket) => await basicBuyExecution.createOrder(ticket.intent),
+      confirmProviderReply: basicBuyExecution === null
+        ? null
+        : async (localOrderId) => await basicBuyExecution.confirmReply(localOrderId),
+      now
+    })
+    : null;
   const demoBuyReads = createDemoBuyReads({
     connection: database.viewerReadConnection
   });
@@ -159,12 +218,23 @@ export async function startMarketScopeService({
     });
   }
 
-  const httpServer = createServer((_request, response) => {
-    response.writeHead(404, {
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "no-store"
-    });
-    response.end("Not Found");
+  const httpServer = createServer((request, response) => {
+    if (!basicBuyConfirmation) {
+      writeHttpFailure(response, 404, "Not Found");
+      return;
+    }
+
+    void basicBuyConfirmation.handle(request, response)
+      .then((handled) => {
+        if (!handled && !response.writableEnded) {
+          writeHttpFailure(response, 404, "Not Found");
+        }
+      })
+      .catch(() => {
+        if (!response.writableEnded) {
+          writeHttpFailure(response, 500, "Internal Server Error");
+        }
+      });
   });
 
   const webSocketServer = new WebSocketServer({
@@ -239,6 +309,14 @@ export async function startMarketScopeService({
         component: "viewer",
         checkpoint: "viewer.detail.read",
         message: "Trusted Detail/history read failed."
+      };
+    }
+    if (type === "order.buy.prepare") {
+      return {
+        component: "basic_buy",
+        checkpoint: "basic_buy.prepare",
+        name: "BasicBuyPrepareError",
+        message: "Basic BUY preparation failed safely."
       };
     }
     if (type === "scanner.execute") {
@@ -528,6 +606,12 @@ export async function startMarketScopeService({
             );
           } else if (parsed.type === "viewer.support.snapshot") {
             result = await createNodeSupportSnapshot();
+          } else if (parsed.type === "order.buy.prepare") {
+            result = await basicBuyTickets.prepare(parsed.payload.securityId);
+            diagnosticContext = {
+              securityId: parsed.payload.securityId,
+              executionMode: result.summary.executionMode
+            };
           } else if (parsed.type === "scanner.execute") {
             result = await scannerAuthority.execute(parsed.payload.sql);
           } else if (parsed.type === "scanner.queries.list") {
@@ -844,6 +928,7 @@ export async function startMarketScopeService({
 
   const address = httpServer.address();
   const port = typeof address === "object" && address !== null ? address.port : config.port;
+  basicBuyLocalOrigin = localHttpOrigin(config.host, port);
 
   return {
     host: config.host,
@@ -855,6 +940,8 @@ export async function startMarketScopeService({
     async close() {
       if (closed) return;
       closed = true;
+      basicBuyConfirmation?.clear();
+      basicBuyTickets.clear();
 
       const httpClosed = new Promise((resolve, reject) => {
         httpServer.close((error) => error ? reject(error) : resolve());

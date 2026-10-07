@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "8.5"
+current_node: "7.4"
 blockers: []
-next_action: "Chat 26 executes TREE 8.5 basic in-product BUY from fresh main, following docs/BASIC_BUY_INTEGRATION.md and the current executor handoff."
+next_action: "Chat 27 executes TREE 7.4 final target-machine/provider acceptance from fresh main after Chat 26 / TREE 8.5 merges green."
 last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
 implementation_authorized: true

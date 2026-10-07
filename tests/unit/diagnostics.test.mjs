@@ -81,9 +81,11 @@ test("diagnostic tracker keeps bounded public-safe checkpoint evidence", () => {
   }
 });
 
-test("checkpoint ownership is strict and includes saved-query and AI export boundaries", () => {
+test("checkpoint ownership is strict and includes saved-query, AI export and Basic BUY boundaries", () => {
   assert.equal(DIAGNOSTIC_CHECKPOINTS["scanner.query_library"], "scanner");
   assert.equal(DIAGNOSTIC_CHECKPOINTS["demo_buy.ai_pack_export"], "demo_buy");
+  assert.equal(DIAGNOSTIC_CHECKPOINTS["basic_buy.sidecar"], "basic_buy");
+  assert.equal(DIAGNOSTIC_CHECKPOINTS["basic_buy.prepare"], "basic_buy");
   const tracker = createDiagnosticTracker();
 
   assert.throws(() => tracker.recordSuccess({

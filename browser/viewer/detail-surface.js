@@ -39,11 +39,69 @@ function summaryMetric(document, label, value, testId = null) {
   return wrapper;
 }
 
+function reserveDefaultConfirmationWindow(document) {
+  const viewerWindow = document.defaultView;
+  if (!viewerWindow || typeof viewerWindow.open !== "function") return null;
+
+  const popup = viewerWindow.open("about:blank", "_blank");
+  if (!popup) return null;
+
+  try {
+    popup.opener = null;
+  } catch {
+    // The confirmation window can still be navigated without retaining an opener reference.
+  }
+
+  return Object.freeze({
+    navigate(url) {
+      popup.location.replace(url);
+    },
+    close() {
+      try {
+        popup.close();
+      } catch {
+        // Closing a blocked/already-closed popup is best-effort.
+      }
+    }
+  });
+}
+
+function validateConfirmationUrl(value) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) {
+    throw new Error("Basic BUY confirmation URL is invalid.");
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error("Basic BUY confirmation URL is invalid.");
+  }
+
+  const loopback = parsed.hostname === "127.0.0.1"
+    || parsed.hostname === "localhost"
+    || parsed.hostname === "[::1]";
+  if (
+    parsed.protocol !== "http:"
+    || !loopback
+    || parsed.username !== ""
+    || parsed.password !== ""
+    || parsed.pathname !== "/buy/confirm"
+    || parsed.search !== ""
+    || parsed.hash.length <= 1
+  ) {
+    throw new Error("Basic BUY confirmation URL is invalid.");
+  }
+
+  return value;
+}
+
 export function createDetailSurface({
   root,
   client,
   onBack = () => {},
   captureReturnState = () => null,
+  reserveConfirmationWindow = null,
   profile = LEGACY_DETAIL_PROFILE
 } = {}) {
   assertElement(root);
@@ -54,6 +112,9 @@ export function createDetailSurface({
   if (typeof captureReturnState !== "function") {
     throw new TypeError("captureReturnState must be a function.");
   }
+  if (reserveConfirmationWindow !== null && typeof reserveConfirmationWindow !== "function") {
+    throw new TypeError("reserveConfirmationWindow must be null or a function.");
+  }
   if (
     !profile
     || !Array.isArray(profile.historyColumns)
@@ -63,6 +124,8 @@ export function createDetailSurface({
   }
 
   const document = root.ownerDocument;
+  const reserveBuyConfirmation = reserveConfirmationWindow
+    ?? (() => reserveDefaultConfirmationWindow(document));
   let openSequence = 0;
   let selectedSecurityId = null;
   let returnState = null;
@@ -72,6 +135,8 @@ export function createDetailSurface({
   let initialError = null;
   let continuationError = null;
   let loadingMore = false;
+  let buyState = "IDLE";
+  let buyError = null;
 
   function snapshot() {
     return Object.freeze({
@@ -98,6 +163,8 @@ export function createDetailSurface({
       initialError = null;
       continuationError = null;
       loadingMore = false;
+      buyState = "IDLE";
+      buyError = null;
       root.replaceChildren();
       onBack(captured);
     });
@@ -130,6 +197,42 @@ export function createDetailSurface({
       ));
     }
     container.append(list);
+  }
+
+  function buyEligible() {
+    return security?.found === true
+      && security.isCurrent === true
+      && typeof selectedSecurityId === "string"
+      && typeof client.prepareBuy === "function";
+  }
+
+  function renderBuyAction(container) {
+    if (!buyEligible()) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "market-flow-us-detail-buy";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.testid = "detail-buy-button";
+    button.disabled = buyState === "PREPARING";
+    button.textContent = buyState === "PREPARING" ? "מכין BUY…" : "BUY / קנייה";
+    button.addEventListener("click", () => {
+      void prepareBuy();
+    });
+    wrapper.append(button);
+
+    const status = document.createElement("span");
+    status.dataset.testid = "detail-buy-status";
+    status.setAttribute("aria-live", "polite");
+    if (buyState === "OPENED") {
+      status.textContent = "חלון אישור BUY נפתח.";
+    } else if (buyState === "ERROR") {
+      status.textContent = "הכנת BUY נכשלה.";
+      if (buyError?.message) status.title = buyError.message;
+    }
+    wrapper.append(status);
+    container.append(wrapper);
   }
 
   function renderHistoryTable(container) {
@@ -206,6 +309,7 @@ export function createDetailSurface({
     }
 
     renderSummary(shell);
+    renderBuyAction(shell);
 
     if (state === "ERROR") {
       const alert = text(document, "p", "שגיאה בטעינת ההיסטוריה.");
@@ -236,6 +340,58 @@ export function createDetailSurface({
     root.replaceChildren(shell);
   }
 
+  async function prepareBuy() {
+    if (!buyEligible() || buyState === "PREPARING") return snapshot();
+
+    const securityId = selectedSecurityId;
+    let reservation;
+    try {
+      reservation = reserveBuyConfirmation();
+    } catch (error) {
+      buyError = error instanceof Error ? error : new Error("Confirmation window could not be opened.");
+      buyState = "ERROR";
+      render();
+      return snapshot();
+    }
+
+    if (
+      !reservation
+      || typeof reservation.navigate !== "function"
+      || typeof reservation.close !== "function"
+    ) {
+      buyError = new Error("Confirmation window was blocked.");
+      buyState = "ERROR";
+      render();
+      return snapshot();
+    }
+
+    buyState = "PREPARING";
+    buyError = null;
+    render();
+
+    try {
+      const prepared = await client.prepareBuy(securityId);
+      if (selectedSecurityId !== securityId || security?.isCurrent !== true) {
+        reservation.close();
+        return Object.freeze({ stale: true });
+      }
+
+      reservation.navigate(validateConfirmationUrl(prepared?.confirmationUrl));
+      buyState = "OPENED";
+      render();
+    } catch (error) {
+      reservation.close();
+      if (selectedSecurityId !== securityId) {
+        return Object.freeze({ stale: true });
+      }
+      buyError = error instanceof Error ? error : new Error("Basic BUY preparation failed.");
+      buyState = "ERROR";
+      render();
+    }
+
+    return snapshot();
+  }
+
   async function open(securityId, { returnState: explicitReturnState } = {}) {
     assertSecurityId(securityId);
     const sequence = ++openSequence;
@@ -247,6 +403,8 @@ export function createDetailSurface({
     initialError = null;
     continuationError = null;
     loadingMore = false;
+    buyState = "IDLE";
+    buyError = null;
     render();
 
     try {

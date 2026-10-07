@@ -106,6 +106,14 @@ export function createViewerClient({
         message: "Trusted Detail/history read failed."
       };
     }
+    if (type === "order.buy.prepare") {
+      return {
+        component: "basic_buy",
+        checkpoint: "basic_buy.prepare",
+        name: "BasicBuyPrepareError",
+        message: "Basic BUY preparation failed safely."
+      };
+    }
     if (type === "scanner.execute") {
       return {
         component: "scanner",
@@ -615,6 +623,11 @@ export function createViewerClient({
     return await request("viewer.history.page", { securityId, cursor });
   }
 
+  async function prepareBuy(securityId) {
+    assertNonEmptyString(securityId, "securityId", 128);
+    return await request("order.buy.prepare", { securityId });
+  }
+
   async function getDemoBuyPage(cursor = null) {
     if (cursor !== null) assertNonEmptyString(cursor, "cursor");
     return await request("demo.buy.page", { cursor });
@@ -681,6 +694,7 @@ export function createViewerClient({
     getStatus,
     getSecurity,
     getHistoryPage,
+    prepareBuy,
     getDemoBuyPage,
     getDemoBuyObservation,
     getDemoBuyCapture,

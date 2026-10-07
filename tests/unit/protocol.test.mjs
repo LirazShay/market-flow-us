@@ -107,6 +107,7 @@ const validCases = [
   ["viewer.history.page", { securityId: "42", cursor: null }, "viewer"],
   ["viewer.status.get", {}, "viewer"],
   ["viewer.support.snapshot", {}, "viewer"],
+  ["order.buy.prepare", { securityId: "42" }, "viewer"],
   ["scanner.execute", { sql: "select 1" }, "viewer"],
   ["scanner.queries.list", {}, "viewer"],
   ["scanner.queries.create", { name: "One", sql: "select 1", intervalMs: 5000 }, "viewer"],
@@ -120,7 +121,7 @@ const validCases = [
 ];
 
 test("every protocol-v1 operation has an explicit valid payload boundary", () => {
-  assert.equal(REQUEST_TYPES.length, 22);
+  assert.equal(REQUEST_TYPES.length, 23);
   for (const [type, payload, role] of validCases) {
     assert.equal(validateRequest(request(type, payload), { role, helloComplete: true }).type, type);
   }
@@ -170,6 +171,7 @@ test("role permissions are closed and exact", () => {
   assert.equal(isOperationAllowed("producer", "producer.heartbeat"), true);
   assert.equal(isOperationAllowed("producer", "viewer.current.get"), false);
   assert.equal(isOperationAllowed("viewer", "scanner.execute"), true);
+  assert.equal(isOperationAllowed("viewer", "order.buy.prepare"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.capture"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.page"), true);
   assert.equal(isOperationAllowed("viewer", "demo.buy.observation.get"), true);
