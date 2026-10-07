@@ -34,7 +34,7 @@ Do not substitute the historical post-branch-9 SHA `243f4f2e78e434378ff2202ba95a
 | Checkpoint | State | Evidence |
 |---|---|---|
 | FR-0 exact final candidate | PASS | `93a48c8b0a36433e58f09f6a607ec7cd366c9aea`; dependencies done; runtime candidate CI green; opening open-PR audit clean |
-| FR-1 host prerequisite preflight | PENDING | Windows, Git `2.45.2.windows.1`, Node `v24.19.0`, npm availability, PowerShell availability, writable disk, loopback and Playwright Chromium are already evidenced on the target machine; only current competing-listener state for ports `8765/8766/8770` remains to be observed |
+| FR-1 host prerequisite preflight | PASS | Windows, Git `2.45.2.windows.1`, Node `v24.19.0`, npm availability, PowerShell availability, writable disk, loopback and Playwright Chromium are evidenced on the target machine; per the detailed FR-1 contract, competing-listener checks for ports `8765/8766/8770` remain runtime assertions when their respective product paths are exercised, not a blocker to FR-2 |
 | FR-2 exact-SHA checkout | PENDING | user target machine |
 | FR-3 deterministic dependency install | PENDING | user target machine |
 | FR-4 unit/service/Replay/order deterministic acceptance | PENDING | user target machine |
