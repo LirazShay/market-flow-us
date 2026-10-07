@@ -6,14 +6,14 @@ This record is public-safe. It contains no credentials, private recordings, auth
 
 Baseline entering hardening: `243f4f2e78e434378ff2202ba95af7b8626a0369`
 Execution branch: `chat-25-replay-hardening`
-Verified hardening runtime/test candidate: `7e0144b42371c3cc33ebcdafb8bca163bbd51df6`
+Verified hardening runtime/test candidate: `52becaaeaddde01457199d17c88dd6ce61c98d42`
 
 ## 4.1 Recording boundary
 
 - Files/boundary reviewed: validated Screener snapshot -> `recording-model.js` -> `market-recorder.js` -> store append/failure lifecycle.
 - Material risks checked: partial/unvalidated frames, non-deterministic membership/order, provider/validation failure, sensitive metadata, false completion after stop/failure, overlapping recorder lifecycle requests.
 - Proof used: existing Replay recording/unit coverage plus `tests/unit/replay-recorder-hardening.test.mjs`.
-- Finding/fix: overlapping `start()` / `stop()` or concurrent `start()` calls could cross the asynchronous recording creation boundary. `market-recorder.js` now serializes recorder lifecycle operations so the second start fails closed and stop waits for the in-flight start before completing.
+- Finding/fix: overlapping `start()` / `stop()` or concurrent `start()` calls could cross the asynchronous recording creation boundary. `market-recorder.js` now serializes startup ownership: a second Start fails closed, while Stop requested during pending creation waits for that exact Start to settle, then stops/completes the created recording rather than allowing a late recording to survive the user's Stop.
 - Final result: `PASS`.
 
 ## 4.2 IndexedDB store/library
@@ -21,15 +21,15 @@ Verified hardening runtime/test candidate: `7e0144b42371c3cc33ebcdafb8bca163bbd5
 - Files/boundary reviewed: `recording-store.js`, recorder append/error paths, library list/read/delete paths and existing quota/storage regressions.
 - Material risks checked: atomic append metadata+frame, quota/transaction failure, preservation of prior committed frames, bounded delete, stale async mutation after lifecycle changes.
 - Proof used: existing Replay recording/store tests including quota failure preservation, plus recorder lifecycle hardening proof.
-- Findings/fixes: no store-format redesign required. Recorder lifecycle serialization closes the material caller-side stale-start race found during audit.
+- Findings/fixes: no store-format redesign required. Recorder lifecycle serialization closes the material caller-side stale-start/Stop race found during audit.
 - Final result: `PASS`.
 
 ## 4.3 Portable format / file source
 
-- Files/boundary reviewed: `portable-recording.js`, `recording-source.js`, portable format/unit tests.
-- Material risks checked: manifest/frame/footer/version/count/order agreement, malformed/truncated/duplicate/out-of-order input, streaming export, byte-slice file reads, seek boundaries, source replacement behavior.
-- Proof used: existing portable recording tests covering malformed/truncated/wrong-version/count/order failures and seek/read slices.
-- Findings/fixes: no format or parser defect found requiring product code changes.
+- Files/boundary reviewed: `portable-recording.js`, `recording-source.js`, `player-controller.js`, portable format/unit tests.
+- Material risks checked: manifest/frame/footer/version/count/order agreement, malformed/truncated/duplicate/out-of-order input, streaming export, byte-slice file reads, seek boundaries, concurrent source replacement behavior.
+- Proof used: existing portable recording tests covering malformed/truncated/wrong-version/count/order failures and seek/read slices, plus `tests/unit/replay-source-load-hardening.test.mjs`.
+- Finding/fix: two concurrent source loads could finish out of order and let an older slower load overwrite the newer selected source. Controller source loading is now generation-owned: only the latest load may publish source/error state, while a stale completion is rejected without replacing the current source.
 - Final result: `PASS`.
 
 ## 4.4 Player / time projection
@@ -40,7 +40,7 @@ Verified hardening runtime/test candidate: `7e0144b42371c3cc33ebcdafb8bca163bbd5
 - Finding/fix 1: pausing while the final cycle ACK was in flight could leave the authoritative final frame committed while the Player remained paused. Resume now reconciles that committed terminal frame exactly once.
 - Finding/fix 2: an old Player callback could update controller state after the controller had rebuilt around a new Player. `player-controller.js` now generation-guards callbacks and invalidates old ownership on rebuild/detach.
 - Finding/fix 3: Pause changed the scheduler generation, so an already-dispatched `acceptUniverse` / `commitCycle` failure could be mistaken for stale scheduling work and silently ignored; a quick Resume could also schedule duplicate authoritative emission while the prior ACK was unresolved. Player now separates scheduling generation from authority generation, tracks the in-flight authoritative boundary, preserves authoritative failures across Pause, prevents duplicate Resume emission, and still ignores source-read work cancelled before authority dispatch.
-- Finding/fix 4: Stop/Seek now invalidate authority synchronously, and a late session-start completion performs bounded stale-session cleanup rather than reviving a terminal lifecycle.
+- Finding/fix 4: Stop/Seek now invalidate authority synchronously, and a late session-start completion performs bounded stale-session cleanup rather than reviving a terminal lifecycle. Direct regression proof covers Stop during pending `startSession`.
 - Final result: `PASS`.
 
 ## 4.5 Replay Host / lifecycle / security
@@ -82,42 +82,51 @@ Verified hardening runtime/test candidate: `7e0144b42371c3cc33ebcdafb8bca163bbd5
 Exact runtime/test candidate:
 
 ```text
-7e0144b42371c3cc33ebcdafb8bca163bbd51df6
+52becaaeaddde01457199d17c88dd6ce61c98d42
 ```
 
 Green PR runs on that SHA:
 
 ```text
-Planning Docs #619  — success
-Workload #263       — success
-Fast CI #477        — success
-Replay CI #6        — success
-Browser CI #435     — success
+Planning Docs #625  — success
+Workload #269       — success
+Fast CI #483        — success
+Replay CI #12       — success
+Browser CI #441     — success
 ```
 
 The required hardening commands are therefore covered explicitly:
 
 ```text
-npm run build:replay             -> Replay CI #6
-npm run test:acceptance:replay   -> Replay CI #6
-npm run test:unit                -> Fast CI #477
-npm run test:service             -> Fast CI #477
+npm run build:replay             -> Replay CI #12
+npm run test:acceptance:replay   -> Replay CI #12
+npm run test:unit                -> Fast CI #483
+npm run test:service             -> Fast CI #483
 ```
 
-Browser CI #435 also passed full Chromium E2E plus bounded Local Fake acceptance. Workload #263 and Planning Docs #619 passed on the same candidate.
+Browser CI #441 also passed full Chromium E2E plus bounded Local Fake acceptance. Workload #269 and Planning Docs #625 passed on the same candidate.
 
 ## Additional verification defect repaired
 
 Planning Docs initially exposed a parser defect in `.planning/verify-handoff.mjs`: the allocated execution regex required a trailing newline after the final node line, so a valid EOF after Chat 27 made node `7.4` appear unallocated. The validator now accepts either newline or EOF for the final node. No allocation, dependency, authorization or execution semantics were changed.
 
+## Final review findings
+
+Final PR diff review before closure found and repaired two additional material lifecycle gaps rather than accepting earlier green CI as sufficient:
+
+1. Stop during Recorder creation was rejected instead of owning the pending Start; this could allow the old Start to finish as a live recording after the user's Stop. The lifecycle and regression were corrected.
+2. Concurrent source loads could publish out of order; latest-load generation ownership now prevents stale source replacement.
+
+The same review also identified missing direct proof for late Player `startSession` completion after Stop; deterministic regression coverage was added. All five repository gates then passed again on the exact final runtime/test candidate above.
+
 ## Final status
 
 - Mandatory static/adversarial audit areas: all `PASS`.
-- Blocking Replay defects found: recorder lifecycle overlap; final-ACK Pause completion; stale controller callback; coordinator stale cleanup race; Host start/stop startup race; Pause/in-flight authority failure/duplicate-emission race.
+- Blocking Replay defects found: recorder lifecycle overlap/Stop-during-startup; final-ACK Pause completion; stale controller callback; stale concurrent source load; coordinator stale cleanup race; Host start/stop startup race; Pause/in-flight authority failure/duplicate-emission race; late Player session-start ownership.
 - Root-cause fixes: implemented.
 - Deterministic regressions: implemented and green.
 - Shared protocol/server: remains Replay-unaware.
 - Arbitrary-start / next-day / product-surface closure: green through Replay acceptance and existing service proof.
-- Required executable proof: green.
+- Required executable proof: green on `52becaaeaddde01457199d17c88dd6ce61c98d42`.
 - Known material untested Replay risk: none remaining from this hardening audit.
 - Overall result: `PASS`.
