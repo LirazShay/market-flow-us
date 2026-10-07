@@ -31,6 +31,12 @@ async function settle() {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 function createControlledChild() {
   const child = new EventEmitter();
   child.stdout = new PassThrough();
@@ -50,9 +56,10 @@ function createControlledChild() {
   return child;
 }
 
-test("Replay Host Stop received during child startup waits and stops that owned child", async () => {
+test("Replay Host Stop issued during child startup waits and stops that owned child", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-replay-host-race-"));
   const children = [];
+  const spawned = deferred();
   const host = await startReplayHost({
     allowedOrigin: ORIGIN,
     controlPort: 0,
@@ -61,6 +68,7 @@ test("Replay Host Stop received during child startup waits and stops that owned 
     spawnProcess: () => {
       const child = createControlledChild();
       children.push(child);
+      spawned.resolve(child);
       return child;
     }
   });
@@ -75,7 +83,7 @@ test("Replay Host Stop received during child startup waits and stops that owned 
       token,
       body: { reason: "race-start" }
     });
-    await settle();
+    const child = await spawned.promise;
     assert.equal(children.length, 1);
 
     const stopPromise = requestJson(baseUrl, "/run/stop", {
@@ -83,9 +91,9 @@ test("Replay Host Stop received during child startup waits and stops that owned 
       body: { reason: "race-stop" }
     });
     await settle();
-    assert.equal(children[0].exitCode, null, "Stop must wait for the in-progress owned startup boundary");
+    assert.equal(child.exitCode, null, "Stop must wait for the in-progress owned startup boundary");
 
-    children[0].stdout.write(`${JSON.stringify({
+    child.stdout.write(`${JSON.stringify({
       event: "service.ready",
       host: "127.0.0.1",
       port: 9123,
@@ -101,7 +109,7 @@ test("Replay Host Stop received during child startup waits and stops that owned 
     assert.equal(stop.payload.hadActiveRun, true);
     assert.equal(stop.payload.runId, start.payload.runId);
     assert.equal(host.getState().activeRunId, null);
-    assert.equal(children[0].signalCode, "SIGTERM");
+    assert.equal(child.signalCode, "SIGTERM");
   } finally {
     await host.close();
     await rm(tempDir, { recursive: true, force: true });
