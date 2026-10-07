@@ -260,7 +260,15 @@ export async function startBasicBuySidecar({
 
     // One bounded retry is safe because it reuses the exact requestId + normalized intent.
     // The order service owns idempotency/reconciliation and never blind-resubmits by key.
-    return await requestOnce("/orders", { method: "POST", bodyJson });
+    try {
+      return await requestOnce("/orders", { method: "POST", bodyJson });
+    } catch (error) {
+      if (error instanceof BasicBuySidecarError
+        && error.code === "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN") {
+        throw new BasicBuySidecarError("ACKNOWLEDGEMENT_UNKNOWN");
+      }
+      throw error;
+    }
   }
 
   async function confirmReply(localOrderId) {
