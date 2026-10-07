@@ -71,30 +71,43 @@ if (service) {
   async function shutdown(signal) {
     if (shuttingDown) return;
     shuttingDown = true;
+
+    let shutdownFailed = false;
     try {
       await service.close();
-      if (basicBuySidecar) {
+    } catch {
+      shutdownFailed = true;
+    }
+
+    if (basicBuySidecar) {
+      try {
         await basicBuySidecar.close();
-        basicBuySidecar = null;
+      } catch {
+        shutdownFailed = true;
       }
+      basicBuySidecar = null;
+    }
+
+    if (!shutdownFailed) {
       process.stdout.write(JSON.stringify({ event: "service.closed", signal }) + "\n");
       process.exitCode = 0;
-    } catch {
-      const record = diagnosticTracker.recordError({
-        component: "node.service",
-        operation: "service.shutdown",
-        operationId: "service-shutdown",
-        checkpoint: "node.service.ready",
-        error: {
-          code: DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
-          name: "ServiceShutdownError",
-          message: "Market Flow US service shutdown failed.",
-          retryable: false
-        }
-      });
-      process.stderr.write(formatCliDiagnostic(record) + "\n");
-      process.exitCode = 1;
+      return;
     }
+
+    const record = diagnosticTracker.recordError({
+      component: "node.service",
+      operation: "service.shutdown",
+      operationId: "service-shutdown",
+      checkpoint: "node.service.ready",
+      error: {
+        code: DIAGNOSTIC_CODES.SERVICE_LISTEN_ERROR,
+        name: "ServiceShutdownError",
+        message: "Market Flow US service shutdown failed.",
+        retryable: false
+      }
+    });
+    process.stderr.write(formatCliDiagnostic(record) + "\n");
+    process.exitCode = 1;
   }
 
   process.once("SIGINT", () => void shutdown("SIGINT"));
