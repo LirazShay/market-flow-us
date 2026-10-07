@@ -196,6 +196,15 @@ export function createBasicBuyTicketAuthority({
     return tickets.get(ticketId) ?? null;
   }
 
+  function consume(ticketId) {
+    if (typeof ticketId !== "string" || ticketId.length === 0) return null;
+    cleanupExpired();
+    const ticket = tickets.get(ticketId) ?? null;
+    if (!ticket) return null;
+    tickets.delete(ticketId);
+    return ticket;
+  }
+
   function diagnostics() {
     cleanupExpired();
     return Object.freeze({
@@ -211,6 +220,7 @@ export function createBasicBuyTicketAuthority({
   return Object.freeze({
     prepare,
     read,
+    consume,
     diagnostics,
     clear
   });
