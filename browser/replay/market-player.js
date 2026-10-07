@@ -282,6 +282,7 @@ export function createMarketReplayPlayer({
       scheduleNext(expectedGeneration === generation ? expectedGeneration : generation);
     } catch (error) {
       if (expectedAuthorityGeneration !== authorityGeneration) return;
+      if (!ownsAuthorityBoundary && expectedGeneration !== generation) return;
       invalidateGeneration();
       status = "error";
       requiresFreshRun = true;
@@ -293,16 +294,17 @@ export function createMarketReplayPlayer({
       await closeErroredSession();
       notify();
     } finally {
-      if (!ownsAuthorityBoundary) return;
-      authorityInFlight = false;
-      if (
-        expectedAuthorityGeneration === authorityGeneration
-        && status === "playing"
-        && expectedGeneration !== generation
-        && nextSequence === sequence
-        && timerHandle === null
-      ) {
-        scheduleNext(generation);
+      if (ownsAuthorityBoundary) {
+        authorityInFlight = false;
+        if (
+          expectedAuthorityGeneration === authorityGeneration
+          && status === "playing"
+          && expectedGeneration !== generation
+          && nextSequence === sequence
+          && timerHandle === null
+        ) {
+          scheduleNext(generation);
+        }
       }
     }
   }
