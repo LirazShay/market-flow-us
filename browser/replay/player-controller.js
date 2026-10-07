@@ -53,6 +53,7 @@ export function createReplayPlayerController({
   let player = null;
   let playerState = null;
   let playerGeneration = 0;
+  let sourceLoadGeneration = 0;
   let selectedSequence = 0;
   let latestError = null;
   const listeners = new Set();
@@ -175,10 +176,13 @@ export function createReplayPlayerController({
   }
 
   async function withSourceLoad(operation) {
+    const currentGeneration = ++sourceLoadGeneration;
     try {
       const nextSource = await operation();
+      if (currentGeneration !== sourceLoadGeneration) return snapshotState();
       return setSource(nextSource);
     } catch (error) {
+      if (currentGeneration !== sourceLoadGeneration) return snapshotState();
       latestError = normalizeError(error);
       notify();
       throw error;
