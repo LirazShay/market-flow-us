@@ -97,6 +97,8 @@ export function createMarketReplayPlayer({
 
   let status = summary.frameCount === 0 ? "empty" : "ready";
   let generation = 0;
+  let authorityGeneration = 0;
+  let authorityInFlight = false;
   let timerHandle = null;
   let sessionStarted = false;
   let selectedSequence = 0;
@@ -184,10 +186,15 @@ export function createMarketReplayPlayer({
     return generation;
   }
 
-  async function closeCompletedSession(expectedGeneration) {
-    if (!sessionStarted || expectedGeneration !== generation) return;
+  function invalidateAuthority() {
+    authorityGeneration += 1;
+    return invalidateGeneration();
+  }
+
+  async function closeCompletedSession(expectedAuthorityGeneration) {
+    if (!sessionStarted || expectedAuthorityGeneration !== authorityGeneration) return;
     await producerBridge.stopSession("replay-complete");
-    sessionStarted = false;
+    if (expectedAuthorityGeneration === authorityGeneration) sessionStarted = false;
   }
 
   async function closeErroredSession() {
@@ -222,9 +229,16 @@ export function createMarketReplayPlayer({
     if (status !== "playing" || expectedGeneration !== generation) return;
     assertSequence(sequence, summary.frameCount);
 
+    const expectedAuthorityGeneration = authorityGeneration;
+    let ownsAuthorityBoundary = false;
+
     try {
       const frame = await source.getFrame(sequence);
-      if (status !== "playing" || expectedGeneration !== generation) return;
+      if (
+        status !== "playing"
+        || expectedGeneration !== generation
+        || expectedAuthorityGeneration !== authorityGeneration
+      ) return;
 
       const projected = projectReplayFrameToSegment(frame, segment);
       const membership = projected.universe.membership;
@@ -232,30 +246,42 @@ export function createMarketReplayPlayer({
         || !sameCanonicalMembership(currentMembership, membership);
 
       if (membershipChanged) {
+        authorityInFlight = true;
+        ownsAuthorityBoundary = true;
         await producerBridge.acceptUniverse(projected.universe);
+        if (expectedAuthorityGeneration !== authorityGeneration) return;
         currentMembership = [...membership];
         if (status !== "playing" || expectedGeneration !== generation) return;
       }
 
+      if (!ownsAuthorityBoundary) {
+        authorityInFlight = true;
+        ownsAuthorityBoundary = true;
+      }
       await producerBridge.commitCycle(projected.cycle);
+      if (expectedAuthorityGeneration !== authorityGeneration) return;
+
       committedSequence = sequence;
       committedFrameCount += 1;
       nextSequence = sequence + 1;
       latestError = null;
       notify();
 
-      if (status !== "playing" || expectedGeneration !== generation) return;
       if (nextSequence >= summary.frameCount) {
-        status = "completed";
-        scheduledDueAtMs = null;
-        notify();
-        await closeCompletedSession(expectedGeneration);
-        notify();
+        if (status === "playing") {
+          status = "completed";
+          scheduledDueAtMs = null;
+          notify();
+          await closeCompletedSession(expectedAuthorityGeneration);
+          notify();
+        }
         return;
       }
-      scheduleNext(expectedGeneration);
+
+      if (status !== "playing") return;
+      scheduleNext(expectedGeneration === generation ? expectedGeneration : generation);
     } catch (error) {
-      if (expectedGeneration !== generation) return;
+      if (expectedAuthorityGeneration !== authorityGeneration) return;
       invalidateGeneration();
       status = "error";
       requiresFreshRun = true;
@@ -266,6 +292,18 @@ export function createMarketReplayPlayer({
       notify();
       await closeErroredSession();
       notify();
+    } finally {
+      if (!ownsAuthorityBoundary) return;
+      authorityInFlight = false;
+      if (
+        expectedAuthorityGeneration === authorityGeneration
+        && status === "playing"
+        && expectedGeneration !== generation
+        && nextSequence === sequence
+        && timerHandle === null
+      ) {
+        scheduleNext(generation);
+      }
     }
   }
 
@@ -301,7 +339,16 @@ export function createMarketReplayPlayer({
     }
 
     if (!sessionStarted) {
+      const expectedAuthorityGeneration = authorityGeneration;
       await producerBridge.startSession();
+      if (expectedAuthorityGeneration !== authorityGeneration) {
+        try {
+          await producerBridge.stopSession("replay-stale-start");
+        } catch {
+          // A later lifecycle boundary owns the visible state; cleanup remains best-effort and bounded.
+        }
+        return snapshotState();
+      }
       sessionStarted = true;
     }
 
@@ -332,9 +379,9 @@ export function createMarketReplayPlayer({
     if (nextSequence >= summary.frameCount) {
       pausedOriginalPositionMs = null;
       status = "completed";
-      const expectedGeneration = invalidateGeneration();
+      invalidateGeneration();
       notify();
-      await closeCompletedSession(expectedGeneration);
+      await closeCompletedSession(authorityGeneration);
       notify();
       return snapshotState();
     }
@@ -347,13 +394,13 @@ export function createMarketReplayPlayer({
     status = "playing";
     const expectedGeneration = invalidateGeneration();
     notify();
-    scheduleNext(expectedGeneration);
+    if (!authorityInFlight) scheduleNext(expectedGeneration);
     return snapshotState();
   }
 
   async function stop(reason = "replay-stop") {
     if (status === "stopped") return snapshotState();
-    invalidateGeneration();
+    invalidateAuthority();
     status = "stopping";
     notify();
 
@@ -381,7 +428,7 @@ export function createMarketReplayPlayer({
 
   async function seek(sequence) {
     assertSequence(sequence, summary.frameCount, "seek sequence");
-    invalidateGeneration();
+    invalidateAuthority();
 
     let stopError = null;
     if (sessionStarted) {
