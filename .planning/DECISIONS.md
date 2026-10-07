@@ -512,25 +512,70 @@ Normal launch, Replay, Scanner, Demo Buy, AI Investigation and Current remain ex
 
 ## D-US-048 — Current continuation is Replay hardening → basic BUY → final 7.4, with allocation order distinct from dependency truth
 
-**Status:** resolved
+**Status:** resolved; superseded for current sequencing by D-US-049
 
 The user explicitly requested Replay hardening before the first basic BUY integration and both before final target-machine acceptance.
 
-Current process order is:
+The completed extension order was:
 
 ```text
 completed historical leaves through 9.5
 → 9.6 Replay hardening
 → 8.5 basic in-product BUY integration
-→ 7.4 final target-machine/provider acceptance on the resulting exact candidate
+→ 7.6 combined pre-acceptance code audit/reclosure
 ```
 
-This serial order is an execution-allocation decision, not a claim that `8.5` technically requires `9.6`. Therefore:
+This serial order was an execution-allocation decision, not a claim that `8.5` technically required `9.6`. Historical dependency truth remains valid for the completed work. The next current sequencing authority is D-US-049.
+
+## D-US-049 — Test-system hardening is branch-7 release/reclosure work and blocks final 7.4
+
+**Status:** resolved
+
+The focused verification mini-project belongs under branch `7` as `7.7`, not as a new product capability branch. It hardens evidence, determinism, maintainability and recurring feedback for the already-built product before user-dependent acceptance.
+
+Current sequence is:
 
 ```text
-9.6 depends_on: 9.5
-8.5 depends_on: 3.3 + 8.4
-7.4 depends_on: 7.5 + 8.5 + 9.6
+completed historical implementation/reclosure through 7.6.5 / 8.5 / 9.6
+→ 7.7 verification-system hardening and completeness reclosure
+→ 7.4 final target-machine/provider acceptance
 ```
 
-This preserves truthful S&T dependencies while ensuring the user-requested hardening-first sequence. The historical post-Branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369` remains the baseline entering the extension but cannot be the final `7.4` candidate after product code changes.
+`7.4` therefore depends directly on `7.7.4` in addition to its existing historical dependencies. Target-machine/authenticated/provider truth remains owned by `7.4`; `7.7` must not relabel synthetic or hosted evidence as final provider success.
+
+## D-US-050 — Comprehensive coverage means contract/risk completeness, not arbitrary source-percentage completion
+
+**Status:** resolved
+
+Verification completeness is judged outside-in against durable contracts and material risks. For each applicable capability/boundary, the audit considers normal behavior, boundary/invalid input, failure, restart/recovery/lifecycle, race/concurrency, security/privacy, user-visible semantics and material performance/load behavior.
+
+A material item is complete only when it has an authoritative proof owner, an explicit justified `TARGET_ONLY`/not-applicable disposition, or a routed blocking gap that remains open until closed. The planning coverage ledger is current-cycle closure evidence; `docs/TEST_STRATEGY.md` remains the durable verification-policy authority.
+
+Line/branch/source coverage may be used as secondary gap-finding telemetry when useful and cheap, but no arbitrary percentage—including 100%—becomes release authority or substitutes for contract/risk proof.
+
+## D-US-051 — Each recurring proof has one authoritative execution owner; acceptance may reuse exact fresh evidence
+
+**Status:** resolved
+
+Unit, real-service integration, Chromium composition, specialized Replay/Order/Workload gates and target-machine acceptance have distinct proof responsibilities. A recurring lower-layer proof should have one authoritative execution owner for each relevant source/helper/config change; duplicate execution requires independent evidence value, not a second label.
+
+Named Local Acceptance/FR evidence may be derived from an already-executed authoritative test only when identity, candidate SHA/run, completeness and freshness are fail-closed. Standalone acceptance commands must still execute their scenario when invoked independently. Replay lower-layer deduplication is legal only after Fast reliably owns those unit/service proofs for every relevant change and release/reclosure requires both same-candidate evidence families.
+
+## D-US-052 — Verification optimization is root-cause first; dependency truth is separate from execution order
+
+**Status:** resolved
+
+Recurring-cost optimization order is:
+
+```text
+referenced timers / process tails / fixed waits
+→ duplicate execution
+→ unnecessary setup/bootstrap/fixture work
+→ oversized data at the wrong layer
+→ topology/cache/setup improvements
+→ concurrency only after isolation/repeat/stress evidence
+```
+
+Do not increase timeouts/retries/workers first, convert authoritative real integration to mocks merely for speed, or globally share mutable DB/service state without contamination/order-independence proof. The known Replay Host losing-timeout lifecycle defect is owned by `7.7.2.1` through root cause, regression, analogous-area sweep and affected verification.
+
+S&T `depends_on` records genuine engineering prerequisites only. Serial Chat allocation may choose a safer merge/execution order among technically parallel leaves, but must not encode that preference as a false dependency. Any CI warning/error encountered during hardening remains blocking until full RCA, reusable prevention/analogous-area sweep and closing evidence are recorded.
