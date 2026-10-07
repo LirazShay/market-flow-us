@@ -6,8 +6,8 @@ This file is the execution evidence ledger for TREE `7.4` only.
 
 - GitHub `main` remains product truth.
 - TREE `7.4` and its `success_evidence` remain definition-of-done.
-- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` remains the detailed checkpoint procedure.
-- Historical wording there that says `Chat 25` or freezes the old post-`9.5` candidate is superseded for this final execution by current TREE/STATUS/EXECUTOR_HANDOFF truth: final acceptance must cover completed `9.6` Replay hardening **and** completed `8.5` Basic BUY.
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` is the authoritative Chat-27 execution wrapper and candidate/ownership truth.
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` remains the detailed FR-1..FR-14 checkpoint procedure, subject to the explicit authority corrections in the final runbook.
 
 ## FR-0 — frozen final candidate
 
@@ -19,11 +19,13 @@ Final accepted product under test:
 
 Why this SHA:
 
-- it is current `main` after Chat 26 / TREE `8.5` squash merge;
+- it is current runtime `main` after Chat 26 / TREE `8.5` squash merge;
 - TREE `9.6` and `8.5` are both `done`;
 - root STATUS points to Chat 27 / TREE `7.4`;
-- no open PR supersedes it at Chat-27 start;
+- no open PR superseded it at Chat-27 start;
 - all five main workflows for this SHA completed successfully.
+
+Later Chat-27 documentation/evidence-only commits do not replace this runtime SHA.
 
 Do not substitute the historical post-branch-9 SHA `243f4f2e78e434378ff2202ba95af7b8626a0369` or the historical branch-8 candidate.
 
@@ -31,8 +33,8 @@ Do not substitute the historical post-branch-9 SHA `243f4f2e78e434378ff2202ba95a
 
 | Checkpoint | State | Evidence |
 |---|---|---|
-| FR-0 exact final candidate | PASS | `93a48c8b0a36433e58f09f6a607ec7cd366c9aea`; dependencies done; main CI green; open-PR audit clean |
-| FR-1 host prerequisite preflight | PENDING | user target machine |
+| FR-0 exact final candidate | PASS | `93a48c8b0a36433e58f09f6a607ec7cd366c9aea`; dependencies done; runtime candidate CI green; opening open-PR audit clean |
+| FR-1 host prerequisite preflight | PENDING | target-machine npm + PowerShell + ports `8765/8766/8770` evidence still required; prior Node/Git/disk/loopback/Chromium evidence remains available |
 | FR-2 exact-SHA checkout | PENDING | user target machine |
 | FR-3 deterministic dependency install | PENDING | user target machine |
 | FR-4 unit/service/Replay/order deterministic acceptance | PENDING | user target machine |
