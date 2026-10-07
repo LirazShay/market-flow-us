@@ -101,3 +101,49 @@ for (const scenario of [
     assert.equal(coordinator.getState().activeRunId, null);
   });
 }
+
+test("Replay run coordinator preserves active ownership when composition cleanup itself fails", async () => {
+  const log = [];
+  const cleanupError = new Error("cleanup-stop-failed");
+  const hostClient = {
+    async stopRun(reason) {
+      log.push(["stop", reason]);
+      if (reason === "replay-composition-failed") throw cleanupError;
+      return { status: "stopped" };
+    },
+    async startRun(reason) {
+      log.push(["start", reason]);
+      return {
+        runId: "run-cleanup-failure",
+        serviceUrl: "ws://127.0.0.1:8765"
+      };
+    }
+  };
+  const compositionError = new Error("producer-factory-failed");
+  const coordinator = createReplayRunCoordinator({
+    hostClient,
+    target: createTarget(),
+    producerBridgeFactory() {
+      throw compositionError;
+    },
+    viewerRuntimeFactory() {
+      throw new Error("viewer-runtime-must-not-run");
+    }
+  });
+
+  await assert.rejects(
+    () => coordinator.startFreshRun({ reason: "cleanup-failure" }),
+    (error) => {
+      assert.equal(error, cleanupError);
+      assert.equal(error.cause, compositionError);
+      return true;
+    }
+  );
+
+  assert.deepEqual(log, [
+    ["stop", "replace-cleanup-failure"],
+    ["start", "cleanup-failure"],
+    ["stop", "replay-composition-failed"]
+  ]);
+  assert.equal(coordinator.getState().activeRunId, "run-cleanup-failure");
+});
