@@ -1,5 +1,5 @@
 schema_version: 2
-phase: implementation
+phase: planning
 overall_status: in_progress
 
 current:
@@ -46,6 +46,7 @@ planning_completion:
   market_replay_tree_freeze: pass
   replay_hardening_buy_extension: pass
   pre_acceptance_extension_audit_replan: pass
+  test_system_hardening_replan: in_progress
 
 execution:
   chats_total: 28
