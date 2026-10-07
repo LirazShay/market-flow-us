@@ -77,6 +77,20 @@ for (const scenario of [
       };
     },
     expected: /could not open/
+  },
+  {
+    name: "viewer returns a malformed null result after Host run starts",
+    producerBridgeFactory() {
+      return { kind: "bridge" };
+    },
+    viewerRuntimeFactory() {
+      return {
+        openViewer() {
+          return null;
+        }
+      };
+    },
+    expected: /Cannot read properties of null|opened/
   }
 ]) {
   test(`Replay run coordinator cleans owned Host run when ${scenario.name}`, async () => {
