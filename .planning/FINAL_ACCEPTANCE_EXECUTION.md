@@ -33,9 +33,9 @@ Do not substitute historical branch-8/post-branch-9/pre-audit candidates or late
 | FR-0 exact final candidate | PASS | `d1ff24abfe72e55302c4c008030174f8923a6d48`; post-audit production runtime pinned; deterministic reclosure fresh green before Chat-28 handoff |
 | FR-1 host prerequisite preflight | PASS | Windows, Git `2.45.2.windows.1`, Node `v24.19.0`, npm availability, PowerShell availability, writable disk, loopback and Playwright Chromium are evidenced on the target machine; these host-only prerequisites are not invalidated by the audit runtime fixes; competing-listener checks for ports `8765/8766/8770` remain runtime assertions when their respective product paths are exercised |
 | FR-2 exact-SHA checkout | PENDING | Chat 28 is active on branch `chat-28-final-acceptance`; repository-side runtime candidate is pinned and no later runtime change supersedes it. Target-machine evidence is still required: clean working tree before checkout, `HEAD=d1ff24abfe72e55302c4c008030174f8923a6d48`, and clean working tree after checkout. Do not advance to FR-3 until observed. |
-| FR-3 deterministic dependency install | PENDING | user target machine |
-| FR-4 unit/service/Replay/order deterministic acceptance | PENDING | user target machine |
-| FR-5 normal + Replay build / Chromium E2E | PENDING | user target machine |
+| FR-3 deterministic dependency install | PENDING | Procedure preverified against exact runtime SHA: `SETUP.cmd` requires Node 24.x, runs pinned `npm ci`, then `npx playwright install chromium`, failing closed on any error. Target-machine execution remains blocked on FR-2 PASS. |
+| FR-4 unit/service/Replay/order deterministic acceptance | PENDING | Exact runtime SHA exposes the documented `test:unit`, `test:service`, `test:acceptance:replay` and `test:acceptance:order` scripts; target-machine execution remains pending. |
+| FR-5 normal + Replay build / Chromium E2E | PENDING | Exact runtime SHA exposes `build:browser`, `build:replay` and `test:e2e`; target-machine execution remains pending. |
 | FR-6 local UI smoke | PENDING | user target machine |
 | FR-7 Local Fake static | PENDING | user target machine |
 | FR-8A..H Local Fake / Demo Buy / AI closure | PENDING | user target machine |
