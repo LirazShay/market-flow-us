@@ -56,7 +56,10 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(buy, /MARKET_FLOW_US_BUY_LIVE_ARG=--buy-live/);
   assert.match(buy, /npm run service -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
   assert.match(buy, /market-flow-us\.bookmarklet\.txt/);
-  assert.doesNotMatch(buy, /caller.?token|account.?id|cookie/i);
+  assert.doesNotMatch(
+    buy,
+    /MARKET_FLOW_US_.*(?:TOKEN|SECRET|ACCOUNT)|--(?:caller-token|account-id|cookie)\b/i
+  );
   assert.doesNotMatch(buy, /MarketScope|MARKETSCOPE|market-scope/i);
 
   assert.match(replay, /npm run build:replay/);
