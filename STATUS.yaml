@@ -6,7 +6,7 @@ current:
   chat: 27
   node: "7.6.5"
   title: "Pre-acceptance extension code audit"
-  status: in_progress
+  status: pending
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
