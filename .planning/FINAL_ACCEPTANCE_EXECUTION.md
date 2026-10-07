@@ -14,25 +14,26 @@ This file is the execution evidence ledger for TREE `7.4` only.
 Final product under target-machine acceptance:
 
 ```text
-d1ff24abfe72e55302c4c008030174f8923a6d48
+682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
 Why this SHA:
 
-- it is the merged production runtime after the pre-acceptance audit fixes from TREE `7.6.2` and `7.6.3`;
-- TREE `7.6.4` found no additional runtime defect and changed no production code;
-- TREE `7.6.5` fresh deterministic reclosure changes are test/CI/evidence-only and therefore do not replace this runtime SHA;
-- the pre-audit `93a48c8b0a36433e58f09f6a607ec7cd366c9aea` candidate is superseded.
+- it contains the merged pre-acceptance audit production fixes from TREE `7.6.2` and `7.6.3`;
+- it contains the later confirmed Replay Host stop-timer lifecycle fix from PR #73;
+- deterministic regression now proves losing shutdown timers are cancelled for prompt SIGTERM exit and SIGKILL escalation;
+- the PR head and resulting `main` candidate passed Fast CI and Replay CI, with the repository's existing Planning Docs CI also green;
+- the prior `d1ff24abfe72e55302c4c008030174f8923a6d48` runtime candidate is superseded.
 
-Do not substitute historical branch-8/post-branch-9/pre-audit candidates or later test/metadata-only commits.
+Do not substitute historical branch-8/post-branch-9/pre-audit candidates, the superseded `d1ff24abfe72e55302c4c008030174f8923a6d48`, or later metadata-only commits unless the final acceptance runbook explicitly pins a new candidate.
 
 ## Checkpoint ledger
 
 | Checkpoint | State | Evidence |
 |---|---|---|
-| FR-0 exact final candidate | PASS | `d1ff24abfe72e55302c4c008030174f8923a6d48`; post-audit production runtime pinned; deterministic reclosure fresh green before Chat-28 handoff |
-| FR-1 host prerequisite preflight | PASS | Windows, Git `2.45.2.windows.1`, Node `v24.19.0`, npm availability, PowerShell availability, writable disk, loopback and Playwright Chromium are evidenced on the target machine; these host-only prerequisites are not invalidated by the audit runtime fixes; competing-listener checks for ports `8765/8766/8770` remain runtime assertions when their respective product paths are exercised |
-| FR-2 exact-SHA checkout | PENDING | target machine must be clean and pinned to `d1ff24abfe72e55302c4c008030174f8923a6d48` |
+| FR-0 exact final candidate | PASS | `682f8c8b01e9f68c7f8e159de8b0f233221f1878`; PR #73 Replay Host lifecycle fix squash-merged; resulting main Fast + Replay + existing Planning Docs CI green; open-PR audit clean |
+| FR-1 host prerequisite preflight | PASS | Windows, Git `2.45.2.windows.1`, Node `v24.19.0`, npm availability, PowerShell availability, writable disk, loopback and Playwright Chromium are evidenced on the target machine; these host-only prerequisites are not invalidated by the Replay Host shutdown fix; competing-listener checks for ports `8765/8766/8770` remain runtime assertions when their respective product paths are exercised |
+| FR-2 exact-SHA checkout | PENDING | target machine must be clean and pinned to `682f8c8b01e9f68c7f8e159de8b0f233221f1878` |
 | FR-3 deterministic dependency install | PENDING | user target machine |
 | FR-4 unit/service/Replay/order deterministic acceptance | PENDING | user target machine |
 | FR-5 normal + Replay build / Chromium E2E | PENDING | user target machine |

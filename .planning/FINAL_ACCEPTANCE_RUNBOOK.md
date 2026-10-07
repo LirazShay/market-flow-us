@@ -8,7 +8,7 @@ This is the authoritative execution wrapper for TREE `7.4` final target-machine/
 - TREE `7.4` `success_evidence` is definition-of-done.
 - `.planning/FINAL_ACCEPTANCE_EXECUTION.md` is the checkpoint/evidence ledger.
 - `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` remains the detailed FR-1..FR-14 procedure only.
-- Where historical acceptance material names Chat 25/27 or freezes an older runtime candidate, this runbook overrides that stale ownership/candidate wording.
+- This runbook is the authority for the current acceptance candidate. Historical acceptance text that points FR-0/FR-2 at TREE `9.5`, `.planning/EXECUTOR_HANDOFF.md`, Chat 25/27 or an older SHA is superseded by this file.
 
 ## Current owner and exact runtime candidate
 
@@ -18,20 +18,27 @@ Current owner:
 Chat 28 / TREE 7.4
 ```
 
-Exact runtime product SHA under acceptance:
+Exact product SHA under acceptance:
 
 ```text
-d1ff24abfe72e55302c4c008030174f8923a6d48
+682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
-This is the merged runtime after the user-requested pre-acceptance code audit fixed the material Order/Basic-BUY and Replay lifecycle defects in TREE `7.6.2` and `7.6.3`. TREE `7.6.4` required no runtime change. TREE `7.6.5` adds test/CI/evidence-only reclosure changes, so those later commits do not replace this runtime SHA.
+Why this SHA:
+
+- it contains the completed pre-acceptance audit runtime fixes from TREE `7.6.2` and `7.6.3`;
+- it also contains the later confirmed Replay Host stop-timer lifecycle root fix from PR #73, including deterministic SIGTERM/SIGKILL regression proof;
+- PR #73 was squash-merged to `main`, and the resulting `main` candidate passed Fast CI, Replay CI and the repository's existing Planning Docs CI;
+- no open PR remained after the merge audit;
+- the previously pinned runtime candidate `d1ff24abfe72e55302c4c008030174f8923a6d48` is therefore superseded.
 
 Do not substitute:
 
+- superseded candidate `d1ff24abfe72e55302c4c008030174f8923a6d48`;
 - pre-audit candidate `93a48c8b0a36433e58f09f6a607ec7cd366c9aea`;
 - historical post-branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369`;
-- historical branch-8 candidate;
-- later test/metadata-only `main` commits.
+- historical branch-8 candidates;
+- later metadata-only `main` commits unless this runbook explicitly pins a replacement acceptance candidate.
 
 ## Execution order
 
@@ -57,11 +64,13 @@ FR-0 exact final candidate
 → FR-14 final evidence/handoff
 ```
 
+For FR-0 and FR-2 specifically, the exact candidate comes from this runbook and `.planning/FINAL_ACCEPTANCE_EXECUTION.md`, not from historical candidate wording in `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` or `.planning/EXECUTOR_HANDOFF.md`.
+
 Real IBKR LIVE submission is PASS only if real external trading permission exists and the user explicitly initiates it. Otherwise record exactly `PENDING_EXTERNAL_PERMISSION`; deterministic/synthetic proof must never be relabeled as live success.
 
-## Reused evidence after the audit
+## Reused evidence after the Replay Host fix
 
-FR-1 host prerequisite evidence remains valid because the audit changed product runtime behavior, not the machine prerequisites it proves. FR-2 and all later candidate-bound checkpoints remain pending against `d1ff24abfe72e55302c4c008030174f8923a6d48` unless their detailed contract explicitly permits reuse and the runtime changes cannot invalidate them.
+FR-1 host prerequisite evidence remains valid because PR #73 changed Replay Host shutdown lifecycle behavior, not the machine prerequisites it proves. FR-2 and all later candidate-bound checkpoints remain pending against `682f8c8b01e9f68c7f8e159de8b0f233221f1878` unless their detailed contract explicitly permits reuse and the runtime change cannot invalidate them.
 
 ## Execution discipline
 
