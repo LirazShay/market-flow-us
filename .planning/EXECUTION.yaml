@@ -41,7 +41,7 @@ chats:
 
   "8":
     nodes:
-      "7.2": { state: done, result: "Deterministic local Fake Leumi acceptance is implemented on the normal U.S. runtime/service/DuckDB path with separate static, moving, membership, provider recovery and restart checkpoints, sanitized SHA-bound reporting, Windows/npm launchers, shared-generator isolated day seeding and explicit target 4096 x 180 profiles; final re-audit passed and Planning/Fast/Browser/Workload CI are green before closure." }
+      "7.2": { state: done, result: "Deterministic local Fake Leumi acceptance is implemented on the normal U.S. runtime/service/DuckDB path with separate static, moving, membership, provider recovery and restart checkpoints, sanitized SHA-bound reporting, Windows/npm launchers, shared-generator isolated day seeding and explicit target 4096 x 180 profiles; final re-audit passed and Planning/Fast/Browser/Workload CI were green before closure." }
 
   "9":
     nodes:
@@ -111,7 +111,7 @@ chats:
 
   "25":
     nodes:
-      "9.6": { state: in_progress, result: null }
+      "9.6": { state: done, result: "Replay pre-user-run hardening completed with all mandatory audit areas PASS. The exact runtime/test candidate 52becaaeaddde01457199d17c88dd6ce61c98d42 passed Planning #625, Workload #269, Fast #483, Replay #12 and Browser #441 after root-cause fixes and deterministic regressions for recorder Start/Stop ownership, final/in-flight Pause authority, stale Player callbacks, stale concurrent source loads, run-coordinator/Host lifecycle races and late session-start cleanup. The shared protocol/server remains Replay-unaware, final diff review found no remaining known material Replay defect or unproved risk, and the durable audit is .planning/REPLAY_HARDENING_AUDIT.md." }
 
   "26":
     nodes:
