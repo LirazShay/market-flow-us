@@ -30,8 +30,21 @@ export class ReplayHostError extends Error {
   }
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function settleBeforeTimeout(promise, timeoutMs, {
+  setTimer = setTimeout,
+  clearTimer = clearTimeout
+} = {}) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((resolve) => {
+        timer = setTimer(() => resolve(false), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimer(timer);
+  }
 }
 
 function applyCors(response, origin, allowedOrigin) {
@@ -171,15 +184,15 @@ async function waitForChildReady(child) {
   });
 }
 
-async function stopOwnedChild(child) {
+export async function stopOwnedChild(child, timerOptions = undefined) {
   if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
   const exited = once(child, "exit").then(() => true);
   child.kill("SIGTERM");
-  if (await Promise.race([exited, delay(CHILD_STOP_TIMEOUT_MS).then(() => false)])) return;
+  if (await settleBeforeTimeout(exited, CHILD_STOP_TIMEOUT_MS, timerOptions)) return;
 
   child.kill("SIGKILL");
-  if (await Promise.race([exited, delay(CHILD_STOP_TIMEOUT_MS).then(() => false)])) return;
+  if (await settleBeforeTimeout(exited, CHILD_STOP_TIMEOUT_MS, timerOptions)) return;
   throw new ReplayHostError("REPLAY_SERVICE_STOP_TIMEOUT", 503);
 }
 
