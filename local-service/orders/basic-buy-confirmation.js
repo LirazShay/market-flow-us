@@ -261,8 +261,9 @@ const APP_JS = `(() => {
   }
 
   confirm.addEventListener("click", async () => {
+    const checkingStatus = confirm.textContent === "Check status";
     confirm.disabled = true;
-    result.textContent = confirm.textContent === "Check status" ? "Reconciling..." : "Confirming...";
+    result.textContent = checkingStatus ? "Reconciling..." : "Confirming...";
     try {
       const confirmed = await post("/buy/confirm/execute", { ticketId });
       renderExecution(confirmed.result);
@@ -270,6 +271,8 @@ const APP_JS = `(() => {
       result.textContent = error.message;
       if (error.code === "ACKNOWLEDGEMENT_UNKNOWN") {
         showUnknownAcknowledgement();
+      } else if (checkingStatus) {
+        showUnknownAcknowledgement("Status reconciliation failed safely. The order acknowledgement is still unknown. Try Check status again; do not create another BUY.");
       }
     }
   });
@@ -347,7 +350,15 @@ function safeExecutionResult(result) {
 }
 
 function isAcknowledgementUnknown(error) {
-  return error instanceof BasicBuySidecarError && error.code === "ACKNOWLEDGEMENT_UNKNOWN";
+  return error instanceof BasicBuySidecarError
+    && (error.code === "ACKNOWLEDGEMENT_UNKNOWN"
+      || error.code === "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN");
+}
+
+function acknowledgementUnknownError(error) {
+  return error?.code === "ACKNOWLEDGEMENT_UNKNOWN"
+    ? error
+    : new BasicBuySidecarError("ACKNOWLEDGEMENT_UNKNOWN");
 }
 
 export function createBasicBuyConfirmationHandler({
@@ -462,12 +473,13 @@ export function createBasicBuyConfirmationHandler({
 
     if (executeConfirmedBuy === null) fail("BASIC_BUY_EXECUTION_UNAVAILABLE", 503);
 
+    const reconciling = session.phase === "ack_unknown";
     let ticket;
     if (session.phase === "reviewed" && session.ticketId === ticketId) {
       ticket = tickets.consume(ticketId);
       if (!ticket) fail("BASIC_BUY_TICKET_INVALID", 410);
     } else if (
-      session.phase === "ack_unknown"
+      reconciling
       && session.ticketId === ticketId
       && session.ticket
     ) {
@@ -503,15 +515,18 @@ export function createBasicBuyConfirmationHandler({
       }
       writeJson(response, 200, { result });
     } catch (error) {
-      if (isAcknowledgementUnknown(error)) {
+      const uncertain = isAcknowledgementUnknown(error);
+      if (reconciling || uncertain) {
         replaceSession(nonce, executing, {
           phase: "ack_unknown",
           ticketId,
-          ticket
+          ticket,
+          localOrderId: session.localOrderId
         });
       } else {
         sessions.delete(nonce);
       }
+      if (uncertain) throw acknowledgementUnknownError(error);
       throw error;
     }
   }
@@ -547,16 +562,17 @@ export function createBasicBuyConfirmationHandler({
       }
       writeJson(response, 200, { result });
     } catch (error) {
-      if (isAcknowledgementUnknown(error)) {
+      const uncertain = isAcknowledgementUnknown(error);
+      if (uncertain) {
         replaceSession(nonce, executing, {
           phase: "ack_unknown",
           ticketId: session.ticketId,
           ticket: session.ticket,
           localOrderId: session.localOrderId
         });
-      } else {
-        sessions.delete(nonce);
+        throw acknowledgementUnknownError(error);
       }
+      sessions.delete(nonce);
       throw error;
     }
   }
