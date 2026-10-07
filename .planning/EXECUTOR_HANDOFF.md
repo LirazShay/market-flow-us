@@ -2,7 +2,7 @@
 
 This is the compact GitHub-only bootstrap for numbered implementation chats.
 
-`.planning/TREE.yaml` owns Strategy/Tactic/dependencies/success evidence. `.planning/EXECUTION.yaml` owns chat allocation/state.
+`.planning/TREE.yaml` owns Strategy/Tactic/dependencies/success evidence. `.planning/EXECUTION.yaml` owns chat allocation/state. GitHub `main` is the source of truth between chats.
 
 ## Authorization gate
 
@@ -60,45 +60,74 @@ Do not ask the user to restate the plan.
 | `8.2` real CPGW lifecycle | IBKR_ORDER_SERVICE §§2,4,5,9,11–16; DECISIONS D-US-035/037/038; TECHNICAL_SPEC §§35–39; TEST_STRATEGY §§26–30 |
 | `8.3` packaging/integration seam | IBKR_ORDER_SERVICE §§19–21; IBKR_ORDER_SERVICE_SECURITY §10; PRODUCT_SPEC/TECHNICAL_SPEC packaging; TEST_STRATEGY §§31–32 |
 | `8.4` branch-8 reclosure | all IBKR order contracts + affected generic contracts + full required deterministic gates + PR/main/open-PR truth |
+| `8.5` basic in-product BUY | BASIC_BUY_INTEGRATION; IBKR_ORDER_SERVICE; IBKR_ORDER_SERVICE_SECURITY; current Detail/service/launcher/order-sidecar tests/code; extension review |
 | `9.1` Replay recorder/storage | MARKET_REPLAY recording/library sections; DATA_CONTRACT Replay recording projection; PRODUCT_REQUIREMENTS/PRODUCT_SPEC Replay; TEST_STRATEGY recorder/storage proof; existing ScreenerHulPaging3 validation seam |
 | `9.2` portable recording format | MARKET_REPLAY portable/large-recording sections; DATA_CONTRACT portable format; TEST_STRATEGY file/export/source proof |
 | `9.3` Player/time projection | MARKET_REPLAY playback/time/Pause/Resume sections; DATA_CONTRACT Replay time projection; D-US-042; TEST_STRATEGY player timing; existing ProducerBridge/shared protocol |
 | `9.4` Replay Host/isolation | MARKET_REPLAY Stop/Seek/Host/Viewer sections; D-US-043/044; TEST_STRATEGY Stop/Seek/isolation/bootstrap; existing service `--db`/`--port`/`--allowed-origin` seams |
 | `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad gates + PR/main/open-PR truth |
-| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact candidate pinned by completed `9.5` |
+| `9.6` Replay hardening | REPLAY_HARDENING; MARKET_REPLAY; extension review; existing Replay tests/code only as routed by the hardening contract |
+| `7.4` final acceptance | TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates; exact final candidate after completed `9.6` + `8.5` |
 
 TREE `success_evidence` is always definition-of-done.
 
 ## Current serial allocation
 
 ```text
-Chats 1–16: historical completed implementation through 7.5
-Chat 17: 8.1 done
-Chat 18: 8.2 done
-Chat 19: 8.3 done
-Chat 20: 8.4 done
-Chat 21: 9.1 → 9.2 done
-Chat 22: 9.3 done
-Chat 23: 9.4 done
-Chat 24: 9.5 done
-Chat 25: 7.4
+Chats 1–24: completed historical implementation through 9.5
+Chat 25: 9.6 Replay pre-user-run hardening
+Chat 26: 8.5 basic in-product BUY
+Chat 27: 7.4 final target-machine/provider acceptance
 ```
 
-Do not skip forward. Current dependency order is:
+This serial order does not create a false dependency between `9.6` and `8.5`.
+
+Current dependency truth is:
 
 ```text
-9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 7.4
+9.6 depends on 9.5
+8.5 depends on 3.3 + 8.4
+7.4 depends on 7.5 + 8.5 + 9.6
 ```
 
-The earlier Chat-21 allocation of `7.4` was deliberately repaired during Replay planning because `7.4` now depends on `9.5`.
+Do not skip forward. The earlier Chat-25 allocation of `7.4` was deliberately repaired because the user requested Replay hardening and the basic in-product BUY before final acceptance.
 
-TREE `9.5` completed and pinned this exact post-branch-9 product candidate:
+TREE `9.5` completed and pinned this historical post-branch-9 product candidate entering `9.6`:
 
 ```text
 243f4f2e78e434378ff2202ba95af7b8626a0369
 ```
 
-PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later planning-only metadata commits do not replace this product candidate.
+PR #53 was squash-merged; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on that main candidate and the open-PR audit was clean. Later planning-only metadata commits do not replace this product candidate, and later runtime changes will supersede it as final-candidate authority.
+
+## Current extension boundaries
+
+### Chat 25 / TREE 9.6
+
+Run the adversarial Replay audit in `docs/REPLAY_HARDENING.md`. Reuse existing proof where it actually covers the risk; add the smallest deterministic regression for any newly identified material gap. A blocking defect remains Chat 25 responsibility through root cause, fix, regression proof and affected verification.
+
+`9.6` must not invent speculative Replay features or add replay-aware behavior to the shared protocol/server.
+
+### Chat 26 / TREE 8.5
+
+Implement only the narrow basic BUY in `docs/BASIC_BUY_INTEGRATION.md`:
+
+```text
+current Detail only
+BUY only
+positive finite run-configured quantity
+STK / USD / SMART
+MKT / DAY
+DRY_RUN by default; LIVE only by explicit operator opt-in
+```
+
+The provider-page Viewer may prepare an immutable short-lived ticket from `securityId`, but performs no sidecar/provider mutation. Actual execution requires the trusted product-owned loopback confirmation page with explicit confirmation and CSRF/ticket protections. The `ibkr-order-service` caller token stays Node-memory-only and is never exposed to browser code. Do not relax browser-Origin/CORS protection or add a generic Viewer order proxy.
+
+Scanner, Demo Buy, AI Investigation, Current and Replay remain disconnected from automatic execution.
+
+### Chat 27 / TREE 7.4
+
+Final target-machine/provider acceptance starts only after `9.6` and `8.5` are `done` and durable truth points to the exact resulting product candidate. The integrated Detail BUY path must be proven in DRY_RUN; real LIVE submission occurs only when external permission exists and remains `PENDING_EXTERNAL_PERMISSION` otherwise.
 
 ## Branch-9 architectural boundary
 
@@ -169,7 +198,7 @@ browser producer/Viewer
 → market-flow-us DuckDB schema v4
 ```
 
-The execution lane is a separate process:
+The execution lane remains the existing sidecar boundary:
 
 ```text
 authorized local caller
@@ -179,7 +208,7 @@ authorized local caller
 → Interactive Brokers
 ```
 
-Branch `8` does **not** wire Scanner, Demo Buy, AI Investigation or Current to automatic order submission. Future integration must consume the sidecar API rather than bypassing it.
+TREE `8.5` consumes this sidecar only through the trusted Node-owned confirmation seam defined above. Scanner, Demo Buy, AI Investigation, Current and Replay still do not automatically submit orders.
 
 ## IBKR order invariants
 
@@ -368,7 +397,7 @@ Preserve the existing checkpoint/support architecture; do not add parallel loggi
 
 Order diagnostics may use an `ibkr_order.*` component namespace; Replay may use bounded recorder/player/host component names. Both expose only stable checkpoint/code, product-owned local IDs where needed, bounded lifecycle state and sanitized cause.
 
-Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence, AI prompt contents or Replay Host control credentials.
+Support evidence may contain bounded status/counters/IDs but never credentials, cookies, provider/local auth tokens, account identifiers, private browser data, raw authenticated dumps, stored SQL, Scanner/history evidence, AI prompt contents, Replay Host control credentials, BUY confirmation tickets or anti-CSRF nonce values.
 
 ## Work-unit lifecycle
 
@@ -409,7 +438,7 @@ Branch `8.4` completed against the post-order-service baseline:
 
 That SHA remains branch-8 evidence only.
 
-TREE `9.5` completed deterministic Replay reclosure and pinned the exact post-branch-9 product candidate:
+TREE `9.5` completed deterministic Replay reclosure and pinned the exact post-branch-9 historical product candidate:
 
 ```text
 243f4f2e78e434378ff2202ba95af7b8626a0369
@@ -417,10 +446,8 @@ TREE `9.5` completed deterministic Replay reclosure and pinned the exact post-br
 
 That candidate passed focused Replay proof plus the materially affected Fast, Browser/Local Fake, Planning and bounded Workload gates on main; PR #53 was squash-merged and the open-PR audit was clean.
 
-Under the currently frozen plan, Chat 25 / TREE `7.4` is the next leaf and must perform final user-dependent target-machine heavy performance, Replay usability/isolation, authenticated market-data browser/static/movement checks and real CPGW target-machine compatibility against that exact candidate.
-
-If the user requests additional capability/hardening before `7.4`, reopen planning explicitly under FRAMEWORK `execution_reopen`; do not silently execute new work under `7.4` or rewrite the pinned candidate.
+Under the currently frozen extension, Chat 25 / `9.6` hardens Replay first; Chat 26 / `8.5` then adds the narrow integrated Detail BUY; Chat 27 / `7.4` performs final user-dependent target-machine acceptance against the exact resulting product candidate.
 
 Real order submission is performed only if external IBKR trading permission exists and the user explicitly initiates the bounded verification; otherwise its exact status remains `PENDING_EXTERNAL_PERMISSION`.
 
-Overall completion requires every assigned leaf done, branch-9 deterministic reclosure, final acceptance, PR/merge/main-green closure and no blocking defect.
+Overall completion requires every assigned leaf done, Replay hardening, basic in-product BUY integration, final acceptance, PR/merge/main-green closure and no blocking defect.

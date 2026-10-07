@@ -3,22 +3,23 @@ root: "0"
 nodes:
   "0":
     status: approved
-    strategy: Market Flow US is a complete local U.S.-market product that preserves the proven analysis/validation model, keeps the isolated permission-gated IBKR order sidecar, and adds an isolated record/export/replay lane that exercises the unchanged market producer/service path without giving replay-specific authority to the server.
-    tactic: Complete nine necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, release/target-machine acceptance, standalone IBKR execution, and Market Recording + Replay.
+    strategy: Market Flow US is a complete local U.S.-market product that preserves the proven analysis/validation model, keeps the isolated permission-gated IBKR order sidecar, supports an explicitly user-confirmed in-product BUY integration, and keeps Market Recording + Replay isolated from live authority.
+    tactic: Complete nine necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI investigation, deterministic offline proof, operational tooling, release/target-machine acceptance, standalone IBKR execution plus the narrow Detail BUY integration, and Market Recording + Replay plus adversarial hardening.
     parallel_assumptions:
       - Preserve proven mechanisms unless current evidence requires change.
       - Scanner SQL remains strategy authority; Demo Buy and AI Investigation remain evidence layers.
-      - IBKR execution remains a separate local boundary and future integration must consume that boundary explicitly.
-      - Replay remains an external producer/orchestrator over the normal market service/protocol rather than a server mode.
+      - IBKR execution remains a separate local boundary; in-product BUY consumes it through a trusted Node-owned seam and never exposes the sidecar credential to browser code.
+      - Replay remains an external producer/orchestrator over the normal producer/service path rather than a server mode.
     necessary_assumptions: []
     sufficiency_assumptions:
-      - All nine branches are required to deliver the current product scope while keeping analysis, execution and replay responsibilities deliberately separated.
+      - All nine branches remain sufficient because Replay hardening extends branch 9 and the first in-product BUY extends branch 8 rather than creating new capability branches.
     success_evidence:
       - Every implementation leaf satisfies its success evidence.
       - Current, Detail/History, Scanner, Demo Buy and AI Investigation operate over final schema-v4 market authority.
-      - Standalone IBKR BUY/SELL dry-run/live-capable lifecycle is deterministically proven with authenticated localhost caller protection and public-safe diagnostics.
-      - Market Recording + Replay proves validated recording, portable export/file playback, current-time rebasing, interactive seek over fresh isolated replay DBs and unchanged producer/service protocol behavior.
-      - Fast, Browser, Planning, required order/replay and bounded Workload gates are green on the post-branch-9 candidate without turning replay waits into ordinary-suite cost.
+      - Standalone IBKR BUY/SELL lifecycle remains deterministically proven with authenticated localhost caller protection, public-safe diagnostics and restart-safe idempotency.
+      - The first in-product BUY is Detail-only, explicit, quantity-configured, MKT/DAY and uses a trusted local confirmation boundary without browser-visible sidecar credentials or automatic execution.
+      - Market Recording + Replay is adversarially hardened after its completed implementation, with no known material untested Replay risk before final target-machine acceptance.
+      - Fast, Browser, Planning, required order/replay and bounded Workload gates are green on the final post-hardening/post-BUY candidate without turning Replay waits into ordinary-suite cost.
       - Final target-machine/provider acceptance passes on that exact candidate, with actual live IBKR submission either proven when permission exists or recorded exactly as PENDING_EXTERNAL_PERMISSION.
     depends_on: []
     children: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
@@ -503,15 +504,15 @@ nodes:
   "7":
     status: approved
     strategy: The product is deterministically re-closed after every requested capability extension and then accepted on the exact final target-machine/provider candidate.
-    tactic: Preserve completed U.S. migration/Demo Buy/AI and branch-8 evidence, require branch-9 Replay reclosure, then resume the final user-dependent acceptance leaf.
+    tactic: Preserve completed U.S. migration/Demo Buy/AI/standalone-order/Replay evidence, complete Replay hardening and the narrow in-product BUY integration, then resume final user-dependent acceptance.
     parallel_assumptions:
       - Target-machine/authenticated checks remain last.
     necessary_assumptions:
-      - Final acceptance must execute against the candidate that includes both the standalone IBKR sidecar and Market Recording + Replay.
+      - Final acceptance must execute against the candidate that includes completed Replay hardening and the first in-product BUY integration rather than the historical post-branch-9 baseline.
     sufficiency_assumptions:
-      - Completed historical proof + branch-8 evidence + branch-9 leaves + final 7.4 establish end-to-end completion.
+      - Completed historical proof + `9.6` + `8.5` + final `7.4` establish end-to-end completion of the current requested scope.
     success_evidence:
-      - Final candidate has green deterministic gates, accurate docs, local market-analysis acceptance, deterministic standalone order-service proof, deterministic Replay proof and final target-machine/provider evidence.
+      - Final candidate has green deterministic gates, accurate docs, hardened Replay, deterministic standalone order-service proof, deterministic Detail BUY integration proof and final target-machine/provider evidence.
     depends_on: []
     children: ["7.1", "7.2", "7.3", "7.5", "7.4"]
 
@@ -570,8 +571,8 @@ nodes:
 
   "7.4":
     status: approved
-    strategy: The exact final post-branch-9 candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
-    tactic: Run final target-machine local market/order/replay acceptance first, then authenticated market-data static smoke and market-open SHA-bound gate; run real IBKR live-order proof only when external permission exists.
+    strategy: The exact final post-hardening/post-basic-BUY candidate is accepted on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, integrated Detail BUY compatibility, standalone IBKR sidecar compatibility, authenticated static compatibility and market-open movement.
+    tactic: Run final target-machine local market/order/replay acceptance first, including the Detail BUY confirmation path, then authenticated market-data static smoke and market-open SHA-bound gate; run real IBKR live-order proof only when external permission exists.
     parallel_assumptions: []
     necessary_assumptions:
       - Automated fake proof cannot establish actual target-machine/browser/provider compatibility or heavy performance.
@@ -581,32 +582,34 @@ nodes:
       - Local Demo Buy journey proves capture, progressive/targeted horizon transition and successful sharing-safe AI Investigation generation/copy/regeneration on the final SHA.
       - Market Replay records/exports/imports or directly opens a portable recording, plays at 1x with contemporary local timing, pauses/resumes, stops/restarts into a fresh replay run, seeks to a fresh replay DB without preroll, and leaves the normal live DB untouched on the final SHA.
       - Standalone IBKR service starts independently, protects localhost caller access, proves DRY_RUN/provider-session diagnostics/restart-safe idempotency on the final SHA, and does not expose credentials/account/session material.
+      - BUY-enabled composition proves current Detail → immutable BUY ticket → trusted local confirmation → existing order-service DRY_RUN path with no browser-visible sidecar token, no generic order proxy and duplicate-click safety.
+      - If LIVE permission exists, the same integrated Detail path proves an explicitly confirmed real order under all existing LIVE/provider gates; otherwise real submission remains exactly PENDING_EXTERNAL_PERMISSION and synthetic proof is never mislabeled as live success.
       - 4096x180 and isolated one-day probes pass target-machine criteria.
       - New-day archive/reset accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state.
       - Authenticated market-data static smoke and market-open movement gates pass with sanitized SHA-bound reports.
-      - Real IBKR order submission is either explicitly proven when trading permission exists or recorded exactly as PENDING_EXTERNAL_PERMISSION; synthetic proof is never mislabeled as live success.
-      - No private credential/session/account material enters repo/reports, recordings or generated shareable artifacts.
-    depends_on: ["7.5", "8.4", "9.5"]
+      - No private credential/session/account material enters repo/reports, recordings, BUY browser surfaces or generated shareable artifacts.
+    depends_on: ["7.5", "8.5", "9.6"]
     children: []
 
   "8":
     status: approved
-    strategy: Market Flow US gains a standalone, integration-ready IBKR BUY/SELL order service whose permission-independent behavior is fully testable before the user's account receives trading permission.
-    tactic: Build the safe local service/dry-run authority, add the real CPGW adapter and live-capable lifecycle, package the operator/integration boundary, then deterministically re-close the repository before final target-machine acceptance resumes.
+    strategy: Market Flow US keeps a standalone, integration-ready IBKR BUY/SELL order service and adds one deliberately narrow, user-confirmed in-product BUY consumer without merging execution authority into Scanner or ordinary browser runtime.
+    tactic: Preserve completed 8.1–8.4 standalone authority/security/provider/reclosure, then add `8.5` Detail-only BUY preparation plus trusted local confirmation that consumes the existing sidecar.
     parallel_assumptions:
       - Existing market-analysis runtime remains independently runnable.
-      - Scanner, Demo Buy, AI Investigation and Current do not automatically submit broker orders in this branch.
+      - Scanner, Demo Buy, AI Investigation, Current and Replay do not automatically submit broker orders.
     necessary_assumptions:
-      - The user needs implementation ready before IBKR grants actual trading permission.
+      - The user requested a first usable in-product BUY before final target-machine acceptance while preserving the completed sidecar security boundary.
     sufficiency_assumptions:
-      - 8.1–8.4 cover local authority/security, provider lifecycle, operator/integration usability and release reclosure without inventing a strategy execution engine.
+      - 8.1–8.4 provide the execution authority and 8.5 is sufficient for the requested basic product integration without a strategy execution engine.
     success_evidence:
-      - Deterministic synthetic proof covers BUY/SELL preview, submission lifecycle, reply/cancel/fills, uncertain acknowledgement reconciliation, no-short-opening protection, caller security and restart-safe idempotency.
-      - Real CPGW compatibility can be diagnosed without storing credentials/account identifiers or bypassing provider permission.
-      - Packaging keeps DRY_RUN default and requires deliberate LIVE enablement.
-      - Branch-8 reclosure produces the exact completed execution baseline consumed by branch 9.
+      - Deterministic synthetic proof preserves the standalone BUY/SELL lifecycle, caller security, LIVE gates, acknowledgement reconciliation and restart-safe idempotency.
+      - The in-product integration exposes only a current-Detail BUY with run-owned quantity/mode and fixed MKT/DAY/STK/USD/SMART intent.
+      - Browser code never receives the sidecar caller token and cannot submit through a generic market-service order proxy.
+      - A trusted loopback confirmation page owns explicit human confirmation, CSRF/ticket protections and stable `requestId` reuse.
+      - Normal launch, Replay, Scanner, Demo Buy and AI remain execution-disabled unless later planning explicitly changes them.
     depends_on: []
-    children: ["8.1", "8.2", "8.3", "8.4"]
+    children: ["8.1", "8.2", "8.3", "8.4", "8.5"]
 
   "8.1":
     status: approved
@@ -681,26 +684,48 @@ nodes:
     depends_on: ["8.3"]
     children: []
 
+  "8.5":
+    status: approved
+    strategy: A user can explicitly create one basic BUY from a current Detail security without exposing the sidecar credential to browser code or turning the analysis runtime into an automatic trading engine.
+    tactic: Add a BUY-enabled operator composition with run-owned quantity and DRY_RUN/LIVE mode, Node-owned `order.buy.prepare({securityId})`, immutable short-lived tickets, a trusted loopback confirmation page and delegation to the existing authenticated order-service using its IPC-provided caller token.
+    parallel_assumptions:
+      - Initial in-product execution is BUY only, MKT, DAY and explicit human confirmation; later order UX remains separately plannable.
+    necessary_assumptions:
+      - A direct provider-page-to-sidecar call would violate the completed Branch-8 browser-origin security boundary.
+      - A generic Viewer order proxy would make ordinary WebSocket access an unintended execution capability.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Normal `START_MARKET_FLOW_US.cmd` starts no order child and exposes no BUY execution capability; a dedicated BUY-enabled launcher validates positive quantity, defaults to DRY_RUN and requires explicit LIVE opt-in.
+      - Only current Detail is eligible; Node resolves authoritative current `Symbol`, fixes STK/USD/SMART BUY MKT DAY and owns quantity/mode so browser input cannot rewrite the normalized intent.
+      - Prepare performs no provider/order-service call or execution mutation and returns only a short-lived ticket/reference plus display-safe summary.
+      - Sidecar caller token remains Node-memory-only; provider Origin cannot call the sidecar or execute through the normal Viewer WebSocket.
+      - Trusted local confirmation requires same local Origin, immutable ticket, anti-CSRF nonce/custom header and explicit confirmation; expired/reused/wrong ticket/nonce and simple cross-origin/form submissions fail before sidecar calls.
+      - Stable server-generated `requestId` reuse makes double-click/retry one logical order and preserves existing sidecar idempotency.
+      - DRY_RUN proves zero submit; deterministic synthetic LIVE proof preserves all independent LIVE gates, reply handling, provider rejection and ACKNOWLEDGEMENT_UNKNOWN no-blind-resubmit semantics.
+      - Replay/Scanner/Demo Buy/AI stay execution-disabled and existing standalone order-service plus materially affected Fast/Browser/Planning gates remain green.
+    depends_on: ["3.3", "8.4"]
+    children: []
+
   "9":
     status: approved
-    strategy: Market Flow US can capture validated real-market snapshots into portable recordings and later replay them interactively through the unchanged normal producer/service path so the complete analytical product can be exercised when the real market is unavailable.
-    tactic: Add browser recording authority and IndexedDB library, portable streaming file interoperability, a media-style Player using the normal producer contract with external time rebasing, an isolated Replay Host/service lifecycle, then deterministically re-close the repository before final acceptance resumes.
+    strategy: Market Flow US can capture validated real-market snapshots into portable recordings and later replay them interactively through the unchanged normal producer/service path so the complete analytical product can be exercised when the real market is unavailable, then adversarially harden that completed path before final user acceptance.
+    tactic: Preserve completed 9.1–9.5 recording/storage/portable/player/Host/reclosure behavior, then execute `9.6` as a static + executable pre-user-run hardening audit with root-cause fixes for any discovered material defect.
     parallel_assumptions:
       - The normal live service/protocol remains replay-unaware.
       - Existing acquisition, ProducerBridge, Viewer, DuckDB and Scanner/Demo Buy authority are reused rather than cloned.
       - Replay artifacts/tests remain opt-in and do not silently lengthen ordinary local verification.
     necessary_assumptions:
-      - The user needs realistic market behavior available outside live market hours and needs long recordings movable off browser storage.
-      - Interactive seek or a new run after Stop cannot leave future/past authority from a previous playback run in the same DB.
+      - The user wants likely Replay problems found and fixed before relying on their first serious target-machine run.
+      - Hardening must cover races/error/cleanup paths that feature implementation tests may not have exercised explicitly.
     sufficiency_assumptions:
-      - 9.1–9.5 cover capture/storage, portability, media playback/time semantics, isolated process/DB lifecycle and deterministic product-level reclosure.
+      - 9.1–9.5 provide the implemented capability and 9.6 is sufficient to adversarially audit/fix/reclose that exact capability before final acceptance.
     success_evidence:
-      - A real/synthetic validated session can be recorded without local service availability, exported, reopened and replayed at original cadence.
-      - Play/Pause/Stop/Seek are usable and server-visible traffic remains only the normal producer protocol.
-      - Mid-recording start and next-day replay keep Current/History/Scanner/Demo Buy semantics coherent without preroll or replay-aware server code.
-      - Normal live DB/process and ordinary local verification paths remain isolated.
+      - Existing recording/export/playback/seek/time-projection/isolation semantics remain green.
+      - Static audit covers every material Replay seam and any newly identified material risk gains the smallest deterministic proof.
+      - No known material untested Replay risk remains when 9.6 closes.
+      - Shared service/protocol remains replay-unaware and normal live DB/process semantics remain isolated.
     depends_on: []
-    children: ["9.1", "9.2", "9.3", "9.4", "9.5"]
+    children: ["9.1", "9.2", "9.3", "9.4", "9.5", "9.6"]
 
   "9.1":
     status: approved
@@ -782,11 +807,11 @@ nodes:
   "9.5":
     status: approved
     strategy: One exact post-Replay candidate has coherent contracts/docs and deterministic proof that recording/replay behaves like live startup where intended without contaminating normal verification or final-candidate truth.
-    tactic: Complete focused recording/file/player/Host/browser acceptance, next-day and arbitrary-start proof, classify/fix any generic live-start defects, run only the materially affected broad gates, review/merge, require green main and pin the new exact candidate before 7.4 resumes.
+    tactic: Complete focused recording/file/player/Host/browser acceptance, next-day and arbitrary-start proof, classify/fix any generic live-start defects, run only the materially affected broad gates, review/merge, require green main and pin the new exact candidate before later extension work.
     parallel_assumptions:
       - Multi-hour real-time playback is unnecessary for deterministic correctness proof; fake-clock timing plus a short real-wall-clock smoke is sufficient.
     necessary_assumptions:
-      - Final target-machine/provider acceptance must not run against the older post-branch-8 candidate.
+      - Later hardening must begin from one exact completed post-Replay baseline.
     sufficiency_assumptions: []
     success_evidence:
       - Recording/format/IndexedDB/file-source/Player/Host focused unit/service/browser proof is green with sanitized synthetic fixtures.
@@ -796,6 +821,25 @@ nodes:
       - Any missing-history crash is fixed only as a generic normal-live-start defect with regression proof; no replay-specific server behavior is introduced.
       - Existing ordinary launchers/test commands retain semantics and Replay-specific timing waits live in dedicated proof; affected Fast/Browser/Planning/bounded Workload/local acceptance remain green without redundant giant matrices.
       - PRODUCT_REQUIREMENTS, PRODUCT_SPEC, DATA_CONTRACT, TECHNICAL_SPEC, TEST_STRATEGY and MARKET_REPLAY match implementation/operator flow.
-      - Implementation/reclosure PRs are reviewed, squash-merged, main CI is green, open-PR audit is clean and STATUS/EXECUTION/handoff pin 7.4 to the exact post-branch-9 candidate.
+      - Implementation/reclosure PRs are reviewed, squash-merged, main CI is green, open-PR audit is clean and the exact post-branch-9 candidate is pinned durably.
     depends_on: ["9.4", "8.4"]
+    children: []
+
+  "9.6":
+    status: approved
+    strategy: The completed Replay implementation is adversarially audited and repaired before the user's run is relied upon, so no known material Replay defect or materially unproved risk remains hidden behind earlier feature-level green tests.
+    tactic: Execute the static and executable matrix in `docs/REPLAY_HARDENING.md` across recording/IndexedDB/portable source/Player/ProducerBridge/Host/service/surfaces/packaging, root-cause any blocking defect, add the smallest missing regression proof and deterministically re-close one exact candidate.
+    parallel_assumptions:
+      - Hardening does not add speculative Replay features; it protects the already-approved behavior contract.
+      - Existing focused tests are reused where they actually prove the risk; new tests are added only for material gaps discovered by audit.
+    necessary_assumptions:
+      - Feature implementation/reclosure cannot prove absence of unreviewed cleanup, stale-callback, malformed-input, storage-failure or lifecycle race gaps without an explicit adversarial audit.
+    sufficiency_assumptions: []
+    success_evidence:
+      - Durable `.planning/REPLAY_HARDENING_AUDIT.md` records PASS/BLOCKED for every mandatory audit area with files, risks, proof and fixes.
+      - `npm run build:replay`, `npm run test:acceptance:replay`, full `test:unit`, full `test:service` and materially affected Browser/Planning/Workload/local gates are green.
+      - Focused proof covers middle-frame zero-preroll, next-day rebasing, Stop→Play, Seek, Pause/Resume, stale generation/ACK sequencing, malformed/truncated/wrong-version portable input, quota/storage failure, Host credential/origin/foreign-process refusal, live-DB isolation and progressive missing-history behavior.
+      - Every discovered blocking defect is root-caused/fixed/regression-proven; no known material untested Replay risk remains.
+      - Shared server/protocol remains replay-unaware, ordinary launch/test semantics remain intact, PR/main CI are green and open-PR audit is clean.
+    depends_on: ["9.5"]
     children: []

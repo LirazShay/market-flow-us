@@ -1,9 +1,10 @@
 version: 2
 plan_state: frozen
 replan_mode: execution_reopen
-current_stage: "implementation"
-current_node: "7.4"
-blockers: []
-next_action: "TREE 9.5 is complete. PR #53 squash-merged as exact post-branch-9 candidate 243f4f2e78e434378ff2202ba95af7b8626a0369; Fast, Browser including bounded Local Fake, Planning Docs and bounded Workload were green on main and the open-PR audit was clean. Under the currently frozen plan Chat 25 / TREE 7.4 is next; a user-requested Replay hardening plus basic BUY integration extension will be handled only through an explicit execution_reopen replan before 7.4 begins."
-last_review: "R-US-MARKET-REPLAY-EXTERNAL"
-implementation_authorized: true
+current_stage: "planning_pr"
+current_node: "9.6"
+blockers:
+  - "Implementation authorization waits for planning PR review/merge, green main Planning Docs CI and clean open-PR audit."
+next_action: "Open the planning PR for the frozen 52-node/39-leaf extension, require Planning Docs CI green, review the diff, squash-merge, verify main Planning Docs CI and open-PR state, then explicitly authorize implementation and hand off Chat 25 / TREE 9.6."
+last_review: "R-US-REPLAY-BUY-EXTENSION-FINAL"
+implementation_authorized: false
