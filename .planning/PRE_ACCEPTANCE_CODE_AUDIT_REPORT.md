@@ -22,7 +22,7 @@ The base is completed post-Demo-Buy/AI reclosure `7.5`. The head is the combined
 | `7.6.2` | IBKR order service + Basic BUY deep audit | PASS | Two material lifecycle defects found/fixed/regression-proven; Fast/Browser/Replay/Planning/Workload green |
 | `7.6.3` | Recording/Replay/Host deep audit | PASS | One material cleanup/ownership defect found/fixed/regression-proven; Fast #534, Browser #492, Replay #63, Planning #691 and Workload #320 green on Stage-3 head `a2613f13dd51046fbe4c0427bb318c2e5feb1dc0` |
 | `7.6.4` | Shared integration/regression audit | PASS | Shared service/protocol/diagnostics/Viewer/launcher/DB/CI seams independently re-read; no additional material defect or execution bypass found; no runtime change required |
-| `7.6.5` | Adversarial verification + deterministic reclosure | PENDING | Runs after Stage 4 merge/main-green closure |
+| `7.6.5` | Adversarial verification + deterministic reclosure | IN_PROGRESS | 5A adds targeted test-only adversarial guards and opens fresh Fast/Browser/Replay/Planning/Workload verification; runtime production code remains unchanged |
 
 ## Stage 1 — exact inventory
 
@@ -33,7 +33,7 @@ The reviewed extension window includes:
 - Replay recorder, IndexedDB store, portable format/source, Player/controller/surfaces, Replay Host client/coordinator;
 - Replay Host config/security/process ownership;
 - shared market-service config/index/service, protocol and diagnostics seams;
-- affected Windows launchers, build/package scripts and CI routing.
+- affected Windows launchers, build/package scripts, focused acceptance scripts and CI/test wiring.
 
 No material production/runtime file in the exact extension window remains unmapped.
 
@@ -152,6 +152,20 @@ Closed invariants:
 One suspected BUY-startup child leak was checked against the final `server/index.js` and rejected as a false positive: the startup `catch` already closes the owned Basic BUY sidecar before surfacing the failure.
 
 Stage 4 introduced no production-code change. The latest merged runtime candidate entering Stage 5 remains `d1ff24abfe72e55302c4c008030174f8923a6d48`; Stage-4 report/status commits are evidence-only and do not replace it.
+
+## Stage 5 — adversarial verification / deterministic reclosure
+
+### 5A — fresh verification setup
+
+No production runtime code is changed in 5A. Three targeted test-only guards were added so the existing CI routing runs fresh deterministic proof over the audited seams:
+
+- Browser guard: reject a loopback Basic BUY confirmation URL that embeds username/password credentials before any navigation.
+- Replay guard: malformed `null` Viewer-open result after Host run start must still stop the owned Replay run and clear ownership after successful cleanup.
+- Workload/shared guard: ordinary `parseServiceConfig()` with no BUY option remains execution-disabled and `DRY_RUN` by default.
+
+The workload guard is included in the existing isolated-probes job; no new subsystem or duplicate suite was introduced.
+
+5B closes only after fresh Fast/Browser/Replay/Planning/Workload evidence is green, complete diff review is clean, the PR is squash-merged, `main` CI is green and open-PR audit is clean.
 
 ## Audit defects so far
 
