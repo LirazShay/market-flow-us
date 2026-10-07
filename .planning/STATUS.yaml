@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "7.6.4"
+current_node: "7.6.5"
 blockers: []
-next_action: "Chat 27 executes TREE 7.6.4 shared integration/regression audit after Stage 3 Replay/Recording/Host closure; Chat 28 remains blocked on 7.6.5."
+next_action: "Chat 27 executes TREE 7.6.5 adversarial verification and deterministic reclosure after Stage 4 shared-integration closure merges green; Chat 28 remains blocked until 7.6.5 is done."
 last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN"
 implementation_authorized: true
