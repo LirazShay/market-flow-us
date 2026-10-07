@@ -83,8 +83,12 @@ export function createReplayRunCoordinator({
       } catch (error) {
         try {
           await hostClient.stopRun("replay-composition-failed");
-        } finally {
           activeRunId = null;
+        } catch (cleanupError) {
+          if (cleanupError && typeof cleanupError === "object" && cleanupError.cause === undefined) {
+            cleanupError.cause = error;
+          }
+          throw cleanupError;
         }
         throw error;
       }
