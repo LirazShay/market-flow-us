@@ -1,10 +1,24 @@
 import { randomBytes } from "node:crypto";
 
+import { BasicBuySidecarError } from "./basic-buy-sidecar.js";
+
 const MAX_BODY_BYTES = 2048;
 const DEFAULT_PAGE_TTL_MS = 120_000;
 const DEFAULT_MAX_PAGE_SESSIONS = 64;
 const CSRF_HEADER = "x-market-flow-csrf";
 const CSP = "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'none'; img-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+const EXECUTION_STATES = new Set([
+  "DRY_RUN_COMPLETE",
+  "READY_TO_SUBMIT",
+  "REPLY_REQUIRED",
+  "SUBMITTED",
+  "PROVIDER_REJECTED",
+  "SUBMIT_FAILED",
+  "ACKNOWLEDGEMENT_UNKNOWN",
+  "CANCELLED",
+  "PARTIALLY_FILLED",
+  "FILLED"
+]);
 
 export const BASIC_BUY_CSRF_HEADER = CSRF_HEADER;
 
@@ -43,9 +57,25 @@ function writeJson(response, statusCode, payload) {
   write(response, statusCode, "application/json; charset=utf-8", JSON.stringify(payload));
 }
 
+function safeHttpStatus(value, fallback) {
+  return Number.isInteger(value) && value >= 400 && value <= 599 ? value : fallback;
+}
+
 function writeFailure(response, error) {
   if (error instanceof BasicBuyConfirmationError) {
     writeJson(response, error.statusCode, { code: error.code });
+    return;
+  }
+  if (error instanceof BasicBuySidecarError) {
+    const statusCode = error.code === "BASIC_BUY_SIDECAR_NOT_READY"
+      ? 503
+      : error.code === "BASIC_BUY_ORDER_SERVICE_REJECTED"
+        ? safeHttpStatus(error.httpStatus, 409)
+        : 502;
+    writeJson(response, statusCode, {
+      code: error.code,
+      ...(error.orderServiceCode ? { orderServiceCode: error.orderServiceCode } : {})
+    });
     return;
   }
   writeJson(response, 500, { code: "BASIC_BUY_CONFIRMATION_INTERNAL_ERROR" });
@@ -84,7 +114,7 @@ function assertJsonContentType(request) {
   }
 }
 
-async function readJson(request) {
+async function readExactJson(request, expectedKeys) {
   const declared = Number(request.headers["content-length"] ?? 0);
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
     request.resume();
@@ -111,14 +141,19 @@ async function readJson(request) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     fail("BASIC_BUY_CONFIRMATION_BODY_INVALID", 400);
   }
-  const keys = Object.keys(parsed);
-  if (keys.length !== 1 || keys[0] !== "ticketId") {
-    fail("BASIC_BUY_CONFIRMATION_BODY_INVALID", 400);
-  }
-  if (typeof parsed.ticketId !== "string" || parsed.ticketId.length === 0 || parsed.ticketId.length > 128) {
+  const actual = Object.keys(parsed).sort();
+  const expected = [...expectedKeys].sort();
+  if (actual.length !== expected.length || actual.some((key, index) => key !== expected[index])) {
     fail("BASIC_BUY_CONFIRMATION_BODY_INVALID", 400);
   }
   return parsed;
+}
+
+function validatedTicketId(value) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 128) {
+    fail("BASIC_BUY_CONFIRMATION_BODY_INVALID", 400);
+  }
+  return value;
 }
 
 function pageHtml(nonce) {
@@ -144,6 +179,7 @@ function pageHtml(nonce) {
 </dl>
 <p id="liveWarning" hidden>LIVE — this confirmation can submit a real provider order.</p>
 <button id="confirm" type="button" disabled>Confirm BUY</button>
+<button id="replyConfirm" type="button" hidden>Confirm provider reply</button>
 <pre id="result"></pre>
 <script src="/buy/confirm/app.js"></script>
 </body>
@@ -164,27 +200,41 @@ const APP_JS = `(() => {
   const status = document.getElementById("status");
   const summary = document.getElementById("summary");
   const confirm = document.getElementById("confirm");
+  const replyConfirm = document.getElementById("replyConfirm");
   const liveWarning = document.getElementById("liveWarning");
   const result = document.getElementById("result");
   const fields = ["securityId", "paperName", "symbol", "quantity", "side", "orderType", "tif", "executionMode"];
 
-  async function post(path) {
+  async function post(path, body) {
     const response = await fetch(path, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Market-Flow-CSRF": csrf
       },
-      body: JSON.stringify({ ticketId })
+      body: JSON.stringify(body)
     });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.code || "BASIC_BUY_CONFIRMATION_FAILED");
-    return body;
+    const payload = await response.json();
+    if (!response.ok) {
+      const detail = payload.orderServiceCode ? ":" + payload.orderServiceCode : "";
+      throw new Error((payload.code || "BASIC_BUY_CONFIRMATION_FAILED") + detail);
+    }
+    return payload;
+  }
+
+  function renderExecution(execution) {
+    result.textContent = JSON.stringify(execution, null, 2);
+    status.textContent = "Execution state: " + execution.lifecycleState;
+    if (execution.lifecycleState === "REPLY_REQUIRED") {
+      replyConfirm.hidden = false;
+      replyConfirm.disabled = false;
+      status.textContent = "Provider reply required. Review the result and explicitly confirm the provider reply.";
+    }
   }
 
   async function load() {
     if (!ticketId) throw new Error("BASIC_BUY_TICKET_INVALID");
-    const inspected = await post("/buy/confirm/inspect");
+    const inspected = await post("/buy/confirm/inspect", { ticketId });
     for (const field of fields) {
       const node = document.getElementById(field);
       node.textContent = inspected.summary[field] == null ? "" : String(inspected.summary[field]);
@@ -199,8 +249,19 @@ const APP_JS = `(() => {
     confirm.disabled = true;
     result.textContent = "Confirming...";
     try {
-      const confirmed = await post("/buy/confirm/execute");
-      result.textContent = JSON.stringify(confirmed, null, 2);
+      const confirmed = await post("/buy/confirm/execute", { ticketId });
+      renderExecution(confirmed.result);
+    } catch (error) {
+      result.textContent = error.message;
+    }
+  });
+
+  replyConfirm.addEventListener("click", async () => {
+    replyConfirm.disabled = true;
+    result.textContent = "Confirming provider reply...";
+    try {
+      const confirmed = await post("/buy/confirm/reply", {});
+      renderExecution(confirmed.result);
     } catch (error) {
       result.textContent = error.message;
     }
@@ -228,19 +289,65 @@ function safeSummary(ticket) {
   });
 }
 
+function boundedText(value, maxLength) {
+  return typeof value === "string" && value.length > 0 && value.length <= maxLength ? value : null;
+}
+
+function finiteOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function safeExecutionResult(result) {
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    fail("BASIC_BUY_EXECUTION_RESULT_INVALID", 502);
+  }
+  const lifecycleState = boundedText(result.lifecycleState, 64);
+  const executionMode = result.executionMode === "DRY_RUN" || result.executionMode === "LIVE"
+    ? result.executionMode
+    : null;
+  const localOrderId = boundedText(result.localOrderId, 256);
+  if (!lifecycleState || !EXECUTION_STATES.has(lifecycleState) || !executionMode || !localOrderId) {
+    fail("BASIC_BUY_EXECUTION_RESULT_INVALID", 502);
+  }
+  const rawReplyIds = Array.isArray(result.replyMessageIds) ? result.replyMessageIds : [];
+  if (rawReplyIds.length > 16 || rawReplyIds.some((value) => boundedText(value, 64) === null)) {
+    fail("BASIC_BUY_EXECUTION_RESULT_INVALID", 502);
+  }
+  return Object.freeze({
+    localOrderId,
+    lifecycleState,
+    executionMode,
+    replayed: result.replayed === true,
+    requestedQuantity: finiteOrNull(result.requestedQuantity),
+    filledQuantity: finiteOrNull(result.filledQuantity),
+    replyRequired: lifecycleState === "REPLY_REQUIRED",
+    replyMessageIds: lifecycleState === "REPLY_REQUIRED" ? Object.freeze([...rawReplyIds]) : Object.freeze([])
+  });
+}
+
 export function createBasicBuyConfirmationHandler({
   tickets,
   getLocalOrigin,
   executeConfirmedBuy = null,
+  confirmProviderReply = null,
   now = () => Date.now(),
   randomId = () => randomBytes(32).toString("base64url"),
   pageTtlMs = DEFAULT_PAGE_TTL_MS,
   maxPageSessions = DEFAULT_MAX_PAGE_SESSIONS
 } = {}) {
   if (!tickets || typeof tickets.read !== "function") throw new TypeError("tickets.read is required");
+  if (executeConfirmedBuy !== null && typeof tickets.consume !== "function") {
+    throw new TypeError("tickets.consume is required when execution is enabled");
+  }
   if (typeof getLocalOrigin !== "function") throw new TypeError("getLocalOrigin must be a function");
   if (executeConfirmedBuy !== null && typeof executeConfirmedBuy !== "function") {
     throw new TypeError("executeConfirmedBuy must be null or a function");
+  }
+  if (confirmProviderReply !== null && typeof confirmProviderReply !== "function") {
+    throw new TypeError("confirmProviderReply must be null or a function");
+  }
+  if (confirmProviderReply !== null && executeConfirmedBuy === null) {
+    throw new TypeError("confirmProviderReply requires executeConfirmedBuy");
   }
   if (typeof now !== "function") throw new TypeError("now must be a function");
   if (typeof randomId !== "function") throw new TypeError("randomId must be a function");
@@ -273,17 +380,28 @@ export function createBasicBuyConfirmationHandler({
     }
     const expiresAtMs = atMs + pageTtlMs;
     if (!Number.isSafeInteger(expiresAtMs)) fail("BASIC_BUY_CONFIRMATION_NONCE_FAILED", 503);
-    sessions.set(nonce, Object.freeze({ expiresAtMs }));
+    sessions.set(nonce, Object.freeze({
+      expiresAtMs,
+      phase: "new",
+      ticketId: null,
+      localOrderId: null
+    }));
     return nonce;
   }
 
-  function validateNonce(request) {
+  function sessionFor(request) {
     cleanupExpired();
     const nonce = request.headers[CSRF_HEADER];
-    if (typeof nonce !== "string" || !sessions.has(nonce)) {
-      fail("BASIC_BUY_CSRF_INVALID", 403);
-    }
-    return nonce;
+    if (typeof nonce !== "string") fail("BASIC_BUY_CSRF_INVALID", 403);
+    const session = sessions.get(nonce);
+    if (!session) fail("BASIC_BUY_CSRF_INVALID", 403);
+    return { nonce, session };
+  }
+
+  function replaceSession(nonce, session, patch) {
+    const updated = Object.freeze({ ...session, ...patch });
+    sessions.set(nonce, updated);
+    return updated;
   }
 
   function ticketFor(ticketId) {
@@ -292,25 +410,84 @@ export function createBasicBuyConfirmationHandler({
     return ticket;
   }
 
-  async function postBoundary(request, response, operation) {
+  async function inspect(request, response) {
     assertSameLocalOrigin(request, getLocalOrigin);
     assertJsonContentType(request);
-    const nonce = validateNonce(request);
-    const { ticketId } = await readJson(request);
+    const { nonce, session } = sessionFor(request);
+    const body = await readExactJson(request, ["ticketId"]);
+    const ticketId = validatedTicketId(body.ticketId);
     const ticket = ticketFor(ticketId);
 
-    if (operation === "inspect") {
-      writeJson(response, 200, { summary: safeSummary(ticket) });
-      return;
+    if (session.phase === "new") {
+      replaceSession(nonce, session, { phase: "reviewed", ticketId });
+    } else if (session.phase !== "reviewed" || session.ticketId !== ticketId) {
+      fail("BASIC_BUY_CONFIRMATION_STATE_INVALID", 409);
     }
 
-    if (executeConfirmedBuy === null) {
-      fail("BASIC_BUY_EXECUTION_UNAVAILABLE", 503);
+    writeJson(response, 200, { summary: safeSummary(ticket) });
+  }
+
+  async function execute(request, response) {
+    assertSameLocalOrigin(request, getLocalOrigin);
+    assertJsonContentType(request);
+    const { nonce, session } = sessionFor(request);
+    const body = await readExactJson(request, ["ticketId"]);
+    const ticketId = validatedTicketId(body.ticketId);
+
+    if (executeConfirmedBuy === null) fail("BASIC_BUY_EXECUTION_UNAVAILABLE", 503);
+    if (session.phase !== "reviewed" || session.ticketId !== ticketId) {
+      fail("BASIC_BUY_CONFIRMATION_STATE_INVALID", 409);
     }
 
-    sessions.delete(nonce);
-    const result = await executeConfirmedBuy(ticket);
-    writeJson(response, 200, { result });
+    const ticket = tickets.consume(ticketId);
+    if (!ticket) fail("BASIC_BUY_TICKET_INVALID", 410);
+    const executing = replaceSession(nonce, session, { phase: "executing" });
+
+    try {
+      const result = safeExecutionResult(await executeConfirmedBuy(ticket));
+      if (result.lifecycleState === "REPLY_REQUIRED") {
+        replaceSession(nonce, executing, {
+          phase: "reply_required",
+          ticketId: null,
+          localOrderId: result.localOrderId
+        });
+      } else {
+        sessions.delete(nonce);
+      }
+      writeJson(response, 200, { result });
+    } catch (error) {
+      sessions.delete(nonce);
+      throw error;
+    }
+  }
+
+  async function reply(request, response) {
+    assertSameLocalOrigin(request, getLocalOrigin);
+    assertJsonContentType(request);
+    const { nonce, session } = sessionFor(request);
+    await readExactJson(request, []);
+
+    if (confirmProviderReply === null) fail("BASIC_BUY_REPLY_UNAVAILABLE", 503);
+    if (session.phase !== "reply_required" || !session.localOrderId) {
+      fail("BASIC_BUY_CONFIRMATION_STATE_INVALID", 409);
+    }
+
+    const executing = replaceSession(nonce, session, { phase: "executing_reply" });
+    try {
+      const result = safeExecutionResult(await confirmProviderReply(session.localOrderId));
+      if (result.lifecycleState === "REPLY_REQUIRED") {
+        replaceSession(nonce, executing, {
+          phase: "reply_required",
+          localOrderId: result.localOrderId
+        });
+      } else {
+        sessions.delete(nonce);
+      }
+      writeJson(response, 200, { result });
+    } catch (error) {
+      sessions.delete(nonce);
+      throw error;
+    }
   }
 
   async function handle(request, response) {
@@ -327,11 +504,15 @@ export function createBasicBuyConfirmationHandler({
         return true;
       }
       if (method === "POST" && url === "/buy/confirm/inspect") {
-        await postBoundary(request, response, "inspect");
+        await inspect(request, response);
         return true;
       }
       if (method === "POST" && url === "/buy/confirm/execute") {
-        await postBoundary(request, response, "execute");
+        await execute(request, response);
+        return true;
+      }
+      if (method === "POST" && url === "/buy/confirm/reply") {
+        await reply(request, response);
         return true;
       }
       return false;
