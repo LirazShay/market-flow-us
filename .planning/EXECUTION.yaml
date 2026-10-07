@@ -120,7 +120,7 @@ chats:
   "27":
     nodes:
       "7.6.1": { state: done, result: "Exact 35-commit delta e0af9d105004f175a44ec33fa481fba0631773bf..93a48c8b0a36433e58f09f6a607ec7cd366c9aea was inventoried completely. Every material production/runtime/packaging file is classified and routed to governing contracts, primary risks, existing deterministic proof and deep-review owner; high-risk order/BUY, Replay/Host and shared seams are explicitly queued rather than presumed PASS." }
-      "7.6.2": { state: pending, result: null }
+      "7.6.2": { state: done, result: "Deep audit of standalone IBKR execution and Basic BUY found two material lifecycle defects: pending cancellation statuses were misclassified as terminal CANCELLED, and ACKNOWLEDGEMENT_UNKNOWN consumed the trusted BUY recovery handle. Both root causes were fixed with focused deterministic regressions, same-request fail-closed reconciliation preserved, and Fast #528 including standalone order acceptance, Browser #486, Replay #57, Planning #685 and Workload #314 were green on Stage-2 head efd9ee6fac0c83ff75e3d36d6ad789e8e781e762." }
       "7.6.3": { state: pending, result: null }
       "7.6.4": { state: pending, result: null }
       "7.6.5": { state: pending, result: null }
