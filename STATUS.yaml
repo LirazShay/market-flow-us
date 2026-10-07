@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 26
-  node: "8.5"
-  title: "Basic in-product BUY"
-  status: in_progress
+  chat: 27
+  node: "7.4"
+  title: "Final target-machine/provider acceptance"
+  status: ready
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -40,13 +40,13 @@ planning_completion:
   market_replay_extension: implementation
   market_replay_durable_contract: pass
   market_replay_tree_freeze: pass
-  replay_hardening_buy_extension: implementation
+  replay_hardening_buy_extension: pass
 
 execution:
   chats_total: 27
   implementation_leaves_total: 39
-  current_chat: 26
-  current_node: "8.5"
+  current_chat: 27
+  current_node: "7.4"
   final_acceptance_node: "7.4"
 
 blockers: []
