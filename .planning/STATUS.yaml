@@ -2,9 +2,10 @@ version: 2
 cycle_state: active
 plan_state: active
 replan_mode: execution_reopen
-current_stage: "planning"
+current_stage: "deep_planning"
 current_node: "7"
-blockers: []
-next_action: "Build the test-system hardening structural map and evidence inventory, then perform focused deep S&T replanning before final acceptance. Preserve valid completed execution and keep 7.4 pending until the replan is reviewed, frozen, allocation-validated and re-authorized."
+blockers:
+  - "Final target-machine/provider acceptance 7.4 is blocked until the test-system hardening replan is reviewed, frozen, allocated, re-authorized, implemented and reclosed."
+next_action: "Deeply decompose the resolved test-system structural map into a branch-7 subtree with exact dependencies and measurable success_evidence; build the contract/risk coverage ledger; update durable test strategy/decisions; perform coherent-slice and outside-in reviews before freeze. Do not implement test refactors yet."
 last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
 implementation_authorized: false
