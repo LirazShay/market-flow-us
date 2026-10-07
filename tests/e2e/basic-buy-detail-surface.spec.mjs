@@ -127,3 +127,17 @@ test("non-loopback confirmation URL is rejected and the reserved window closes w
     "close"
   ]);
 });
+
+test("loopback confirmation URL with embedded credentials is rejected before navigation", async ({ page }) => {
+  await mount(page, {
+    confirmationUrl: "http://user:secret@127.0.0.1:8765/buy/confirm#ticket-1"
+  });
+
+  await page.getByTestId("detail-buy-button").click();
+  await expect(page.getByTestId("detail-buy-status")).toHaveText("הכנת BUY נכשלה.");
+  await expect.poll(() => page.evaluate(() => globalThis.__buyEvents)).toEqual([
+    "reserve",
+    ["prepare", "101"],
+    "close"
+  ]);
+});

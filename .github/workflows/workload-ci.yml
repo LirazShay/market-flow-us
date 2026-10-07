@@ -101,6 +101,7 @@ jobs:
           node --test
           tests/workload/isolated-probes.test.mjs
           tests/workload/demo-buy-evaluator-probe.test.mjs
+          tests/workload/pre-acceptance-integration-guard.test.mjs
 
       - name: Print sanitized isolated reports
         if: always()

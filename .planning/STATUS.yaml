@@ -2,8 +2,8 @@ version: 2
 plan_state: frozen
 replan_mode: execution_reopen
 current_stage: "implementation"
-current_node: "7.6.5"
+current_node: "7.4"
 blockers: []
-next_action: "Chat 27 executes TREE 7.6.5 adversarial verification and deterministic reclosure after Stage 4 shared-integration closure merges green; Chat 28 remains blocked until 7.6.5 is done."
-last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN"
+next_action: "Chat 28 executes TREE 7.4 final target-machine/provider acceptance against exact audited runtime candidate d1ff24abfe72e55302c4c008030174f8923a6d48; begin from the earliest pending checkpoint in FINAL_ACCEPTANCE_EXECUTION.md."
+last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
 implementation_authorized: true
