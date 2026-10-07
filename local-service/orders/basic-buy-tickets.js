@@ -135,6 +135,7 @@ export function createBasicBuyTicketAuthority({
       fail(ERROR_CODES.SERVICE_NOT_READY);
     }
 
+    const localOrigin = normalizeLocalOrigin(getLocalOrigin());
     const requestId = `buy-${nextOpaqueId("requestId")}`;
     const ticketId = nextOpaqueId("ticketId");
     if (tickets.has(ticketId)) {
@@ -171,7 +172,6 @@ export function createBasicBuyTicketAuthority({
     });
     tickets.set(ticketId, ticket);
 
-    const localOrigin = normalizeLocalOrigin(getLocalOrigin());
     const summary = Object.freeze({
       securityId,
       paperName: security.paperName ?? null,
