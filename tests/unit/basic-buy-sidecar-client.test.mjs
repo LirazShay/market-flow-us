@@ -211,4 +211,4 @@ test("child exit revokes execution authority before any protected HTTP call", as
       && error.code === "BASIC_BUY_SIDECAR_NOT_READY"
   );
   assert.equal(fetchCalls, 0);
-}
+});
