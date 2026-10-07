@@ -4,6 +4,6 @@ replan_mode: execution_reopen
 current_stage: "implementation"
 current_node: "7.4"
 blockers: []
-next_action: "Chat 28 executes TREE 7.4 final target-machine/provider acceptance against exact audited runtime candidate d1ff24abfe72e55302c4c008030174f8923a6d48; begin from the earliest pending checkpoint in FINAL_ACCEPTANCE_EXECUTION.md."
+next_action: "Resume Chat 28 TREE 7.4 final target-machine/provider acceptance only when main contains the Replay Host stop-timer lifecycle fix from PR #73 and required main CI is green; use that resulting main SHA as the exact acceptance candidate and begin from the earliest pending checkpoint in FINAL_ACCEPTANCE_EXECUTION.md."
 last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
 implementation_authorized: true
