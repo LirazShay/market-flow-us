@@ -132,7 +132,7 @@ test("create retry after local transport loss reuses the same requestId and exac
   }
 });
 
-test("two local transport failures surface acknowledgement unknown without inventing a fresh requestId", async () => {
+test("two local transport failures surface ACKNOWLEDGEMENT_UNKNOWN without inventing a fresh requestId", async () => {
   const bodies = [];
   const { sidecar } = await start(async (_url, options) => {
     bodies.push(JSON.parse(options.body));
@@ -143,11 +143,12 @@ test("two local transport failures surface acknowledgement unknown without inven
     await assert.rejects(
       () => sidecar.createOrder(intent()),
       (error) => error instanceof BasicBuySidecarError
-        && error.code === "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN"
+        && error.code === "ACKNOWLEDGEMENT_UNKNOWN"
     );
     assert.equal(bodies.length, 2);
     assert.equal(bodies[0].requestId, "buy-stable-request-1");
     assert.equal(bodies[1].requestId, "buy-stable-request-1");
+    assert.deepEqual(bodies[0], bodies[1]);
   } finally {
     await sidecar.close();
   }
