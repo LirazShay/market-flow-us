@@ -49,6 +49,13 @@ Do not substitute historical branch-8/post-branch-9/pre-audit candidates or late
 | FR-13 authenticated market-open movement | PENDING | Exact-SHA procedure preverified: rerun the same SHA-bound gate during real movement; PASS requires observed provider-field change reflected in committed Current and History. No movement remains PENDING, never manually promoted. |
 | FR-14 final evidence / handoff | PENDING | Final closure procedure preverified; may close only after all required target-machine/provider evidence is green and final PR/merge/main-green/open-PR truth is clean. |
 
+## Repository-side execution state
+
+- Draft PR `#70` (`chat-28-final-acceptance` -> `main`) is open for execution/evidence metadata only; it must remain unmerged until final acceptance closure is complete.
+- Planning Docs CI run `37606241234` passed on PR head `d395e8584c739f9da4108f8eea209f313314dc8c` before this ledger-only follow-up commit.
+- The PR diff contains only `STATUS.yaml`, `.planning/EXECUTION.yaml`, and this ledger; no production/test/runtime file is part of the acceptance branch.
+- This repository-side CI is not target-machine evidence and does not alter any FR checkpoint state.
+
 ## Execution rule
 
 Run one user-dependent checkpoint at a time and stop at the first failure. A blocking defect remains Chat 28 responsibility through root cause, fix, regression proof and affected verification. Reports/evidence must remain sanitized: no credentials, cookies, tokens, account identifiers, authenticated raw dumps or private browser state.
