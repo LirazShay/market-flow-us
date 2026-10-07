@@ -35,7 +35,8 @@ try {
     serviceVersion: SERVICE_VERSION,
     diagnosticTracker,
     openDatabase: openMarketFlowUsDatabase,
-    basicBuyReadiness: () => basicBuySidecar?.isReady() === true
+    basicBuyReadiness: () => basicBuySidecar?.isReady() === true,
+    basicBuyExecution: basicBuySidecar
   });
 
   process.stdout.write(
