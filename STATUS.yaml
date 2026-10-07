@@ -13,6 +13,7 @@ authority:
   execution_allocation: ".planning/EXECUTION.yaml"
   executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
+  final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
   ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
   ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
