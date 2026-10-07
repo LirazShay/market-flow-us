@@ -4,6 +4,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { openMarketScopeDatabase } from "../database/database.js";
 import { createSerializedWriter } from "../database/writer.js";
 import { createDemoBuyAiPackExporter } from "../exports/demo-buy-ai-pack.js";
+import { createBasicBuyConfirmationHandler } from "../orders/basic-buy-confirmation.js";
 import { createBasicBuyTicketAuthority } from "../orders/basic-buy-tickets.js";
 import { createProducerPersistence } from "../persistence/producer-authority.js";
 import { createCycleAuthorityPersistence } from "../persistence/cycle-authority.js";
@@ -68,6 +69,18 @@ function operationError(code) {
 function localHttpOrigin(host, port) {
   const hostForUrl = host.includes(":") ? `[${host}]` : host;
   return `http://${hostForUrl}:${port}`;
+}
+
+function writeHttpFailure(response, statusCode, body) {
+  if (response.headersSent) {
+    if (!response.writableEnded) response.destroy();
+    return;
+  }
+  response.writeHead(statusCode, {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store"
+  });
+  response.end(body);
 }
 
 async function closeWebSocket(socket) {
@@ -154,6 +167,13 @@ export async function startMarketScopeService({
     getLocalOrigin: () => basicBuyLocalOrigin,
     now
   });
+  const basicBuyConfirmation = config.buy?.enabled === true
+    ? createBasicBuyConfirmationHandler({
+      tickets: basicBuyTickets,
+      getLocalOrigin: () => basicBuyLocalOrigin,
+      now
+    })
+    : null;
   const demoBuyReads = createDemoBuyReads({
     connection: database.viewerReadConnection
   });
@@ -181,12 +201,23 @@ export async function startMarketScopeService({
     });
   }
 
-  const httpServer = createServer((_request, response) => {
-    response.writeHead(404, {
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "no-store"
-    });
-    response.end("Not Found");
+  const httpServer = createServer((request, response) => {
+    if (!basicBuyConfirmation) {
+      writeHttpFailure(response, 404, "Not Found");
+      return;
+    }
+
+    void basicBuyConfirmation.handle(request, response)
+      .then((handled) => {
+        if (!handled && !response.writableEnded) {
+          writeHttpFailure(response, 404, "Not Found");
+        }
+      })
+      .catch(() => {
+        if (!response.writableEnded) {
+          writeHttpFailure(response, 500, "Internal Server Error");
+        }
+      });
   });
 
   const webSocketServer = new WebSocketServer({
@@ -892,6 +923,7 @@ export async function startMarketScopeService({
     async close() {
       if (closed) return;
       closed = true;
+      basicBuyConfirmation?.clear();
       basicBuyTickets.clear();
 
       const httpClosed = new Promise((resolve, reject) => {
