@@ -3,10 +3,10 @@ phase: implementation
 overall_status: in_progress
 
 current:
-  chat: 25
-  node: "9.6"
-  title: "Replay pre-user-run hardening"
-  status: in_progress
+  chat: 26
+  node: "8.5"
+  title: "Basic in-product BUY"
+  status: ready
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -45,8 +45,8 @@ planning_completion:
 execution:
   chats_total: 27
   implementation_leaves_total: 39
-  current_chat: 25
-  current_node: "9.6"
+  current_chat: 26
+  current_node: "8.5"
   final_acceptance_node: "7.4"
 
 blockers: []
