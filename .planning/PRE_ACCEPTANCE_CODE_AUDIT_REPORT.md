@@ -21,8 +21,8 @@ The base is completed post-Demo-Buy/AI reclosure `7.5`. The head is the combined
 | `7.6.1` | Exact delta inventory + contract/proof map | PASS | All material production/runtime/packaging files in the exact 35-commit delta were mapped to contract, risk, proof and deep-review owner |
 | `7.6.2` | IBKR order service + Basic BUY deep audit | PASS | Two material lifecycle defects found/fixed/regression-proven; Fast/Browser/Replay/Planning/Workload green |
 | `7.6.3` | Recording/Replay/Host deep audit | PASS | One material cleanup/ownership defect found/fixed/regression-proven; Fast #534, Browser #492, Replay #63, Planning #691 and Workload #320 green on Stage-3 head `a2613f13dd51046fbe4c0427bb318c2e5feb1dc0` |
-| `7.6.4` | Shared integration/regression audit | PENDING | Starts after Stage-3 merge/main-green closure |
-| `7.6.5` | Adversarial verification + deterministic reclosure | PENDING | Runs after Stage 4 PASS |
+| `7.6.4` | Shared integration/regression audit | PASS | Shared service/protocol/diagnostics/Viewer/launcher/DB/CI seams independently re-read; no additional material defect or execution bypass found; no runtime change required |
+| `7.6.5` | Adversarial verification + deterministic reclosure | PENDING | Runs after Stage 4 merge/main-green closure |
 
 ## Stage 1 — exact inventory
 
@@ -113,9 +113,9 @@ Workload #320    PASS
 
 No additional material Replay defect or materially unproved Stage-3 risk remained after the independent static pass. Shared server/protocol remains Replay-unaware; live DB/process authority remains isolated.
 
-## Remaining Stage 4 queue
+## Stage 4 — shared integration / regression audit
 
-Mandatory shared-integration review:
+The combined runtime was independently re-read at the cross-feature seams where subsystem tests can miss authority drift:
 
 ```text
 local-service/server/config.js
@@ -125,6 +125,7 @@ shared/protocol/index.js
 shared/diagnostics/index.js
 browser/viewer/client.js
 browser/viewer/detail-surface.js
+START_MARKET_FLOW_US.cmd
 START_MARKET_FLOW_US_WITH_BUY.cmd
 START_MARKET_REPLAY.cmd
 NEW_TRADING_DAY.cmd
@@ -133,16 +134,24 @@ package.json
 .github/workflows/replay-ci.yml
 ```
 
-Cross-feature invariants still to close:
+Result: PASS with no runtime change required.
 
-- ordinary launcher remains execution-disabled;
-- Replay remains opt-in/external and shared server/protocol replay-unaware;
-- BUY exposes no generic Viewer execution proxy or browser sidecar token;
-- live market DB, Replay DB and order DB ownership remain disjoint;
-- New Trading Day does not own order/replay DBs;
-- Detail/History, Current, Scanner, Demo Buy and AI remain regression-green;
-- diagnostics remain sanitized;
-- no test-only bypass exists in production composition.
+Closed invariants:
+
+- ordinary launcher remains execution-disabled; Basic BUY requires the explicit BUY-enabled launcher/config;
+- BUY-enabled startup closes its owned sidecar if later market-service startup fails;
+- Viewer/shared protocol exposes `order.buy.prepare` only and no generic submit/reply/cancel execution primitive;
+- Detail BUY is current-security-only and validates a loopback `/buy/confirm` URL; browser receives no sidecar token or order-service requestId;
+- Replay remains opt-in/external and the shared market server/protocol is Replay-unaware;
+- live market DB, Replay-owned DBs and standalone order-service DB remain disjoint authorities;
+- New Trading Day targets only the market DB and does not own order/replay DBs;
+- diagnostic contexts are allowlisted, operation ids sanitized, and production callers supply bounded product-owned error messages rather than raw provider/auth errors;
+- Fast CI routes shared/local-service/order-service changes through unit + real-service + standalone order acceptance; Replay CI routes Replay/shared/local-service changes through Replay build + focused Replay acceptance;
+- existing release-runtime and diagnostics regressions explicitly protect normal-runtime authority, DB isolation and public-safe support evidence.
+
+One suspected BUY-startup child leak was checked against the final `server/index.js` and rejected as a false positive: the startup `catch` already closes the owned Basic BUY sidecar before surfacing the failure.
+
+Stage 4 introduced no production-code change. The latest merged runtime candidate entering Stage 5 remains `d1ff24abfe72e55302c4c008030174f8923a6d48`; Stage-4 report/status commits are evidence-only and do not replace it.
 
 ## Audit defects so far
 
@@ -151,6 +160,8 @@ Cross-feature invariants still to close:
 3. Basic BUY unknown acknowledgement lost same-order recovery — fixed/regression-proven in Stage 2.
 4. Replay post-start composition failure could leak Host-owned run — fixed/regression-proven in Stage 3, including cleanup-failure ownership truth.
 
+No additional material defect was found in Stage 4.
+
 ## Completion condition
 
-Overall `PASS` requires Stages `7.6.4` and `7.6.5` PASS, every material scoped area explicitly reviewed, no known material defect or material unproved review risk, required deterministic gates green, audit PR/main/open-PR closure clean, and one exact audited runtime candidate pinned for TREE `7.4`.
+Overall `PASS` requires Stage `7.6.5` PASS, every material scoped area explicitly reviewed, no known material defect or material unproved review risk, required deterministic gates green, audit PR/main/open-PR closure clean, and one exact audited runtime candidate pinned for TREE `7.4`.

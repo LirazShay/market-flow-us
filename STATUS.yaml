@@ -4,7 +4,7 @@ overall_status: in_progress
 
 current:
   chat: 27
-  node: "7.6.4"
+  node: "7.6.5"
   title: "Pre-acceptance extension code audit"
   status: pending
 authority:
@@ -51,7 +51,7 @@ execution:
   chats_total: 28
   implementation_leaves_total: 44
   current_chat: 27
-  current_node: "7.6.4"
+  current_node: "7.6.5"
   final_acceptance_node: "7.4"
 
 blockers: []
