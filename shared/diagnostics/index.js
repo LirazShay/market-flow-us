@@ -33,6 +33,7 @@ export const DIAGNOSTIC_CHECKPOINTS = Object.freeze({
   "demo_buy.provenance_read": "demo_buy",
   "demo_buy.observation_read": "demo_buy",
   "demo_buy.ai_pack_export": "demo_buy",
+  "basic_buy.sidecar": "basic_buy",
   "basic_buy.prepare": "basic_buy",
   "demo.runtime.built": "demo",
   "demo.fake_market.ready": "demo",
