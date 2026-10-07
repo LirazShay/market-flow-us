@@ -1,12 +1,12 @@
 schema_version: 2
-phase: planning
+phase: implementation
 overall_status: in_progress
 
 current:
   chat: 25
   node: "9.6"
-  title: "Replay hardening awaiting planning authorization"
-  status: blocked
+  title: "Replay pre-user-run hardening"
+  status: ready
 authority:
   product_truth: "LirazShay/market-flow-us main"
   planning_state: ".planning/STATUS.yaml"
@@ -32,15 +32,15 @@ planning_completion:
   external_user_from_zero_review: pass
   plan_freeze: pass
   execution_allocation: pass
-  handoff_verification: structural_pass_pending_ci
-  implementation_authorization: pending_planning_pr_main_gates
+  handoff_verification: pass
+  implementation_authorization: pass
   ibkr_order_extension: implementation
   ibkr_order_durable_contract: pass
   ibkr_order_tree_freeze: pass
   market_replay_extension: implementation
   market_replay_durable_contract: pass
   market_replay_tree_freeze: pass
-  replay_hardening_buy_extension: frozen_pending_planning_gates
+  replay_hardening_buy_extension: implementation
 
 execution:
   chats_total: 27
@@ -49,5 +49,4 @@ execution:
   current_node: "9.6"
   final_acceptance_node: "7.4"
 
-blockers:
-  - "Implementation remains unauthorized until the extension planning PR is reviewed/merged, main Planning Docs CI is green and open-PR state is clean."
+blockers: []
