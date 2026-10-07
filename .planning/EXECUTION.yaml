@@ -119,4 +119,12 @@ chats:
 
   "27":
     nodes:
-      "7.4": { state: in_progress, result: null }
+      "7.6.1": { state: pending, result: null }
+      "7.6.2": { state: pending, result: null }
+      "7.6.3": { state: pending, result: null }
+      "7.6.4": { state: pending, result: null }
+      "7.6.5": { state: pending, result: null }
+
+  "28":
+    nodes:
+      "7.4": { state: pending, result: null }
