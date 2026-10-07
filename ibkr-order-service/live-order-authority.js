@@ -93,7 +93,7 @@ function resultFromStored(execution, provider, { replayed = false } = {}) {
 }
 
 function isCancellationStatus(status) {
-  return typeof status === "string" && /cancel/iu.test(status);
+  return typeof status === "string" && status.trim().toLowerCase() === "cancelled";
 }
 
 function exactRuntimeAccount(accounts) {
