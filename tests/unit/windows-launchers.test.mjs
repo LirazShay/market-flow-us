@@ -66,6 +66,7 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(replay, /call npm run replay-host -- --allowed-origin "%MARKET_FLOW_US_ORIGIN%"/);
   assert.match(replay, /market-flow-us-replay\.bookmarklet\.txt/);
   assert.match(replay, /normal live DB is never opened or reset by Replay Host/i);
+  assert.doesNotMatch(replay, /\b(?:del|erase|rd|rmdir)\b/i);
   assert.doesNotMatch(replay, /caller.?token|control.?token|cookie/i);
   assert.doesNotMatch(replay, /MARKET_FLOW_US_.*(?:TOKEN|SECRET)/i);
 
