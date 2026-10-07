@@ -35,6 +35,14 @@ function parsePort(value) {
   return port;
 }
 
+function parsePositiveFiniteNumber(value, option) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) {
+    throw new Error(`${option} must be a positive finite number`);
+  }
+  return number;
+}
+
 function parseOrigin(value) {
   if (value === "*") {
     throw new Error("Wildcard Origin is not allowed");
@@ -60,6 +68,8 @@ function parseConfig(argv, { cwd, defaults, dbFilename }) {
     dbPath: path.resolve(cwd, "data", dbFilename),
     allowedOrigins: []
   };
+  let buyQuantity = null;
+  let buyLive = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const option = argv[index];
@@ -92,16 +102,43 @@ function parseConfig(argv, { cwd, defaults, dbFilename }) {
       continue;
     }
 
+    if (option === "--buy-quantity") {
+      if (buyQuantity !== null) {
+        throw new Error("--buy-quantity may be supplied only once");
+      }
+      buyQuantity = parsePositiveFiniteNumber(readValue(argv, index, option), option);
+      index += 1;
+      continue;
+    }
+
+    if (option === "--buy-live") {
+      if (buyLive) {
+        throw new Error("--buy-live may be supplied only once");
+      }
+      buyLive = true;
+      continue;
+    }
+
     throw new Error(`Unknown option: ${option}`);
   }
 
   if (config.allowedOrigins.length === 0) {
     throw new Error("At least one exact --allowed-origin is required");
   }
+  if (buyLive && buyQuantity === null) {
+    throw new Error("--buy-live requires --buy-quantity");
+  }
+
+  const buy = Object.freeze({
+    enabled: buyQuantity !== null,
+    quantity: buyQuantity,
+    mode: buyLive ? "LIVE" : "DRY_RUN"
+  });
 
   return Object.freeze({
     ...config,
-    allowedOrigins: Object.freeze([...config.allowedOrigins])
+    allowedOrigins: Object.freeze([...config.allowedOrigins]),
+    buy
   });
 }
 
