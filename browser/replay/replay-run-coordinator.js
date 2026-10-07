@@ -56,31 +56,42 @@ export function createReplayRunCoordinator({
       }
 
       activeRunId = run.runId;
-      const producerBridge = producerBridgeFactory({
-        url: run.serviceUrl,
-        productVersion,
-        clientInstanceId: `market-flow-us-replay-producer-${currentGeneration}`
-      });
+      try {
+        const producerBridge = producerBridgeFactory({
+          url: run.serviceUrl,
+          productVersion,
+          clientInstanceId: `market-flow-us-replay-producer-${currentGeneration}`
+        });
 
-      const viewerRuntime = viewerRuntimeFactory({
-        target,
-        serviceUrl: run.serviceUrl,
-        productVersion,
-        openWindow: () => viewerWindow,
-        collectCandidate: async () => {
-          throw new Error("Replay Viewer runtime must never acquire provider market data.");
+        const viewerRuntime = viewerRuntimeFactory({
+          target,
+          serviceUrl: run.serviceUrl,
+          productVersion,
+          openWindow: () => viewerWindow,
+          collectCandidate: async () => {
+            throw new Error("Replay Viewer runtime must never acquire provider market data.");
+          }
+        });
+        const viewer = viewerRuntime.openViewer({ rebuild: true });
+        if (viewer.opened !== true) {
+          const error = new Error("Market Flow US Replay Viewer could not open.");
+          error.code = "REPLAY_VIEWER_OPEN_FAILED";
+          throw error;
         }
-      });
-      const viewer = viewerRuntime.openViewer({ rebuild: true });
-      if (viewer.opened !== true) {
-        await hostClient.stopRun("viewer-open-failed");
-        activeRunId = null;
-        const error = new Error("Market Flow US Replay Viewer could not open.");
-        error.code = "REPLAY_VIEWER_OPEN_FAILED";
+
+        return producerBridge;
+      } catch (error) {
+        try {
+          await hostClient.stopRun("replay-composition-failed");
+          activeRunId = null;
+        } catch (cleanupError) {
+          if (cleanupError && typeof cleanupError === "object" && cleanupError.cause === undefined) {
+            cleanupError.cause = error;
+          }
+          throw cleanupError;
+        }
         throw error;
       }
-
-      return producerBridge;
     });
 
     lifecycle = operation.catch(() => {});
