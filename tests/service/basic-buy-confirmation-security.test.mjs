@@ -32,23 +32,59 @@ function immutableTicket(ticketId = "ticket-1") {
   });
 }
 
-async function startHarness({ executeConfirmedBuy = async () => ({ status: "AUTHORIZED_FOR_TEST" }) } = {}) {
+function executionResult(overrides = {}) {
+  return {
+    localOrderId: "ord-test-1",
+    lifecycleState: "SUBMITTED",
+    executionMode: "LIVE",
+    replayed: false,
+    requestedQuantity: 2,
+    filledQuantity: 0,
+    replyRequired: false,
+    replyMessageIds: [],
+    privateProviderField: "must-not-cross",
+    ...overrides
+  };
+}
+
+async function startHarness({
+  executeConfirmedBuy = async () => executionResult(),
+  confirmProviderReply = async () => executionResult()
+} = {}) {
   let origin = null;
   let ticket = immutableTicket();
+  let consumeCalls = 0;
   const executeCalls = [];
+  const replyCalls = [];
   let nonceSequence = 0;
-  const handler = createBasicBuyConfirmationHandler({
-    tickets: {
-      read(ticketId) {
-        return ticket?.ticketId === ticketId ? ticket : null;
-      }
+
+  const tickets = {
+    read(ticketId) {
+      return ticket?.ticketId === ticketId ? ticket : null;
     },
+    consume(ticketId) {
+      if (ticket?.ticketId !== ticketId) return null;
+      const consumed = ticket;
+      ticket = null;
+      consumeCalls += 1;
+      return consumed;
+    }
+  };
+
+  const handler = createBasicBuyConfirmationHandler({
+    tickets,
     getLocalOrigin: () => origin,
     executeConfirmedBuy: executeConfirmedBuy === null
       ? null
       : async (value) => {
         executeCalls.push(value);
         return await executeConfirmedBuy(value);
+      },
+    confirmProviderReply: executeConfirmedBuy === null || confirmProviderReply === null
+      ? null
+      : async (localOrderId) => {
+        replyCalls.push(localOrderId);
+        return await confirmProviderReply(localOrderId);
       },
     now: () => 1_000,
     randomId: () => `${String(++nonceSequence).padStart(2, "0")}${"N".repeat(46)}`
@@ -70,6 +106,8 @@ async function startHarness({ executeConfirmedBuy = async () => ({ status: "AUTH
   return {
     origin,
     executeCalls,
+    replyCalls,
+    getConsumeCalls: () => consumeCalls,
     expireTicket() {
       ticket = null;
     },
@@ -137,6 +175,8 @@ test("trusted BUY page uses fragment-only ticket transfer and hardened no-store/
     assert.match(source, /textContent/);
     assert.equal(source.includes("innerHTML"), false);
     assert.match(source, /X-Market-Flow-CSRF/);
+    assert.match(source, /\/buy\/confirm\/reply/);
+    assert.equal(source.includes("localOrderId"), false);
   } finally {
     await harness.close();
   }
@@ -193,33 +233,106 @@ test("confirmation POSTs require exact local Origin, JSON and a fresh page nonce
   }
 });
 
-test("explicit confirmation consumes its page nonce before the injected execution seam and blocks replay", async () => {
+test("execution requires prior review, consumes the immutable ticket once before execution and blocks replay", async () => {
   const harness = await startHarness();
   try {
     const { nonce } = await page(harness);
 
+    const beforeReview = await post(harness, "/buy/confirm/execute", { nonce });
+    assert.equal(beforeReview.response.status, 409);
+    assert.deepEqual(beforeReview.json, { code: "BASIC_BUY_CONFIRMATION_STATE_INVALID" });
+    assert.equal(harness.getConsumeCalls(), 0);
+    assert.equal(harness.executeCalls.length, 0);
+
+    const inspected = await post(harness, "/buy/confirm/inspect", { nonce });
+    assert.equal(inspected.response.status, 200);
+
     const first = await post(harness, "/buy/confirm/execute", { nonce });
     assert.equal(first.response.status, 200);
-    assert.deepEqual(first.json, { result: { status: "AUTHORIZED_FOR_TEST" } });
+    assert.deepEqual(first.json, {
+      result: {
+        localOrderId: "ord-test-1",
+        lifecycleState: "SUBMITTED",
+        executionMode: "LIVE",
+        replayed: false,
+        requestedQuantity: 2,
+        filledQuantity: 0,
+        replyRequired: false,
+        replyMessageIds: []
+      }
+    });
+    assert.equal(JSON.stringify(first.json).includes("privateProviderField"), false);
+    assert.equal(harness.getConsumeCalls(), 1);
     assert.equal(harness.executeCalls.length, 1);
     assert.equal(harness.executeCalls[0].requestId, "buy-request-1");
-    assert.equal(harness.executeCalls[0].intent.instrument.symbol, "AAA");
+    assert.equal(harness.executeCalls[0].intent.requestId, "buy-request-1");
 
     const replay = await post(harness, "/buy/confirm/execute", { nonce });
     assert.equal(replay.response.status, 403);
     assert.deepEqual(replay.json, { code: "BASIC_BUY_CSRF_INVALID" });
     assert.equal(harness.executeCalls.length, 1);
+
+    const secondPage = await page(harness);
+    const reopened = await post(harness, "/buy/confirm/inspect", { nonce: secondPage.nonce });
+    assert.equal(reopened.response.status, 410);
+    assert.deepEqual(reopened.json, { code: "BASIC_BUY_TICKET_INVALID" });
   } finally {
     await harness.close();
   }
 });
 
-test("expired/missing ticket and not-yet-wired execution fail before an execution callback", async () => {
+test("REPLY_REQUIRED continues only with the server-held localOrderId and requires a second explicit click", async () => {
+  const harness = await startHarness({
+    executeConfirmedBuy: async () => executionResult({
+      localOrderId: "ord-reply-1",
+      lifecycleState: "REPLY_REQUIRED",
+      replyRequired: true,
+      replyMessageIds: ["o163"]
+    }),
+    confirmProviderReply: async (localOrderId) => {
+      assert.equal(localOrderId, "ord-reply-1");
+      return executionResult({ localOrderId, lifecycleState: "SUBMITTED" });
+    }
+  });
+
+  try {
+    const { nonce } = await page(harness);
+    await post(harness, "/buy/confirm/inspect", { nonce });
+
+    const created = await post(harness, "/buy/confirm/execute", { nonce });
+    assert.equal(created.response.status, 200);
+    assert.equal(created.json.result.lifecycleState, "REPLY_REQUIRED");
+    assert.deepEqual(created.json.result.replyMessageIds, ["o163"]);
+    assert.equal(harness.replyCalls.length, 0);
+
+    const browserOverride = await post(harness, "/buy/confirm/reply", {
+      nonce,
+      body: { localOrderId: "evil-browser-order" }
+    });
+    assert.equal(browserOverride.response.status, 400);
+    assert.deepEqual(browserOverride.json, { code: "BASIC_BUY_CONFIRMATION_BODY_INVALID" });
+    assert.equal(harness.replyCalls.length, 0);
+
+    const confirmed = await post(harness, "/buy/confirm/reply", { nonce, body: {} });
+    assert.equal(confirmed.response.status, 200);
+    assert.equal(confirmed.json.result.lifecycleState, "SUBMITTED");
+    assert.deepEqual(harness.replyCalls, ["ord-reply-1"]);
+
+    const replay = await post(harness, "/buy/confirm/reply", { nonce, body: {} });
+    assert.equal(replay.response.status, 403);
+    assert.deepEqual(replay.json, { code: "BASIC_BUY_CSRF_INVALID" });
+    assert.deepEqual(harness.replyCalls, ["ord-reply-1"]);
+  } finally {
+    await harness.close();
+  }
+});
+
+test("missing ticket and unavailable execution fail before any execution callback", async () => {
   const missing = await startHarness();
   try {
     const { nonce } = await page(missing);
     missing.expireTicket();
-    const response = await post(missing, "/buy/confirm/execute", { nonce });
+    const response = await post(missing, "/buy/confirm/inspect", { nonce });
     assert.equal(response.response.status, 410);
     assert.deepEqual(response.json, { code: "BASIC_BUY_TICKET_INVALID" });
     assert.equal(missing.executeCalls.length, 0);
@@ -227,16 +340,16 @@ test("expired/missing ticket and not-yet-wired execution fail before an executio
     await missing.close();
   }
 
-  const unwired = await startHarness({ executeConfirmedBuy: null });
+  const unwired = await startHarness({ executeConfirmedBuy: null, confirmProviderReply: null });
   try {
     const { nonce } = await page(unwired);
+    const inspected = await post(unwired, "/buy/confirm/inspect", { nonce });
+    assert.equal(inspected.response.status, 200);
+
     const response = await post(unwired, "/buy/confirm/execute", { nonce });
     assert.equal(response.response.status, 503);
     assert.deepEqual(response.json, { code: "BASIC_BUY_EXECUTION_UNAVAILABLE" });
     assert.equal(unwired.executeCalls.length, 0);
-
-    const inspectStillWorks = await post(unwired, "/buy/confirm/inspect", { nonce });
-    assert.equal(inspectStillWorks.response.status, 200);
   } finally {
     await unwired.close();
   }
