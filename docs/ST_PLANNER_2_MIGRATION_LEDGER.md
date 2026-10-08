@@ -26,7 +26,7 @@ Migration baseline:
 | `.planning/TREE.yaml` real implementation-leaf dependencies | `.planning/EXECUTION.md -> Depends on` | **RECONCILED** |
 | `.planning/GOAL.md` outcome/current reality/constraints | `.planning/PLAN.md` | **RECONCILED** |
 | `.planning/TREE.yaml` Strategy/Tactic/assumptions/necessity/sufficiency/success evidence | `.planning/PLAN.md` | **RECONCILED** |
-| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED for material current findings; historical review file not yet retired** |
+| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED; central V1 review registry is safe to retire** |
 | `.planning/DECISIONS.md` material decisions | `.planning/DECISIONS.md` | **AUDITED: durable decisions preserved; D-US-017 retired as V1 ceremony-only; D-US-048 corrected to current history/authority model** |
 | root `STATUS.yaml` | root `STATUS.yaml` | **MIGRATED to non-authoritative projection sourced from PLAN/EXECUTION** |
 | root `AGENTS.md` project-owned rules outside bounded ST Planner block | rewritten root `AGENTS.md` | **MIGRATED: project rules preserved, V1 managed block removed, ST Planner 2 bootstrap/authority/executor flow installed** |
@@ -34,10 +34,10 @@ Migration baseline:
 | `.planning/BASELINE_PROVENANCE.md` | same file | preserve unchanged |
 | final acceptance/preflight evidence files | same files | preserve unchanged semantically |
 | IBKR/Replay/pre-acceptance audit/reclosure evidence | same files | preserve unchanged semantically |
-| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 handoff/planning assertions not copied; old V1 file retained only until deletion checkpoint** |
+| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 handoff/planning assertions not copied** |
 | `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | **MIGRATED: product/security/evidence checks preserved; V1 framework/TREE/freeze/allocation/handoff state-machine validation removed** |
-| active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | **MIGRATED: README, FIRST_RUN_ACCEPTANCE and EXECUTOR_ROUTING corrected; START_HERE audited with no V1 authority refs and left unchanged** |
-| framework-owned V1 runtime/install/validators | deletion after replacement review | **not yet eligible for deletion; pre-delete no-loss/reference search still required** |
+| active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | **MIGRATED: README, FIRST_RUN_ACCEPTANCE, EXECUTOR_ROUTING and final-acceptance authorities corrected; START_HERE audited with no V1 authority refs and left unchanged** |
+| framework-owned V1 runtime/install/validators and superseded V1 authority files | deletion manifest below | **ELIGIBLE FOR DELETION** |
 
 ## Planning reconciliation proof
 
@@ -83,16 +83,103 @@ No installed framework checker, framework version/provenance file, freeze/author
 - Preserved CI checks include U.S. provider/schema invariants, Demo Buy and AI evidence/privacy boundaries, IBKR order security/lifecycle contracts, Replay contracts, target workload expectations, forbidden Israel-only typed fields and post-main open-PR hygiene.
 - Minimal ST Planner 2 sanity is limited to required `PLAN.md` / `EXECUTION.md` presence/table shape and `STATUS.yaml` projection markers; CI does not parse or count S&T nodes/leaves or infer execution ownership/status/dependencies.
 - Removed CI authority includes `ST_PLANNER_INSTALL`, framework freshness, `.planning/STATUS.yaml`, `TREE.yaml` shape/count/status validation, allocation/freeze/authorization logic, `EXECUTOR_HANDOFF.md`, `verify-handoff.mjs`, review-marker gates and framework-runtime-file presence.
-- Full GitHub Actions execution is deferred until the migration PR exists; this checkpoint is a repository-content refactor, not a claim that remote CI has already run.
+- `fast-ci.yml`, `browser-ci.yml`, `replay-ci.yml`, `workload-ci.yml` and the reusable Chat-7 workload workflow were re-audited after the authority cutover and do not invoke or require V1 planning/runtime files.
+- Full GitHub Actions execution is deferred until the migration PR exists; this checkpoint is repository-content verification, not a claim that remote CI has already run.
 
 ## Active-document reconciliation proof
 
-- `README.md` now reflects the implemented schema-v4/Demo Buy/AI/Replay/order-sidecar/Basic-BUY product and points planning/execution authority to PLAN/EXECUTION rather than V1 STATUS/TREE/EXECUTION.yaml files.
+- `README.md` reflects the implemented schema-v4/Demo Buy/AI/Replay/order-sidecar/Basic-BUY product and points planning/execution authority to PLAN/EXECUTION rather than V1 STATUS/TREE/EXECUTION.yaml files.
 - `docs/EXECUTOR_ROUTING.md` is context routing only. PLAN owns leaf success evidence; EXECUTION owns owner/status/dependencies/results; generic continuation cannot activate another numbered chat.
-- `docs/FIRST_RUN_ACCEPTANCE.md` now takes the exact runtime candidate from `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and verifies it against `.planning/FINAL_ACCEPTANCE_EXECUTION.md`; it no longer reads candidate/authority from `.planning/EXECUTOR_HANDOFF.md`, `.planning/STATUS.yaml` or TREE state.
-- The detailed acceptance checkpoint semantics remain intact. The active guide also includes the integrated current-Detail BUY DRY_RUN checkpoint already required by the authoritative final acceptance runbook.
-- `START_HERE.md` was reviewed and contains no active V1 planning/execution authority reference, so it was deliberately left unchanged.
+- `docs/FIRST_RUN_ACCEPTANCE.md` takes the exact runtime candidate from `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and verifies it against `.planning/FINAL_ACCEPTANCE_EXECUTION.md`; it no longer reads candidate/authority from `.planning/EXECUTOR_HANDOFF.md`, `.planning/STATUS.yaml` or TREE state.
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and `.planning/FINAL_ACCEPTANCE_EXECUTION.md` were re-audited after the first sweep: PLAN/EXECUTION now own planning/execution truth, the active detailed procedure is `docs/FIRST_RUN_ACCEPTANCE.md`, and `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` is explicitly historical/provenance evidence only.
+- The exact runtime candidate remains `682f8c8b01e9f68c7f8e159de8b0f233221f1878`; FR-0 and FR-1 remain PASS and later checkpoint states remain unchanged.
+- `START_HERE.md` contains no active V1 planning/execution authority reference and remains unchanged.
 - Historical/provenance evidence may continue to mention V1 filenames, old candidates, TREE counts or prior process state when clearly describing historical truth; those mentions are not live authority.
+
+## Pre-delete classification manifest
+
+The branch-level `.planning/` inventory and every active authority/entrypoint named by the migration contract were re-read after the final-acceptance fixes. `package.json` contains no planner runtime scripts, and all GitHub workflows were checked after the Planning CI refactor. No active product/runtime/CI/executor/acceptance consumer requires any file in the DELETE set below.
+
+### DELETE — superseded V1 authority/runtime/process files
+
+These files are fully replaced and may be deleted in the next checkpoint:
+
+```text
+.planning/README.md
+.planning/FRAMEWORK.md
+.planning/GOAL.md
+.planning/TREE.yaml
+.planning/STATUS.yaml
+.planning/EXECUTION.yaml
+.planning/REVIEWS.md
+.planning/EXECUTOR_HANDOFF.md
+.planning/CI-RCA-POLICY.md
+.planning/ST_PLANNER_INSTALL.json
+.planning/check-framework-update.mjs
+.planning/executor-authority.mjs
+.planning/execution-guidance.mjs
+.planning/validate-allocation.mjs
+.planning/validate-ci-hygiene.mjs
+.planning/verify-freeze-baseline.mjs
+.planning/verify-handoff.mjs
+```
+
+Deletion rationale:
+
+- `GOAL.md` + `TREE.yaml` were reconciled into `PLAN.md`.
+- `EXECUTION.yaml` + `.planning/STATUS.yaml` were reconciled into `EXECUTION.md`; root `STATUS.yaml` remains projection-only.
+- `REVIEWS.md` current material findings were reconciled into PLAN/DECISIONS/durable contracts; dedicated project review/audit evidence files are preserved separately.
+- `.planning/README.md`, `FRAMEWORK.md`, `ST_PLANNER_INSTALL.json`, framework checkers, freeze/allocation/executor/handoff helpers and `EXECUTOR_HANDOFF.md` are V1 framework/process runtime and have no ST Planner 2 role.
+- `CI-RCA-POLICY.md` project-owned RCA requirements are preserved in `AGENTS.md`.
+- `.planning/validate-ci-hygiene.mjs` useful repository hygiene was migrated to `scripts/validate-ci-hygiene.mjs`; V1 assertions were intentionally not copied.
+
+### PRESERVE — ST Planner 2 live truth
+
+```text
+.planning/PLAN.md
+.planning/EXECUTION.md
+.planning/DECISIONS.md
+.planning/BACKLOG.md
+STATUS.yaml
+AGENTS.md
+docs/EXECUTOR_ROUTING.md
+```
+
+`BACKLOG.md` remains unchanged in this first migration.
+
+### PRESERVE — active acceptance authority / procedure
+
+```text
+.planning/FINAL_ACCEPTANCE_RUNBOOK.md
+.planning/FINAL_ACCEPTANCE_EXECUTION.md
+docs/FIRST_RUN_ACCEPTANCE.md
+```
+
+### PRESERVE — historical/provenance/audit/evidence
+
+At minimum, the following remain evidence and are not deletion targets:
+
+```text
+.planning/BASELINE_PROVENANCE.md
+.planning/FIRST_RUN_ACCEPTANCE_PLAN.md
+.planning/FINAL_PREFLIGHT_AUDIT.md
+.planning/FINAL_PREFLIGHT_PROGRESS.yaml
+.planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md
+.planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md
+.planning/IBKR_ORDER_MINI_PROJECT.md
+.planning/IBKR_ORDER_PACKAGING_REVIEW.md
+.planning/IBKR_ORDER_RECLOSURE.md
+.planning/IBKR_ORDER_REVIEWS.md
+.planning/MARKET_REPLAY_MINI_PROJECT.md
+.planning/MARKET_REPLAY_RECLOSURE.md
+.planning/REPLAY_BUY_EXTENSION_REVIEW.md
+.planning/REPLAY_HARDENING_AUDIT.md
+.planning/PRE_ACCEPTANCE_CODE_AUDIT.md
+.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
+.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md
+```
+
+These files may contain historical V1/TREE/handoff wording when it records provenance. They are not execution/planning authority unless an active document explicitly designates a narrower evidence role.
 
 ## Execution reconciliation proof
 
@@ -180,4 +267,17 @@ Checks performed:
 
 ## Deletion gate
 
-**CLOSED.** Planning/execution/decision authority, AGENTS bootstrap, CI/hygiene and the known active-document references are now reconciled. V1 source deletion remains blocked until the dedicated pre-delete repository-wide no-loss/reference search classifies every remaining legacy reference as either historical evidence or an active consumer that must be repaired.
+**OPEN — scoped only to the 17-file DELETE manifest above.**
+
+The gate opened only after:
+
+1. planning, execution and decision truth were reconciled into ST Planner 2 files;
+2. root `STATUS.yaml` became projection-only;
+3. AGENTS/executor bootstrap stopped consuming V1 runtime state;
+4. CI/hygiene stopped consuming V1 framework/state-machine files;
+5. README/routing/active first-run acceptance were migrated;
+6. the final acceptance runbook/evidence ledger were re-audited and detached from V1 authority;
+7. all repository workflows were re-read after the cutover and no V1 planner consumer remained;
+8. project-owned evidence/backlog/provenance files were explicitly classified for preservation.
+
+Opening this gate does **not** authorize deleting any preserved evidence file, changing task `7.4`, changing the accepted runtime candidate, or inventing completion. The next checkpoint may delete only the 17 manifest files and must then re-run the same active-consumer/authority verification against the post-delete tree.
