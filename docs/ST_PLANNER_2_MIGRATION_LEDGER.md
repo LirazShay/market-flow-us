@@ -36,8 +36,8 @@ Migration baseline:
 | IBKR/Replay/pre-acceptance audit/reclosure evidence | same files | preserve unchanged semantically |
 | `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 handoff/planning assertions not copied; old V1 file retained only until deletion checkpoint** |
 | `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | **MIGRATED: product/security/evidence checks preserved; V1 framework/TREE/freeze/allocation/handoff state-machine validation removed** |
-| active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | pending repository-wide active-reference sweep |
-| framework-owned V1 runtime/install/validators | deletion after replacement review | **not yet eligible for deletion** |
+| active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | **MIGRATED: README, FIRST_RUN_ACCEPTANCE and EXECUTOR_ROUTING corrected; START_HERE audited with no V1 authority refs and left unchanged** |
+| framework-owned V1 runtime/install/validators | deletion after replacement review | **not yet eligible for deletion; pre-delete no-loss/reference search still required** |
 
 ## Planning reconciliation proof
 
@@ -84,6 +84,15 @@ No installed framework checker, framework version/provenance file, freeze/author
 - Minimal ST Planner 2 sanity is limited to required `PLAN.md` / `EXECUTION.md` presence/table shape and `STATUS.yaml` projection markers; CI does not parse or count S&T nodes/leaves or infer execution ownership/status/dependencies.
 - Removed CI authority includes `ST_PLANNER_INSTALL`, framework freshness, `.planning/STATUS.yaml`, `TREE.yaml` shape/count/status validation, allocation/freeze/authorization logic, `EXECUTOR_HANDOFF.md`, `verify-handoff.mjs`, review-marker gates and framework-runtime-file presence.
 - Full GitHub Actions execution is deferred until the migration PR exists; this checkpoint is a repository-content refactor, not a claim that remote CI has already run.
+
+## Active-document reconciliation proof
+
+- `README.md` now reflects the implemented schema-v4/Demo Buy/AI/Replay/order-sidecar/Basic-BUY product and points planning/execution authority to PLAN/EXECUTION rather than V1 STATUS/TREE/EXECUTION.yaml files.
+- `docs/EXECUTOR_ROUTING.md` is context routing only. PLAN owns leaf success evidence; EXECUTION owns owner/status/dependencies/results; generic continuation cannot activate another numbered chat.
+- `docs/FIRST_RUN_ACCEPTANCE.md` now takes the exact runtime candidate from `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and verifies it against `.planning/FINAL_ACCEPTANCE_EXECUTION.md`; it no longer reads candidate/authority from `.planning/EXECUTOR_HANDOFF.md`, `.planning/STATUS.yaml` or TREE state.
+- The detailed acceptance checkpoint semantics remain intact. The active guide also includes the integrated current-Detail BUY DRY_RUN checkpoint already required by the authoritative final acceptance runbook.
+- `START_HERE.md` was reviewed and contains no active V1 planning/execution authority reference, so it was deliberately left unchanged.
+- Historical/provenance evidence may continue to mention V1 filenames, old candidates, TREE counts or prior process state when clearly describing historical truth; those mentions are not live authority.
 
 ## Execution reconciliation proof
 
@@ -171,4 +180,4 @@ Checks performed:
 
 ## Deletion gate
 
-**CLOSED.** Planning/execution/decision authority, AGENTS bootstrap and CI/hygiene replacements are now reconciled. V1 source deletion remains blocked until the repository-wide active-document reference sweep is completed and the pre-delete no-loss search proves there are no active consumers of the legacy files.
+**CLOSED.** Planning/execution/decision authority, AGENTS bootstrap, CI/hygiene and the known active-document references are now reconciled. V1 source deletion remains blocked until the dedicated pre-delete repository-wide no-loss/reference search classifies every remaining legacy reference as either historical evidence or an active consumer that must be repaired.
