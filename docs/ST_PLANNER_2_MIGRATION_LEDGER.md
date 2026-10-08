@@ -29,7 +29,7 @@ Migration baseline:
 | material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED for material current findings; historical review file not yet retired** |
 | `.planning/DECISIONS.md` material decisions | `.planning/DECISIONS.md` | **AUDITED: durable decisions preserved; D-US-017 retired as V1 ceremony-only; D-US-048 corrected to current history/authority model** |
 | root `STATUS.yaml` | root `STATUS.yaml` | **MIGRATED to non-authoritative projection sourced from PLAN/EXECUTION** |
-| root `AGENTS.md` project-owned rules outside bounded ST Planner block | rewritten root `AGENTS.md` | pending; must preserve project rules |
+| root `AGENTS.md` project-owned rules outside bounded ST Planner block | rewritten root `AGENTS.md` | **MIGRATED: project rules preserved, V1 managed block removed, ST Planner 2 bootstrap/authority/executor flow installed** |
 | `.planning/BACKLOG.md` | same file | preserve unchanged in first migration |
 | `.planning/BASELINE_PROVENANCE.md` | same file | preserve unchanged |
 | final acceptance/preflight evidence files | same files | preserve unchanged semantically |
@@ -54,6 +54,26 @@ Migration baseline:
 - Decision IDs were not renumbered.
 - `D-US-048` was corrected so the historical requested sequence includes the completed `7.6.1–7.6.5` staged pre-acceptance audit before `7.4`; it no longer pretends to own dependency truth.
 - `.planning/DECISIONS.md` now explicitly defers S&T truth to PLAN and execution truth to EXECUTION.
+
+## AGENTS reconciliation proof
+
+The ST Planner 1.x managed block bounded by `st-planner:rules:v3:begin/end` was removed rather than carried forward.
+
+Project-owned rules remain represented for:
+
+- GitHub `main` source-of-truth and donor/reference roles;
+- KISS / preserve-proven-mechanism engineering;
+- focused branch → PR → CI → review → squash merge → main verification/open-PR workflow;
+- blocking-defect ownership and root-cause/regression discipline;
+- comprehensive CI warning/error RCA, including analogous-area review and recurrence prevention;
+- automation feedback-cost/performance discipline;
+- 10+ stage static SQL preflight before first execution of new/materially changed SQL;
+- diagnosability-by-design and public-safe security;
+- project-owned executor routing.
+
+The replacement bootstrap now resolves one exact ST Planner `main` commit and reads `BOOTSTRAP.md`, `SNT-METHODOLOGY.md` and `EXECUTION-MANAGEMENT.md` from that same commit, then uses PLAN/EXECUTION and routed project context. Numbered Chat identity is explicit-only; generic continuation cannot activate another Chat N.
+
+No installed framework checker, framework version/provenance file, freeze/authorization gate, allocation validator or handoff state machine is recreated in AGENTS.
 
 ## Execution reconciliation proof
 
@@ -141,4 +161,4 @@ Checks performed:
 
 ## Deletion gate
 
-**CLOSED.** Replacement planning/execution/decision authority now exists and is reconciled, but V1 source deletion remains blocked until AGENTS, CI/hygiene and active-document reference migrations are completed and reviewed.
+**CLOSED.** Replacement planning/execution/decision authority and AGENTS bootstrap now exist and are reconciled, but V1 source deletion remains blocked until CI/hygiene and active-document reference migrations are completed and reviewed.
