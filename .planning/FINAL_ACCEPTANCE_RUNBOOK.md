@@ -1,55 +1,62 @@
-# Chat 28 — Final Acceptance Runbook
+# Market Flow US — Deferred Final Acceptance Runbook
 
-This is the authoritative execution wrapper for task `7.4` final target-machine/provider acceptance.
+This document preserves the target-machine/provider acceptance procedure for backlog item `B-US-000`.
+
+It is **not an active execution boundary**. Target-machine/provider acceptance was removed from `.planning/EXECUTION.md` and moved to `backlog/B-US-000-final-target-machine-provider-acceptance.md` so it cannot block unrelated development.
 
 ## Authority
 
 - GitHub `main` is repository truth.
-- `.planning/PLAN.md` leaf `7.4` and its success evidence are the planning definition-of-done.
-- `.planning/EXECUTION.md` owns task `7.4` owner/status/dependency/result truth.
-- `.planning/FINAL_ACCEPTANCE_EXECUTION.md` is the checkpoint/evidence ledger.
-- `docs/FIRST_RUN_ACCEPTANCE.md` is the active detailed FR-0..FR-14 procedure.
-- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` is preserved as historical planning/provenance evidence only; any older candidate/owner/TREE/HANDOFF wording there is superseded by this runbook and the active guide.
-- This runbook is the authority for the current acceptance candidate. Historical acceptance text that points FR-0/FR-2 at old TREE state, `.planning/EXECUTOR_HANDOFF.md`, Chat 25/27 or an older SHA is not live authority.
+- `backlog/B-US-000-final-target-machine-provider-acceptance.md` owns the current non-blocking backlog intent and candidate-selection policy.
+- `.planning/PLAN.md` preserves the detailed historical planning/success-evidence rationale for the former `7.4` scope.
+- `.planning/EXECUTION.md` owns active execution; this acceptance work is not active unless it is explicitly re-planned and allocated there.
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md` preserves acceptance checkpoint/evidence history.
+- `docs/FIRST_RUN_ACCEPTANCE.md` is the maintained detailed FR-0..FR-14 procedure.
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` is historical planning/provenance evidence only.
 
-## Current owner and exact runtime candidate
+## Candidate policy — latest intended runtime, selected when activated
 
-Current owner:
+Do **not** permanently pin acceptance to a stale SHA while product/runtime development continues.
 
-```text
-Chat 28 / task 7.4
-```
+When `B-US-000` is explicitly activated in the future:
 
-Exact product SHA under acceptance:
+1. fetch fresh `main`;
+2. review merged product/runtime changes since the last acceptance evidence;
+3. select the **latest intended runtime candidate** containing the development meant to be accepted;
+4. record that exact SHA in the acceptance ledger for that run;
+5. invalidate/rerun candidate-bound evidence affected by newer runtime changes;
+6. reuse old evidence only where the maintained contract proves the later changes cannot invalidate it.
+
+A newer docs/metadata-only commit need not replace the selected runtime candidate merely because its SHA is newer. Conversely, a newer merged product/runtime change must not be ignored in favor of an older runtime candidate.
+
+Historical candidate retained only as provenance:
 
 ```text
 682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
-Why this SHA:
+That SHA is **not** a future mandatory FR-2 target after newer product/runtime development.
 
-- it contains the completed pre-acceptance audit runtime fixes from tasks `7.6.2` and `7.6.3`;
-- it also contains the later confirmed Replay Host stop-timer lifecycle root fix from PR #73, including deterministic SIGTERM/SIGKILL regression proof;
-- PR #73 was squash-merged to `main`, and the resulting `main` candidate passed Fast CI, Replay CI and the repository's existing Planning Docs CI;
-- no open PR remained after the merge audit;
-- the previously pinned runtime candidate `d1ff24abfe72e55302c4c008030174f8923a6d48` is therefore superseded.
+## Non-blocking rule
 
-Do not substitute:
+Acceptance may be run whenever it is explicitly planned/allocated, but while it remains in `backlog/`:
 
-- superseded candidate `d1ff24abfe72e55302c4c008030174f8923a6d48`;
-- pre-audit candidate `93a48c8b0a36433e58f09f6a607ec7cd366c9aea`;
-- historical post-branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369`;
-- historical branch-8 candidates;
-- later metadata-only `main` commits unless this runbook explicitly pins a replacement acceptance candidate.
+- it creates no dependency edge for other work;
+- it does not own the repository current pointer;
+- it does not prevent feature/fix/planning PRs;
+- a missing target-machine checkpoint is not a development blocker;
+- new development may continue and will simply require candidate selection/reconciliation when acceptance is later resumed.
 
-## Execution order
+If acceptance itself discovers a deterministic defect, that executing work unit owns the defect through RCA, fix, regression and affected verification. This does not make the dormant backlog item a global blocker for unrelated development.
 
-Use the active detailed procedures and PASS semantics in `docs/FIRST_RUN_ACCEPTANCE.md` in this order:
+## Execution order when re-activated
+
+Use the detailed procedures and PASS semantics in `docs/FIRST_RUN_ACCEPTANCE.md` in this order:
 
 ```text
-FR-0 exact final candidate
+FR-0 select exact candidate for this acceptance run from fresh main
 → FR-1 host prerequisite preflight
-→ FR-2 exact-SHA checkout
+→ FR-2 exact selected-SHA checkout
 → FR-3 dependency install
 → FR-4 deterministic unit/service/Replay/order acceptance
 → FR-5 browser + Replay build/E2E
@@ -66,19 +73,15 @@ FR-0 exact final candidate
 → FR-14 final evidence/handoff
 ```
 
-For FR-0 and FR-2 specifically, the exact candidate comes from this runbook and `.planning/FINAL_ACCEPTANCE_EXECUTION.md`.
+FR-2 must validate the SHA selected by FR-0 **for that run**, not the historical SHA above.
 
 Real IBKR LIVE submission is PASS only if real external trading permission exists and the user explicitly initiates it. Otherwise record exactly `PENDING_EXTERNAL_PERMISSION`; deterministic/synthetic proof must never be relabeled as live success.
 
-## Reused evidence after the Replay Host fix
-
-FR-1 host prerequisite evidence remains valid because PR #73 changed Replay Host shutdown lifecycle behavior, not the machine prerequisites it proves. FR-2 and all later candidate-bound checkpoints remain pending against `682f8c8b01e9f68c7f8e159de8b0f233221f1878` unless their detailed contract explicitly permits reuse and the runtime change cannot invalidate them.
-
-## Execution discipline
+## Execution discipline when activated
 
 - One user-dependent checkpoint at a time.
-- Stop on first FAIL.
-- Root-cause a blocking defect before retry; the defect remains Chat 28 responsibility through regression proof and affected verification.
+- Stop on first FAIL within the acceptance run.
+- Root-cause a deterministic defect before retry; keep it with the executing work unit through regression proof and affected verification.
 - Resume from the earliest checkpoint invalidated by a fix; do not rerun unrelated green checkpoints.
 - Do not advance machine/provider checkpoints from assumptions. Machine-specific evidence must be observed.
 - Preserve sanitized evidence only: no credentials, cookies, tokens, auth/session data, account identifiers, raw authenticated dumps or private browser state.

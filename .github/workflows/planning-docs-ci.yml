@@ -46,6 +46,15 @@ jobs:
           required=(
             AGENTS.md README.md START_HERE.md STATUS.yaml
             .planning/PLAN.md .planning/EXECUTION.md .planning/DECISIONS.md .planning/BACKLOG.md
+            backlog/README.md
+            backlog/B-US-000-final-target-machine-provider-acceptance.md
+            backlog/B-US-001-file-backed-sql-authoring-library.md
+            backlog/B-US-002-query-correctness-contract-tests.md
+            backlog/B-US-003-static-sql-performance-gate.md
+            backlog/B-US-004-ai-query-development-workflow.md
+            backlog/B-US-005-replay-pre-user-run-hardening-audit.md
+            backlog/B-US-006-basic-in-product-buy.md
+            backlog/B-US-007-prioritize-backlog.md
             .planning/BASELINE_PROVENANCE.md
             .planning/FINAL_ACCEPTANCE_EXECUTION.md .planning/FINAL_ACCEPTANCE_RUNBOOK.md
             .planning/FIRST_RUN_ACCEPTANCE_PLAN.md
@@ -97,10 +106,19 @@ jobs:
           require_text '# Market Flow US — Plan' .planning/PLAN.md
           require_text '# Market Flow US — Execution' .planning/EXECUTION.md
           require_text '| Task | Owner | Status | Depends on | Result/Evidence |' .planning/EXECUTION.md
+          require_text 'There is currently **no open allocated execution task**.' .planning/EXECUTION.md
+          require_text 'backlog/B-US-000-final-target-machine-provider-acceptance.md' .planning/EXECUTION.md
+          require_text '# Market Flow US Backlog' backlog/README.md
+          require_text 'Backlog items are **non-blocking by default**.' backlog/README.md
+          require_text 'B-US-007' backlog/README.md
+          require_text 'Blocking: `No`' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text 'latest intended runtime candidate' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text 'backlog/README.md' .planning/BACKLOG.md
           require_text 'role: projection' STATUS.yaml
           require_text 'non_authoritative: true' STATUS.yaml
           require_text 'planning: ".planning/PLAN.md"' STATUS.yaml
           require_text 'execution: ".planning/EXECUTION.md"' STATUS.yaml
+          require_text 'backlog: "backlog/README.md"' STATUS.yaml
 
           require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
           require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
