@@ -1,15 +1,17 @@
 # Chat 28 — Final Target-Machine / Provider Acceptance
 
-This file is the execution evidence ledger for TREE `7.4` only.
+This file is the checkpoint/evidence ledger for task `7.4` only.
 
 ## Authority
 
 - GitHub `main` remains product truth.
-- TREE `7.4` and its `success_evidence` remain definition-of-done.
-- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` is the authoritative Chat-28 execution wrapper and candidate/ownership truth.
-- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` remains the detailed FR-1..FR-14 checkpoint procedure, subject to the explicit authority corrections in the final runbook.
+- `.planning/PLAN.md` leaf `7.4` and its success evidence remain the planning definition-of-done.
+- `.planning/EXECUTION.md` owns task `7.4` owner/status/dependency/result truth.
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` is the authoritative Chat-28 execution wrapper and exact-candidate truth.
+- `docs/FIRST_RUN_ACCEPTANCE.md` is the active detailed FR-0..FR-14 checkpoint procedure.
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` is preserved as historical planning/provenance evidence; older TREE/HANDOFF/candidate wording there is not live authority.
 
-## FR-0 — frozen final candidate
+## FR-0 — pinned final candidate
 
 Final product under target-machine acceptance:
 
@@ -19,7 +21,7 @@ Final product under target-machine acceptance:
 
 Why this SHA:
 
-- it contains the merged pre-acceptance audit production fixes from TREE `7.6.2` and `7.6.3`;
+- it contains the merged pre-acceptance audit production fixes from tasks `7.6.2` and `7.6.3`;
 - it contains the later confirmed Replay Host stop-timer lifecycle fix from PR #73;
 - deterministic regression now proves losing shutdown timers are cancelled for prompt SIGTERM exit and SIGKILL escalation;
 - the PR head and resulting `main` candidate passed Fast CI and Replay CI, with the repository's existing Planning Docs CI also green;
@@ -44,7 +46,7 @@ Do not substitute historical branch-8/post-branch-9/pre-audit candidates, the su
 | FR-10 daily DB lifecycle | PENDING | user target machine |
 | FR-11A authenticated market-data deployment smoke | PENDING | user target machine/provider |
 | FR-11B standalone order service + real CPGW session compatibility | PENDING | user target machine/IBKR CPGW |
-| Integrated Detail BUY DRY_RUN | PENDING | current Detail -> immutable ticket -> trusted confirmation -> order-service DRY_RUN |
+| FR-11C integrated Detail BUY DRY_RUN | PENDING | current Detail -> immutable ticket -> trusted confirmation -> order-service DRY_RUN |
 | Real IBKR LIVE order | PENDING_EXTERNAL_PERMISSION | PASS only if actually permissioned and explicitly user-initiated |
 | FR-12 authenticated static/pre-market | PENDING | user target machine/provider |
 | FR-13 authenticated market-open movement | PENDING | real market movement required |
