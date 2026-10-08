@@ -7,7 +7,7 @@ Migration baseline:
 - Market Flow US source snapshot: `932fa501ee251f01b5bd1492a7e0e7b408d440d8` (`main`).
 - ST Planner session source: `LirazShay/st-planner@4746f54468b7c03e6e2c0fc5e3105e71e3ba3bfb`.
 - Migration branch: `chore/st-planner-2-migration`.
-- No V1 file may be deleted until every useful source item below has a reviewed destination.
+- No V1 file may be deleted until every useful source item below has a reviewed destination. That gate was satisfied before the deletion checkpoint recorded below.
 
 ## Authority target
 
@@ -26,7 +26,7 @@ Migration baseline:
 | `.planning/TREE.yaml` real implementation-leaf dependencies | `.planning/EXECUTION.md -> Depends on` | **RECONCILED** |
 | `.planning/GOAL.md` outcome/current reality/constraints | `.planning/PLAN.md` | **RECONCILED** |
 | `.planning/TREE.yaml` Strategy/Tactic/assumptions/necessity/sufficiency/success evidence | `.planning/PLAN.md` | **RECONCILED** |
-| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED; central V1 review registry is safe to retire** |
+| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED; central V1 review registry retired** |
 | `.planning/DECISIONS.md` material decisions | `.planning/DECISIONS.md` | **AUDITED: durable decisions preserved; D-US-017 retired as V1 ceremony-only; D-US-048 corrected to current history/authority model** |
 | root `STATUS.yaml` | root `STATUS.yaml` | **MIGRATED to non-authoritative projection sourced from PLAN/EXECUTION** |
 | root `AGENTS.md` project-owned rules outside bounded ST Planner block | rewritten root `AGENTS.md` | **MIGRATED: project rules preserved, V1 managed block removed, ST Planner 2 bootstrap/authority/executor flow installed** |
@@ -34,10 +34,10 @@ Migration baseline:
 | `.planning/BASELINE_PROVENANCE.md` | same file | preserve unchanged |
 | final acceptance/preflight evidence files | same files | preserve unchanged semantically |
 | IBKR/Replay/pre-acceptance audit/reclosure evidence | same files | preserve unchanged semantically |
-| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 handoff/planning assertions not copied** |
+| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 assertions not copied; old V1 file deleted** |
 | `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | **MIGRATED: product/security/evidence checks preserved; V1 framework/TREE/freeze/allocation/handoff state-machine validation removed** |
 | active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | **MIGRATED: README, FIRST_RUN_ACCEPTANCE, EXECUTOR_ROUTING and final-acceptance authorities corrected; START_HERE audited with no V1 authority refs and left unchanged** |
-| framework-owned V1 runtime/install/validators and superseded V1 authority files | deletion manifest below | **ELIGIBLE FOR DELETION** |
+| framework-owned V1 runtime/install/validators and superseded V1 authority files | deletion manifest below | **DELETED AND POST-DELETE VERIFIED** |
 
 ## Planning reconciliation proof
 
@@ -96,13 +96,13 @@ No installed framework checker, framework version/provenance file, freeze/author
 - `START_HERE.md` contains no active V1 planning/execution authority reference and remains unchanged.
 - Historical/provenance evidence may continue to mention V1 filenames, old candidates, TREE counts or prior process state when clearly describing historical truth; those mentions are not live authority.
 
-## Pre-delete classification manifest
+## Deletion manifest and post-delete verification
 
-The branch-level `.planning/` inventory and every active authority/entrypoint named by the migration contract were re-read after the final-acceptance fixes. `package.json` contains no planner runtime scripts, and all GitHub workflows were checked after the Planning CI refactor. No active product/runtime/CI/executor/acceptance consumer requires any file in the DELETE set below.
+The branch-level `.planning/` inventory and every active authority/entrypoint named by the migration contract were re-read before deletion. `package.json` contains no planner runtime scripts, and all GitHub workflows were checked after the Planning CI refactor. No active product/runtime/CI/executor/acceptance consumer required any file in the DELETE set below.
 
 ### DELETE — superseded V1 authority/runtime/process files
 
-These files are fully replaced and may be deleted in the next checkpoint:
+The following **17 files were deleted** from `chore/st-planner-2-migration` after the deletion gate opened:
 
 ```text
 .planning/README.md
@@ -132,6 +132,15 @@ Deletion rationale:
 - `.planning/README.md`, `FRAMEWORK.md`, `ST_PLANNER_INSTALL.json`, framework checkers, freeze/allocation/executor/handoff helpers and `EXECUTOR_HANDOFF.md` are V1 framework/process runtime and have no ST Planner 2 role.
 - `CI-RCA-POLICY.md` project-owned RCA requirements are preserved in `AGENTS.md`.
 - `.planning/validate-ci-hygiene.mjs` useful repository hygiene was migrated to `scripts/validate-ci-hygiene.mjs`; V1 assertions were intentionally not copied.
+
+Post-delete proof:
+
+- comparing the pre-delete gate commit `ed580f9f06d5be22bd7b8fc99906bf554e70901c` to the branch after deletion showed exactly **17 commits / 17 removed files**, with no modified or added file in that deletion slice;
+- the post-delete `.planning/` inventory still contains `PLAN.md`, `EXECUTION.md`, `DECISIONS.md`, `BACKLOG.md`, final-acceptance files and the preserved provenance/audit/evidence set;
+- root `STATUS.yaml` remains `role: projection` / `non_authoritative: true` and still projects task `7.4`, Chat 28, `pending`, 44 leaves / 43 done / 1 pending;
+- `.planning/EXECUTION.md` remains authoritative and still records task `7.4`, owner Chat 28, status pending, exact candidate `682f8c8b01e9f68c7f8e159de8b0f233221f1878`, with FR-0 and FR-1 PASS;
+- `.github/workflows/planning-docs-ci.yml` requires only the preserved ST Planner 2/evidence files and invokes `scripts/validate-ci-hygiene.mjs`; it does not require any deleted V1 file;
+- no remote CI result is claimed yet; GitHub Actions execution remains part of the migration PR checkpoint.
 
 ### PRESERVE — ST Planner 2 live truth
 
@@ -267,17 +276,17 @@ Checks performed:
 
 ## Deletion gate
 
-**OPEN — scoped only to the 17-file DELETE manifest above.**
+**COMPLETED — the scoped 17-file DELETE manifest was executed and post-delete verified.**
 
-The gate opened only after:
+The deletion checkpoint is valid because:
 
-1. planning, execution and decision truth were reconciled into ST Planner 2 files;
-2. root `STATUS.yaml` became projection-only;
-3. AGENTS/executor bootstrap stopped consuming V1 runtime state;
-4. CI/hygiene stopped consuming V1 framework/state-machine files;
+1. planning, execution and decision truth were reconciled into ST Planner 2 files before deletion;
+2. root `STATUS.yaml` is projection-only;
+3. AGENTS/executor bootstrap does not consume V1 runtime state;
+4. CI/hygiene does not consume V1 framework/state-machine files;
 5. README/routing/active first-run acceptance were migrated;
-6. the final acceptance runbook/evidence ledger were re-audited and detached from V1 authority;
-7. all repository workflows were re-read after the cutover and no V1 planner consumer remained;
-8. project-owned evidence/backlog/provenance files were explicitly classified for preservation.
+6. final acceptance authority is detached from V1 and preserves the exact runtime candidate/checkpoint state;
+7. the post-delete diff contains exactly the 17 manifest removals and no collateral file change;
+8. the post-delete tree retains all explicitly preserved live/evidence files.
 
-Opening this gate does **not** authorize deleting any preserved evidence file, changing task `7.4`, changing the accepted runtime candidate, or inventing completion. The next checkpoint may delete only the 17 manifest files and must then re-run the same active-consumer/authority verification against the post-delete tree.
+This completion does **not** change task `7.4`, its owner/status/dependencies, the accepted runtime candidate, or any final-acceptance checkpoint. Remote CI and fresh-reader verification remain required before the migration PR can be merged.
