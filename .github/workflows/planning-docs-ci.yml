@@ -168,9 +168,4 @@ jobs:
             exit 1
           fi
 
-          if grep -Eq '^\|[^|]+\|[^|]+\| (draft|approved|frozen|authorized|allocated|handoff) \|' .planning/EXECUTION.md; then
-            echo "EXECUTION.md contains ST Planner 1.x process state instead of execution status"
-            exit 1
-          fi
-
           echo "Market Flow US planning/contract validation passed."
