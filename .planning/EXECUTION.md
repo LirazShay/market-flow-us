@@ -8,17 +8,17 @@ Authority:
 - `.planning/EXECUTION.md` owns task, owner, status, real execution dependency and result/evidence truth.
 - root `STATUS.yaml` is a non-authoritative projection/navigation compatibility file only.
 - Numbered executor identity changes only through explicit activation such as `אני צאט 28 תתחיל`; a generic `continue` must never silently switch owners.
+- `backlog/` is future work only. A backlog item is not an execution task and does not block active or future development unless a later PLAN/EXECUTION dependency explicitly says so.
 
 Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-- Open task: `7.4`
-- Owner: `Chat 28`
-- Status: `pending`
-- Exact final-acceptance runtime candidate: `682f8c8b01e9f68c7f8e159de8b0f233221f1878`
-- Acceptance authority/evidence: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
-- Existing accepted checkpoint state is preserved: FR-0 and FR-1 PASS; later checkpoints remain pending/user-dependent exactly as the acceptance ledger records.
+There is currently **no open allocated execution task**.
+
+Former task `7.4` final target-machine/provider acceptance was deliberately removed from active execution and moved to `backlog/B-US-000-final-target-machine-provider-acceptance.md` as non-blocking future work. Its previous evidence remains preserved in the final-acceptance runbook/ledger, but it is no longer a current task, current owner, next pointer, dependency gate or development blocker.
+
+Future work must be planned from fresh `main` and explicitly allocated here before execution. Backlog ordering alone never activates work.
 
 ## Execution map
 
@@ -56,7 +56,6 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 | `7.6.3` | Chat 27 | `done` | `7.6.2` | Independent final Replay/Recording/Host audit found one material lifecycle defect: a Host-owned fresh Replay run could remain active when post-start producer/viewer composition threw. Cleanup is now fail-closed across all post-start composition failures; active ownership is cleared only after successful stop and retained if cleanup itself fails. Focused regression covers producer/viewer/open failures plus cleanup-stop failure, and Fast #534, Browser #492, Replay #63, Planning #691 and Workload #320 were green on Stage-3 head a2613f13dd51046fbe4c0427bb318c2e5feb1dc0. |
 | `7.6.4` | Chat 27 | `done` | `7.6.3` | Shared integration/regression audit independently re-read final server config/index/service, shared protocol/diagnostics, Viewer client/Detail, ordinary/BUY/Replay launchers, New Trading Day, package and CI routing. No additional material defect or execution bypass was found: ordinary runtime remains execution-disabled, Viewer remains prepare-only, Replay remains opt-in and shared-protocol-unaware, market/Replay/order DB authorities stay disjoint, diagnostics remain sanitized, and no runtime change was required. The latest merged runtime candidate remains d1ff24abfe72e55302c4c008030174f8923a6d48 pending Stage 5 deterministic reclosure. |
 | `7.6.5` | Chat 27 | `done` | `7.6.4` | Adversarial deterministic reclosure completed with targeted test-only guards for BUY confirmation URL credential rejection, Replay malformed Viewer-result cleanup and ordinary BUY-disabled/DRY_RUN config. Fresh Fast #540, Browser #498, Replay #69, Planning #700 and Workload #326 were green; full audit diff review found no remaining material defect or unproved scoped risk. Exact production runtime candidate for final acceptance was d1ff24abfe72e55302c4c008030174f8923a6d48 at this checkpoint; the later Replay Host lifecycle fix superseded that candidate in the final acceptance runbook. |
-| `7.4` | Chat 28 | `pending` | `7.5`, `8.5`, `9.6`, `7.6.5` | Current acceptance authority: .planning/FINAL_ACCEPTANCE_RUNBOOK.md + .planning/FINAL_ACCEPTANCE_EXECUTION.md. Exact runtime candidate 682f8c8b01e9f68c7f8e159de8b0f233221f1878; FR-0 and FR-1 PASS; FR-2 onward pending/user-dependent; real IBKR LIVE remains PENDING_EXTERNAL_PERMISSION unless actually permissioned and explicitly initiated. |
 | `8.1` | Chat 17 | `done` | `7.5` | Standalone IBKR order-service local authority is implemented with strict normalized STK/USD/SMART BUY/SELL LMT/MKT DAY/GTC validation, ephemeral caller auth/origin/body security on 127.0.0.1:8770, deterministic DRY_RUN fake preview with zero submit, separate hardened DuckDB requestId idempotency/restart persistence, stable product-owned localOrderId and documented SQL preflight. PR #38 head 0b7ecf50be4f1b3eeae5ed8650ff4199cea2d17c passed Fast CI on Node 24.21.0 (181 unit + 128 service, zero failures/skips), Browser CI including full Chromium and bounded Local Fake acceptance, Planning Docs CI and bounded Workload before closure. |
 | `8.2` | Chat 18 | `done` | `8.1` | Real Client Portal Gateway lifecycle is implemented with scoped loopback HTTPS transport, session/init/accounts/instrument/snapshot/what-if/submit/reply/orders/trades/cancel/keepalive adapter coverage, independent fail-closed LIVE gates, exact SELL long-position coverage, durable reply/submit/acknowledgement-unknown reconciliation, distinct cancel/partial/full fill observation and restart-safe provider-state persistence without account/session material. PR #39 head d6d40218673624ed2b31d986daebf4c6d0e49d2e passed Fast CI #382 and Planning Docs CI #495 after the final CPGW init-delay/privacy regression proof; diff review found no remaining blocking defect. |
 | `8.3` | Chat 19 | `done` | `8.2` | Standalone IBKR order-service packaging is implemented with a real CPGW operator entrypoint, DRY_RUN-by-default/explicit-LIVE Windows startup, scoped loopback TLS/session check, ephemeral caller-token IPC seam, hardened loopback CPGW URL validation, stable authenticated localhost integration documentation and deterministic synthetic HTTP/DuckDB acceptance covering auth, BUY/SELL preview, restart idempotency, reply/cancel/fills, acknowledgement-unknown reconciliation and no-short SELL. Two packaging defects (unsupported port override and missing CMD call semantics) were root-caused and regression-guarded before closure. PR #40 head 8ed0e6fec3f203487d98aaea4f94925501a25f50 passed Fast CI including standalone order acceptance, Browser CI, Planning Docs CI and bounded Workload; final diff review found no remaining blocking defect. |
@@ -73,12 +72,13 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 - Source: legacy `.planning/EXECUTION.yaml` + real leaf dependencies from legacy `.planning/TREE.yaml` at `market-flow-us/main` SHA `932fa501ee251f01b5bd1492a7e0e7b408d440d8`.
 - Source implementation leaves: **44**.
-- Target execution rows: **44**.
-- Unique target task IDs: **44**.
+- Original ST Planner 2.0 migration target rows: **44**.
+- `7.4` was later explicitly reclassified from active execution to non-blocking backlog item `B-US-000`; it is not marked `done` and no acceptance PASS is invented.
+- Current active execution rows: **43**.
+- Unique current execution task IDs: **43**.
 - Done rows: **43**.
-- Pending rows: **1** (`7.4`).
-- Every execution dependency references another implementation leaf; no self-dependency or dependency cycle is present.
-- Owner assignments are preserved exactly, including `7.4 → Chat 28`.
-- Historical results/evidence are carried forward; `7.4` points to the current final-acceptance runbook/ledger rather than inventing new acceptance evidence.
+- Pending rows: **0**.
+- Every current execution dependency references another execution task; no self-dependency or dependency cycle is present.
+- Historical results/evidence are preserved. Deferred target-machine/provider acceptance evidence remains in the final-acceptance runbook/ledger and `backlog/B-US-000-final-target-machine-provider-acceptance.md`.
 
-Do not infer completion from this table alone. A task is `done` only where its preserved evidence proves the relevant PLAN success evidence; overall product completion still requires `7.4` final target-machine/provider acceptance.
+The absence of an open execution task means development is free to continue through newly planned/allocated work. It does not claim that deferred backlog acceptance has passed.
