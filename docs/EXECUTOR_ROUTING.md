@@ -10,9 +10,12 @@ Use this document only to decide which durable project contracts/code/tests to l
 .planning/PLAN.md      = planning / S&T / success-evidence truth
 .planning/EXECUTION.md = task / owner / status / real dependency / result-evidence truth
 STATUS.yaml            = non-authoritative navigation projection only
+backlog/README.md      = future non-blocking work only; never execution authority
 ```
 
 Load only the row(s) relevant to the explicitly assigned task(s); do not preload the whole repository. A numbered executor activates only from an explicit request such as `אני צאט N תתחיל`; generic continuation or a projected current pointer never changes chat identity.
+
+Backlog items, including `B-US-000` deferred target-machine/provider acceptance, have no executor routing until they are explicitly planned and allocated in `.planning/EXECUTION.md`.
 
 | Task / PLAN leaf | Primary durable truth |
 |---|---|
@@ -32,7 +35,6 @@ Load only the row(s) relevant to the explicitly assigned task(s); do not preload
 | `6.2` diagnostics/live | AGENTS diagnosability, TECHNICAL_SPEC diagnostics/live, TEST_STRATEGY authenticated gates |
 | `6.3` workload | TEST_STRATEGY workload, TECHNICAL_SPEC performance, shared generator, AGENTS SQL preflight |
 | `7.1`–`7.3` historical closure | PLAN success evidence + existing release/local acceptance contracts |
-| `7.4` final acceptance | FINAL_ACCEPTANCE_RUNBOOK + FINAL_ACCEPTANCE_EXECUTION; FIRST_RUN_ACCEPTANCE_PLAN / FIRST_RUN_ACCEPTANCE detailed procedures; TEST_STRATEGY target-machine/local Fake Leumi/Demo Buy/AI/order-sidecar/Replay/heavy workload/authenticated gates |
 | `7.5` historical post-Demo-Buy reclosure | Demo Buy/AI contracts + USER_GUIDE/SCANNER_SQL_GUIDE + historical deterministic evidence |
 | `7.6.*` pre-acceptance extension audit | PRE_ACCEPTANCE_CODE_AUDIT; PRE_ACCEPTANCE_CODE_AUDIT_REPORT; BASIC_BUY_INTEGRATION; IBKR_ORDER_SERVICE + SECURITY; MARKET_REPLAY + REPLAY_HARDENING; changed production/tests/launchers/shared seams |
 | `8.1` local order authority | IBKR_ORDER_SERVICE §§1,3,5–8,10,14,17–18; IBKR_ORDER_SERVICE_SECURITY; PRODUCT_REQUIREMENTS §15; TECHNICAL_SPEC §§33–35,37,40–41; TEST_STRATEGY §§24–25,28 |
@@ -47,4 +49,4 @@ Load only the row(s) relevant to the explicitly assigned task(s); do not preload
 | `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad evidence + PR/main/open-PR truth |
 | `9.6` Replay hardening | REPLAY_HARDENING; MARKET_REPLAY; extension review; existing Replay tests/code only as routed by the hardening contract |
 
-The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence. This routing file must never duplicate or override either authority.
+The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done for allocated PLAN tasks. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence. This routing file must never duplicate or override either authority.
