@@ -34,8 +34,8 @@ Migration baseline:
 | `.planning/BASELINE_PROVENANCE.md` | same file | preserve unchanged |
 | final acceptance/preflight evidence files | same files | preserve unchanged semantically |
 | IBKR/Replay/pre-acceptance audit/reclosure evidence | same files | preserve unchanged semantically |
-| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | pending split; V1 assertions must not survive |
-| `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | pending; V1 state-machine checks must be removed |
+| `.planning/validate-ci-hygiene.mjs` project hygiene | `scripts/validate-ci-hygiene.mjs` | **SPLIT: genuine action-pin/npm-install hygiene migrated; V1 handoff/planning assertions not copied; old V1 file retained only until deletion checkpoint** |
+| `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | **MIGRATED: product/security/evidence checks preserved; V1 framework/TREE/freeze/allocation/handoff state-machine validation removed** |
 | active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | pending repository-wide active-reference sweep |
 | framework-owned V1 runtime/install/validators | deletion after replacement review | **not yet eligible for deletion** |
 
@@ -74,6 +74,16 @@ Project-owned rules remain represented for:
 The replacement bootstrap now resolves one exact ST Planner `main` commit and reads `BOOTSTRAP.md`, `SNT-METHODOLOGY.md` and `EXECUTION-MANAGEMENT.md` from that same commit, then uses PLAN/EXECUTION and routed project context. Numbered Chat identity is explicit-only; generic continuation cannot activate another Chat N.
 
 No installed framework checker, framework version/provenance file, freeze/authorization gate, allocation validator or handoff state machine is recreated in AGENTS.
+
+## CI / hygiene reconciliation proof
+
+- `scripts/validate-ci-hygiene.mjs` retains only genuine repository hygiene: deprecated GitHub Action pin rejection, exact reviewed `esbuild@0.28.2` install-script allowlist, and `.npmrc` fail-closed enforcement.
+- The V1 checks that interpreted `EXECUTOR_HANDOFF.md` or planning authority were deliberately not migrated.
+- `.github/workflows/planning-docs-ci.yml` now invokes the project-owned hygiene script and validates durable product/contracts/security/evidence rather than planner runtime state.
+- Preserved CI checks include U.S. provider/schema invariants, Demo Buy and AI evidence/privacy boundaries, IBKR order security/lifecycle contracts, Replay contracts, target workload expectations, forbidden Israel-only typed fields and post-main open-PR hygiene.
+- Minimal ST Planner 2 sanity is limited to required `PLAN.md` / `EXECUTION.md` presence/table shape and `STATUS.yaml` projection markers; CI does not parse or count S&T nodes/leaves or infer execution ownership/status/dependencies.
+- Removed CI authority includes `ST_PLANNER_INSTALL`, framework freshness, `.planning/STATUS.yaml`, `TREE.yaml` shape/count/status validation, allocation/freeze/authorization logic, `EXECUTOR_HANDOFF.md`, `verify-handoff.mjs`, review-marker gates and framework-runtime-file presence.
+- Full GitHub Actions execution is deferred until the migration PR exists; this checkpoint is a repository-content refactor, not a claim that remote CI has already run.
 
 ## Execution reconciliation proof
 
@@ -161,4 +171,4 @@ Checks performed:
 
 ## Deletion gate
 
-**CLOSED.** Replacement planning/execution/decision authority and AGENTS bootstrap now exist and are reconciled, but V1 source deletion remains blocked until CI/hygiene and active-document reference migrations are completed and reviewed.
+**CLOSED.** Planning/execution/decision authority, AGENTS bootstrap and CI/hygiene replacements are now reconciled. V1 source deletion remains blocked until the repository-wide active-document reference sweep is completed and the pre-delete no-loss search proves there are no active consumers of the legacy files.
