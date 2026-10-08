@@ -82,11 +82,13 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run acceptance plan and user runbook stay reclosed through branch-9 Replay and final provider proof", async () => {
-  const [startHere, plan, runbook, liveVerification] = await Promise.all([
+test("first-run historical evidence and active runbook stay reclosed through final provider proof", async () => {
+  const [startHere, historicalPlan, runbook, finalRunbook, finalExecution, liveVerification] = await Promise.all([
     rootFile("START_HERE.md"),
     rootFile(".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"),
     rootFile("docs/FIRST_RUN_ACCEPTANCE.md"),
+    rootFile(".planning/FINAL_ACCEPTANCE_RUNBOOK.md"),
+    rootFile(".planning/FINAL_ACCEPTANCE_EXECUTION.md"),
     rootFile("docs/LIVE_VERIFICATION.md")
   ]);
 
@@ -95,34 +97,55 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-9 
   assert.match(startHere, /NO_MARKET_MOVEMENT_OBSERVED/);
 
   for (const checkpoint of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14]) {
-    assert.match(plan, new RegExp(`FR-${checkpoint}\\b`));
+    assert.match(historicalPlan, new RegExp(`FR-${checkpoint}\\b`));
     assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
   }
   for (const checkpoint of ["11A", "11B"]) {
-    assert.match(plan, new RegExp(`FR-${checkpoint}\\b`));
+    assert.match(historicalPlan, new RegExp(`FR-${checkpoint}\\b`));
     assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
   }
+  assert.match(runbook, /## FR-11C\b/);
+  assert.match(finalRunbook, /FR-11C integrated Detail BUY DRY_RUN/);
+  assert.match(finalExecution, /FR-11C integrated Detail BUY DRY_RUN/);
 
   for (const subCheckpoint of ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]) {
-    assert.match(plan, new RegExp(`FR-${subCheckpoint}\\b`));
+    assert.match(historicalPlan, new RegExp(`FR-${subCheckpoint}\\b`));
     assert.match(runbook, new RegExp(`FR-${subCheckpoint}\\b`));
   }
 
   const historicalBranch8Candidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
-  assert.match(plan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
-  assert.match(plan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
-  assert.match(plan, /Chat 25/);
-  assert.match(plan, /post-branch-9 product SHA/);
-  assert.match(plan, /test:acceptance:replay/);
-  assert.match(plan, /build:replay/);
+  const finalCandidate = "682f8c8b01e9f68c7f8e159de8b0f233221f1878";
+
+  // The preserved planning mini-project is provenance evidence and may retain its historical owner/candidate wording.
+  assert.match(historicalPlan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
+  assert.match(historicalPlan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
+  assert.match(historicalPlan, /Chat 25/);
+  assert.match(historicalPlan, /post-branch-9 product SHA/);
+  assert.match(historicalPlan, /test:acceptance:replay/);
+  assert.match(historicalPlan, /build:replay/);
+
+  // Active acceptance authority must come from the final runbook/evidence ledger, not retired V1 handoff state.
+  assert.match(runbook, /\.planning\/FINAL_ACCEPTANCE_RUNBOOK\.md/);
+  assert.match(runbook, /\.planning\/FINAL_ACCEPTANCE_EXECUTION\.md/);
+  assert.match(runbook, /\.planning\/EXECUTION\.md/);
+  assert.match(runbook, /\.planning\/PLAN\.md/);
   assert.match(runbook, /אין דרישת checkout מקומי ב־FR-0/);
-  assert.match(runbook, /git switch --detach <accepted-post-branch-9-SHA>/);
+  assert.match(runbook, /git switch --detach <accepted-final-candidate-SHA>/);
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
+  assert.doesNotMatch(runbook, /accepted-post-branch-9-SHA|\.planning\/EXECUTOR_HANDOFF\.md|\.planning\/STATUS\.yaml/);
+
+  assert.match(finalRunbook, new RegExp(finalCandidate));
+  assert.match(finalExecution, new RegExp(finalCandidate));
+  assert.match(finalRunbook, /Chat 28 \/ task 7\.4/);
+  assert.match(finalExecution, /FR-0 exact final candidate \| PASS/);
+  assert.match(finalExecution, /FR-1 host prerequisite preflight \| PASS/);
+  assert.match(finalExecution, /FR-2 exact-SHA checkout \| PENDING/);
+
   assert.match(runbook, /test:acceptance:replay/);
   assert.match(runbook, /build:replay/);
   assert.match(runbook, /Replay-owned DuckDBs/);
-  assert.doesNotMatch(plan, /Chat 21/);
-  assert.doesNotMatch(plan, new RegExp(historicalBranch8Candidate));
+  assert.doesNotMatch(historicalPlan, /Chat 21/);
+  assert.doesNotMatch(historicalPlan, new RegExp(historicalBranch8Candidate));
   assert.doesNotMatch(runbook, new RegExp(historicalBranch8Candidate));
   assert.doesNotMatch(runbook, /branch הוא `main`|accepted `main` SHA/);
   assert.doesNotMatch(runbook, /f2789a4ec43e0878688aa9ea29c647e40a1154b6/);
@@ -148,14 +171,14 @@ test("first-run acceptance plan and user runbook stay reclosed through branch-9 
   assert.match(runbook, /pending\/inconclusive/);
   assert.match(runbook, /movement\.status = "FAIL"/);
 
-  assert.match(plan, /Two-pass first run is valid/);
-  assert.match(plan, /PRE-MARKET READINESS = PASS/);
-  assert.match(plan, /do not replay FR-0\.\.FR-12/i);
-  assert.match(plan, /Demo Buy \+ AI Investigation/);
-  assert.match(plan, /fresh active DB is schema v4/);
-  assert.match(plan, /RUN_IBKR_ORDER_ACCEPTANCE\.cmd/);
-  assert.match(plan, /CHECK_IBKR_SESSION\.cmd/);
-  assert.match(plan, /PENDING_EXTERNAL_PERMISSION/);
+  assert.match(historicalPlan, /Two-pass first run is valid/);
+  assert.match(historicalPlan, /PRE-MARKET READINESS = PASS/);
+  assert.match(historicalPlan, /do not replay FR-0\.\.FR-12/i);
+  assert.match(historicalPlan, /Demo Buy \+ AI Investigation/);
+  assert.match(historicalPlan, /fresh active DB is schema v4/);
+  assert.match(historicalPlan, /RUN_IBKR_ORDER_ACCEPTANCE\.cmd/);
+  assert.match(historicalPlan, /CHECK_IBKR_SESSION\.cmd/);
+  assert.match(historicalPlan, /PENDING_EXTERNAL_PERMISSION/);
 
   assert.match(liveVerification, /overall = "PASS"/);
   assert.match(liveVerification, /movement\.status = "PENDING"/);
