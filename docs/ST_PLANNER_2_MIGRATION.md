@@ -2,11 +2,25 @@
 
 ## Purpose
 
-This is the project-specific migration contract for moving `LirazShay/market-flow-us` from the installed ST Planner 1.1.1 model to ST Planner 2.x without losing planning truth, execution progress, target-owned rules, or verification evidence.
+This is the project-specific migration contract for moving `LirazShay/market-flow-us` from the installed ST Planner 1.1.1 model to ST Planner 2.x **without losing planning truth, execution progress, project-owned rules, future backlog, or verification evidence**.
 
 This document is intentionally specific to Market Flow US. It supplements the current ST Planner `BOOTSTRAP.md`; it does not replace the framework methodology.
 
-## Audit snapshot
+The migration priority is:
+
+```text
+preserve project truth first
+→ establish ST Planner 2.0 authorities
+→ prove equivalence/completeness
+→ remove only superseded planner machinery
+→ clean historical clutter only in a later, separately reviewed change if useful
+```
+
+Do not optimize directory cleanliness at the cost of information loss during the first migration.
+
+---
+
+# 0. Audit snapshot and no-loss review
 
 Prepared against:
 
@@ -27,7 +41,83 @@ At this audit snapshot Market Flow US is still in active implementation:
 - blockers: none
 - open pull requests at audit time: none
 
-## Critical cutover rule — do not migrate yet
+Current execution truth is especially simple:
+
+```text
+43 implementation leaves = done
+1 implementation leaf   = pending
+pending leaf             = 7.4
+owner                    = Chat 28
+```
+
+The final-acceptance ledger currently records:
+
+- FR-0 exact candidate: PASS
+- FR-1 host prerequisite preflight: PASS
+- FR-2 onward: still pending/user-dependent at this snapshot
+- exact acceptance candidate: `682f8c8b01e9f68c7f8e159de8b0f233221f1878`
+
+## 0.1 Framework customization audit — PASS
+
+The installed ST Planner 1.1.1 integrity metadata was checked against the current `.planning` tree.
+
+Every framework-managed file still has the exact installed blob SHA:
+
+- `.planning/README.md`
+- `.planning/FRAMEWORK.md`
+- `.planning/EXECUTOR_HANDOFF.md`
+- `.planning/CI-RCA-POLICY.md`
+- `.planning/executor-authority.mjs`
+- `.planning/execution-guidance.mjs`
+- `.planning/validate-allocation.mjs`
+- `.planning/verify-freeze-baseline.mjs`
+- `.planning/check-framework-update.mjs`
+
+Therefore there is **no hidden project customization inside those managed files at this snapshot**.
+
+The bounded root `AGENTS.md` ST Planner block also matches the exact 1.1.1 source block (`AGENTS.rules.md` blob `2265e1d423ffec8e98d577d727de0e482020ef36`).
+
+Important: project-owned rules exist both **before and after** that bounded block. In particular, the `Market Flow US executor routing` rule after the block is project-owned and must survive.
+
+Re-run this integrity/customization check immediately before the real migration. This audit result is evidence for the snapshot above, not permission to assume later files are unchanged.
+
+## 0.2 Decision-state audit — PASS
+
+The current material decision register contains decisions `D-US-001` through `D-US-048` and the current entries are resolved (some earlier sequencing decisions are explicitly marked superseded by later resolved decisions).
+
+There is no known open material decision hidden in `DECISIONS.md` at this snapshot.
+
+Do not discard the register: it contains durable architecture, security, data, replay, Demo Buy and IBKR execution rationale that remains useful after the planner format changes.
+
+## 0.3 Review-state audit — no unresolved blocker found
+
+The main `REVIEWS.md` records completed/superseded planning reviews and corrections. Material corrections were folded into TREE/DECISIONS/product contracts as the project evolved.
+
+Separate project-specific review/audit documents also exist for IBKR, Replay, pre-acceptance and final acceptance.
+
+Migration rule:
+
+- do not preserve old review **workflow state** as ST Planner 2.0 authority;
+- do preserve any durable finding/evidence that is not already represented elsewhere;
+- do not delete project-specific audit/evidence files in the first migration PR.
+
+## 0.4 User-entry documentation audit — migration update required
+
+Root `README.md` still contains active V1-era planning references such as:
+
+- `TREE 7.4` as a live release pointer;
+- `STATUS.yaml` + `.planning/EXECUTION.yaml` as execution truth;
+- `.planning/STATUS.yaml`, `.planning/TREE.yaml`, `.planning/EXECUTION.yaml` in its main truth list.
+
+It also contains some product descriptions that predate later schema-v4 / IBKR / Replay extensions.
+
+Therefore repository migration is incomplete unless active user/agent entry documents are reviewed and updated. Do not remove V1 files while leaving the root README teaching the old authority model.
+
+`START_HERE.md` is primarily operational/product usage and does not currently depend on the V1 planner authority model in the same way; still include it in the final dead-reference/user-entry sweep.
+
+---
+
+# 1. Critical cutover rule — do not migrate yet
 
 Do **not** execute the migration while Chat 28 / leaf `7.4` final acceptance is still active.
 
@@ -37,78 +127,75 @@ The migration may start only after all of these are true on `main`:
 
 1. leaf `7.4` is closed with its required success evidence;
 2. Chat 28 has no unfinished work;
-3. the final target-machine/provider acceptance result has been durably recorded;
-4. no planning/execution PR is open;
-5. required engineering CI for the accepted product candidate is green;
-6. `main` is the accepted product truth;
-7. there is no unresolved execution blocker whose meaning depends on the V1 state machine.
+3. FR-14/final handoff is complete for the accepted candidate, or the durable final acceptance contract explicitly records any legitimate externally unavailable proof state;
+4. the final target-machine/provider acceptance result has been durably recorded;
+5. no planning/execution PR is open;
+6. required engineering CI for the accepted product candidate is green;
+7. `main` is the accepted product truth;
+8. there is no unresolved execution blocker whose meaning depends on the V1 state machine.
 
 Then perform the migration as one dedicated process-only branch/PR. Do not combine it with a product feature, runtime change, schema change, provider change, or test-behavior change.
 
 ---
 
-# 1. What must survive the migration
+# 2. What must survive the migration
 
-The objective is **not** to erase the planning history. The objective is to remove V1 framework machinery while preserving project truth.
+The objective is **not** to erase planning history. The objective is to remove V1 framework machinery while preserving Market Flow US truth.
 
 Preserve:
 
-- the Market Flow US product goal and current reality;
-- the still-relevant S&T reasoning;
-- implementation-ready leaf IDs that still matter for understanding delivered work;
+- product goal and current reality;
+- still-relevant S&T reasoning;
+- implementation-ready leaf IDs that remain useful for traceability;
 - real execution dependencies;
-- all valid `done` evidence/results;
+- every valid `done` result/evidence;
 - current/future owner assignments when unfinished work exists;
-- material decisions and their rationale;
+- material decisions and rationale;
 - real blockers;
+- future backlog items that are intentionally outside the current plan;
 - target-owned executor routing;
 - target-owned product/architecture/test/security contracts;
-- all project-specific mini-project/acceptance evidence that remains useful;
+- baseline provenance;
+- project-specific mini-project, reclosure, audit, preflight and acceptance evidence;
 - explicit numbered-chat identity: `Chat N` activates only when the user explicitly starts `Chat N`.
 
-Do not restart or relabel valid completed work merely because the planner format changes.
+Do not restart, renumber or relabel valid completed work merely because the planner format changes.
 
 ---
 
-# 2. Current ownership classification
+# 3. Exhaustive `.planning` disposition inventory
 
-## 2.1 Project-owned truth — preserve
+This section exists to prevent broad deletion such as “remove the old `.planning` folder”.
 
-These are Market Flow US data/contracts, not framework runtime:
+The first migration PR must account for **every current file** before deletion/move.
 
-- `AGENTS.md` content **outside** the bounded ST Planner block;
-- `STATUS.yaml` until its external/Sequence Runner consumers are explicitly checked;
-- `.planning/GOAL.md`;
-- `.planning/TREE.yaml`;
-- `.planning/DECISIONS.md`;
-- `.planning/REVIEWS.md` as historical review evidence;
-- `.planning/STATUS.yaml` only as an input to migration, not as a 2.0 destination;
-- `.planning/EXECUTION.yaml` as the source for task/owner/status/result migration;
-- `.planning/BACKLOG.md`;
-- `.planning/BASELINE_PROVENANCE.md`;
-- all Market Flow US mini-project, preflight, audit, reclosure and acceptance documents;
-- `docs/EXECUTOR_ROUTING.md`;
-- `docs/US_MIGRATION_AUDIT.md` and `docs/US_MIGRATION_FILE_MAP.md`;
-- all PRODUCT / DATA / TECHNICAL / TEST / security / feature contracts.
+## 3.1 Transform into ST Planner 2.0 live authorities
 
-`docs/EXECUTOR_ROUTING.md` is especially important: target-specific routing was deliberately moved there during the 1.1.1 upgrade. It must remain project-owned after the 2.0 migration.
+| Current file | 2.0 disposition |
+|---|---|
+| `.planning/GOAL.md` | Merge current outcome/current reality/constraints into `.planning/PLAN.md` |
+| `.planning/TREE.yaml` | Convert S&T reasoning/leaves/success evidence into `.planning/PLAN.md`; execution prerequisites go to `EXECUTION.md` |
+| `.planning/EXECUTION.yaml` | Convert owner/status/dependencies/result into `.planning/EXECUTION.md` |
+| `.planning/DECISIONS.md` | Keep as optional `.planning/DECISIONS.md`; this project is complex enough to justify it |
+| `.planning/STATUS.yaml` | Input-only for migration; do not reproduce freeze/authorization lifecycle state |
+| `.planning/REVIEWS.md` | Extract any still-unrepresented durable finding, then retire as live authority |
 
-## 2.2 Installed ST Planner 1.1.1 machinery — remove after replacement is verified
+## 3.2 Installed ST Planner 1.1.1 machinery — remove only after replacements are proven
 
-The install metadata identifies these as framework-managed V1 material:
+Current integrity audit says these are exact framework bytes, with no hidden target customization:
 
-- `.planning/README.md`;
-- `.planning/FRAMEWORK.md`;
-- `.planning/EXECUTOR_HANDOFF.md`;
-- `.planning/CI-RCA-POLICY.md`;
-- `.planning/executor-authority.mjs`;
-- `.planning/execution-guidance.mjs`;
-- `.planning/validate-allocation.mjs`;
-- `.planning/verify-freeze-baseline.mjs`;
-- `.planning/check-framework-update.mjs`;
-- `.planning/ST_PLANNER_INSTALL.json`.
+- `.planning/README.md`
+- `.planning/FRAMEWORK.md`
+- `.planning/EXECUTOR_HANDOFF.md`
+- `.planning/CI-RCA-POLICY.md`
+- `.planning/executor-authority.mjs`
+- `.planning/execution-guidance.mjs`
+- `.planning/validate-allocation.mjs`
+- `.planning/verify-freeze-baseline.mjs`
+- `.planning/check-framework-update.mjs`
+- `.planning/ST_PLANNER_INSTALL.json`
 
-Also remove the bounded root `AGENTS.md` block between:
+Also remove only the bounded root block:
 
 ```text
 <!-- st-planner:rules:v3:begin -->
@@ -116,116 +203,222 @@ Also remove the bounded root `AGENTS.md` block between:
 <!-- st-planner:rules:v3:end -->
 ```
 
-Remove **only** that block. Preserve all Market Flow US rules around it.
+Never replace root `AGENTS.md` wholesale.
 
-## 2.3 Local V1 helpers that need classification, not blind deletion
+## 3.3 Local V1 helper — remove after replacement
 
 ### `.planning/verify-handoff.mjs`
 
-This script exists to enforce the old serial V1 state machine: frozen planning, allocated YAML, serial prefix, root status pointer, current chat/node equality, and handoff validity.
+This is a local implementation of the V1 serial state machine. It enforces frozen plan/allocation/current pointer/serial prefix semantics.
 
-It should be removed during the 2.0 migration. The useful behavior is replaced by the simpler execution rule:
+Remove it after `PLAN.md + EXECUTION.md + AGENTS.md` express the simpler 2.0 execution contract:
 
 - explicit Chat N activation;
-- read `PLAN.md` + `EXECUTION.md`;
-- work only on that owner's assigned runnable tasks;
-- require real dependencies to be satisfied;
-- never silently become another owner.
+- only that owner's assigned work;
+- real dependency readiness;
+- verified result before `done`;
+- no silent owner switch.
+
+## 3.4 Mixed project/planner helper — split, do not delete blindly
 
 ### `.planning/validate-ci-hygiene.mjs`
 
-Do **not** delete this file without preserving its target-owned engineering checks.
+This file contains both:
 
-It currently contains two kinds of behavior:
+1. V1 planning/handoff assertions — remove;
+2. Market Flow US engineering/security hygiene — preserve.
 
-1. V1 planning/handoff assertions — remove these;
-2. Market Flow US CI/security hygiene — preserve these, including reviewed GitHub Action pins and strict npm install-script approval.
+Preserve at least the real project checks for:
 
-Recommended migration:
+- reviewed/current GitHub Action pins;
+- strict npm install-script policy;
+- approved `esbuild@0.28.2` install script only.
 
-- move the useful non-planner checks to a normal project script such as `scripts/validate-ci-hygiene.mjs`;
-- remove checks whose only purpose is `TREE/STATUS/EXECUTOR_HANDOFF` authority;
-- invoke the surviving project hygiene check from normal engineering CI if it still protects a real invariant.
+Recommended target:
+
+```text
+scripts/validate-ci-hygiene.mjs
+```
+
+or another normal project-owned script location.
+
+## 3.5 Project-owned future work — preserve
+
+### `.planning/BACKLOG.md`
+
+Preserve it in the first migration PR.
+
+It explicitly contains future work that is **not allocated in the current frozen execution**, including file-backed Scanner SQL/query-authoring and related correctness/static-performance workflow work.
+
+Some older backlog entries may already have been implemented through later branches. Do not prune them during the ST Planner migration. Backlog cleanup is a separate product-planning review so migration cannot accidentally erase an unimplemented request.
+
+## 3.6 Project provenance — preserve
+
+### `.planning/BASELINE_PROVENANCE.md`
+
+Preserve. It records the exact MarketScope donor baseline, imported commit/tree and initial green-CI boundary used as migration/rollback provenance.
+
+## 3.7 Final acceptance / preflight evidence — preserve in first migration
+
+Do not delete or move these in the first migration PR:
+
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md`
+- `.planning/FINAL_PREFLIGHT_AUDIT.md`
+- `.planning/FINAL_PREFLIGHT_PROGRESS.yaml`
+- `.planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md`
+- `.planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md`
+
+Before any later cleanup, ensure the final accepted `7.4` result in `EXECUTION.md` contains a concise durable pointer to the exact accepted SHA and final evidence/result.
+
+Historical preflight progress may later move to Git history, but that is not part of this migration.
+
+## 3.8 IBKR execution evidence — preserve in first migration
+
+Do not delete or move:
+
+- `.planning/IBKR_ORDER_MINI_PROJECT.md`
+- `.planning/IBKR_ORDER_PACKAGING_REVIEW.md`
+- `.planning/IBKR_ORDER_RECLOSURE.md`
+- `.planning/IBKR_ORDER_REVIEWS.md`
+
+These contain project-specific provider/security/packaging/reclosure reasoning and evidence, not generic framework runtime.
+
+## 3.9 Replay / BUY extension evidence — preserve in first migration
+
+Do not delete or move:
+
+- `.planning/MARKET_REPLAY_MINI_PROJECT.md`
+- `.planning/MARKET_REPLAY_RECLOSURE.md`
+- `.planning/REPLAY_BUY_EXTENSION_REVIEW.md`
+- `.planning/REPLAY_HARDENING_AUDIT.md`
+
+These are project-specific capability/hardening evidence.
+
+## 3.10 Pre-acceptance extension audit evidence — preserve in first migration
+
+Do not delete or move:
+
+- `.planning/PRE_ACCEPTANCE_CODE_AUDIT.md`
+- `.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md`
+- `.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md`
+
+These document the combined order/BUY/Replay/shared-seam audit and the defects/proofs that produced the final candidate.
+
+### First-migration safety rule
+
+The first ST Planner 2.0 migration is **not** a `.planning` directory cleanup project.
+
+After the migration, the live planning authorities should be only `PLAN.md`, `EXECUTION.md` and optional `DECISIONS.md`, but project-specific evidence documents may temporarily remain beside them as clearly non-authoritative evidence. A later cleanup may move/remove historical evidence only after a separate review proves nothing durable becomes harder to recover.
 
 ---
 
-# 3. Target ST Planner 2.0 state
+# 4. Target ST Planner 2.0 authority model
 
-The normal live planning state after migration should be:
+The authoritative live planning core after migration is:
 
 ```text
 .planning/
 ├── PLAN.md
 ├── EXECUTION.md
-└── DECISIONS.md        # keep here because this project has a large material decision set
+└── DECISIONS.md
 ```
 
-Do **not** create `.planning/STATUS.md` initially. Market Flow US already has a root `STATUS.yaml`; introducing another status file would recreate duplicate state.
+Other project-specific evidence documents may remain, but must not become competing planning/execution authorities.
 
-After migration, decide the root `STATUS.yaml` separately:
+Do **not** create `.planning/STATUS.md` initially.
 
-- if Sequence Runner or another real external integration still consumes it, keep it as a **small non-authoritative projection** and state explicitly that `.planning/EXECUTION.md` owns execution status;
-- if no external consumer requires it, remove it instead of keeping duplicate current-chat/current-node state.
+## Root `STATUS.yaml` — keep in the first migration
 
-Never let both root `STATUS.yaml` and `EXECUTION.md` independently own the same execution fact.
+For the first migration, keep root `STATUS.yaml` even if its external consumer is not yet proven.
+
+Reason: it may be consumed by Sequence Runner or another external workflow outside repository code search. Deleting it in the same migration would create unnecessary compatibility risk.
+
+Rewrite it as a **small non-authoritative projection** only:
+
+- product/repository phase if still useful;
+- current owner/task pointer only when an external consumer genuinely needs it;
+- optional next/blocker summary.
+
+State explicitly:
+
+```text
+.planning/PLAN.md       = planning/reasoning authority
+.planning/EXECUTION.md  = task/owner/status/dependency/result authority
+STATUS.yaml             = external/navigation projection only
+```
+
+Do not require `STATUS.yaml` and `EXECUTION.md` to be synchronized by a validator/state machine.
+
+Remove root `STATUS.yaml` only in a later change after its absence is proven safe for Sequence Runner/other external consumers.
 
 ---
 
-# 4. Exact content migration map
+# 5. Exact content migration map
 
-## `.planning/GOAL.md` → `.planning/PLAN.md`
+## 5.1 `.planning/GOAL.md` → `.planning/PLAN.md`
 
-Move only current planning truth:
+Move current truth:
 
-- root outcome;
-- relevant current reality;
-- constraints and non-goals;
-- U.S.-conversion boundary that still matters;
-- success boundary that remains meaningful.
+- three-lane product outcome: market analysis, standalone IBKR execution, isolated recording/replay;
+- intentional separation between analysis, execution and replay authority;
+- stable product direction;
+- current constraints/non-goals;
+- current completion boundary;
+- canonical contract precedence only where it remains useful.
 
-Do not copy lifecycle/freeze prose merely because it exists.
+Do not copy V1 lifecycle/freeze prose merely because it exists.
 
-## `.planning/TREE.yaml` → `.planning/PLAN.md`
+The current GOAL contains older planning-boundary text from earlier branch-9 planning. Treat later TREE/DECISIONS/contracts/current execution as newer truth where they explicitly supersede it.
 
-Preserve the S&T model, not its YAML schema.
+## 5.2 `.planning/TREE.yaml` → `.planning/PLAN.md`
+
+Preserve the S&T model, not the YAML schema.
 
 Carry forward:
 
-- Strategy/Tactic relationships that remain useful;
+- root Strategy/Tactic;
+- all still-useful Strategy/Tactic relationships;
 - necessity/sufficiency reasoning;
 - material assumptions;
 - implementation-ready leaf IDs;
 - objective success evidence;
-- still-relevant planning dependencies.
+- final `7.4` definition-of-done;
+- the real distinction between S&T hierarchy and execution dependency.
 
-Execution-order prerequisites belong in `EXECUTION.md -> Depends on`, not in the logical S&T hierarchy.
+Execution-order prerequisites belong in `EXECUTION.md -> Depends on`.
 
-Do not preserve exact node-count requirements as a planner invariant. The current `58 TREE nodes / 44 implementation leaves` counts are historical facts of this plan, not a permanent schema contract.
+Do not preserve exact node-count requirements as a planner invariant. The current `58 TREE nodes / 44 implementation leaves` values are facts of this completed/near-completed plan, not a permanent schema contract.
 
-## `.planning/DECISIONS.md` → keep as `.planning/DECISIONS.md`
+## 5.3 `.planning/DECISIONS.md` → keep as `.planning/DECISIONS.md`
 
-This project has a large decision set, so the optional ST Planner 2.0 `DECISIONS.md` is justified for readability.
+Keep the material decision register because this project has many cross-cutting decisions.
 
-Preserve material product/architecture/security/data decisions and their rationale. Remove only entries that exist solely to describe V1 framework ceremony when they have no continuing project meaning.
+At this audit snapshot `D-US-001..048` are resolved/current-or-explicitly-superseded decisions; there is no open decision requiring separate migration resolution.
 
-`PLAN.md` should reference relevant decision IDs rather than duplicate their full text.
+Preserve product/architecture/security/data/replay/order rationale. Remove a decision only when it is purely V1 planner ceremony and no future executor/product reader needs it.
 
-## `.planning/REVIEWS.md`
+`PLAN.md` should reference decision IDs instead of duplicating full decision text.
 
-Do not carry review history forward as live workflow state.
+## 5.4 `.planning/REVIEWS.md`
 
-Before deletion from live planning state:
+Do not make historical review chronology a ST Planner 2.0 live state machine.
 
-- copy any unresolved material finding into `PLAN.md`, `DECISIONS.md`, a product contract, or `EXECUTION.md` as appropriate;
-- confirm that completed review history is recoverable from Git history.
+Before retiring it as live authority:
 
-Then remove the live `REVIEWS.md` authority.
+1. identify every finding marked unresolved/open/blocked;
+2. require zero unresolved material findings or migrate each finding to `PLAN.md`, `DECISIONS.md`, a durable product contract or `EXECUTION.md`;
+3. verify every material correction that still matters is represented in current TREE/DECISIONS/contracts;
+4. keep Git history as chronology/audit fallback.
 
-Project-specific review/audit documents that contain durable evidence may remain as project evidence; they do not become framework state.
+At this audit snapshot no unresolved material blocker was found in the main review file.
 
-## `.planning/STATUS.yaml`
+Do not delete the separate project-specific audit/reclosure evidence files listed in Section 3.
 
-Use it only to understand the migration starting point.
+## 5.5 `.planning/STATUS.yaml`
+
+Use only to understand migration starting state.
 
 Do not carry forward:
 
@@ -235,79 +428,120 @@ Do not carry forward:
 - freeze/refreeze state;
 - review-cycle markers.
 
-Real blockers or next work belong in `EXECUTION.md` or the small external status projection if one is still needed.
+Real blockers/tasks belong in `EXECUTION.md`; navigation projection may remain in root `STATUS.yaml`.
 
-## `.planning/EXECUTION.yaml` → `.planning/EXECUTION.md`
+## 5.6 `.planning/EXECUTION.yaml` → `.planning/EXECUTION.md`
 
-Preserve every implementation leaf that still matters for execution/history with:
+Use the 2.0 shape:
 
-| Task | Owner | Status | Depends on | Result |
+| Task | Owner | Status | Depends on | Result/Evidence |
 |---|---|---|---|---|
-| `<leaf ID>` | `Chat N` | `pending / in_progress / blocked / done` | real prerequisites only | short verified result/evidence |
+| `<leaf ID>` | `Chat N` | `pending / in_progress / blocked / done` | real prerequisites only | verified result/evidence |
 
 Migration invariants:
 
 - keep leaf IDs stable;
-- preserve the existing Chat owner for every unfinished task;
+- preserve owner for every unfinished task;
 - preserve every valid `done` state;
-- preserve the useful result/evidence text;
-- preserve real dependencies;
-- do not require chat numbers to be globally contiguous as a validity rule;
-- do not require all work to be one serial prefix merely because V1 did;
+- preserve useful result/evidence text;
+- preserve real dependencies from TREE;
+- do not require contiguous chat numbering as a validity rule;
+- do not require all work to form one serial prefix merely because V1 did;
 - do not create `allocation_validated`, `handoff_verified`, `implementation_authorized`, or equivalent fields.
 
-At the current audit snapshot the source contains 44 implementation leaves across 28 chats. The migration must account for all 44 before the old YAML is removed.
+At this audit snapshot:
 
-If migration happens after final `7.4` acceptance, the expected starting state is that all current leaves are closed. If any new work has been added by then, migrate the actual latest `main` state instead of relying on the numbers in this document.
+```text
+44 leaves total
+43 done
+7.4 pending under Chat 28
+```
+
+The migration must account for all latest leaves before deleting the YAML source.
+
+If migration starts after final `7.4`, the expected state is all current leaves `done`, with `7.4` result containing the final accepted SHA/evidence. If later work added new leaves, migrate the actual latest `main` instead of relying on this snapshot.
 
 ---
 
-# 5. `AGENTS.md` migration
+# 6. `AGENTS.md` migration
 
-Preserve Market Flow US project rules, including:
+## 6.1 Preserve project-owned behavior
 
-- repository roles and product source of truth;
-- controlled U.S. conversion principles that still matter;
+Preserve/re-express Market Flow US rules for:
+
+- repository roles/product source of truth;
+- relevant controlled U.S. conversion/product boundaries;
 - branch/PR workflow;
 - RCA/root-cause behavior;
 - automation-performance contract;
 - SQL static preflight gate;
 - diagnosability-by-design;
-- security/public-safe constraints;
+- public-safe/security constraints;
 - durable product contract ownership;
-- explicit `אני צאט N תתחיל` activation rule.
+- target-owned `docs/EXECUTOR_ROUTING.md`;
+- explicit `אני צאט N תתחיל` activation and no silent owner switch.
 
-Remove/rewrite V1-specific sections that require:
+## 6.2 Remove/translate V1 project-native sections
 
-- freshness checker execution;
-- installed framework files;
-- freeze/unfreeze;
-- `implementation_authorized`;
-- allocation validator;
-- mandatory handoff verifier;
-- `.planning/EXECUTOR_HANDOFF.md`;
-- `.planning/STATUS.yaml` as planning authority;
-- `.planning/EXECUTION.yaml` as YAML authority;
-- exact current-chat pointer equality as execution authorization.
+Several V1-coupled sections live **outside** the bounded framework block and therefore will not disappear automatically.
 
-Recommended fresh-chat execution order after migration:
+Review and rewrite at least:
+
+- `Fresh-chat read order`;
+- `Planning boundary`;
+- `Serial executor protocol`;
+- `Durable ownership`;
+- any branch/release text that names TREE/STATUS/EXECUTION as framework authorization gates;
+- any reference to freeze, implementation authorization, handoff validation or current-pointer equality as permission to work.
+
+Do not delete the useful engineering rule merely because its wording mentions TREE. Translate the rule to the new authority model.
+
+## 6.3 Remove exact bounded framework block
+
+Current audit confirms the bounded block matches the installed ST Planner source. Remove exactly between the begin/end markers and preserve everything outside them.
+
+## 6.4 New fresh-chat execution order
+
+Recommended:
 
 ```text
 AGENTS.md
-→ resolve one current ST Planner source commit for the session
-→ read that commit's BOOTSTRAP + SNT-METHODOLOGY + EXECUTION-MANAGEMENT
+→ resolve one current ST Planner source commit for this session
+→ read BOOTSTRAP + SNT-METHODOLOGY + EXECUTION-MANAGEMENT from that commit
 → .planning/PLAN.md
 → .planning/EXECUTION.md
 → assigned leaf/Strategy in PLAN
 → matching docs/EXECUTOR_ROUTING.md row
-→ only the routed product contracts/code/tests
+→ only routed product contracts/code/tests
 ```
 
-A generic `continue` never changes executor identity. `Chat N` remains `Chat N` until the user explicitly starts another numbered chat.
+A generic `continue` never changes executor identity. `Chat N` remains `Chat N` until the user explicitly starts another owner.
 
 ---
 
-# 6. Planning Docs CI migration — mandatory
+# 7. Root/user-entry documentation migration
+
+Review active entry documents after the new authorities exist.
+
+At minimum:
+
+- `README.md`
+- `START_HERE.md`
+- `AGENTS.md`
+- any release/development guide that names old planning files as current authority.
+
+For root `README.md` specifically:
+
+- replace `.planning/TREE.yaml`, `.planning/STATUS.yaml`, `.planning/EXECUTION.yaml` authority references with `PLAN.md` / `EXECUTION.md` and the projection role of root `STATUS.yaml`;
+- remove V1 planner lifecycle wording;
+- ensure product description reflects the current implemented product (schema v4 / Demo Buy / AI / IBKR sidecar/basic BUY / Replay as applicable at migration time);
+- do not mix this documentation correction with new runtime behavior.
+
+Historical documents may keep historical file names when they are clearly describing a past event and are not used as current instructions.
+
+---
+
+# 8. Planning Docs CI migration — mandatory
 
 The current `.github/workflows/planning-docs-ci.yml` cannot survive unchanged.
 
@@ -325,9 +559,9 @@ It currently enforces V1 machinery, including:
 
 Removing V1 files without changing this workflow will intentionally break CI.
 
-## Preserve from Planning Docs CI
+## 8.1 Preserve real Market Flow US checks
 
-Keep checks that protect real Market Flow US product/engineering invariants, for example:
+Keep checks that protect product/engineering invariants, for example:
 
 - required durable product contracts;
 - U.S. schema/provider contract checks;
@@ -335,12 +569,12 @@ Keep checks that protect real Market Flow US product/engineering invariants, for
 - Demo Buy / IBKR / Replay contract invariants that are still current;
 - prevention of reintroducing Israel-only typed fields into current U.S. contracts;
 - representative workload/product constraints that remain current;
-- open-PR hygiene if the project still intentionally wants that rule;
-- useful npm/GitHub Actions hygiene after moving it out of planner tooling.
+- open-PR hygiene if the project intentionally keeps that rule;
+- npm/GitHub Actions hygiene moved out of planner tooling.
 
-## Remove from Planning Docs CI
+## 8.2 Remove planning-engine checks
 
-Remove checks whose only purpose is proving the old planning engine:
+Remove checks whose only purpose is proving V1:
 
 - framework install/update freshness;
 - exact TREE shape/counts;
@@ -351,86 +585,95 @@ Remove checks whose only purpose is proving the old planning engine:
 - framework-managed file presence;
 - review-history marker counts that do not protect a current product contract.
 
-## 2.0 replacement
+## 8.3 ST Planner 2.0 CI rule
 
-The workflow may still check that ongoing substantial planning has coherent `PLAN.md` / `EXECUTION.md`, but do not rebuild a schema engine around them.
+CI may perform lightweight deterministic sanity checks on `PLAN.md` / `EXECUTION.md` if a repeated real failure justifies them, but must not recreate a second planner schema/state machine.
 
-Prefer simple product-contract checks over a second ST Planner runtime.
+Prefer direct product-contract checks.
 
 ---
 
-# 7. Recommended migration sequence
+# 9. Recommended migration sequence
 
-Perform these steps in one focused migration branch after the cutover rule is satisfied.
+Perform in one focused migration branch after Section 1's cutover gate is satisfied.
 
-## Step 1 — refresh all sources
+## Step 1 — refresh sources
 
 1. fetch latest Market Flow US `main`;
-2. verify there are no unexpected open PRs;
-3. resolve the current `LirazShay/st-planner` `main` to one exact commit;
-4. read `BOOTSTRAP.md`, `docs/SNT-METHODOLOGY.md`, and `docs/EXECUTION-MANAGEMENT.md` from that same commit;
-5. use the latest project state, not this document's audit snapshot, for actual migration values.
+2. verify no unexpected open PR;
+3. resolve current `LirazShay/st-planner` `main` to one exact commit;
+4. read `BOOTSTRAP.md`, `docs/SNT-METHODOLOGY.md`, `docs/EXECUTION-MANAGEMENT.md` from that same commit;
+5. use latest project state, not this audit snapshot, for migration values.
 
-## Step 2 — audit customization before deletion
+## Step 2 — snapshot the migration inventory
 
-Compare the installed V1 framework-managed files against `.planning/ST_PLANNER_INSTALL.json` integrity metadata.
+Before edits, record in the PR description or migration notes:
 
-If any framework-managed file differs, inspect the difference before deleting it.
+- base `main` SHA;
+- current planning files present;
+- current leaf count/status/owners;
+- current final acceptance result/candidate;
+- current open blockers;
+- open-PR state.
 
-At minimum re-check:
+Git history is the rollback snapshot; do not create a permanent duplicate archive directory.
 
-- `.planning/README.md`;
-- `.planning/FRAMEWORK.md`;
-- `.planning/EXECUTOR_HANDOFF.md`;
-- `.planning/CI-RCA-POLICY.md`;
-- framework scripts;
-- bounded ST Planner block in root `AGENTS.md`.
+## Step 3 — repeat customization/integrity audit
 
-Project-specific executor routing already lives in `docs/EXECUTOR_ROUTING.md`; preserve it.
+Compare framework-managed files with `.planning/ST_PLANNER_INSTALL.json` and compare bounded `AGENTS` block with its installed source.
 
-## Step 3 — create `PLAN.md`
+If any managed file/block changed since this review, classify the delta before deletion.
 
-Consolidate current GOAL + S&T reasoning + still-relevant decisions/review findings into `.planning/PLAN.md`.
+## Step 4 — create `PLAN.md`
 
-Review the result outside-in before deleting sources.
+Consolidate latest GOAL + TREE + still-relevant decision/review findings.
 
-## Step 4 — create `EXECUTION.md`
+Perform outside-in review before deleting sources.
 
-Convert the latest `.planning/EXECUTION.yaml` and real TREE dependencies into the lightweight table.
+## Step 5 — create `EXECUTION.md`
+
+Convert latest execution allocation plus real TREE dependencies.
 
 Prove:
 
-- no implementation leaf disappeared;
+- every leaf accounted for;
 - no unfinished owner changed silently;
-- every valid `done` result remains represented;
-- real dependencies are retained;
-- no process-only state was reintroduced.
+- every valid `done` result preserved;
+- real dependencies retained;
+- final `7.4` evidence preserved after completion;
+- no process-only fields introduced.
 
-## Step 5 — preserve optional decisions
+## Step 6 — keep/normalize `DECISIONS.md`
 
-Keep `.planning/DECISIONS.md` as the optional material decision register and remove V1-only ceremony from it only when clearly process-only.
+Keep material decisions. Remove only clearly obsolete planner-ceremony entries if any exist; do not opportunistically rewrite product decisions during migration.
 
-## Step 6 — rewrite project routing/rules
+## Step 7 — rewrite `AGENTS.md`
 
-Update `AGENTS.md` to the 2.0 read/execution model while preserving Market Flow US engineering/product rules.
+Translate V1-coupled project-native rules to 2.0 and only then remove the exact bounded framework block.
 
-Remove only the bounded installed ST Planner block after the project-native replacement is complete.
+## Step 8 — keep root `STATUS.yaml` as projection
 
-## Step 7 — refactor CI
+Do not delete it in the first migration. Demote it explicitly to projection-only and remove V1 authorization semantics.
 
-Refactor `planning-docs-ci.yml` and `validate-ci-hygiene.mjs` before deleting their V1 inputs.
+## Step 9 — refactor CI/hygiene
 
-Keep real product/engineering checks. Remove planning-engine checks.
+Refactor `planning-docs-ci.yml` and split `validate-ci-hygiene.mjs` before removing their V1 inputs.
 
-## Step 8 — remove V1 framework/runtime state
+Keep real engineering/product checks.
 
-Only after Steps 3–7 are reviewed, remove the superseded installed framework files/scripts and live V1 review/status machinery.
+## Step 10 — update active entry docs
 
-Do not delete product contracts, executor routing, mini-project evidence, acceptance runbooks or project-specific audit evidence merely because they are under `.planning/` today. Classify each by content first.
+Update README/AGENTS/START_HERE or other current instructions so a fresh reader never follows removed V1 authorities.
 
-## Step 9 — repository-wide dead-reference sweep
+## Step 11 — remove V1 framework/runtime state
 
-Search for and resolve active references to:
+Only after Steps 4–10 are reviewed, remove superseded framework files/scripts plus live V1 status/review authority.
+
+Do not delete project-specific evidence documents listed in Section 3.
+
+## Step 12 — repository-wide dead-reference sweep
+
+Search active/current documentation, workflows and scripts for:
 
 ```text
 .planning/README.md
@@ -452,60 +695,105 @@ implementation_authorized
 plan_state
 freeze
 handoff verification
+allocation validation
 ```
 
-Historical text may remain when clearly historical and not used as current authority.
+For every match classify:
 
-## Step 10 — verify and merge
+- active instruction → update/remove;
+- historical evidence → may remain if clearly historical;
+- product contract → translate without weakening the underlying rule.
+
+## Step 13 — no-loss cross-check before deletion commit
+
+Perform a source-to-target ledger:
+
+### PLAN coverage
+
+For each current TREE node/leaf that carries still-useful reasoning/evidence, identify its PLAN location or explicit durable contract/decision reference.
+
+### EXECUTION coverage
+
+For every current implementation leaf identify exactly one EXECUTION row and compare:
+
+- owner;
+- status;
+- real dependencies;
+- result/evidence.
+
+### Decisions
+
+Account for every current material decision ID.
+
+### Evidence
+
+Confirm every project-specific evidence file in Section 3 still exists unchanged in the migration diff unless an explicitly reviewed reason says otherwise.
+
+No V1 source file is deleted until this ledger has no unexplained gap.
+
+## Step 14 — verify and merge
 
 Require:
 
-1. fresh-reader review from the repository alone;
+1. fresh-reader review from repository alone;
 2. `PLAN.md` covers current S&T truth;
-3. `EXECUTION.md` preserves work ownership/status/dependencies/results;
-4. `docs/EXECUTOR_ROUTING.md` still routes every relevant active/maintained leaf family;
-5. no active file requires removed framework runtime;
-6. product contract CI remains meaningful and green;
-7. normal required engineering CI is green;
-8. PR diff contains no runtime/product behavior change unless separately justified;
-9. squash merge;
-10. verify `main` and required main CI after merge.
+3. `EXECUTION.md` preserves ownership/status/dependencies/results;
+4. `DECISIONS.md` preserves material rationale;
+5. `docs/EXECUTOR_ROUTING.md` still routes relevant maintained leaf families;
+6. no active file requires removed framework runtime;
+7. root user/agent docs teach only the 2.0 authority model;
+8. product contract CI remains meaningful and green;
+9. normal required engineering CI is green;
+10. PR diff contains no runtime/product behavior change unless separately justified;
+11. squash merge;
+12. verify `main`, required main CI and open-PR state after merge.
 
 ---
 
-# 8. Migration acceptance checklist
+# 10. Migration acceptance checklist
 
 The migration is complete only when all are true:
 
-- [ ] final pre-migration execution work was not lost or reset;
-- [ ] all latest implementation leaves are accounted for;
-- [ ] all unfinished owner assignments are preserved;
-- [ ] all valid completed results remain represented;
+- [ ] final pre-migration execution work was not lost/reset;
+- [ ] final `7.4` accepted SHA/result/evidence is represented durably;
+- [ ] every latest implementation leaf is accounted for exactly once in the execution map;
+- [ ] every unfinished owner assignment, if any, is preserved;
+- [ ] every valid completed result remains represented;
 - [ ] real execution prerequisites are preserved;
-- [ ] material decisions remain available;
-- [ ] `docs/EXECUTOR_ROUTING.md` remains project-owned and authoritative for context routing only;
+- [ ] every material decision remains available;
+- [ ] future backlog remains available;
+- [ ] baseline provenance remains available;
+- [ ] all project-specific acceptance/audit/reclosure evidence files from Section 3 remain available;
+- [ ] `docs/EXECUTOR_ROUTING.md` remains project-owned context routing only;
 - [ ] product/data/technical/test/security contracts are unchanged unless explicitly reviewed;
-- [ ] root project rules outside the bounded ST Planner block are preserved;
+- [ ] project rules outside the bounded ST Planner block are preserved or deliberately translated;
+- [ ] root README/entry docs no longer teach old planner authorities;
 - [ ] no V1 framework checker/validator/state machine is required to continue work;
 - [ ] no global freeze or implementation-authorization flag exists;
 - [ ] generic continuation cannot silently become another Chat N;
+- [ ] root `STATUS.yaml` is projection-only in first migration;
 - [ ] Planning Docs CI no longer enforces obsolete planner schemas/counts;
 - [ ] useful CI/security hygiene formerly mixed into planner scripts still exists in normal project tooling;
-- [ ] fresh chat can recover using repository truth without old chat history;
-- [ ] `main` CI is green after squash merge.
+- [ ] fresh chat can recover from repository truth without old chat history;
+- [ ] required CI is green after squash merge;
+- [ ] no unexpected open PR remains after merge.
 
 ---
 
-# 9. Rollback / safety
+# 11. Rollback / safety
 
-This migration must be a single focused PR with no product behavior change.
+This migration must be a focused process/documentation/tooling PR with no product runtime behavior change.
 
-Before merge, rollback is simply abandoning the branch/PR.
+Before merge, rollback is abandoning the branch/PR.
 
-After merge, Git history preserves the complete V1 state. Do not create a permanent archive directory of the old framework files unless a concrete recovery need is demonstrated; that would recreate duplicate live authorities.
+After merge, Git history preserves the complete V1 state.
+
+Do not create a permanent archive directory of old framework files merely for comfort; that recreates duplicate live authorities. Instead, keep project-specific durable evidence and rely on Git history for superseded framework/process chronology.
+
+If migration verification exposes an unexplained gap, stop and keep the V1 source file until the gap is resolved. “Cleanup” is never a reason to accept uncertain information loss.
 
 ---
 
-# 10. One-line operating principle
+# 12. One-line operating principle
 
-> Preserve Market Flow US truth and execution evidence; remove only ST Planner's old management machinery.
+> Preserve every Market Flow US fact, decision, task result, future request and useful proof; remove only ST Planner's obsolete management machinery.
