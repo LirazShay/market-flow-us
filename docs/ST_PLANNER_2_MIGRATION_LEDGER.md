@@ -22,12 +22,13 @@ Migration baseline:
 
 | Source truth | Destination | State in this migration |
 |---|---|---|
-| `.planning/EXECUTION.yaml` task IDs, owner, status, result | `.planning/EXECUTION.md` | **RECONCILED in this checkpoint** |
-| `.planning/TREE.yaml` real implementation-leaf dependencies | `.planning/EXECUTION.md -> Depends on` | **RECONCILED in this checkpoint** |
-| `.planning/GOAL.md` outcome/current reality/constraints | `.planning/PLAN.md` | pending next migration checkpoint |
-| `.planning/TREE.yaml` Strategy/Tactic/assumptions/necessity/sufficiency/success evidence | `.planning/PLAN.md` | pending next migration checkpoint |
-| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | pending content review before V1 review retirement |
-| `.planning/DECISIONS.md` material decisions | `.planning/DECISIONS.md` | preserve; detailed review pending |
+| `.planning/EXECUTION.yaml` task IDs, owner, status, result | `.planning/EXECUTION.md` | **RECONCILED** |
+| `.planning/TREE.yaml` real implementation-leaf dependencies | `.planning/EXECUTION.md -> Depends on` | **RECONCILED** |
+| `.planning/GOAL.md` outcome/current reality/constraints | `.planning/PLAN.md` | **RECONCILED** |
+| `.planning/TREE.yaml` Strategy/Tactic/assumptions/necessity/sufficiency/success evidence | `.planning/PLAN.md` | **RECONCILED** |
+| material `.planning/REVIEWS.md` findings not already durable elsewhere | `.planning/PLAN.md` / `.planning/DECISIONS.md` / durable product contract | **RECONCILED for material current findings; historical review file not yet retired** |
+| `.planning/DECISIONS.md` material decisions | `.planning/DECISIONS.md` | **AUDITED: durable decisions preserved; D-US-017 retired as V1 ceremony-only; D-US-048 corrected to current history/authority model** |
+| root `STATUS.yaml` | root `STATUS.yaml` | **MIGRATED to non-authoritative projection sourced from PLAN/EXECUTION** |
 | root `AGENTS.md` project-owned rules outside bounded ST Planner block | rewritten root `AGENTS.md` | pending; must preserve project rules |
 | `.planning/BACKLOG.md` | same file | preserve unchanged in first migration |
 | `.planning/BASELINE_PROVENANCE.md` | same file | preserve unchanged |
@@ -37,6 +38,22 @@ Migration baseline:
 | `.github/workflows/planning-docs-ci.yml` product-contract checks | refactored same workflow | pending; V1 state-machine checks must be removed |
 | active V1 references in README/START_HERE/FIRST_RUN_ACCEPTANCE/EXECUTOR_ROUTING/docs | ST Planner 2.0 authority wording | pending repository-wide active-reference sweep |
 | framework-owned V1 runtime/install/validators | deletion after replacement review | **not yet eligible for deletion** |
+
+## Planning reconciliation proof
+
+- `.planning/PLAN.md` owns the current desired outcome, current reality, constraints/non-goals, root Strategy/Tactic, all nine necessary capability branches, S&T necessity/sufficiency, material assumptions, success evidence and completion boundary.
+- All **44** implementation leaf IDs represented by the source TREE are represented exactly once in the PLAN and exactly once in `.planning/EXECUTION.md`.
+- Execution dependencies are intentionally not duplicated into PLAN; `.planning/EXECUTION.md` is their sole live authority.
+- Material review corrections already made durable in TREE/DECISIONS/contracts were carried into PLAN, including returned-position semantics, sharing-safe AI export, Replay fresh-run isolation/zero-preroll, Basic BUY trust boundaries and final code-audit/reclosure requirements.
+- V1 process states such as freeze, implementation authorization, review-cycle state, allocation state and handoff state were not promoted into PLAN.
+
+## Decision reconciliation proof
+
+- Durable product/architecture/security/verification/operational decisions `D-US-001`–`D-US-016` and `D-US-018`–`D-US-048` remain represented.
+- `D-US-017` was removed from live decisions because it described only V1 planning ceremony (`TREE -> review -> allocation -> freeze/authorization`) and carried no independent product/architecture/operational invariant.
+- Decision IDs were not renumbered.
+- `D-US-048` was corrected so the historical requested sequence includes the completed `7.6.1–7.6.5` staged pre-acceptance audit before `7.4`; it no longer pretends to own dependency truth.
+- `.planning/DECISIONS.md` now explicitly defers S&T truth to PLAN and execution truth to EXECUTION.
 
 ## Execution reconciliation proof
 
@@ -124,4 +141,4 @@ Checks performed:
 
 ## Deletion gate
 
-**CLOSED.** This checkpoint intentionally does not delete any V1 source. The gate may open only after PLAN/DECISIONS/AGENTS/CI/docs mappings above are completed and reviewed.
+**CLOSED.** Replacement planning/execution/decision authority now exists and is reconciled, but V1 source deletion remains blocked until AGENTS, CI/hygiene and active-document reference migrations are completed and reviewed.
