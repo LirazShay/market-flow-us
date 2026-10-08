@@ -1,4 +1,22 @@
-schema_version: 2
+schema_version: 3
+role: projection
+non_authoritative: true
+
+# ST Planner 2.0 authority model:
+#   PLAN.md      = planning / S&T truth
+#   EXECUTION.md = execution task / owner / status / dependency / result truth
+#   STATUS.yaml  = non-authoritative projection only
+#
+# Compatibility consumers may read this file for navigation, but they must not
+# treat it as an independent source of execution truth. Update EXECUTION.md
+# first, then refresh this projection from that authoritative state.
+
+source_of_truth:
+  product: "LirazShay/market-flow-us main"
+  planning: ".planning/PLAN.md"
+  execution: ".planning/EXECUTION.md"
+  decisions: ".planning/DECISIONS.md"
+
 phase: implementation
 overall_status: in_progress
 
@@ -7,11 +25,26 @@ current:
   node: "7.4"
   title: "Final target-machine/provider acceptance"
   status: pending
-authority:
-  product_truth: "LirazShay/market-flow-us main"
-  planning_state: ".planning/STATUS.yaml"
-  execution_allocation: ".planning/EXECUTION.yaml"
-  executor_handoff: ".planning/EXECUTOR_HANDOFF.md"
+  projected_from: ".planning/EXECUTION.md"
+
+execution_projection:
+  implementation_leaves_total: 44
+  done: 43
+  pending: 1
+  in_progress: 0
+  blocked: 0
+  current_chat: 28
+  current_node: "7.4"
+  projected_from: ".planning/EXECUTION.md"
+
+next_pointer:
+  task: "7.4"
+  owner: "Chat 28"
+  status: pending
+  action: "Continue final target-machine/provider acceptance from the preserved acceptance checkpoint state."
+  projected_from: ".planning/EXECUTION.md"
+
+navigation:
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
@@ -26,32 +59,12 @@ authority:
   replay_hardening_contract: "docs/REPLAY_HARDENING.md"
   replay_buy_extension_review: ".planning/REPLAY_BUY_EXTENSION_REVIEW.md"
 
-planning_completion:
-  file_audit_and_change_summary: pass
-  durable_us_contracts_and_decisions: pass
-  new_st_tree: pass
-  st_tree_review: pass
-  second_pass_adversarial_review: pass
-  final_planning_review: pass
-  external_user_from_zero_review: pass
-  plan_freeze: pass
-  execution_allocation: pass
-  handoff_verification: pass
-  implementation_authorization: pass
-  ibkr_order_extension: implementation
-  ibkr_order_durable_contract: pass
-  ibkr_order_tree_freeze: pass
-  market_replay_extension: implementation
-  market_replay_durable_contract: pass
-  market_replay_tree_freeze: pass
-  replay_hardening_buy_extension: pass
-  pre_acceptance_extension_audit_replan: pass
+acceptance_projection:
+  task: "7.4"
+  candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
+  checkpoint_summary: "FR-0 PASS; FR-1 PASS; later checkpoints remain pending/user-dependent according to the acceptance ledger."
+  authority:
+    runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
+    execution_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
-execution:
-  chats_total: 28
-  implementation_leaves_total: 44
-  current_chat: 28
-  current_node: "7.4"
-  final_acceptance_node: "7.4"
-
-blockers: []
+blockers_projection: []

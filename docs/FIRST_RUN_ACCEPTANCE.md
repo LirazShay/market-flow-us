@@ -6,19 +6,27 @@
 
 אין להעתיק או לשמור בדוחות credentials, cookies, caller tokens, authorization/session data, account identifiers, full authenticated responses, raw authenticated responses או private browser state.
 
-## FR-0 — Freeze exact candidate
+## Authority
+
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` הוא authority ל־exact runtime candidate הנוכחי ולסדר הקבלה.
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md` הוא checkpoint/evidence ledger.
+- `.planning/EXECUTION.md` הוא execution owner/status/dependency/result truth; `STATUS.yaml` הוא projection בלבד.
+- `.planning/PLAN.md` leaf `7.4` הוא planning/success-evidence truth של final target-machine/provider acceptance.
+- טקסט היסטורי ב־planning/evidence files שמצביע על TREE/STATUS/HANDOFF ישן או על candidate ישן אינו מחליף את ה־runbook הנוכחי.
+
+## FR-0 — Pin exact candidate
 
 זהו checkpoint של release/GitHub truth, לא פעולה על מחשב היעד. לפני שמבקשים מהמשתמש להתקין או לבדוק משהו, המאמת קורא fresh `main` ומוודא:
 
-- TREE `9.5` סגור ו־`STATUS.yaml` / `.planning/STATUS.yaml` מצביעים על TREE `7.4`;
-- `.planning/EXECUTOR_HANDOFF.md` מצמיד את ה־post-branch-9 product candidate המדויק;
-- ה־candidate אינו ה־historical post-branch-8 SHA;
+- `.planning/EXECUTION.md` משאיר את task `7.4` כעבודת final acceptance של owner הנוכחי;
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` מצמיד exact product SHA אחד;
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md` מתייחס לאותו candidate ומכיל את checkpoint state הקיים;
 - commits מאוחרים יותר ב־`main` שהם planning/docs/metadata בלבד אינם מחליפים את ה־candidate;
 - אין PR release פתוח או product work לא ממוזג שמחליף את ה־candidate.
 
-PASS: ה־post-branch-9 SHA המדויק מה־handoff מוקפא כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
+PASS: ה־exact SHA מה־final acceptance runbook מתקבל כ־accepted product SHA להמשך המסלול. אין דרישת checkout מקומי ב־FR-0.
 
-FAIL: זהות ה־candidate אינה חד־משמעית, `9.5` אינו סגור, ה־status כבר לא מאשר `7.4`, ה־handoff עדיין מצביע על candidate של Branch 8, או קיים product/release work שמחליף אותו. עצור לפני FR-1.
+FAIL: זהות ה־candidate אינה חד־משמעית, runbook/execution ledger אינם מסכימים, task `7.4` כבר אינו final acceptance הנוכחי, או קיים product/release work שמחליף את ה־candidate. עצור לפני FR-1.
 
 ## FR-1 — Host prerequisite preflight
 
@@ -37,14 +45,14 @@ powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"
 
 ## FR-2 — Repository acquisition/update
 
-אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, השתמש בו רק אם ה־working tree נקי. לאחר מכן pin את ה־checkout ל־accepted SHA שהוקפא ב־FR-0; אין דרישה שה־branch יהיה `main`, ו־`main` מאוחר יותר עם metadata בלבד אינו ה־product candidate.
+אם זו התקנה ראשונה, clone את `LirazShay/market-flow-us`. אם הריפו כבר קיים, השתמש בו רק אם ה־working tree נקי. לאחר מכן pin את ה־checkout ל־accepted SHA שנקבע ב־FR-0; אין דרישה שה־branch יהיה `main`, ו־`main` מאוחר יותר עם metadata בלבד אינו ה־product candidate.
 
-בריפו קיים, קח את ה־SHA המדויק מ־`.planning/EXECUTOR_HANDOFF.md` ואז הרץ:
+קח את ה־SHA המדויק מ־`.planning/FINAL_ACCEPTANCE_RUNBOOK.md` ואמת אותו מול `.planning/FINAL_ACCEPTANCE_EXECUTION.md`, ואז הרץ:
 
 ```text
 git fetch origin
 git status --short
-git switch --detach <accepted-post-branch-9-SHA>
+git switch --detach <accepted-final-candidate-SHA>
 git status --short
 git rev-parse HEAD
 ```
@@ -54,7 +62,7 @@ git rev-parse HEAD
 PASS:
 
 - `git status --short` ריק לפני ואחרי החלפת ה־candidate;
-- `HEAD` שווה בדיוק ל־accepted SHA מ־`.planning/EXECUTOR_HANDOFF.md`;
+- `HEAD` שווה בדיוק ל־accepted SHA מה־final acceptance runbook;
 - detached checkout תקין ומועדף ל־acceptance; אין צורך להיות על branch `main`;
 - אין substitution שקט ל־SHA מאוחר יותר של metadata בלבד.
 
@@ -270,6 +278,31 @@ PENDING_EXTERNAL_PERMISSION
 
 זה מצב תקין של external evidence ואינו מוחלף ב־synthetic success. אם permission כן קיימת, כל real-order verification חייב להיות user-initiated, bounded, SHA-bound ו־provider-compliant.
 
+## FR-11C — Integrated current-Detail BUY compatibility
+
+הפעל את ה־BUY-enabled composition לפי `docs/BASIC_BUY_INTEGRATION.md` כאשר מצב ההרצה הוא DRY_RUN כברירת מחדל.
+
+PASS דורש את המסלול:
+
+```text
+current Detail
+→ prepare immutable BUY ticket
+→ trusted local confirmation
+→ existing order-service DRY_RUN path
+```
+
+ומוכיח:
+
+- current Detail בלבד זכאי ל־BUY;
+- Node פותר את ה־authoritative current `Symbol` ומחזיק quantity/mode/fixed `STK/USD/SMART BUY MKT DAY` intent;
+- prepare אינו מבצע provider/order mutation;
+- browser code אינו מקבל את sidecar caller token ואין generic Viewer order proxy;
+- confirmation דורש ticket/nonce/origin protections ו־explicit human confirmation;
+- duplicate click/response retry משתמשים באותו `requestId` ולא יוצרים logical order חדש;
+- DRY_RUN אינו מגיע ל־provider submit.
+
+אם real LIVE permission קיימת והמשתמש בוחר במפורש לבצע real-order verification, אותם existing LIVE/provider gates חלים. אחרת real submission נשאר בדיוק `PENDING_EXTERNAL_PERMISSION`.
+
 ## FR-12 — Authenticated closed/static-market acceptance
 
 הכן את ה־SHA-bound live gate:
@@ -280,7 +313,7 @@ PREPARE_LIVE_VERIFICATION.cmd
 
 הפעל את ה־bookmarklet שנוצר בעמוד הספק המחובר.
 
-PASS של ה־base gate מחמיר יותר מהמינימום של TREE: הוא דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
+PASS של ה־base gate דורש לפחות 20 complete committed provider cycles ולפחות 60 שניות, ובשוק סגור/סטטי ערכים זהים ברצף חוקיים. בנוסף נדרשים validation, universe revision handling, Current/Security/History, bounded Scanner, ownership/status ו־clean stop, עם sanitized SHA-bound report.
 
 ל־FR-12 נדרש:
 
@@ -302,14 +335,14 @@ movement.code = "NO_MARKET_MOVEMENT_OBSERVED"
 
 ### PRE-MARKET READINESS checkpoint
 
-אם FR-0..FR-12 ירוקים, כולל FR-11A ו־FR-11B, רשום:
+אם FR-0..FR-12 ירוקים, כולל FR-11A, FR-11B ו־FR-11C, רשום:
 
 ```text
 PRE-MARKET READINESS = PASS
 FR-13 = PENDING MARKET MOVEMENT
 ```
 
-`PENDING_EXTERNAL_PERMISSION` עבור real-order placement אינו מבטל את PRE-MARKET READINESS כאשר deterministic order acceptance ו־real CPGW session compatibility ירוקים.
+`PENDING_EXTERNAL_PERMISSION` עבור real-order placement אינו מבטל את PRE-MARKET READINESS כאשר deterministic order acceptance, real CPGW session compatibility ו־integrated BUY DRY_RUN proof ירוקים.
 
 שמור את ה־sanitized FR-12 report ואת ה־accepted candidate SHA.
 
@@ -365,10 +398,11 @@ movement.status = "FAIL"
 
 רשום בקיצור:
 
-- accepted post-branch-9 SHA המדויק מ־`.planning/EXECUTOR_HANDOFF.md`;
-- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H ו־FR-11A/FR-11B;
+- accepted final runtime SHA המדויק מ־`.planning/FINAL_ACCEPTANCE_RUNBOOK.md`;
+- סטטוס FR-0..FR-13, כולל FR-8A..FR-8H ו־FR-11A/FR-11B/FR-11C;
 - focused deterministic Replay acceptance status;
 - deterministic IBKR order-service acceptance status;
+- integrated current-Detail BUY DRY_RUN status;
 - real CPGW session compatibility status;
 - real-order evidence: `PASS` רק אם בוצע בפועל עם permission וביוזמת המשתמש; אחרת בדיוק `PENDING_EXTERNAL_PERMISSION`;
 - אם נעשה two-pass run: FR-12 pre-market report + FR-13 market-open report על אותו accepted SHA;
@@ -383,7 +417,7 @@ movement.status = "FAIL"
 - אין blocking defect פתוח;
 - `main` CI ירוק אחרי כל fix שנדרש במהלך acceptance.
 
-רק לאחר שכל success evidence של TREE `7.4` ירוק וה־PR/merge/main-green/open-PR closure הושלם, מותר להכריז על completion של המוצר.
+רק לאחר שכל success evidence של `.planning/PLAN.md` leaf `7.4` ירוק, `.planning/FINAL_ACCEPTANCE_EXECUTION.md` משקף את כל ה־checkpoints הנדרשים, task `7.4` יכול לעבור ל־`done` ב־`.planning/EXECUTION.md`, וה־PR/merge/main-green/open-PR closure הושלם — מותר להכריז על completion של המוצר.
 
 ## Troubleshooting routing
 
@@ -391,8 +425,11 @@ movement.status = "FAIL"
 
 מסמכים משלימים:
 
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` — exact candidate + execution order authority;
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md` — checkpoint/evidence ledger;
 - `docs/MARKET_REPLAY.md` — Market Recording + Replay operator/contract truth;
 - `docs/IBKR_ORDER_SERVICE_OPERATOR.md` — startup, caller-token handling, CPGW ו־order acceptance;
+- `docs/BASIC_BUY_INTEGRATION.md` — integrated Detail BUY trust/confirmation contract;
 - `docs/LOCAL_FAKE_ACCEPTANCE.md` — פרופילי Fake Leumi/workload, כולל Demo Buy/AI;
 - `docs/LIVE_VERIFICATION.md` — authenticated SHA-bound gate;
 - `docs/USER_GUIDE.md` — שימוש שוטף במוצר;

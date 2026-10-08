@@ -11,11 +11,16 @@ authenticated Bank Leumi U.S. market page
 → browser Recorder / Producer Bridge
 → loopback WebSocket
 → localhost Node.js service
-→ native DuckDB schema v3
+→ native DuckDB schema v4
 → Current / Security Detail / History / Dynamic SQL Scanner
+→ Demo Buy / AI Investigation
 ```
 
-אין backend ענן ואין מסד production בבעלות הדפדפן. ה־DuckDB המקומי הוא מקור הסמכות של המוצר לאחר commit תקין.
+Market Recording + Replay הוא מסלול opt-in נפרד שמשתמש ב־recordings שנבנו מ־validated provider snapshots ומזרים אותם חזרה דרך מסלול ה־producer/service הרגיל בלי להפוך את השרת ל־Replay-aware.
+
+IBKR order execution נשאר boundary מקומי נפרד. קיימת גם אינטגרציית BUY מצומצמת מ־current Detail דרך launcher ייעודי, immutable ticket ו־trusted local confirmation. ה־normal launch, Scanner, Demo Buy, AI Investigation ו־Replay אינם הופכים למנוע מסחר אוטומטי.
+
+אין backend ענן ואין מסד production בבעלות הדפדפן. ה־DuckDB המקומי הוא מקור הסמכות של market analysis לאחר commit תקין.
 
 ## התחלה מהירה
 
@@ -60,19 +65,21 @@ NEW_TRADING_DAY.cmd
 npm run db:new-day
 ```
 
-ברירת המחדל מעבירה את מסד היום הקודם ל־`data/archive/`, יוצרת active DB חדש ב־schema v3 ומשמרת את `scanner_saved_queries`. הפעולה מסרבת להתקדם אם קיימת session שמסומנת `running`, ובכשל בזמן החלפת הקבצים היא מנסה להחזיר את המסד הקודם למקומו.
+ברירת המחדל מקבלת active DB תקין ב־schema v3 או v4, מעבירה את מסד היום הקודם ל־`data/archive/`, יוצרת active DB חדש ב־schema v4 ומשמרת את `scanner_saved_queries`. Market/Demo Buy evidence אינו מועתק ליום החדש. הפעולה מסרבת להתקדם אם קיימת session שמסומנת `running`, ובכשל בזמן החלפת הקבצים היא מנסה להחזיר את המסד הקודם למקומו.
 
 אין למחוק ידנית את `data/market-flow-us.duckdb` כחלק מ־rollover רגיל.
 
 ## שכבות acceptance
 
-### 1. Local Fake Leumi — ללא authentication
+### 1. Deterministic local proof
 
 ```text
+RUN_TESTS.cmd
 RUN_LOCAL_ACCEPTANCE.cmd
+RUN_IBKR_ORDER_ACCEPTANCE.cmd
 ```
 
-מוכיח דטרמיניסטית static responses, moving values, membership change, provider failure/recovery ו־restart דרך ה־runtime/service/DuckDB הרגילים. לפרטים: `docs/LOCAL_FAKE_ACCEPTANCE.md`.
+הבדיקות מוכיחות את ה־runtime/service/DuckDB הרגילים, Demo Buy + AI Investigation, Replay/order paths הרלוונטיים ו־sanitized failure/recovery behavior ללא תלות ב־provider permission אמיתי. לפרטי המסלול הסדרתי המלא ראה `docs/FIRST_RUN_ACCEPTANCE.md`.
 
 ### 2. Authenticated closed/static provider compatibility
 
@@ -111,9 +118,18 @@ movement.status = "PENDING"
 
 ## גבול release
 
-ה־release מתקדם דרך deterministic offline proof, Local Fake Leumi acceptance, cleanup תפעולי ולבסוף target-machine acceptance. השלמה כוללת דורשת את חבילת `TREE 7.4`: daily-bounded target-machine performance, new-day lifecycle proof, authenticated static compatibility ו־market-open movement proof.
+ה־release מתקדם דרך deterministic repository proof, target-machine Local Fake/Demo Buy/AI/Replay/order compatibility, daily DB lifecycle, authenticated static compatibility ולבסוף market-open movement evidence על **אותו exact runtime candidate**.
 
-`STATUS.yaml` ו־`.planning/EXECUTION.yaml` הם מקור האמת היחיד ל־execution pointer ולמצב העדכני.
+מקורות האמת תחת ST Planner 2.0 הם:
+
+```text
+.planning/PLAN.md      = planning / S&T truth
+.planning/EXECUTION.md = task / owner / status / dependency / result-evidence truth
+.planning/DECISIONS.md = durable supporting decisions
+STATUS.yaml            = non-authoritative navigation projection only
+```
+
+ה־exact final-acceptance runtime candidate וה־checkpoint ledger נמצאים ב־`.planning/FINAL_ACCEPTANCE_RUNBOOK.md` וב־`.planning/FINAL_ACCEPTANCE_EXECUTION.md`. Planning/docs commits מאוחרים יותר אינם מחליפים candidate אוטומטית.
 
 ## החלטות מוצר מרכזיות
 
@@ -122,22 +138,30 @@ movement.status = "PENDING"
 - לשמור append-only history בתוך יום המסחר הפעיל + `latest` סמכותי.
 - לשמור את Scanner כמשטח strategy/analysis, כולל saved queries.
 - ה־staged candidate הוא SQL רגיל וניתן לעריכה, לא Strategy Engine חדש.
-- Automated order execution / IBKR מחוץ להיקף migration זה.
+- Demo Buy הוא validation evidence, לא simulated execution.
+- AI Investigation הוא export מקומי sharing-safe ו־anti-hindsight, בלי cloud/API dependency אוטומטי.
+- Replay נשאר opt-in ומחוץ ל־normal live authority.
+- IBKR execution נשאר sidecar נפרד עם DRY_RUN כברירת מחדל ו־LIVE gates בלתי תלויים; Basic BUY הוא explicit Detail-only integration ולא strategy execution engine.
 - performance authority כבד שייך למחשב היעד, לא ל־GitHub-hosted CI.
 
 ## מסמכי אמת עיקריים
 
 - `AGENTS.md`
-- `STATUS.yaml`
-- `.planning/STATUS.yaml`
-- `.planning/EXECUTION.yaml`
-- `.planning/TREE.yaml`
+- `.planning/PLAN.md`
+- `.planning/EXECUTION.md`
+- `.planning/DECISIONS.md`
+- `STATUS.yaml` — projection בלבד
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
+- `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
 - `docs/PRODUCT_REQUIREMENTS.md`
 - `docs/PRODUCT_SPEC.md`
 - `docs/DATA_CONTRACT.md`
 - `docs/TECHNICAL_SPEC.md`
 - `docs/SCANNER_SQL_GUIDE.md`
 - `docs/TEST_STRATEGY.md`
+- `docs/MARKET_REPLAY.md`
+- `docs/IBKR_ORDER_SERVICE.md`
+- `docs/BASIC_BUY_INTEGRATION.md`
 - `docs/LOCAL_FAKE_ACCEPTANCE.md`
 - `docs/LIVE_VERIFICATION.md`
 

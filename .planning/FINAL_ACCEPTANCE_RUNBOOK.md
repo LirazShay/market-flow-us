@@ -1,21 +1,23 @@
 # Chat 28 — Final Acceptance Runbook
 
-This is the authoritative execution wrapper for TREE `7.4` final target-machine/provider acceptance.
+This is the authoritative execution wrapper for task `7.4` final target-machine/provider acceptance.
 
 ## Authority
 
 - GitHub `main` is repository truth.
-- TREE `7.4` `success_evidence` is definition-of-done.
+- `.planning/PLAN.md` leaf `7.4` and its success evidence are the planning definition-of-done.
+- `.planning/EXECUTION.md` owns task `7.4` owner/status/dependency/result truth.
 - `.planning/FINAL_ACCEPTANCE_EXECUTION.md` is the checkpoint/evidence ledger.
-- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` remains the detailed FR-1..FR-14 procedure only.
-- This runbook is the authority for the current acceptance candidate. Historical acceptance text that points FR-0/FR-2 at TREE `9.5`, `.planning/EXECUTOR_HANDOFF.md`, Chat 25/27 or an older SHA is superseded by this file.
+- `docs/FIRST_RUN_ACCEPTANCE.md` is the active detailed FR-0..FR-14 procedure.
+- `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` is preserved as historical planning/provenance evidence only; any older candidate/owner/TREE/HANDOFF wording there is superseded by this runbook and the active guide.
+- This runbook is the authority for the current acceptance candidate. Historical acceptance text that points FR-0/FR-2 at old TREE state, `.planning/EXECUTOR_HANDOFF.md`, Chat 25/27 or an older SHA is not live authority.
 
 ## Current owner and exact runtime candidate
 
 Current owner:
 
 ```text
-Chat 28 / TREE 7.4
+Chat 28 / task 7.4
 ```
 
 Exact product SHA under acceptance:
@@ -26,7 +28,7 @@ Exact product SHA under acceptance:
 
 Why this SHA:
 
-- it contains the completed pre-acceptance audit runtime fixes from TREE `7.6.2` and `7.6.3`;
+- it contains the completed pre-acceptance audit runtime fixes from tasks `7.6.2` and `7.6.3`;
 - it also contains the later confirmed Replay Host stop-timer lifecycle root fix from PR #73, including deterministic SIGTERM/SIGKILL regression proof;
 - PR #73 was squash-merged to `main`, and the resulting `main` candidate passed Fast CI, Replay CI and the repository's existing Planning Docs CI;
 - no open PR remained after the merge audit;
@@ -42,7 +44,7 @@ Do not substitute:
 
 ## Execution order
 
-Use the existing detailed procedures and PASS semantics in `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` in this order:
+Use the active detailed procedures and PASS semantics in `docs/FIRST_RUN_ACCEPTANCE.md` in this order:
 
 ```text
 FR-0 exact final candidate
@@ -58,13 +60,13 @@ FR-0 exact final candidate
 → FR-10 daily DB lifecycle
 → FR-11A real market-data deployment smoke
 → FR-11B standalone order service + real CPGW session compatibility
-→ integrated Detail BUY DRY_RUN
+→ FR-11C integrated Detail BUY DRY_RUN
 → FR-12 authenticated static/pre-market
 → FR-13 authenticated market-open movement
 → FR-14 final evidence/handoff
 ```
 
-For FR-0 and FR-2 specifically, the exact candidate comes from this runbook and `.planning/FINAL_ACCEPTANCE_EXECUTION.md`, not from historical candidate wording in `.planning/FIRST_RUN_ACCEPTANCE_PLAN.md` or `.planning/EXECUTOR_HANDOFF.md`.
+For FR-0 and FR-2 specifically, the exact candidate comes from this runbook and `.planning/FINAL_ACCEPTANCE_EXECUTION.md`.
 
 Real IBKR LIVE submission is PASS only if real external trading permission exists and the user explicitly initiates it. Otherwise record exactly `PENDING_EXTERNAL_PERMISSION`; deterministic/synthetic proof must never be relabeled as live success.
 

@@ -1,9 +1,0 @@
-version: 2
-plan_state: frozen
-replan_mode: execution_reopen
-current_stage: "implementation"
-current_node: "7.4"
-blockers: []
-next_action: "Chat 28 resumes TREE 7.4 final target-machine/provider acceptance against exact candidate 682f8c8b01e9f68c7f8e159de8b0f233221f1878; FR-0 and FR-1 are PASS, so begin with FR-2 exact-SHA checkout from FINAL_ACCEPTANCE_EXECUTION.md."
-last_review: "R-US-PRE-ACCEPTANCE-CODE-AUDIT-RECLOSURE"
-implementation_authorized: true
