@@ -16,35 +16,37 @@ source_of_truth:
   planning: ".planning/PLAN.md"
   execution: ".planning/EXECUTION.md"
   decisions: ".planning/DECISIONS.md"
+  backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: in_progress
+overall_status: ready_for_new_work
 
 current:
-  chat: 28
-  node: "7.4"
-  title: "Final target-machine/provider acceptance"
-  status: pending
+  chat: null
+  node: null
+  title: "No active allocated execution task"
+  status: none
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
-  implementation_leaves_total: 44
+  active_execution_rows: 43
   done: 43
-  pending: 1
+  pending: 0
   in_progress: 0
   blocked: 0
-  current_chat: 28
-  current_node: "7.4"
+  current_chat: null
+  current_node: null
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "7.4"
-  owner: "Chat 28"
-  status: pending
-  action: "Continue final target-machine/provider acceptance from the preserved acceptance checkpoint state."
+  task: null
+  owner: null
+  status: none
+  action: "Plan and explicitly allocate the next work from fresh main. Backlog items are non-blocking and do not activate themselves."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
+  backlog: "backlog/README.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
@@ -60,10 +62,13 @@ navigation:
   replay_buy_extension_review: ".planning/REPLAY_BUY_EXTENSION_REVIEW.md"
 
 acceptance_projection:
-  task: "7.4"
-  candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
-  checkpoint_summary: "FR-0 PASS; FR-1 PASS; later checkpoints remain pending/user-dependent according to the acceptance ledger."
+  task: "B-US-000"
+  status: backlog_non_blocking
+  candidate_policy: "Select the latest intended runtime candidate from fresh main when the backlog item is explicitly activated."
+  historical_candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
+  checkpoint_summary: "Historical FR-0 and FR-1 evidence is preserved; candidate-bound acceptance is deferred and must be reconciled when B-US-000 is activated."
   authority:
+    backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
     runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
     execution_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
