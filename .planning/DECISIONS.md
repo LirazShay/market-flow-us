@@ -1,6 +1,14 @@
 # Market Flow US Planning Decisions
 
-These are the current durable planning decisions. Later-numbered decisions supersede conflicting details in earlier ones.
+This register preserves durable product, architecture, security, verification and operational decisions. Later-numbered decisions supersede conflicting details in earlier ones.
+
+Authority boundaries under ST Planner 2.0:
+
+- `.planning/PLAN.md` is planning / S&T truth.
+- `.planning/EXECUTION.md` is task / owner / status / dependency / result truth.
+- this file preserves supporting decision rationale and supersession history; it does not own execution state.
+
+`D-US-017` was intentionally retired during the ST Planner 2.0 migration because it described only ST Planner 1.x ceremony (`TREE -> review -> allocation -> freeze/authorization`) and had no independent product, architecture or operational meaning. Decision IDs are not renumbered.
 
 ## D-US-001 — Incremental conversion, not rewrite
 
@@ -18,13 +26,7 @@ Use the authenticated browser's U.S. `ScreenerHulPaging3` endpoint with the extr
 
 **Status:** resolved
 
-After fail-closed source-type validation:
-
-```text
-securityId = String(PaperId)
-```
-
-Never key market-data authority by Symbol, row order, name or PaperIdYatab.
+After fail-closed source-type validation, `securityId = String(PaperId)`. Never key market-data authority by Symbol, row order, name or PaperIdYatab.
 
 ## D-US-004 — One U.S. response maps to one complete cycle
 
@@ -48,7 +50,7 @@ Keep append-only active-day history, full latest replacement, serialized writer,
 
 **Status:** resolved
 
-Promote the documented U.S. source fields and always retain raw data. Do not strengthen empirical meanings such as `Price`, `DailyVolume`, `PaperMarketCap` or `TradeDateTime` without evidence.
+Promote documented U.S. source fields and always retain raw data. Do not strengthen empirical meanings such as `Price`, `DailyVolume`, `PaperMarketCap` or `TradeDateTime` without evidence.
 
 ## D-US-008 — Current/Detail preserve the proven UX model
 
@@ -102,15 +104,9 @@ Use the normal loopback HTTP fake/runtime/service/DuckDB path with deterministic
 
 **Status:** resolved
 
-No live bank CI. Keep a static/closed-market smoke distinct from a final market-open moving-provider gate. Reports remain sanitized and SHA-bound.
+No live-provider CI. Keep a static/closed-market smoke distinct from a final market-open moving-provider gate. Reports remain sanitized and SHA-bound.
 
-## D-US-017 — Planning order is contracts → TREE → review → allocation → freeze
-
-**Status:** resolved
-
-Implementation allocation/authorization follows exhaustive audit, coherent durable contracts, S&T decomposition, necessity/sufficiency/KISS/outside-in reviews and final freeze.
-
-## D-US-018 — Normal-runtime U.S. cutover occurred at TREE 5.2
+## D-US-018 — Normal-runtime U.S. cutover occurred at 5.2
 
 **Status:** resolved
 
@@ -120,22 +116,13 @@ Pre-cutover seams staged U.S. components without breaking normal Browser CI. `5.
 
 **Status:** resolved
 
-Sequence:
-
-```text
-deterministic candidate
-→ reusable local Fake Leumi acceptance
-→ release closure
-→ final target-machine/authenticated acceptance
-```
-
-Synthetic movement never substitutes for real-provider movement; hosted timing never substitutes for target-machine performance.
+Sequence remains deterministic candidate -> reusable local Fake acceptance -> release closure -> final target-machine/authenticated acceptance. Synthetic movement never substitutes for real-provider movement; hosted timing never substitutes for target-machine performance.
 
 ## D-US-020 — Recurring automation speed is an engineering requirement
 
 **Status:** resolved
 
-Remove duplicated/setup/synchronization waste before accepting slow recurring verification. Do not hide avoidable slowness with larger timeouts/retries or weakened proof.
+Remove duplicated setup/synchronization waste before accepting slow recurring verification. Do not hide avoidable slowness with larger timeouts/retries or weakened proof.
 
 ## D-US-021 — One configurable synthetic generator drives fake/load evidence
 
@@ -153,384 +140,201 @@ The production active DB is day-bounded. Prior days may archive; new day starts 
 
 **Status:** resolved
 
-Phase 1 supports manual selected/all/Top-X and session-only Auto All/Top-X observations. Demo Buy itself does not add orders, manual buy price, fills, portfolio state, fees/slippage, sell rules, quantity, liquidity proof or aggregate strategy scoring. Repeated later capture of the same security is valid because observations are not positions.
-
-The later branch-8 standalone IBKR sidecar does not change this Demo Buy invariant.
+Phase 1 supports manual Selected/All/Top-X and session-only Auto All/Top-X observations. Demo Buy itself does not add orders, manual buy price, fills, portfolio state, fees/slippage, sell rules, quantity, liquidity proof or aggregate strategy scoring. Repeated later capture of the same security is valid because observations are not positions. The standalone IBKR sidecar and later Detail BUY integration do not change this invariant.
 
 ## D-US-024 — Demo Buy uses additive schema v4, exact baseline linkage and direct trusted reads
 
 **Status:** resolved
 
-Schema v4 adds only `demo_buy_captures` and `demo_buy_items` on top of proven v3 market authority.
+Schema v4 adds only `demo_buy_captures` and `demo_buy_items` on top of proven v3 market authority. Each item links `(buy_cycle_id, security_id) -> history(cycle_id, security_id)`; no user-supplied buy price or persisted horizon results exist.
 
-Each item links:
+`buy_cycle_id` is both the exact baseline cycle and the capture-time authority watermark because market commits and capture share the serialized writer. For horizon H, the future row is the first row for the same security satisfying `cycle_id > buy_cycle_id` and `collected_at_ms >= captured_at_ms + H`, ordered by `collected_at_ms ASC, cycle_id ASC`.
 
-```text
-(buy_cycle_id, security_id)
-→ history(cycle_id, security_id)
-```
-
-No user-supplied buy price or persisted horizon results exist.
-
-`buy_cycle_id` is also the capture-time authority watermark because market commits and capture share the serialized writer.
-
-For horizon H, the future row is the first row satisfying:
-
-```text
-same security_id
-AND cycle_id > buy_cycle_id
-AND collected_at_ms >= captured_at_ms + H
-ORDER BY collected_at_ms ASC, cycle_id ASC
-LIMIT 1
-```
-
-No background horizon updater/materialized result schema/new market DB/new market transport is added before evidence requires it.
+No background horizon updater, materialized result schema, new market DB or new market transport is added before evidence requires it.
 
 ## D-US-025 — Demo Buy + AI Investigation precede final target-machine acceptance
 
-**Status:** resolved; sequence extended by D-US-039, D-US-040 and D-US-048
+**Status:** resolved; sequencing later extended by D-US-039, D-US-040 and D-US-048
 
-Completed migration leaves through `7.3` remain historical evidence. The prior sequence implemented Demo Buy/AI, then `7.5`, then began `7.4`.
-
-Branch `8` was later requested before `7.4` completed, branch `9` Market Recording + Replay was requested before `7.4` resumed, and the later hardening/basic-BUY extension is now owned by D-US-048.
+Completed migration leaves through `7.3` remain historical evidence. Demo Buy/AI were implemented and reclosed before final target-machine acceptance; later branch 8, branch 9, hardening, Basic BUY and the final pre-acceptance code audit were also inserted before `7.4` without invalidating the completed evidence they did not supersede.
 
 ## D-US-026 — Capture preserves original Scanner meaning under bounded provenance
 
 **Status:** resolved
 
-Selection is source-row-first:
+Selection is source-row-first: Selected / All / first X source rows -> validate every chosen identity -> browser dedupe by first chosen canonical ID -> preserve original 1-based `resultRank`. Node requires unique ordered payload and never silently repairs it.
 
-```text
-Selected / All / first X source rows
-→ validate every chosen identity
-→ browser dedupe by first chosen canonical ID
-→ preserve original 1-based resultRank
-```
+Authoritative bounds remain:
 
-Node requires unique ordered payload and never silently repairs it.
+- items <= 5000;
+- source SQL <= 1 MiB UTF-8;
+- context source rows <= 50;
+- retained columns <= 64 total, canonical identity mandatory;
+- textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping;
+- serialized context JSON <= 256 KiB UTF-8.
 
-Authoritative bounds are in `docs/DEMO_BUY_PROTOCOL_LIMITS.md`:
-
-```text
-items <= 5000
-source SQL <= 1 MiB UTF-8
-context source rows <= 50
-retained columns <= 64 total, canonical identity mandatory
-textual/serialized cell <= 128 UTF-8 bytes after deterministic clipping
-serialized context JSON <= 256 KiB UTF-8
-```
-
-Node cross-checks every selected position <=50 against the retained context position+identity. Scanner may remain usable when a generation is not Demo-Buy-capturable; capture fails visibly rather than silently changing evidence.
+Node cross-checks every selected position <=50 against retained context position+identity. Scanner may remain usable when a generation is not Demo-Buy-capturable; capture fails visibly rather than silently changing evidence.
 
 ## D-US-027 — Lost capture ACK is unknown, not failure
 
 **Status:** resolved
 
-Capture outcomes are:
-
-```text
-CONFIRMED_COMMITTED
-CONFIRMED_REJECTED
-ACKNOWLEDGEMENT_UNKNOWN
-```
-
-Unknown acknowledgement is never auto-replayed. Recovery is explicit reconnect/relaunch + Demo Buy refresh before another capture. Phase 1 adds no durable capture idempotency subsystem solely for this rare local race.
-
-Per-connection FIFO/shared writer remain intact; `capturedAtMs` is assigned only inside the actual serialized capture operation.
+Capture outcomes are `CONFIRMED_COMMITTED`, `CONFIRMED_REJECTED` or `ACKNOWLEDGEMENT_UNKNOWN`. Unknown acknowledgement is never auto-replayed. Recovery is explicit reconnect/relaunch + Demo Buy refresh before another capture; no durable capture-idempotency subsystem is added solely for this rare local race. Per-connection FIFO/shared writer remain intact and `capturedAtMs` is assigned only inside the serialized capture operation.
 
 ## D-US-028 — AI Investigation is local anti-hindsight forensic export
 
 **Status:** resolved
 
-No AI provider/API key/cloud upload/automatic SQL mutation.
+No AI provider/API key/cloud upload/automatic SQL mutation. For one Demo Buy target the pack contains exact query, bounded Scanner context-derived evidence, prediction-time target history, exact baseline, post-capture history, trusted horizon outcomes, field guide and disciplined prompt.
 
-For one Demo Buy target the pack contains exact query, bounded original Scanner context-derived evidence, prediction-time target history, exact baseline, post-capture history, trusted horizon outcomes, field guide and disciplined prompt.
-
-Prediction-time authority requires `cycle_id <= buy_cycle_id`; outcome evidence requires `cycle_id > buy_cycle_id`. Future facts may explain outcome and generate hypotheses but may never be presented as original predictive inputs.
-
-Targets outside retained Top-50 remain investigable with `targetInScannerContext=false` and explicit limits on peer reconstruction.
-
-Exporter writes atomically under a controlled ignored local root and never mutates DuckDB.
+Prediction-time authority requires `cycle_id <= buy_cycle_id`; outcome evidence requires `cycle_id > buy_cycle_id`. Future facts may explain outcome and generate hypotheses but may never be presented as original predictive inputs. Targets outside retained Top-50 remain investigable with `targetInScannerContext=false`. Export is atomic under a controlled ignored local root and never mutates DuckDB.
 
 ## D-US-029 — New-day accepts valid v3 or v4 and always installs fresh v4
 
 **Status:** resolved
 
-Source DB is inspected without mutation. v1/v2, running producer ownership and suspicious/corrupt states fail closed.
-
-Flow:
-
-```text
-read saved queries
-→ build temporary fresh schema-v4 DB
-→ seed saved queries transactionally
-→ optionally archive/move source as-is
-→ atomically install fresh v4 active DB
-```
-
-Market/Demo Buy evidence does not copy into the new day. v4 archives remain self-contained; v3 archives remain valid pre-Demo-Buy history.
+Inspect source DB without mutation; v1/v2, running producer ownership and suspicious/corrupt states fail closed. Read saved queries -> build temporary fresh schema-v4 DB -> seed saved queries transactionally -> optionally archive/move source as-is -> atomically install fresh v4 active DB. Market/Demo Buy evidence does not copy into the new day.
 
 ## D-US-030 — Demo Buy UX is explicit about background work, progressive evidence and bounded interaction
 
 **Status:** resolved
 
-Auto mode is persistent cross-surface Viewer-session state with direct Off control; enabling/changing Auto affects only future Scanner generations. Turning Off does not cancel an already dispatched capture.
+Auto is persistent cross-surface Viewer-session state with direct Off control; changes affect only future Scanner generations and do not pretend to cancel an already-dispatched capture. Scanner has resumable `Stop recurring scan`, distinct from terminal Viewer destruction.
 
-Scanner gains a **resumable** `Stop recurring scan` behavior using the existing scheduler seam; terminal Viewer destruction remains separate. While stopped, no new generations or Auto attempts occur; later Activate works normally.
-
-Demo Buy renders capture groups with sticky identity/baseline context and one compact horizon cell per horizon. `NO_FUTURE_OBSERVATION` is shown as Pending, while baseline/future-price problems are warning-style unavailable states.
-
-`Refresh latest` resets to the first keyset page; `Load more` continues the current walk. `demo.buy.observation.get(captureId, securityId)` refreshes one older observation in place so Auto cannot push the item out of inspectable reach.
-
-AI Investigation uses one Viewer-wide export slot, relative product export paths and clipboard fallback. A lost export ACK may be safely regenerated after reconnect because export is non-mutating and collision-safe.
+Demo Buy remains capture-grouped with sticky identity/baseline context and compact horizon cells. `NO_FUTURE_OBSERVATION` is Pending; non-temporal unavailable reasons remain explicit warnings. `Refresh latest` resets first page, `Load more` continues the keyset walk, and targeted observation refresh keeps an older item inspectable while Auto adds newer captures. AI Investigation uses one Viewer-wide export slot, relative product paths and clipboard fallback; lost export ACK may be regenerated because export is non-mutating and collision-safe.
 
 ## D-US-031 — Wall-clock timestamps are diagnostics; writer/cycle ordering is authority
 
 **Status:** resolved
 
-Scanner start/completion, market collection and capture timestamps are useful forensic diagnostics but can regress under system-clock adjustment.
-
-Preserve raw timestamps. Derive duration/latency/age only when non-negative; otherwise return null plus a bounded timing-anomaly indicator. Do not reject a valid capture or reorder authority because of wall-clock anomalies.
-
-Market authority at capture is determined by `buy_cycle_id` and serialized writer order.
+Scanner start/completion, market collection and capture wall-clock times are forensic diagnostics and may regress under system-clock adjustment. Preserve raw timestamps; derived duration/latency/age is null plus bounded anomaly indication when negative. Market authority at capture is determined by `buy_cycle_id` and serialized writer order.
 
 ## D-US-032 — Scanner resultRank is returned position, not semantic rank by itself
 
 **Status:** resolved
 
-`resultRank` / `result_rank` preserves the original 1-based row position returned by the exact Scanner generation. It remains useful provenance even when the query has no meaningful ranking.
-
-Neither the Viewer nor AI Investigation may infer “best”, “top-ranked”, score quality or strategy preference from that position alone. The AI prompt must inspect the exact SQL first and may use ranking language only when deterministic `ORDER BY`/tie-break logic establishes that interpretation.
-
-For unordered or ambiguously ordered SQL, the pack must explicitly call the value **returned position** and treat peer/ranking conclusions as unproven. This correction requires no SQL parser or new subsystem; it is an interpretation/presentation invariant backed by ordered-vs-unordered regression tests.
+`resultRank` / `result_rank` is the original 1-based row position returned by the exact Scanner generation. Viewer and AI Investigation may not infer best/top-ranked/quality/preference from position alone. Ranking language is allowed only when the exact SQL provides deterministic ordering/tie-break semantics; otherwise the value is explicitly a returned position.
 
 ## D-US-033 — AI Investigation exports sharing-safe evidence, not raw local rows
 
 **Status:** resolved
 
-Demo Buy persistence keeps the full local provenance needed for correctness, but AI Investigation packs are designed for optional external sharing and therefore must derive a separate deterministic sharing-safe projection before writing files.
+Local persistence keeps full correctness provenance, but shareable AI packs derive a separate deterministic sharing-safe projection. History/baseline exports allowlist authority keys + documented provider market fields + provider `raw_data` while excluding system-owned session/producer/config/error/request/source-metadata/path fields.
 
-History/baseline files include only authority keys plus documented U.S. provider/source market fields and provider `raw_data`; system-owned operational/session fields such as `session_id`, producer/session/config/error/request metadata, `source_metadata_json` and absolute host paths are excluded.
-
-Scanner context keeps structural metadata, canonical identity, numeric/null/boolean values and documented market-text columns. Other string/array/object contents are not exported and are represented only by bounded metadata with `redactedForSharing=true`. Redacted content may not leak through prompt, README, manifest, response metadata or diagnostics.
-
-Exact Scanner SQL remains user-authored content and is exported verbatim; the UI/README must visibly remind the user not to put secrets in SQL and to review generated files before sharing.
-
-This is an export-projection rule, not a second database or sanitization subsystem. Regression tests use canary operational/session/string values and require their byte sequences to be absent from every generated shareable artifact and response surface.
+Scanner context preserves structural metadata, identity, numeric/null/boolean and documented market-text values. Other string/array/object contents become bounded redaction metadata with `redactedForSharing=true`; redacted bytes may not leak through files, prompt, README, manifest, response metadata or diagnostics. Exact Scanner SQL remains verbatim user-authored content and the UI/README warns the user to review it before sharing.
 
 ## D-US-034 — IBKR execution is a standalone sidecar, not Scanner execution
 
 **Status:** resolved
 
-Branch `8` introduces one separate Node 24 process on `127.0.0.1:8770` using the first-party Interactive Brokers Client Portal Web API through Client Portal Gateway.
-
-Scanner, Demo Buy, AI Investigation and Current do not automatically submit orders. The later basic Detail BUY integration consumes the sidecar's stable local API through a trusted Node-owned seam instead of bypassing it to call IBKR directly.
-
-The existing market-data database remains authoritative for market analysis.
+Branch 8 uses a separate Node 24 process on `127.0.0.1:8770` using the first-party Interactive Brokers Client Portal Web API through Client Portal Gateway. Scanner, Demo Buy, AI Investigation and Current do not automatically submit orders. The basic Detail BUY integration consumes the sidecar through a trusted Node-owned seam instead of bypassing it. Market-data DuckDB remains authority for market analysis.
 
 ## D-US-035 — DRY_RUN is default; LIVE requires independent local and provider gates
 
 **Status:** resolved
 
-`DRY_RUN` must never reach the provider submit endpoint.
-
-Actual submit requires all independent gates:
-
-```text
-valid authenticated local caller
-process explicitly LIVE-enabled
-request explicitly executionMode=LIVE
-valid brokerage session
-tradable runtime account
-provider permission
-unambiguous instrument
-snapshot preflight
-successful what-if
-local validation / no-short-opening SELL guard
-```
-
-Missing any gate is a diagnosable rejection, never a fallback/bypass. Provider reply questions are surfaced explicitly; unknown questions fail closed.
+`DRY_RUN` must never reach provider submit. Actual submit requires authenticated local caller, process LIVE opt-in, request LIVE opt-in, valid brokerage session, tradable runtime account, provider permission, unambiguous instrument, snapshot preflight, successful what-if and local validation including the no-short-opening SELL guard. Missing any gate is a diagnosable rejection; unknown provider questions fail closed.
 
 ## D-US-036 — Loopback is not authorization
 
 **Status:** resolved
 
-An order-capable localhost HTTP service must defend against hostile browser-origin traffic.
-
-Every endpoint except strictly non-sensitive `GET /health` requires a high-entropy per-run local caller credential before provider/order logic. Browser `Origin` requests are rejected by default; wildcard/credentialed CORS is forbidden.
-
-The token is never hard-coded, committed, persisted, logged, reported or sent to IBKR and is invalidated by process exit.
-
-This local caller gate is independent from LIVE/provider permission checks.
+Every order-service endpoint except strictly non-sensitive `GET /health` requires a high-entropy per-run local caller credential before provider/order logic. Browser Origin requests are rejected by default; wildcard/credentialed CORS is forbidden. The credential is never hard-coded, committed, persisted, logged, reported or sent to IBKR and dies with the process. This gate is independent from LIVE/provider permission checks.
 
 ## D-US-037 — Order creation is restart-safe and acknowledgement-unknown never blind-retries
 
 **Status:** resolved
 
-`requestId` is mandatory.
+`requestId` is mandatory. Same requestId + same normalized intent returns/reconciles the existing local result; same requestId + different intent rejects. Transport loss after provider submit becomes `ACKNOWLEDGEMENT_UNKNOWN` unless a conclusive result is known and never authorizes blind resubmit. Provider state is reconciled before any later explicit retry decision.
 
-```text
-same requestId + same normalized intent
-→ return/reconcile existing local result
-
-same requestId + different normalized intent
-→ reject
-```
-
-Transport loss after provider submit produces `ACKNOWLEDGEMENT_UNKNOWN` unless a conclusive result is known. It is neither rejection nor permission to resubmit. The service reconciles provider open-order/trade state before any later explicit retry decision.
-
-Use the smallest separate DuckDB store required for these facts; provider account identity, credentials, cookies/session tokens, caller token and raw authenticated responses are never persisted.
+Use the smallest separate DuckDB store required for execution facts. Provider account identity, credentials, cookies/session tokens, caller token and raw authenticated responses are never persisted.
 
 ## D-US-038 — Initial execution scope is narrow U.S.-equity BUY/SELL with no short opening
 
 **Status:** resolved
 
-Initial normalized scope:
+Initial normalized scope is `STK / USD / SMART`, `BUY | SELL`, `LMT | MKT`, `DAY | GTC`, positive finite quantity. LMT requires positive finite price; MKT forbids price. Before LIVE SELL the service must establish requested quantity does not exceed known long position; unavailable/ambiguous position authority fails closed. Short selling, options/futures/FX, bracket/OCA/algo orders and leverage optimization remain out of scope.
 
-```text
-STK / USD / SMART
-BUY | SELL
-LMT | MKT
-DAY | GTC
-positive finite quantity
-```
-
-`LMT` requires positive finite price; `MKT` forbids price.
-
-Before LIVE SELL, the service must establish that requested quantity does not exceed the known long position. Unavailable/ambiguous position authority fails closed. This is a narrow safety guard, not a portfolio/risk engine.
-
-Short selling, options/futures/FX, bracket/OCA/algo orders and leverage optimization remain out of scope.
-
-## D-US-039 — Branch 8 reclosure precedes resuming final 7.4 acceptance
+## D-US-039 — Branch 8 reclosure preceded resuming final acceptance
 
 **Status:** resolved; superseded for sequencing by D-US-040 and D-US-048
 
-The user requested the standalone IBKR mini-project after `7.5` was done and while `7.4` final acceptance was still unfinished.
+The standalone IBKR mini-project was requested after `7.5` while `7.4` was unfinished. Branch 8 completed and produced a reclosed candidate. Later branch 9 and subsequent extensions superseded that candidate as final-candidate authority, while branch-8 evidence remains valid for what it proved.
 
-Branch `8` completed and produced a reclosed candidate. Before `7.4` resumed, the user requested branch `9` Market Recording + Replay. The later hardening/basic-BUY extension is now owned by D-US-048; all branch-8 implementation evidence remains valid for what it proved.
-
-## D-US-040 — Branch 9 Replay reclosure precedes resuming final 7.4 acceptance
+## D-US-040 — Branch 9 Replay reclosure preceded resuming final acceptance
 
 **Status:** resolved; superseded for current sequencing by D-US-048
 
-The completed sequence was:
-
-```text
-preserve completed branch 1–8 implementation/evidence
-→ keep 7.4 blocked/not-done
-→ implement 9.1–9.4
-→ implement 9.5 deterministic Replay reclosure
-→ pin exact post-branch-9 product candidate
-```
-
-That post-branch-9 candidate remains valid historical evidence, but final `7.4` now waits for the later `9.6` hardening and `8.5` basic BUY extension defined by D-US-048.
+Completed branch 1–8 evidence was preserved; `7.4` remained unfinished while `9.1–9.5` implemented and reclosed Replay. That post-branch-9 candidate remains historical evidence but was superseded as final-candidate authority by later hardening, Basic BUY and final code-audit work.
 
 ## D-US-041 — Replay records validated browser snapshots, not DB state
 
 **Status:** resolved
 
-Recording authority is the already-validated U.S. browser snapshot boundary before Node/DuckDB authority.
-
-Only complete validated snapshots become immutable recording frames. Recordings preserve provider market values and enough membership/timing metadata to reconstruct the normal U.S. collection candidate later.
-
-Do not record DuckDB tables/cycle IDs, Viewer/Scanner/Demo Buy state, DOM/auth/session/account material or raw authenticated browser dumps.
-
-Portable recordings use a versioned streaming-friendly line-oriented format with manifest/frame/footer agreement; malformed, truncated or unsupported files fail closed.
+Recording authority is the already-validated U.S. browser snapshot boundary before Node/DuckDB authority. Only complete validated snapshots become immutable frames. Do not record DuckDB tables/cycle IDs, Viewer/Scanner/Demo Buy state, DOM/auth/session/account material or raw authenticated browser dumps. Portable recordings use a versioned streaming-friendly line-oriented manifest/frame/footer format and malformed/truncated/unsupported files fail closed.
 
 ## D-US-042 — Replay is a normal producer with external time rebasing
 
 **Status:** resolved
 
-The existing Market Flow US service and shared producer protocol remain replay-unaware. No replay mode, virtual clock, seek, speed, recording ID or load/reset operation is added to them.
-
-Initial playback is `1x` using the exact observed gaps between validated recorded frames. Provider/source fields stay unchanged. Local collection/cycle/chunk/security timestamps that live acquisition would stamp locally are rebased coherently to current wall-clock time before normal ProducerBridge emission.
-
-Pause emits no frames. Resume establishes a new contemporary timing segment while preserving the remaining inter-frame delay. A real pause may therefore appear as a real gap in replay history; this is preferable to a hidden server clock.
+The normal service/shared producer protocol remain replay-unaware: no replay mode, virtual clock, seek, speed, recording ID or load/reset operation. Initial playback is exactly `1x` using recorded inter-frame gaps. Provider/source fields remain unchanged while locally owned collection/cycle/chunk/security timestamps are coherently rebased to current wall-clock time before normal ProducerBridge emission. Pause emits nothing; Resume starts a contemporary segment while preserving remaining delay.
 
 ## D-US-043 — Seek means fresh replay start, never hidden warm-up
 
 **Status:** resolved
 
-Seek resolves to a real recorded frame boundary and starts a fresh replay DB/session at that frame. No earlier frame is fast-forwarded or pre-rolled through the server.
-
-Missing prior 10s/20s/2m history after seek is a valid condition equivalent to starting the live application at that market time. If an existing query/surface crashes solely because prior history is absent, fix it as a generic live-start defect rather than adding replay-specific history synthesis.
+Seek resolves to a real recorded frame boundary and starts a fresh replay DB/session at that frame. No earlier frame is fast-forwarded or pre-rolled. Missing prior anchors are valid live-start-like state; crashes caused only by missing prior history are fixed as generic live-start defects, not by replay-specific synthesis.
 
 ## D-US-044 — Replay Host owns lifecycle only and fails closed on foreign processes/data
 
 **Status:** resolved
 
-A small loopback Replay Host may orchestrate the unchanged market-data service for seek/reset, but it is not a market-data server.
-
-It may control only a service child it spawned and replay-only DB artifacts it explicitly owns. If the intended port/path is occupied or ambiguous, it fails closed. It never attaches to, stops, kills, opens, resets or deletes an unrelated process or the normal live DB.
-
-The Host uses exact allowed Origin plus an ephemeral per-run control credential and never accepts/persists market frames, writes market DuckDB tables, translates producer messages or executes Scanner SQL.
+Replay Host may orchestrate the unchanged market-data service for seek/reset but is not a market-data server. It controls only a child it spawned and replay-only DB artifacts it explicitly owns. Occupied/ambiguous port/path fails closed; it never attaches to/stops/kills/opens/resets/deletes unrelated processes or normal live DB data. Control requires exact allowed Origin plus ephemeral per-run credential; Host never persists market frames or executes Scanner SQL.
 
 ## D-US-045 — Replay stays opt-in and does not tax ordinary verification
 
 **Status:** resolved
 
-Replay uses a dedicated browser entry/artifact, operator launcher and focused deterministic proof. Existing `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` keep their current semantics.
-
-Timing is proved primarily with deterministic/fake clocks plus a short real-wall-clock integration smoke. Multi-hour real-time playback is not a CI/local prerequisite. Existing Fast/Browser/Planning/Workload evidence remains required where materially affected, but Replay-specific waiting must not silently inflate ordinary local verification.
+Replay has dedicated entry/artifact/launcher and focused proof. Existing ordinary launch/test commands retain their semantics. Timing proof is deterministic/fake-clock first plus a short real-wall-clock smoke; multi-hour playback is not a normal CI/local prerequisite. Replay-specific waits must not silently inflate recurring verification.
 
 ## D-US-046 — Replay hardening is an adversarial re-audit, not a new Replay feature
 
 **Status:** resolved
 
-After `9.5` completed, the user requested a pre-user-run audit intended to find likely defects before relying on manual testing. This work belongs to new leaf `9.6` and is governed by `docs/REPLAY_HARDENING.md`.
-
-Hardening must combine static review and executable proof across recording, IndexedDB, portable parsing/file source, Player scheduling/rebase/generation cancellation, ProducerBridge ACK flow, Replay Host ownership/security/lifecycle, unchanged service seams, replay DB isolation, product surfaces and operator/diagnostic paths.
-
-A green pre-existing suite is not enough when static review finds an unproved material risk. Any such risk receives the smallest deterministic proof. Any discovered blocking defect stays in `9.6` through root cause → fix → regression proof → affected verification → green.
-
-The audit does not justify new Replay capability. Shared server/protocol remains replay-unaware and ordinary launch/test semantics stay unchanged.
+`9.6` statically and executably audits the completed Replay path across recording, IndexedDB, portable parsing/file source, Player scheduling/rebase/generation cancellation, ProducerBridge ACK flow, Replay Host ownership/security/lifecycle, unchanged service seams, replay DB isolation, product surfaces and operator/diagnostic paths. A pre-existing green suite does not close a newly identified material risk; every blocker stays with the audit through root cause -> fix -> regression proof -> affected verification -> green. Hardening does not add speculative Replay capability.
 
 ## D-US-047 — Basic in-product BUY uses immutable preparation plus trusted local confirmation
 
 **Status:** resolved
 
-The first integrated order feature is intentionally narrow and belongs to `8.5` under `docs/BASIC_BUY_INTEGRATION.md`:
+The first integrated order feature is deliberately narrow: current Detail only, BUY only, run-configured positive quantity, `STK / USD / SMART`, `MKT / DAY`, DRY_RUN by default and LIVE only through explicit operator opt-in.
 
-```text
-current Detail only
-BUY only
-run-configured positive quantity
-STK / USD / SMART
-MKT / DAY
-DRY_RUN by default; LIVE only by explicit operator opt-in
-```
+The authenticated provider page is not an execution trust boundary and never receives the sidecar caller token. Viewer/WebSocket may only prepare an immutable short-lived ticket from `securityId`; Node resolves current `Symbol` and owns quantity/mode/fixed order dimensions with zero provider/order mutation during preparation.
 
-The authenticated provider page is not an execution trust boundary. It never receives the `ibkr-order-service` caller token, cannot call the sidecar through CORS, and cannot submit arbitrary normalized order JSON through a generic Viewer proxy.
+Actual mutation requires the separate product-owned loopback confirmation page with explicit human confirmation, immutable short-lived ticket, anti-CSRF nonce/custom header, same local Origin and bounded JSON-only mutation. A stable server-generated `requestId` is bound to the intent; double-click/retry reuses it and acknowledgement-unknown never creates a new automatic submit. Normal launch, Replay, Scanner, Demo Buy, AI Investigation and Current remain execution-disabled.
 
-Viewer/WebSocket may only prepare an immutable short-lived ticket from `securityId`. Node resolves authoritative current `Symbol`, owns quantity/mode/fixed order dimensions and performs zero sidecar/provider mutation during preparation.
+## D-US-048 — Extension sequencing is history; dependency truth remains structural
 
-Actual mutation requires a separate product-owned loopback confirmation page with explicit human confirmation, short-lived immutable ticket, anti-CSRF nonce/custom header, same local Origin and bounded JSON-only mutation. The market process may call the existing sidecar only with the caller token it received from the child it actually spawned through the existing IPC ready seam.
+**Status:** resolved; current dependency truth is in `.planning/EXECUTION.md`
 
-One server-generated `requestId` is bound to the prepared immutable intent. Double-click/response retry reuses that exact ID; acknowledgement-unknown never creates a fresh automatic submit. Existing Branch-8 DRY_RUN/LIVE/provider/reply/idempotency/reconciliation authority remains unchanged.
-
-Normal launch, Replay, Scanner, Demo Buy, AI Investigation and Current remain execution-disabled.
-
-## D-US-048 — Current continuation is Replay hardening → basic BUY → final 7.4, with allocation order distinct from dependency truth
-
-**Status:** resolved
-
-The user explicitly requested Replay hardening before the first basic BUY integration and both before final target-machine acceptance.
-
-Current process order is:
+The user requested Replay hardening before Basic BUY and both before final target-machine acceptance. That requested implementation sequence completed as:
 
 ```text
 completed historical leaves through 9.5
-→ 9.6 Replay hardening
-→ 8.5 basic in-product BUY integration
-→ 7.4 final target-machine/provider acceptance on the resulting exact candidate
+-> 9.6 Replay hardening
+-> 8.5 basic in-product BUY integration
+-> 7.6.1-7.6.5 final staged code audit / deterministic reclosure
+-> 7.4 final target-machine/provider acceptance
 ```
 
-This serial order is an execution-allocation decision, not a claim that `8.5` technically requires `9.6`. Therefore:
+The serial work order never creates false technical dependencies. Current real execution dependencies are owned only by `.planning/EXECUTION.md`; in particular, `8.5` remains technically dependent on `3.3 + 8.4`, while `7.4` depends on the completed release/replay/BUY/audit prerequisites including `7.6.5`.
 
-```text
-9.6 depends_on: 9.5
-8.5 depends_on: 3.3 + 8.4
-7.4 depends_on: 7.5 + 8.5 + 9.6
-```
+The historical post-Branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369` remains provenance only. The current exact final-acceptance runtime candidate is owned by `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` / `.planning/FINAL_ACCEPTANCE_EXECUTION.md` and is not inferred from planning-document commits.
 
-This preserves truthful S&T dependencies while ensuring the user-requested hardening-first sequence. The historical post-Branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369` remains the baseline entering the extension but cannot be the final `7.4` candidate after product code changes.
+## Decision audit result for ST Planner 2.0 migration
+
+- Durable decisions preserved: `D-US-001`–`D-US-016`, `D-US-018`–`D-US-048`.
+- Retired as V1 ceremony-only: `D-US-017`.
+- No decision owns task status, owner or dependency truth; `.planning/EXECUTION.md` does.
+- No decision owns S&T structure; `.planning/PLAN.md` does.
+- Superseded sequencing decisions remain only where they explain still-relevant product/release history.
