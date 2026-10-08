@@ -30,49 +30,82 @@ Do not introduce a Strategy Engine, temporal-link engine, dynamic schema, new da
 
 The staged candidate idea is Scanner SQL. Strategy logic belongs in editable/saved SQL unless a later measured bottleneck justifies a narrower implementation optimization.
 
-## Migration cutover sequencing
+## Historical migration cutover record
 
-The U.S. conversion is **pre-cutover** until TREE node `5.2`.
+The U.S. conversion used implementation leaf `5.2` as the normal-runtime cutover boundary. Before that point, leaves `1.*` through `4.*` and `5.1` proved the U.S. target through existing constructor/dependency/config/test seams without switching the incomplete normal runtime. Browser CI remained green and no feature-flag subsystem or duplicate architecture was introduced solely for staging.
 
-Before `5.2`:
+Leaf `5.2` completed the normal-runtime U.S. cutover only after provider, authority, read/UI and Scanner prerequisites were ready; `5.3` proved the composed Browser path and `7.3` completed superseded Israel-path cleanup. This is historical product provenance, not a current execution gate.
 
-- nodes `1.*` through `4.*` and `5.1` implement and prove their U.S. target behavior through the existing constructor/dependency/config/test seams;
-- they must not switch the normal built browser/runtime/demo/service composition to the U.S. path while downstream U.S. dependencies are still incomplete;
-- the currently active proven composition must remain Browser-CI green;
-- do not skip/disable Browser tests to hide an integration gap;
-- do not invent a feature-flag subsystem or duplicate architecture just for migration staging.
+## ST Planner 2.0 bootstrap and authority
 
-Use the smallest existing injection/construction seam that lets focused tests exercise the U.S. implementation without activating an incomplete product path.
+ST Planner is a method/reference, not an installed runtime inside this repository. Do not recreate framework installers, freshness checkers, hashes, freeze state, authorization state, allocation validators or handoff state machines.
 
-TREE node `5.2` is the normal-runtime U.S. cutover boundary. Chat 5 owns `5.1 → 5.2 → 5.3` in one work unit, so the normal runtime is switched only after the required U.S. provider, authority, read/UI and Scanner outcomes already exist, and the full U.S. Browser suite is adapted/green before that PR may merge.
-
-Legacy Israel-specific paths may remain temporarily reachable only as pre-cutover compatibility. They receive no new product behavior and are removed/retired only after replacement proof, with final authoritative cleanup owned by `7.3`.
-
-## Fresh-chat read order
-
-Planning/review:
+For any fresh planning/review or numbered executor session:
 
 ```text
-AGENTS.md
-→ STATUS.yaml
-→ .planning/STATUS.yaml
-→ .planning/GOAL.md
-→ only current TREE nodes + routed contracts/evidence
+fetch fresh market-flow-us/main
+→ read AGENTS.md
+→ resolve one exact current LirazShay/st-planner main commit
+→ from that same commit read BOOTSTRAP.md
+→ docs/SNT-METHODOLOGY.md
+→ docs/EXECUTION-MANAGEMENT.md
+→ .planning/PLAN.md
+→ .planning/EXECUTION.md
+→ only then load the relevant task/leaf and routed project context
 ```
 
-Execution after freeze:
+Never mix ST Planner documents from different framework commits within one bootstrap.
+
+Repository authority is:
 
 ```text
-AGENTS.md
-→ STATUS.yaml
-→ .planning/STATUS.yaml
-→ .planning/EXECUTOR_HANDOFF.md
-→ .planning/EXECUTION.yaml
-→ assigned TREE nodes + dependencies
-→ only routed contracts/tests/code
+.planning/PLAN.md      = planning / S&T truth
+.planning/EXECUTION.md = task / owner / status / real dependency / result-evidence truth
+.planning/DECISIONS.md = durable supporting decision rationale
+STATUS.yaml            = non-authoritative navigation/compatibility projection only
 ```
 
-GitHub `main` overrides chat history.
+GitHub `main` overrides chat history. `STATUS.yaml` may project the current task for external tooling, but it must never independently redefine owner, status, dependency or completion truth.
+
+## Fresh executor flow
+
+A numbered executor starts only from an explicit request such as `אני צאט N תתחיל` / `I am chat N`. A generic `continue`, repository current pointer, handoff text or previous chat identity must never silently activate another numbered chat.
+
+After the ST Planner 2.0 bootstrap above:
+
+1. read `.planning/EXECUTION.md` and locate tasks explicitly owned by Chat N;
+2. verify each task's real dependencies are `done` before starting it;
+3. read the corresponding implementation-ready leaf in `.planning/PLAN.md`, including success evidence;
+4. read only the matching row(s) in `docs/EXECUTOR_ROUTING.md`;
+5. load only routed contracts/tests/code needed for that task;
+6. move the active task to `in_progress` when implementation actually begins;
+7. implement/test only owned, unblocked work;
+8. mark a task `done` only after its success evidence is green and record useful result/evidence in `.planning/EXECUTION.md`;
+9. refresh root `STATUS.yaml` only as a projection of the authoritative execution state;
+10. complete the branch/PR/CI workflow before starting an independent next work unit.
+
+A chat may own several tasks. Execute them in dependency-valid order from `.planning/EXECUTION.md`; chat numbering itself is not dependency truth and need not be contiguous.
+
+If the requested Chat N is not the current owner of any executable task, or required dependencies are not `done`, do not rewrite planning/execution truth to fit the request. Report the blocker briefly.
+
+## Planning and execution boundary
+
+ST Planner 2.0 does not use freeze/authorization ceremony as execution authority.
+
+Planning changes belong in `.planning/PLAN.md` and durable rationale in `.planning/DECISIONS.md`. Execution starts only from an explicit row in `.planning/EXECUTION.md` whose real dependencies permit it.
+
+If implementation or verification proves the current PLAN/contract materially wrong:
+
+```text
+stop coding forward
+→ identify the smallest affected planning/contract area
+→ repair PLAN / DECISIONS / durable contract as needed
+→ review the affected reasoning and success evidence
+→ repair EXECUTION mapping/dependencies if needed
+→ continue only from the corrected truth
+```
+
+Do not work around a plan known to be wrong, and do not invent a second status/authorization mechanism.
 
 ## Branch and PR workflow
 
@@ -82,7 +115,7 @@ Every meaningful planning or engineering work unit uses:
 fresh main
 → focused branch
 → work + focused proof
-→ update STATUS/EXECUTION on same branch
+→ update PLAN/EXECUTION/STATUS projection as applicable on the same branch
 → PR
 → required CI green
 → review diff
@@ -99,7 +132,7 @@ Rules:
 - `main` is accepted truth; an open PR is work in progress;
 - blocking defects remain with the chat that discovers them;
 - fix root cause + regression proof, not only the symptom;
-- if implementation proves the frozen plan materially wrong, reopen the smallest affected planning area before coding forward.
+- if implementation proves the current plan materially wrong, repair the smallest affected planning area before coding forward.
 
 ## Learning from failures
 
@@ -113,45 +146,21 @@ root cause
 → green
 ```
 
-If the defect proves a frozen planning decision/contract wrong, stop coding forward and reopen only the smallest affected planning area before continuing.
+If the defect proves a planning decision/contract wrong, stop coding forward and reopen only the smallest affected planning area before continuing.
 
-## Planning boundary
+### CI warning/error RCA gate
 
-Production implementation is forbidden while:
+Every CI warning or error pauses progression until a comprehensive RCA is closed. A local symptom fix or a green rerun alone is not closure.
 
-```text
-STATUS.yaml -> phase: planning
-```
+Before continuing, establish:
 
-Implementation is authorized only when:
+- the root cause;
+- why the defect escaped prevention/detection;
+- the reusable change that reduces recurrence;
+- materially analogous areas that may share the weakness;
+- regression/verification evidence covering the cause and affected paths.
 
-```text
-.planning/STATUS.yaml -> plan_state: frozen
-AND
-STATUS.yaml -> phase: implementation
-AND
-.planning/EXECUTION.yaml is allocated
-```
-
-The planner must finish contracts, S&T review, whole-goal coverage review, Final Planning Review, freeze, allocation and handoff verification before authorizing execution.
-
-## Serial executor protocol
-
-When the user says `אני צאט N תתחיל` or equivalent:
-
-1. fetch current `main`;
-2. read `.planning/EXECUTOR_HANDOFF.md`;
-3. read `.planning/EXECUTION.yaml`;
-4. verify root STATUS points to chat N and its first non-done node;
-5. load only assigned TREE nodes/dependencies and routed contracts;
-6. verify dependencies are `done`;
-7. set the active node `in_progress` before implementation;
-8. implement/test only assigned unblocked work;
-9. mark `done` only after success evidence is green;
-10. update STATUS/EXECUTION on the same branch;
-11. PR → CI green → review → squash merge → verify main before the next independent work unit.
-
-A chat may own several nodes; execute them in listed order.
+Only after that evidence is green may execution continue.
 
 ## Engineering defaults
 
@@ -219,7 +228,7 @@ Use them for:
 - approximately-full-universe width checks when they remain small;
 - diagnostic timing, not target-machine SLO claims.
 
-Do not repeatedly run large end-to-end workloads in hosted CI merely because they are available. Heavy performance PASS/FAIL belongs to the final target-machine acceptance defined by TREE/TEST_STRATEGY.
+Do not repeatedly run large end-to-end workloads in hosted CI merely because they are available. Heavy performance PASS/FAIL belongs to the final target-machine acceptance defined by `.planning/PLAN.md` and `docs/TEST_STRATEGY.md`.
 
 When measuring one component, exercise the narrowest relevant layer: persistence tests need not pay for browser/HTTP; read/Scanner tests may seed valid day-bounded data directly; only end-to-end acceptance should pay for the complete Fake Market → browser → service → DuckDB path.
 
@@ -271,7 +280,7 @@ Preserve the proven diagnosability model:
 - bounded Support Snapshot / CLI fallback;
 - no secrets, cookies, auth/session material, account identifiers, raw authenticated dumps or private browser state.
 
-The target boundary remains:
+The core market-data boundary remains:
 
 ```text
 authenticated provider page
@@ -282,6 +291,8 @@ authenticated provider page
 → Current / Detail-History / Scanner
 ```
 
+Replay and order execution remain separate boundaries as defined by their durable contracts; they must not weaken this authority path.
+
 ## Security
 
 Treat the repository as public-safe regardless of visibility.
@@ -290,15 +301,12 @@ Never commit credentials, cookies, authorization/session data, account identifie
 
 ## Durable ownership
 
-- `STATUS.yaml` — operational phase/current execution pointer.
-- `.planning/STATUS.yaml` — plan state.
-- `.planning/GOAL.md` — stable U.S. migration goal.
-- `.planning/TREE.yaml` — S&T logic/dependencies/evidence.
-- `.planning/DECISIONS.md` — material decisions.
-- `.planning/REVIEWS.md` — planning and whole-goal coverage reviews.
-- `.planning/EXECUTION.yaml` — numbered execution allocation after freeze.
-- `.planning/EXECUTOR_HANDOFF.md` — framework-owned executor bootstrap/handoff contract.
-- `docs/EXECUTOR_ROUTING.md` — target-owned executor context routing; read only the assigned node rows after framework bootstrap.
+- `.planning/PLAN.md` — planning / S&T truth, including outcome, strategies/tactics, assumptions, necessity/sufficiency and leaf success evidence.
+- `.planning/EXECUTION.md` — execution task/owner/status/dependency/result truth.
+- `.planning/DECISIONS.md` — durable supporting product/architecture/security/verification/operational rationale and supersession history.
+- `STATUS.yaml` — non-authoritative navigation/compatibility projection from current execution truth.
+- `.planning/BACKLOG.md` — preserved backlog; not live execution authority.
+- `docs/EXECUTOR_ROUTING.md` — target-owned executor context routing; read only the assigned task rows after ST Planner bootstrap.
 - `docs/US_MIGRATION_AUDIT.md` + `docs/US_MIGRATION_FILE_MAP.md` — exhaustive imported-baseline migration audit.
 - `docs/US_CONTRACT_REVIEW.md` — durable contract coherence review.
 - `docs/PRODUCT_REQUIREMENTS.md` — what/why.
@@ -308,61 +316,11 @@ Never commit credentials, cookies, authorization/session data, account identifie
 - `docs/TEST_STRATEGY.md` — verification contract.
 - `docs/SCANNER_SQL_GUIDE.md` — public Scanner schema/query guide.
 - `docs/SOURCE_EXTRACTION.md` / `docs/US_SOURCE_EVIDENCE.md` — migration provenance/evidence.
+- `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` + `.planning/FINAL_ACCEPTANCE_EXECUTION.md` — exact final target-machine acceptance procedure/candidate/evidence state.
+- project-specific audit/reclosure/preflight files under `.planning/` — historical or scoped evidence; not ST Planner runtime state unless a live PLAN/EXECUTION row explicitly points to them.
 
 Do not duplicate live operational status in durable specs.
 
-<!-- st-planner:rules:v3:begin -->
-# S&T Planner Rules
-
-## Mandatory freshness gate
-
-Before any S&T planning request or numbered executor bootstrap, run:
-
-```text
-node .planning/check-framework-update.mjs
-```
-
-Interpret the result literally:
-
-- exit `0` + current — continue;
-- exit `0` + recommended update — surface the update and continue unless an upgrade is chosen;
-- exit `2` — a required framework upgrade/reconciliation exists; do not start new S&T planning/execution until it is resolved and the checker reports current;
-- exit `3` — installed framework/provenance is missing, damaged, malformed, or drifted; repair/upgrade it before S&T work;
-- freshness unavailable because the network/source cannot be reached — say that source freshness is unverified and continue only from the locally integrity-checked installed framework without claiming it is current.
-
-Framework upgrades may refresh framework-owned instructions/tooling only. They must never overwrite `.planning/GOAL.md`, `.planning/TREE.yaml`, `.planning/DECISIONS.md`, `.planning/REVIEWS.md`, `.planning/STATUS.yaml`, or `.planning/EXECUTION.yaml`.
-
-## Planning trigger
-
-A request such as `תתכנן לי עם S&T Planner לפי הריפו: ...`, `ST Planner`, or an equivalent natural-language request is sufficient. The user does not need to restate the framework procedure.
-
-After the freshness gate, follow the installed framework contract in this order:
-
-```text
-project-native AGENTS/routing rules
-→ .planning/README.md
-→ .planning/FRAMEWORK.md
-→ .planning/STATUS.yaml
-→ current-cycle S&T state/evidence as routed
-```
-
-Use the complete S&T method described there: outcome before solution, deep justified Strategy/Tactic reasoning, necessity/sufficiency, implementation-ready leaves, final review, freeze/no-drift, allocation validation, handoff verification, and explicit implementation authorization. Do not implement target-project work while planning.
-
-## Executor trigger
-
-A numbered executor starts only from an explicit request such as `אני צאט N תתחיל` / `I am chat N`. Allocation, target current pointers, `NEXT_CHAT_PROMPT`, or generic `continue` never activate another Chat N implicitly.
-
-After the freshness gate, follow `.planning/EXECUTOR_HANDOFF.md`, `.planning/CI-RCA-POLICY.md`, `.planning/EXECUTION.yaml`, TREE dependencies, and only the explicitly assigned/routed project context. `.planning/EXECUTION.yaml` is execution-state authority; target-owned current chat/node pointers are projections only.
-
-## CI warning/error gate
-
-Every CI warning or error pauses progression until the RCA in `.planning/CI-RCA-POLICY.md` is closed. A local symptom fix or a green rerun alone is not closure. Establish root cause, why prevention/detection failed, reusable recurrence prevention, materially analogous areas that may share the weakness, and closing evidence before continuing.
-
-## Update-safe ownership
-
-This whole block is framework-owned and is bounded by the `st-planner:rules:v3:begin/end` markers. Target-project instructions belong outside the markers and must be preserved byte-for-byte by framework upgrades.
-<!-- st-planner:rules:v3:end -->
-
 ## Market Flow US executor routing
 
-For numbered executor chats, after the S&T framework bootstrap/authorization checks, read `docs/EXECUTOR_ROUTING.md` and load only the row(s) for the explicitly assigned node(s). This routing contract is target-owned and intentionally lives outside framework-managed files.
+For numbered executor chats, after the ST Planner 2.0 bootstrap and `.planning/EXECUTION.md` ownership/dependency checks, read `docs/EXECUTOR_ROUTING.md` and load only the row(s) for the explicitly assigned task(s). This routing contract is target-owned and remains part of the project even though ST Planner 1.x handoff/runtime machinery is retired.
