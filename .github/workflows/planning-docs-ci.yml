@@ -1,4 +1,4 @@
-name: Market Flow US Planning Docs CI
+name: Market Flow US Planning and Contract CI
 
 on:
   push:
@@ -35,25 +35,30 @@ jobs:
             exit 1
           fi
 
-      - name: Validate Market Flow US planning truth
+      - name: Validate repository hygiene
+        run: node scripts/validate-ci-hygiene.mjs
+
+      - name: Validate planning authority and durable evidence
         shell: bash
         run: |
           set -euo pipefail
 
           required=(
-            AGENTS.md README.md STATUS.yaml
-            .planning/README.md .planning/FRAMEWORK.md .planning/GOAL.md .planning/TREE.yaml
-            .planning/DECISIONS.md .planning/REVIEWS.md .planning/IBKR_ORDER_REVIEWS.md .planning/STATUS.yaml
-            .planning/EXECUTION.yaml .planning/EXECUTOR_HANDOFF.md .planning/verify-handoff.mjs
-            .planning/ST_PLANNER_INSTALL.json .planning/check-framework-update.mjs
-            .planning/executor-authority.mjs .planning/execution-guidance.mjs
-            .planning/validate-allocation.mjs .planning/verify-freeze-baseline.mjs
-            .planning/CI-RCA-POLICY.md .planning/validate-ci-hygiene.mjs
-            .planning/IBKR_ORDER_MINI_PROJECT.md .planning/MARKET_REPLAY_MINI_PROJECT.md
-            .planning/REPLAY_BUY_EXTENSION_REVIEW.md
+            AGENTS.md README.md START_HERE.md STATUS.yaml
+            .planning/PLAN.md .planning/EXECUTION.md .planning/DECISIONS.md .planning/BACKLOG.md
+            .planning/BASELINE_PROVENANCE.md
+            .planning/FINAL_ACCEPTANCE_EXECUTION.md .planning/FINAL_ACCEPTANCE_RUNBOOK.md
+            .planning/FIRST_RUN_ACCEPTANCE_PLAN.md
+            .planning/FINAL_PREFLIGHT_AUDIT.md .planning/FINAL_PREFLIGHT_PROGRESS.yaml
+            .planning/FINAL_PREFLIGHT_A7_SQL_PREFLIGHT.md .planning/FINAL_PREFLIGHT_A8_SQL_PREFLIGHT.md
+            .planning/IBKR_ORDER_MINI_PROJECT.md .planning/IBKR_ORDER_PACKAGING_REVIEW.md
+            .planning/IBKR_ORDER_RECLOSURE.md .planning/IBKR_ORDER_REVIEWS.md
+            .planning/MARKET_REPLAY_MINI_PROJECT.md .planning/MARKET_REPLAY_RECLOSURE.md
+            .planning/REPLAY_BUY_EXTENSION_REVIEW.md .planning/REPLAY_HARDENING_AUDIT.md
             .planning/PRE_ACCEPTANCE_CODE_AUDIT.md
             .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
             .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md
+            docs/EXECUTOR_ROUTING.md docs/FIRST_RUN_ACCEPTANCE.md
             docs/US_MIGRATION_AUDIT.md docs/US_MIGRATION_FILE_MAP.md docs/US_CONTRACT_REVIEW.md
             docs/US_PRODUCT_DIRECTION.md docs/US_SOURCE_EVIDENCE.md
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md
@@ -61,8 +66,9 @@ jobs:
             docs/SCANNER_SQL_GUIDE.md
             docs/DEMO_BUY_VALIDATION.md docs/DEMO_BUY_PROTOCOL_LIMITS.md
             docs/DEMO_BUY_UX.md docs/AI_INVESTIGATION_PACK.md
-            docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md docs/MARKET_REPLAY.md
-            docs/REPLAY_HARDENING.md docs/BASIC_BUY_INTEGRATION.md
+            docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md
+            docs/MARKET_REPLAY.md docs/REPLAY_HARDENING.md docs/BASIC_BUY_INTEGRATION.md
+            scripts/validate-ci-hygiene.mjs
           )
 
           for file in "${required[@]}"; do
@@ -79,40 +85,22 @@ jobs:
             }
           done
 
-          grep -Eq '^plan_state: (active|frozen)$' .planning/STATUS.yaml || {
-            echo "Invalid/missing plan_state"; exit 1;
-          }
-
-          grep -Eq '^phase: (planning|implementation|release_ready|done)$' STATUS.yaml || {
-            echo "Invalid/missing root phase"; exit 1;
-          }
-
-          grep -q '^root: "0"$' .planning/TREE.yaml || {
-            echo "TREE root must be 0"; exit 1;
-          }
-
-          grep -Fq '    children: ["1", "2", "3", "4", "5", "6", "7", "8", "9"]' .planning/TREE.yaml || {
-            echo "TREE root must contain nine capability branches"; exit 1;
-          }
-
-          for node in \
-            '"4.3.1"' '"4.3.2"' '"4.3.3"' '"4.4.1"' '"4.4.2"' '"4.5.1"' '"4.5.2"' \
-            '"7.5"' '"7.6.1"' '"7.6.2"' '"7.6.3"' '"7.6.4"' '"7.6.5"' \
-            '"8.1"' '"8.2"' '"8.3"' '"8.4"' '"8.5"' \
-            '"9.1"' '"9.2"' '"9.3"' '"9.4"' '"9.5"' '"9.6"' '"7.4"'; do
-            grep -Fq "  ${node}:" .planning/TREE.yaml || {
-              echo "TREE missing required implementation leaf ${node}"; exit 1;
-            }
-          done
-
           require_text() {
             local needle="$1"
             local file="$2"
             grep -Fq "$needle" "$file" || {
-              echo "Missing planning invariant in $file: $needle"
+              echo "Missing durable invariant in $file: $needle"
               exit 1
             }
           }
+
+          require_text '# Market Flow US — Plan' .planning/PLAN.md
+          require_text '# Market Flow US — Execution' .planning/EXECUTION.md
+          require_text '| Task | Owner | Status | Depends on | Result/Evidence |' .planning/EXECUTION.md
+          require_text 'role: projection' STATUS.yaml
+          require_text 'non_authoritative: true' STATUS.yaml
+          require_text 'planning: ".planning/PLAN.md"' STATUS.yaml
+          require_text 'execution: ".planning/EXECUTION.md"' STATUS.yaml
 
           require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
           require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
@@ -155,17 +143,7 @@ jobs:
           require_text 'redactedForSharing' docs/AI_INVESTIGATION_PACK.md
           require_text 'redactedForSharing' docs/TECHNICAL_SPEC.md
           require_text 'canary secret/session' docs/TEST_STRATEGY.md
-          require_text 'D-US-032' .planning/DECISIONS.md
-          require_text 'D-US-033' .planning/DECISIONS.md
-          require_text 'D-US-034' .planning/DECISIONS.md
-          require_text 'D-US-036' .planning/DECISIONS.md
-          require_text 'D-US-037' .planning/DECISIONS.md
-          require_text 'D-US-039' .planning/DECISIONS.md
-          require_text 'D-US-040' .planning/DECISIONS.md
-          require_text 'D-US-045' .planning/DECISIONS.md
-          require_text 'D-US-046' .planning/DECISIONS.md
-          require_text 'D-US-047' .planning/DECISIONS.md
-          require_text 'D-US-048' .planning/DECISIONS.md
+
           require_text 'DRY_RUN' docs/IBKR_ORDER_SERVICE.md
           require_text 'ACKNOWLEDGEMENT_UNKNOWN' docs/IBKR_ORDER_SERVICE.md
           require_text '127.0.0.1:8770' docs/IBKR_ORDER_SERVICE_SECURITY.md
@@ -174,21 +152,6 @@ jobs:
           require_text 'same requestId + same normalized intent' docs/IBKR_ORDER_SERVICE.md
           require_text 'no short opening' docs/PRODUCT_REQUIREMENTS.md
 
-          # Historical reviews remain historical evidence and keep their historical counts/text.
-          require_text '37 implementation leaves allocated exactly once' docs/TEST_STRATEGY.md
-          require_text '8.1 / 8.2 / 8.3 / 8.4 done' docs/TEST_STRATEGY.md
-          require_text '9.1 / 9.2 / 9.3 / 9.4 / 9.5 done' docs/TEST_STRATEGY.md
-          require_text 'R-US-DEMO-BUY-FINAL' .planning/REVIEWS.md
-          require_text 'R-US-DEMO-BUY-EXTERNAL' .planning/REVIEWS.md
-          require_text 'R-US-IBKR-ORDER-FINAL' .planning/IBKR_ORDER_REVIEWS.md
-          require_text 'R-US-IBKR-ORDER-EXTERNAL' .planning/IBKR_ORDER_REVIEWS.md
-          require_text 'R-US-REPLAY-BUY-EXTENSION-FINAL' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
-          require_text 'TREE nodes:              52' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
-          require_text 'implementation leaves:   39' .planning/REPLAY_BUY_EXTENSION_REVIEW.md
-          require_text 'R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
-
-          require_text 'sharing-safe local AI Investigation Pack' .planning/TREE.yaml
-          require_text 'fresh replay DB/session' .planning/TREE.yaml
           require_text '4096' docs/TEST_STRATEGY.md
           require_text '180 end-to-end cycles' docs/TEST_STRATEGY.md
           require_text 'at least 20 consecutive complete ScreenerHulPaging3 responses' docs/TEST_STRATEGY.md
@@ -196,151 +159,18 @@ jobs:
 
           if grep -Eq 'LastKnownRate|BaseRateChangePercentage|BuyLimit1|SellLimit1|DailyNISRevenue|DailyDealsQuantity|LastDealTimeOnly' \
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md; then
-            echo "Core U.S. planning contracts still contain Israeli typed market fields"
+            echo "Core U.S. contracts still contain Israel-only typed market fields"
             exit 1
           fi
 
           if grep -Eq 'universe = 561|561 x 600|561 × 600' docs/TEST_STRATEGY.md docs/TECHNICAL_SPEC.md; then
-            echo "Core U.S. verification contracts still contain old representative workload"
+            echo "Core U.S. verification contracts still contain the superseded representative workload"
             exit 1
           fi
 
-          node <<'NODE'
-          const fs = require('node:fs');
-
-          const tree = fs.readFileSync('.planning/TREE.yaml', 'utf8');
-          const ids = [...tree.matchAll(/^  "([^"]+)":$/gm)].map(m => m[1]);
-          if (!ids.length || ids[0] !== '0') throw new Error('TREE has no valid node list/root');
-
-          const sections = {};
-          for (let i = 0; i < ids.length; i++) {
-            const start = tree.indexOf(`  "${ids[i]}":\n`);
-            const end = i + 1 < ids.length
-              ? tree.indexOf(`  "${ids[i + 1]}":\n`, start + 1)
-              : tree.length;
-            sections[ids[i]] = tree.slice(start, end);
-          }
-
-          const children = {};
-          const deps = {};
-          const parentCount = Object.fromEntries(ids.map(id => [id, 0]));
-
-          for (const id of ids) {
-            const childMatch = sections[id].match(/    children: \[([^\]]*)\]/);
-            children[id] = childMatch && childMatch[1].trim()
-              ? childMatch[1].split(',').map(x => x.trim().replace(/^"|"$/g, ''))
-              : [];
-
-            for (const child of children[id]) {
-              if (!(child in parentCount)) throw new Error(`Missing TREE child ${child} referenced by ${id}`);
-              parentCount[child]++;
-            }
-
-            const depMatch = sections[id].match(/    depends_on: \[([^\]]*)\]/);
-            deps[id] = depMatch && depMatch[1].trim()
-              ? depMatch[1].split(',').map(x => x.trim().replace(/^"|"$/g, ''))
-              : [];
-          }
-
-          if (parentCount['0'] !== 0) throw new Error('Root cannot have a parent');
-          for (const id of ids.filter(x => x !== '0')) {
-            if (parentCount[id] !== 1) throw new Error(`Node ${id} must have exactly one S&T parent`);
-          }
-
-          const oneChild = ids.filter(id => children[id].length === 1);
-          if (oneChild.length) throw new Error(`One-child S&T decomposition found: ${oneChild.join(', ')}`);
-
-          const leaves = ids.filter(id => children[id].length === 0);
-          const leafSet = new Set(leaves);
-
-          for (const [id, list] of Object.entries(deps)) {
-            for (const dep of list) {
-              if (dep === id) throw new Error(`Self dependency: ${id}`);
-              if (!leafSet.has(dep)) throw new Error(`Dependency ${id} -> ${dep} must reference an implementation leaf`);
-            }
-          }
-
-          const visiting = new Set();
-          const done = new Set();
-          function visit(id) {
-            if (visiting.has(id)) throw new Error(`Dependency cycle at ${id}`);
-            if (done.has(id)) return;
-            visiting.add(id);
-            for (const dep of deps[id] || []) visit(dep);
-            visiting.delete(id);
-            done.add(id);
-          }
-          for (const leaf of leaves) visit(leaf);
-
-          if (ids.length !== 58) throw new Error(`Expected 58 TREE nodes after pre-acceptance audit replan, found ${ids.length}`);
-          if (leaves.length !== 44) throw new Error(`Expected 44 implementation leaves after pre-acceptance audit replan, found ${leaves.length}`);
-
-          const planState = fs.readFileSync('.planning/STATUS.yaml', 'utf8')
-            .match(/^plan_state: ([a-z_]+)$/m)?.[1];
-
-          if (planState === 'frozen') {
-            const statuses = [...tree.matchAll(/^    status: ([a-z_]+)$/gm)].map(m => m[1]);
-            if (statuses.length !== ids.length || statuses.some(s => s !== 'approved')) {
-              throw new Error('Frozen TREE must contain only approved nodes');
-            }
-            const reviews = fs.readFileSync('.planning/REVIEWS.md', 'utf8');
-            const ibkrReviews = fs.readFileSync('.planning/IBKR_ORDER_REVIEWS.md', 'utf8');
-            const extensionReview = fs.readFileSync('.planning/REPLAY_BUY_EXTENSION_REVIEW.md', 'utf8');
-            const auditReplanReview = fs.readFileSync('.planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md', 'utf8');
-            for (const marker of ['R-US-DEMO-BUY-FINAL', 'R-US-DEMO-BUY-EXTERNAL']) {
-              if (!reviews.includes(marker)) throw new Error(`Frozen plan requires historical review ${marker}`);
-            }
-            for (const marker of ['R-US-IBKR-ORDER-FINAL', 'R-US-IBKR-ORDER-EXTERNAL']) {
-              if (!ibkrReviews.includes(marker)) throw new Error(`Frozen plan requires branch-8 review ${marker}`);
-            }
-            for (const marker of ['R-US-MARKET-REPLAY-FINAL', 'R-US-MARKET-REPLAY-EXTERNAL']) {
-              if (!reviews.includes(marker)) throw new Error(`Frozen plan requires branch-9 review ${marker}`);
-            }
-            if (!extensionReview.includes('R-US-REPLAY-BUY-EXTENSION-FINAL')) {
-              throw new Error('Frozen plan requires hardening/BUY extension review');
-            }
-            if (!auditReplanReview.includes('R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN')) {
-              throw new Error('Frozen plan requires pre-acceptance audit replan review');
-            }
-          }
-
-          console.log('TREE verified', { nodes: ids.length, leaves: leaves.length });
-          NODE
-
-          plan_state="$(sed -n 's/^plan_state: //p' .planning/STATUS.yaml | head -n1)"
-          replan_mode="$(sed -n 's/^replan_mode: //p' .planning/STATUS.yaml | head -n1)"
-          phase="$(sed -n 's/^phase: //p' STATUS.yaml | head -n1)"
-
-          if [ "$plan_state" = "active" ]; then
-            [ "$phase" = "planning" ] || {
-              echo "Active plan requires root phase: planning"
-              exit 1
-            }
-            if [ "$replan_mode" = "execution_reopen" ]; then
-              ! grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
-                echo "execution_reopen requires preserved allocated EXECUTION"
-                exit 1
-              }
-            else
-              grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
-                echo "Initial active planning must keep EXECUTION unallocated"
-                exit 1
-              }
-            fi
+          if grep -Eq '^\|[^|]+\|[^|]+\| (draft|approved|frozen|authorized|allocated|handoff) \|' .planning/EXECUTION.md; then
+            echo "EXECUTION.md contains ST Planner 1.x process state instead of execution status"
+            exit 1
           fi
 
-          if [ "$phase" = "implementation" ]; then
-            [ "$plan_state" = "frozen" ] || {
-              echo "Implementation requires frozen plan"
-              exit 1
-            }
-            ! grep -q '^chats: {}$' .planning/EXECUTION.yaml || {
-              echo "Implementation requires allocated EXECUTION"
-              exit 1
-            }
-          fi
-
-          node .planning/validate-ci-hygiene.mjs
-          node .planning/verify-handoff.mjs
-
-          echo "Market Flow US planning validation passed."
+          echo "Market Flow US planning/contract validation passed."
