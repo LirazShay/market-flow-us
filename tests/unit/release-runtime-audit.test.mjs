@@ -82,13 +82,26 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run historical evidence and active runbook stay reclosed through final provider proof", async () => {
-  const [startHere, historicalPlan, runbook, finalRunbook, finalExecution, liveVerification] = await Promise.all([
+test("first-run procedure is preserved while final target-machine acceptance is deferred and non-blocking", async () => {
+  const [
+    startHere,
+    historicalPlan,
+    runbook,
+    finalRunbook,
+    finalExecution,
+    execution,
+    backlogIndex,
+    backlogAcceptance,
+    liveVerification
+  ] = await Promise.all([
     rootFile("START_HERE.md"),
     rootFile(".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"),
     rootFile("docs/FIRST_RUN_ACCEPTANCE.md"),
     rootFile(".planning/FINAL_ACCEPTANCE_RUNBOOK.md"),
     rootFile(".planning/FINAL_ACCEPTANCE_EXECUTION.md"),
+    rootFile(".planning/EXECUTION.md"),
+    rootFile("backlog/README.md"),
+    rootFile("backlog/B-US-000-final-target-machine-provider-acceptance.md"),
     rootFile("docs/LIVE_VERIFICATION.md")
   ]);
 
@@ -114,9 +127,9 @@ test("first-run historical evidence and active runbook stay reclosed through fin
   }
 
   const historicalBranch8Candidate = "28e950afc1c4bfe4322d0593f483d05d92553e2d";
-  const finalCandidate = "682f8c8b01e9f68c7f8e159de8b0f233221f1878";
+  const historicalDeferredCandidate = "682f8c8b01e9f68c7f8e159de8b0f233221f1878";
 
-  // The preserved planning mini-project is provenance evidence and may retain its historical owner/candidate wording.
+  // The preserved planning mini-project is provenance evidence and may retain historical owner/candidate wording.
   assert.match(historicalPlan, /FR-0 is a release-level checkpoint, not a local-checkout checkpoint/);
   assert.match(historicalPlan, /FR-2 proves the target machine is actually checked out to that exact SHA/);
   assert.match(historicalPlan, /Chat 25/);
@@ -124,7 +137,7 @@ test("first-run historical evidence and active runbook stay reclosed through fin
   assert.match(historicalPlan, /test:acceptance:replay/);
   assert.match(historicalPlan, /build:replay/);
 
-  // Active acceptance authority must come from the final runbook/evidence ledger, not retired V1 handoff state.
+  // Detailed FR procedure remains available and continues to use a per-run selected SHA.
   assert.match(runbook, /\.planning\/FINAL_ACCEPTANCE_RUNBOOK\.md/);
   assert.match(runbook, /\.planning\/FINAL_ACCEPTANCE_EXECUTION\.md/);
   assert.match(runbook, /\.planning\/EXECUTION\.md/);
@@ -134,12 +147,25 @@ test("first-run historical evidence and active runbook stay reclosed through fin
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
   assert.doesNotMatch(runbook, /accepted-post-branch-9-SHA|\.planning\/EXECUTOR_HANDOFF\.md|\.planning\/STATUS\.yaml/);
 
-  assert.match(finalRunbook, new RegExp(finalCandidate));
-  assert.match(finalExecution, new RegExp(finalCandidate));
-  assert.match(finalRunbook, /Chat 28 \/ task 7\.4/);
-  assert.match(finalExecution, /FR-0 exact final candidate \| PASS/);
-  assert.match(finalExecution, /FR-1 host prerequisite preflight \| PASS/);
-  assert.match(finalExecution, /FR-2 exact-SHA checkout \| PENDING/);
+  // Final acceptance is now backlog-only and must follow the latest intended runtime candidate when activated.
+  assert.match(backlogIndex, /B-US-000/);
+  assert.match(backlogIndex, /non-blocking by default/i);
+  assert.match(backlogAcceptance, /Blocking: `No`/);
+  assert.match(backlogAcceptance, /latest intended runtime candidate/i);
+  assert.match(backlogAcceptance, /fresh `main`/);
+  assert.match(finalRunbook, /not an active execution boundary/i);
+  assert.match(finalRunbook, /latest intended runtime candidate/i);
+  assert.match(finalRunbook, /not.*future mandatory FR-2 target/is);
+  assert.match(finalRunbook, new RegExp(historicalDeferredCandidate));
+  assert.match(finalExecution, /Active execution status: \*\*not allocated\*\*/);
+  assert.match(finalExecution, /Blocking development: \*\*No\*\*/);
+  assert.match(finalExecution, /FR-2 exact selected-SHA checkout \| DEFERRED/);
+  assert.match(finalExecution, new RegExp(historicalDeferredCandidate));
+
+  assert.match(execution, /There is currently \*\*no open allocated execution task\*\*/);
+  assert.match(execution, /backlog\/B-US-000-final-target-machine-provider-acceptance\.md/);
+  assert.doesNotMatch(execution, /\| `7\.4` \| Chat 28 \| `pending`/);
+  assert.match(execution, /Pending rows: \*\*0\*\*/);
 
   assert.match(runbook, /test:acceptance:replay/);
   assert.match(runbook, /build:replay/);
