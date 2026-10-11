@@ -86,9 +86,8 @@ async function insertFixture(connection) {
   const baselineRows = CASES.map((entry, index) => `(
     2, 'outcome-contract-session', 1, '${entry.securityId}', 0,
     1_700, 1_890, 1_900, NULL,
-    'S${index + 1}', 'Security ${index + 1}', NULL, 'TEST', NULL, NULL, NULL,
-    ${sqlValue(entry.baselinePrice)}, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-    NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+    'S${index + 1}', 'Security ${index + 1}', NULL, 'TEST',
+    ${sqlValue(entry.baselinePrice)}, 0, 100,
     '{"PaperId":"${entry.securityId}"}'
   )`).join(",\n");
 
@@ -97,14 +96,18 @@ async function insertFixture(connection) {
     .map((entry, index) => `(
       3, 'outcome-contract-session', 1, '${entry.securityId}', 0,
       11_700, 11_890, 12_000, NULL,
-      'F${index + 1}', 'Future ${index + 1}', NULL, 'TEST', NULL, NULL, NULL,
-      ${sqlValue(entry.futurePrice)}, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+      'F${index + 1}', 'Future ${index + 1}', NULL, 'TEST',
+      ${sqlValue(entry.futurePrice)}, 0, 100,
       '{"PaperId":"${entry.securityId}"}'
     )`).join(",\n");
 
   await connection.run(`
-    INSERT INTO history VALUES
+    INSERT INTO history (
+      cycle_id, session_id, universe_revision, security_id, chunk_index,
+      cycle_started_at_ms, chunk_received_at_ms, collected_at_ms,
+      source_metadata_json, Symbol, PaperNameEng, PaperNameHeb, ExchangeName,
+      Price, ChangePercent, DailyVolume, raw_data
+    ) VALUES
       ${baselineRows},
       ${futureRows}
   `);
