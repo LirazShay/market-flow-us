@@ -19,7 +19,7 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: backtest_lab_allocated_pending_planning_merge
+overall_status: backtest_lab_ready
 
 current:
   chat: 29
@@ -42,7 +42,7 @@ next_pointer:
   task: "10.1"
   owner: "Chat 29"
   status: pending
-  action: "After the Branch-10 planning changes are merged to main, start Chat 29 from fresh main. Do not start 10.2-10.6 before their declared dependencies are done."
+  action: "Start Chat 29 from fresh main for task 10.1. Do not start 10.2-10.6 before their declared dependencies are done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
