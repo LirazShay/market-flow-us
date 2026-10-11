@@ -46,6 +46,14 @@ async function requestJson(fetchImpl, path, options = undefined) {
   return body;
 }
 
+function postJson(fetchImpl, path, body) {
+  return requestJson(fetchImpl, path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+}
+
 export function createBacktestLabClient({ fetchImpl = globalThis.fetch } = {}) {
   if (typeof fetchImpl !== "function") {
     throw new TypeError("fetchImpl must be a function.");
@@ -61,11 +69,22 @@ export function createBacktestLabClient({ fetchImpl = globalThis.fetch } = {}) {
     },
 
     async runPoint(request) {
-      const body = await requestJson(fetchImpl, "/api/point/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(request)
-      });
+      const body = await postJson(fetchImpl, "/api/point/run", request);
+      return body.point;
+    },
+
+    async runSweep(request) {
+      const body = await postJson(fetchImpl, "/api/sweep/run", request);
+      return body.sweep;
+    },
+
+    async pageSweep(sweepId, offset, limit) {
+      const body = await postJson(fetchImpl, "/api/sweep/page", { sweepId, offset, limit });
+      return body.page;
+    },
+
+    async openSweepPoint(sweepId, index) {
+      const body = await postJson(fetchImpl, "/api/sweep/open", { sweepId, index });
       return body.point;
     }
   });
