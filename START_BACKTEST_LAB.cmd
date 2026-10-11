@@ -25,7 +25,7 @@ echo The browser will open automatically when the Lab is ready.
 echo Keep this window open. Press Ctrl+C here to stop the Lab.
 echo.
 
-powershell -NoProfile -Command "$c=$null; try { $c=New-Object System.Net.Sockets.TcpClient('127.0.0.1',8767); exit 1 } catch { exit 0 } finally { if($null -ne $c){ $c.Close() } }"
+powershell -NoProfile -Command "$c=$null; try { $c=[System.Net.Sockets.TcpClient]::new('127.0.0.1',8767); exit 1 } catch { exit 0 } finally { if($null -ne $c){ $c.Close() } }"
 if errorlevel 1 goto :port_fail
 
 start "" /b powershell -NoProfile -WindowStyle Hidden -Command "$deadline=(Get-Date).AddSeconds(30); while((Get-Date)-lt $deadline){ try { $r=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8767/' -TimeoutSec 1; if($r.StatusCode -eq 200 -and $r.Content -match 'Market Flow US.+Backtest Lab'){ Start-Process 'http://127.0.0.1:8767/'; exit 0 } } catch {} ; Start-Sleep -Seconds 1 }; exit 1" >nul 2>&1
