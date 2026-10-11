@@ -42,6 +42,14 @@ export function freezeBacktestPointRequest({ sourceId, requestedAtMs, queries, t
   return freezeCopy({ sourceId, requestedAtMs, queries: queries.map(({ id, name, sql }) => ({ id, name, sql })), topX, horizonsMs });
 }
 
+export function buildUnavailableBacktestPointResult({ request, reason = "NO_BASELINE" }) {
+  if (!request || typeof request !== "object" || !Object.isFrozen(request)
+    || typeof reason !== "string" || reason.length === 0) invalid("Unavailable point input is invalid.");
+  return freezeCopy({ available: false, unavailableReason: reason, sourceId: request.sourceId,
+    requestedAtMs: request.requestedAtMs, baseline: null, topX: request.topX,
+    horizonsMs: request.horizonsMs, queries: request.queries });
+}
+
 export function selectBacktestRows(result, topX) {
   if (topX !== null && (!Number.isSafeInteger(topX) || topX < 1)) invalid("topX must be positive or null for All.");
   if (!result || !Array.isArray(result.columns) || !Array.isArray(result.rows)
