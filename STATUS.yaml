@@ -42,7 +42,7 @@ next_pointer:
   task: "10.5"
   owner: "Chat 33"
   status: pending
-  action: "Task 10.4 is complete after PR #86 Inspect/Compare implementation and green Fast #625, Browser #550, Planning #799 and Workload #373 proof. Start Chat 33 explicitly before implementing 10.5 Sweep; generic continuation does not change chat identity."
+  action: "Task 10.4 closure is staged in PR #86 after green implementation proof; this projection becomes main truth only when that PR merges and main CI is green. Then start Chat 33 explicitly before implementing 10.5 Sweep; generic continuation does not change chat identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
