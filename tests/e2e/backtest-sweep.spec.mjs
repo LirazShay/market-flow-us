@@ -43,9 +43,10 @@ async function mount(page) {
       bestPercent: averagePercent,
       worstPercent: averagePercent
     });
+    const intervalMs = (request) => request.intervalValue * (request.intervalUnit === "minutes" ? 60_000 : 1000);
     const compactPoint = (index, request) => ({
       index,
-      requestedAtMs: request.fromAtMs + index * request.intervalValue * (request.intervalUnit === "minutes" ? 60_000 : 1000),
+      requestedAtMs: request.fromAtMs + index * intervalMs(request),
       available: true,
       unavailableReason: null,
       baseline: { cycleId: 7, committedAtMs: request.fromAtMs - 1000 },
@@ -159,11 +160,11 @@ async function mount(page) {
         return json({ error: { code: "POINT_RERUN_FORBIDDEN", message: "Sweep Open must not rerun the point." } }, 500);
       }
       if (pathname === "/api/sweep/run") {
-        const totalCount = body.queries.length === 1 ? 3 : 51;
+        const totalCount = Math.floor((body.toAtMs - body.fromAtMs) / intervalMs(body)) + 1;
         const points = Array.from({ length: totalCount }, (_, index) => compactPoint(index, body));
         activeSweep = {
           id: String(calls.filter((call) => call.pathname === "/api/sweep/run").length),
-          request: { ...body, intervalMs: body.intervalValue * (body.intervalUnit === "minutes" ? 60_000 : 1000) },
+          request: { ...body, intervalMs: intervalMs(body) },
           metrics: {
             requestedPointCount: totalCount,
             availablePointCount: totalCount,
@@ -205,39 +206,39 @@ function endpointCalls(page, pathname) {
   return page.evaluate((value) => globalThis.__backtestSweepCalls.filter((call) => call.pathname === value), pathname);
 }
 
-test("Sweep pages 51 compact points and Open uses the exact existing Compare renderer without rerun", async ({ page }) => {
+test("Sweep pages 61 compact points and Open uses the exact existing Compare renderer without rerun", async ({ page }) => {
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeHidden();
-  await host.getByLabel("Sweep from").fill("2026-10-11T14:00:00");
-  await host.getByLabel("Sweep to").fill("2026-10-11T14:08:20");
+  await host.getByLabel("Sweep from").fill("2026-10-11T14:00");
+  await host.getByLabel("Sweep to").fill("2026-10-11T14:10");
   await host.getByLabel("Sweep interval", { exact: true }).fill("10");
   await host.getByLabel("Sweep interval unit").selectOption("seconds");
   await host.getByRole("button", { name: "Run Sweep" }).click();
 
   await expect(host.getByRole("heading", { name: "Sweep timeline" })).toBeVisible();
-  await expect(host.getByText("Requested: 51", { exact: true })).toBeVisible();
+  await expect(host.getByText("Requested: 61", { exact: true })).toBeVisible();
   await expect(host.getByText("Distinct baselines: 1", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 2", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Sweep timeline points" }).locator("tbody tr")).toHaveCount(50);
-  await expect(host.getByText("1-50 / 51", { exact: true })).toBeVisible();
+  await expect(host.getByText("1-50 / 61", { exact: true })).toBeVisible();
 
   const runCalls = await endpointCalls(page, "/api/sweep/run");
   expect(runCalls).toHaveLength(1);
   expect(runCalls[0].body.intervalValue).toBe(10);
   expect(runCalls[0].body.intervalUnit).toBe("seconds");
   expect(runCalls[0].body.queries).toHaveLength(2);
-  expect(runCalls[0].body.toAtMs - runCalls[0].body.fromAtMs).toBe(500_000);
+  expect(runCalls[0].body.toAtMs - runCalls[0].body.fromAtMs).toBe(600_000);
 
   await host.getByRole("button", { name: "Next" }).click();
   const secondPage = host.getByRole("table", { name: "Sweep timeline points" });
-  await expect(secondPage.locator("tbody tr")).toHaveCount(1);
-  await expect(host.getByText("51-51 / 51", { exact: true })).toBeVisible();
+  await expect(secondPage.locator("tbody tr")).toHaveCount(11);
+  await expect(host.getByText("51-61 / 61", { exact: true })).toBeVisible();
   const pageCalls = await endpointCalls(page, "/api/sweep/page");
   expect(pageCalls).toHaveLength(1);
   expect(pageCalls[0].body).toEqual({ sweepId: "1", offset: 50, limit: 50 });
 
-  await host.getByRole("button", { name: "Open Sweep point 51" }).click();
+  await host.getByRole("button", { name: "Open Sweep point 61" }).click();
   await expect(host.getByRole("heading", { name: "Compare result" })).toBeVisible();
   await expect(host.getByText("Resolved cycle: 7", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
@@ -247,17 +248,17 @@ test("Sweep pages 51 compact points and Open uses the exact existing Compare ren
 
   const openCalls = await endpointCalls(page, "/api/sweep/open");
   expect(openCalls).toHaveLength(1);
-  expect(openCalls[0].body).toEqual({ sweepId: "1", index: 50 });
+  expect(openCalls[0].body).toEqual({ sweepId: "1", index: 60 });
   expect(await endpointCalls(page, "/api/point/run")).toHaveLength(0);
 });
 
-test("Sweep can freeze Query A only with minute cadence", async ({ page }) => {
+test("Sweep can freeze Query A only with minute cadence and Open into Inspect without rerun", async ({ page }) => {
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await host.getByLabel("Sweep query set").selectOption("single");
   await expect(host.getByLabel("Query B SQL")).toBeHidden();
-  await host.getByLabel("Sweep from").fill("2026-10-11T14:00:00");
-  await host.getByLabel("Sweep to").fill("2026-10-11T14:02:00");
+  await host.getByLabel("Sweep from").fill("2026-10-11T14:00");
+  await host.getByLabel("Sweep to").fill("2026-10-11T14:02");
   await host.getByLabel("Sweep interval", { exact: true }).fill("1");
   await host.getByLabel("Sweep interval unit").selectOption("minutes");
   await host.getByRole("button", { name: "Run Sweep" }).click();
@@ -269,5 +270,12 @@ test("Sweep can freeze Query A only with minute cadence", async ({ page }) => {
   expect(runCalls[0].body.intervalUnit).toBe("minutes");
   await expect(host.getByText("Requested: 3", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 1", { exact: true })).toBeVisible();
+
+  await host.getByRole("button", { name: "Open Sweep point 1" }).click();
+  await expect(host.getByRole("heading", { name: "Inspect result" })).toBeVisible();
+  await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
+  const openCalls = await endpointCalls(page, "/api/sweep/open");
+  expect(openCalls).toHaveLength(1);
+  expect(openCalls[0].body).toEqual({ sweepId: "1", index: 0 });
   expect(await endpointCalls(page, "/api/point/run")).toHaveLength(0);
 });
