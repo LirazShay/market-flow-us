@@ -11,9 +11,10 @@ async function launcher(name) {
 }
 
 test("Windows launchers remain thin wrappers around canonical npm commands", async () => {
-  const [setup, demo, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance] = await Promise.all([
+  const [setup, demo, backtest, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance] = await Promise.all([
     launcher("SETUP.cmd"),
     launcher("START_DEMO.cmd"),
+    launcher("START_BACKTEST_LAB.cmd"),
     launcher("RESET_DEMO.cmd"),
     launcher("RUN_TESTS.cmd"),
     launcher("START_MARKET_FLOW_US.cmd"),
@@ -33,6 +34,19 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
 
   assert.match(demo, /npm run demo:fake-market/);
   assert.match(demo, /http:\/\/127\.0\.0\.1:4173\//);
+
+  assert.match(backtest, /call npm run backtest-lab/);
+  assert.match(backtest, /http:\/\/127\.0\.0\.1:8767\//);
+  assert.match(backtest, /\[System\.Net\.Sockets\.TcpClient\]::new\('127\.0\.0\.1',8767\)/);
+  assert.match(backtest, /Invoke-WebRequest[^\n]+127\.0\.0\.1:8767/);
+  assert.match(backtest, /StatusCode -eq 200[^\n]+Market Flow US\.\+Backtest Lab/);
+  assert.match(backtest, /No provider login or open market is required/i);
+  assert.match(backtest, /opened read-only/i);
+  assert.match(backtest, /does not start Collector, Replay, or IBKR order service/i);
+  assert.match(backtest, /Port 8767 is already in use/);
+  assert.match(backtest, /No browser was opened and no process was stopped automatically/);
+  assert.doesNotMatch(backtest, /--allowed-origin|build:browser|build:replay|replay-host|order-service --|demo:fake-market/i);
+  assert.doesNotMatch(backtest, /\b(?:del|erase|rd|rmdir|taskkill)\b/i);
 
   assert.match(reset, /npm run demo:reset/);
   assert.doesNotMatch(reset, /\b(?:del|erase|rd|rmdir)\b/i);
@@ -101,7 +115,7 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
   assert.match(orderAcceptance, /synthetic-only/i);
   assert.match(orderAcceptance, /never requires or claims a real-money order/i);
 
-  for (const content of [setup, demo, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance]) {
+  for (const content of [setup, demo, backtest, reset, tests, real, buy, replay, live, newDay, order, sessionCheck, orderAcceptance]) {
     assert.match(content, /pushd "%~dp0"/);
     assert.doesNotMatch(content, /MarketScope|MARKETSCOPE|market-scope/i);
   }

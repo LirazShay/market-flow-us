@@ -25,14 +25,14 @@ current:
   chat: 34
   node: "10.6"
   title: "Backtest Lab productization and reclosure"
-  status: pending
+  status: in_progress
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
   done: 48
-  pending: 1
-  in_progress: 0
+  pending: 0
+  in_progress: 1
   blocked: 0
   current_chat: 34
   current_node: "10.6"
@@ -41,8 +41,8 @@ execution_projection:
 next_pointer:
   task: "10.6"
   owner: "Chat 34"
-  status: pending
-  action: "Task 10.5 / Chat 33 is closed by PR #88 candidate 42f13a827493a4106d4ef8780fd3c77f93986823 with green Fast #656, Browser #572, Planning #832 and Workload #395 after final contract review and RCA fixes. Start Chat 34 explicitly before implementing 10.6 productization/reclosure; generic continuation does not change chat identity."
+  status: in_progress
+  action: "Chat 34 is active on task 10.6. Complete the offline START_BACKTEST_LAB.cmd + beginner guidance segment first; then continue with representative Inspect/Compare/second-level Sweep measurements, remove only measured avoidable work, and finish affected deterministic reclosure before marking 10.6 done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
