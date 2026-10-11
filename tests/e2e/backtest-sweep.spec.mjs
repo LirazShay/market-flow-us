@@ -210,6 +210,8 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeHidden();
+  await host.getByLabel("Query A template").selectOption("q-a");
+  await host.getByLabel("Query B template").selectOption("q-b");
   await host.getByLabel("Sweep from").fill("2026-10-11T14:00");
   await host.getByLabel("Sweep to").fill("2026-10-11T14:10");
   await host.getByLabel("Sweep interval", { exact: true }).fill("10");
@@ -228,6 +230,7 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
   expect(runCalls[0].body.intervalValue).toBe(10);
   expect(runCalls[0].body.intervalUnit).toBe("seconds");
   expect(runCalls[0].body.queries).toHaveLength(2);
+  expect(runCalls[0].body.queries.map((query) => query.name)).toEqual(["Momentum A", "Price B"]);
   expect(runCalls[0].body.toAtMs - runCalls[0].body.fromAtMs).toBe(600_000);
 
   await host.getByRole("button", { name: "Next" }).click();
@@ -255,6 +258,7 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
 test("Sweep can freeze Query A only with minute cadence and Open into Inspect without rerun", async ({ page }) => {
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
+  await host.getByLabel("Query A template").selectOption("q-a");
   await host.getByLabel("Sweep query set").selectOption("single");
   await expect(host.getByLabel("Query B SQL")).toBeHidden();
   await host.getByLabel("Sweep from").fill("2026-10-11T14:00");
@@ -266,6 +270,7 @@ test("Sweep can freeze Query A only with minute cadence and Open into Inspect wi
   const runCalls = await endpointCalls(page, "/api/sweep/run");
   expect(runCalls).toHaveLength(1);
   expect(runCalls[0].body.queries).toHaveLength(1);
+  expect(runCalls[0].body.queries[0].name).toBe("Momentum A");
   expect(runCalls[0].body.intervalValue).toBe(1);
   expect(runCalls[0].body.intervalUnit).toBe("minutes");
   await expect(host.getByText("Requested: 3", { exact: true })).toBeVisible();
