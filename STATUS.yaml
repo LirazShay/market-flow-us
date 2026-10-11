@@ -42,7 +42,7 @@ next_pointer:
   task: "10.6"
   owner: "Chat 34"
   status: in_progress
-  action: "Chat 34 is active on task 10.6. Complete the offline START_BACKTEST_LAB.cmd + beginner guidance segment first; then continue with representative Inspect/Compare/second-level Sweep measurements, remove only measured avoidable work, and finish affected deterministic reclosure before marking 10.6 done."
+  action: "PR #89 merged the offline START_BACKTEST_LAB.cmd + beginner guidance checkpoint as b5c3f0c2b7838ff26e9f07e6c916162b65caaaaf with green Fast and Planning on main. Next: measure representative Inspect, Compare and second-level Sweep workloads; remove only measured avoidable work, then complete affected deterministic reclosure before marking 10.6 done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
