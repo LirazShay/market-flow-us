@@ -14,9 +14,9 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Backtest Branch 10 is now explicitly allocated for sequential execution. Task `10.1` owned by Chat 29 is the only currently executable Backtest task; `10.2`–`10.6` remain `pending` behind their declared dependencies and must not start early.
+Backtest Branch 10 is explicitly allocated for sequential execution. Task `10.1` owned by Chat 29 is complete; task `10.2` owned by Chat 30 is the next executable Backtest task. Tasks `10.3`–`10.6` remain `pending` behind their declared dependencies and must not start early.
 
-The planning branch must be merged to fresh `main` before Chat 29 begins implementation. A numbered executor activates only through an explicit request such as `אני צאט 29 תתחיל`; a generic continuation never changes chat identity.
+Chat 30 may begin only after the `10.1` closure PR is merged to fresh `main`. A numbered executor activates only through an explicit request such as `אני צאט 30 תתחיל`; a generic continuation never changes chat identity.
 
 Former task `7.4` final target-machine/provider acceptance remains in `backlog/B-US-000-final-target-machine-provider-acceptance.md` as non-blocking future work. It is not a dependency of Branch 10.
 
@@ -67,7 +67,7 @@ Former task `7.4` final target-machine/provider acceptance remains in `backlog/B
 | `9.4` | Chat 23 | `done` | `9.3` | Replay Host is implemented as loopback lifecycle orchestration only: exact Origin, ephemeral in-memory one-run pairing credential, replay-owned per-run DuckDB/service child, foreign-port fail-closed behavior, and stop-only-owned-child semantics. The dedicated Replay UI/client/coordinator composes the unchanged ProducerBridge and existing Viewer; initial Play provisions an isolated run, Pause/Resume stays on the same run, while Seek and Play-after-Stop create fresh DB/service runs before any frame emission. START_MARKET_REPLAY.cmd and npm replay-host provide the opt-in operator path. PR #52 head 37f346dcd3949ad27918e20d43fd56799036b01a passed Fast #451, Browser #410, Planning Docs #583 and Workload #238 after correcting one overbroad launcher assertion; focused Host/service proof confirms live-DB canary preservation and no foreign-process termination. |
 | `9.5` | Chat 24 | `done` | `9.4`, `8.4` | Branch-9 deterministic Replay reclosure is complete. PR #53 squash-merged as exact post-branch-9 candidate 243f4f2e78e434378ff2202ba95af7b8626a0369 after integrated arbitrary-start/next-day Replay proof, focused Replay acceptance, contract/release-truth repairs and final diff review. Fast #469, Browser #428 including bounded Local Fake, Planning Docs #601 and Workload #256 were green on main, and the open-PR audit was clean. |
 | `9.6` | Chat 25 | `done` | `9.5` | Replay pre-user-run hardening completed with all mandatory audit areas PASS. The exact runtime/test candidate 52becaaeaddde01457199d17c88dd6ce61c98d42 passed Planning #625, Workload #269, Fast #483, Replay #12 and Browser #441 after root-cause fixes and deterministic regressions for recorder Start/Stop ownership, final/in-flight Pause authority, stale Player callbacks, stale concurrent source loads, run-coordinator/Host lifecycle races and late session-start cleanup. The shared protocol/server remains Replay-unaware, final diff review found no remaining known material Replay defect or unproved risk, and the durable audit is .planning/REPLAY_HARDENING_AUDIT.md. |
-| `10.1` | Chat 29 | `pending` | `7.6.5` | Pending implementation. Definition of done is PLAN 10.1: dedicated offline loopback runtime, controlled active/archive catalog, read-only v3/v4 validation with zero source mutation/ownership, focused source-isolation proof and public-safe diagnostics. |
+| `10.1` | Chat 29 | `done` | `7.6.5` | Dedicated `127.0.0.1` Backtest runtime and controlled active/archive catalog now open only product-owned schema-v3/v4 DuckDB evidence in hardened `READ_ONLY` mode, reject arbitrary paths, durable running ownership and real foreign-process file locks without recovery/mutation/process killing, and expose bounded public-safe diagnostics. Focused proof preserves source bytes plus schema/session/saved-query/market/Demo-Buy facts and proves no provider/Collector/Replay/order ownership hooks. Closure candidate `4f4b079481a1c1bd1abf4a85a85c2bfa5cd691a9` passed Fast #574, Browser #520, Replay #91, Planning #748 and Workload #343 after RCA of the same-process DuckDB lock assumption. |
 | `10.2` | Chat 30 | `pending` | `10.1` | Pending implementation. Definition of done is PLAN 10.2: exact committed-cycle resolution plus hardened detached historical `latest/history` sandbox, unchanged Scanner SQL admission/execution and future/source-catalog canary proof. |
 | `10.3` | Chat 31 | `pending` | `10.2` | Pending implementation. Definition of done is PLAN 10.3: set-wise post-decision evaluator using `(B,T0,returned position,securityId)`, Demo Buy-equivalent horizon semantics, explicit unavailable/integrity behavior and focused equivalence proof without Backtest persistence. |
 | `10.4` | Chat 32 | `pending` | `10.2`, `10.3` | Pending implementation. Definition of done is PLAN 10.4: beginner-first Inspect plus Compare A/B/(optional C), compact summary and mandatory full Side-by-Side per-security evidence with overlap/exclusive/position-change drill-down. |
@@ -83,11 +83,11 @@ Former task `7.4` final target-machine/provider acceptance remains in `backlog/B
 - Backtest Branch 10 adds **6** newly planned/allocated execution rows without changing historical completion evidence.
 - Current execution rows: **49**.
 - Unique current execution task IDs: **49**.
-- Done rows: **43**.
-- Pending rows: **6**.
+- Done rows: **44**.
+- Pending rows: **5**.
 - In-progress rows: **0**.
 - Blocked rows: **0**; dependency-gated pending work remains `pending` until predecessors are `done`.
 - Every current execution dependency references another execution task; no self-dependency or dependency cycle is present.
 - Historical results/evidence are preserved. Deferred target-machine/provider acceptance evidence remains in the final-acceptance runbook/ledger and `backlog/B-US-000-final-target-machine-provider-acceptance.md`.
 
-The next executable task is `10.1` / Chat 29 after this planning allocation is present on fresh `main`. No later Backtest chat may start before its declared dependency is `done`.
+The next executable task is `10.2` / Chat 30 after the `10.1` closure is present on fresh `main`. No later Backtest chat may start before its declared dependency is `done`.

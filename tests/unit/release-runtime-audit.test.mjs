@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run procedure stays deferred/non-blocking while new Backtest execution can be allocated", async () => {
+test("first-run procedure stays deferred/non-blocking while Backtest execution progresses", async () => {
   const [
     startHere,
     historicalPlan,
@@ -162,13 +162,20 @@ test("first-run procedure stays deferred/non-blocking while new Backtest executi
   assert.match(finalExecution, /FR-2 exact selected-SHA checkout \| DEFERRED/);
   assert.match(finalExecution, new RegExp(historicalDeferredCandidate));
 
-  // EXECUTION may now contain unrelated allocated work; the durable invariant is that 7.4 stays backlog-only.
-  assert.match(execution, /Backtest Branch 10 is now explicitly allocated for sequential execution/);
-  assert.match(execution, /\| `10\.1` \| Chat 29 \| `pending` \| `7\.6\.5` \|/);
-  assert.match(execution, /The next executable task is `10\.1` \/ Chat 29/);
+  // EXECUTION may advance through Branch 10; stable owner/dependency allocation must not depend on mutable task status/pointer text.
+  assert.match(execution, /Backtest Branch 10 is .*allocated for sequential execution/);
+  for (const allocation of [
+    /\| `10\.1` \| Chat 29 \| `(pending|in_progress|done|blocked)` \| `7\.6\.5` \|/,
+    /\| `10\.2` \| Chat 30 \| `(pending|in_progress|done|blocked)` \| `10\.1` \|/,
+    /\| `10\.3` \| Chat 31 \| `(pending|in_progress|done|blocked)` \| `10\.2` \|/,
+    /\| `10\.4` \| Chat 32 \| `(pending|in_progress|done|blocked)` \| `10\.2`, `10\.3` \|/,
+    /\| `10\.5` \| Chat 33 \| `(pending|in_progress|done|blocked)` \| `10\.4` \|/,
+    /\| `10\.6` \| Chat 34 \| `(pending|in_progress|done|blocked)` \| `10\.5` \|/
+  ]) {
+    assert.match(execution, allocation);
+  }
   assert.match(execution, /backlog\/B-US-000-final-target-machine-provider-acceptance\.md/);
   assert.doesNotMatch(execution, /\| `7\.4` \| Chat 28 \| `pending`/);
-  assert.match(execution, /Pending rows: \*\*6\*\*/);
 
   assert.match(runbook, /test:acceptance:replay/);
   assert.match(runbook, /build:replay/);
