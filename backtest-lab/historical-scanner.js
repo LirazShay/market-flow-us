@@ -55,6 +55,39 @@ async function resolveBaseline(connection, requestedAtMs) {
   return Object.freeze({ cycleId, committedAtMs });
 }
 
+export async function resolveBacktestBaselineSeries({
+  dataDir,
+  sourceId,
+  requestedAtMsList
+} = {}) {
+  if (!Array.isArray(requestedAtMsList) || requestedAtMsList.length === 0) {
+    throw new TypeError("requestedAtMsList must contain at least one point.");
+  }
+
+  let previous = -1;
+  for (const requestedAtMs of requestedAtMsList) {
+    assertRequestedAtMs(requestedAtMs);
+    if (requestedAtMs <= previous) {
+      throw new TypeError("requestedAtMsList must be strictly increasing.");
+    }
+    previous = requestedAtMs;
+  }
+
+  const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  try {
+    const resolved = [];
+    for (const requestedAtMs of requestedAtMsList) {
+      resolved.push(Object.freeze({
+        requestedAtMs,
+        baseline: await resolveBaseline(evidence.connection, requestedAtMs)
+      }));
+    }
+    return Object.freeze(resolved);
+  } finally {
+    await evidence.close();
+  }
+}
+
 async function applySandboxHardening(connection) {
   for (const [name, value] of Object.entries(DUCKDB_HARDENING)) {
     await connection.run(`SET ${name} = ${value}`);
