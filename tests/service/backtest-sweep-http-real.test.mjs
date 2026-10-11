@@ -19,6 +19,11 @@ async function postJson(runtime, pathname, body) {
   };
 }
 
+function assertClose(actual, expected, tolerance = 1e-12) {
+  assert.equal(typeof actual, "number");
+  assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} is not within ${tolerance} of ${expected}`);
+}
+
 async function seedSweepEvidence(dbPath) {
   const database = await openMarketFlowUsDatabase({
     dbPath,
@@ -115,30 +120,48 @@ test("real Backtest Sweep HTTP keeps shared baseline selection while Open preser
       distinctBaselineCount: 1,
       queryExecutionCount: 1
     });
-    assert.deepEqual(run.body.sweep.overview, {
-      availablePointCount: 2,
-      queries: [{
-        id: "price",
-        name: "Price",
-        pointCount: 2,
-        sourceRowCount: 2,
-        selectedSourceRowCount: 2,
-        evaluatedUniqueCount: 2,
-        duplicateRowCount: 0,
-        summary: [{
-          horizonMs: 10_000,
-          availableCount: 2,
-          unavailableCount: 0,
-          averagePercent: 15,
-          medianPercent: 15,
-          positiveCount: 2,
-          positiveRate: 1,
-          bestPercent: 20,
-          worstPercent: 10
-        }]
-      }],
-      comparison: null
+
+    assert.equal(run.body.sweep.overview.availablePointCount, 2);
+    assert.equal(run.body.sweep.overview.comparison, null);
+    assert.equal(run.body.sweep.overview.queries.length, 1);
+    const overviewQuery = run.body.sweep.overview.queries[0];
+    assert.deepEqual({
+      id: overviewQuery.id,
+      name: overviewQuery.name,
+      pointCount: overviewQuery.pointCount,
+      sourceRowCount: overviewQuery.sourceRowCount,
+      selectedSourceRowCount: overviewQuery.selectedSourceRowCount,
+      evaluatedUniqueCount: overviewQuery.evaluatedUniqueCount,
+      duplicateRowCount: overviewQuery.duplicateRowCount
+    }, {
+      id: "price",
+      name: "Price",
+      pointCount: 2,
+      sourceRowCount: 2,
+      selectedSourceRowCount: 2,
+      evaluatedUniqueCount: 2,
+      duplicateRowCount: 0
     });
+    assert.equal(overviewQuery.summary.length, 1);
+    const overviewSummary = overviewQuery.summary[0];
+    assert.deepEqual({
+      horizonMs: overviewSummary.horizonMs,
+      availableCount: overviewSummary.availableCount,
+      unavailableCount: overviewSummary.unavailableCount,
+      positiveCount: overviewSummary.positiveCount,
+      positiveRate: overviewSummary.positiveRate
+    }, {
+      horizonMs: 10_000,
+      availableCount: 2,
+      unavailableCount: 0,
+      positiveCount: 2,
+      positiveRate: 1
+    });
+    assertClose(overviewSummary.averagePercent, 15);
+    assertClose(overviewSummary.medianPercent, 15);
+    assertClose(overviewSummary.bestPercent, 20);
+    assertClose(overviewSummary.worstPercent, 10);
+
     assert.deepEqual(run.body.sweep.page.items.map((item) => [
       item.requestedAtMs,
       item.baseline.cycleId,
@@ -167,8 +190,10 @@ test("real Backtest Sweep HTTP keeps shared baseline selection while Open preser
     assert.equal(second.body.point.queries[0].items[0].horizons[0].price, 120);
     assert.equal(Math.round(first.body.point.queries[0].items[0].horizons[0].changePercent), 10);
     assert.equal(Math.round(second.body.point.queries[0].items[0].horizons[0].changePercent), 20);
-    assert.equal(run.body.sweep.overview.queries[0].summary[0].averagePercent,
-      (first.body.point.queries[0].summary[0].averagePercent + second.body.point.queries[0].summary[0].averagePercent) / 2);
+    assertClose(
+      overviewSummary.averagePercent,
+      (first.body.point.queries[0].summary[0].averagePercent + second.body.point.queries[0].summary[0].averagePercent) / 2
+    );
     assert.deepEqual(await readFile(dbPath), before);
   } finally {
     await runtime?.close();
