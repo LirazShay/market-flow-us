@@ -72,6 +72,52 @@ async function mount(page) {
         }] : []
       }
     });
+    const aggregateSummary = (points, queryIndex, horizonIndex, horizonMs) => {
+      const values = points.map((point) => point.queries[queryIndex].summary[horizonIndex].averagePercent)
+        .sort((a, b) => a - b);
+      const middle = Math.floor(values.length / 2);
+      const medianPercent = values.length % 2
+        ? values[middle]
+        : (values[middle - 1] + values[middle]) / 2;
+      return {
+        horizonMs,
+        availableCount: values.length,
+        unavailableCount: 0,
+        averagePercent: values.reduce((sum, value) => sum + value, 0) / values.length,
+        medianPercent,
+        positiveCount: values.filter((value) => value > 0).length,
+        positiveRate: values.filter((value) => value > 0).length / values.length,
+        bestPercent: values.at(-1),
+        worstPercent: values[0]
+      };
+    };
+    const sweepOverview = (request, points) => ({
+      availablePointCount: points.length,
+      queries: request.queries.map((query, queryIndex) => ({
+        id: query.id,
+        name: query.name,
+        pointCount: points.length,
+        sourceRowCount: points.length * 2,
+        selectedSourceRowCount: points.length,
+        evaluatedUniqueCount: points.length,
+        duplicateRowCount: 0,
+        summary: request.horizonsMs.map((horizonMs, horizonIndex) =>
+          aggregateSummary(points, queryIndex, horizonIndex, horizonMs))
+      })),
+      comparison: request.queries.length > 1 ? {
+        pointCount: points.length,
+        unionObservationCount: points.length,
+        commonObservationCount: points.length,
+        exclusiveObservationCounts: request.queries.map(() => 0),
+        pairs: [{
+          queryIds: [request.queries[0].id, request.queries[1].id],
+          overlapObservationCount: points.length,
+          unionObservationCount: points.length,
+          onlyObservationCounts: [0, 0],
+          positionChangeObservationCount: 0
+        }]
+      } : null
+    });
     const fullPoint = (index) => {
       const compact = activeSweep.points[index];
       const request = activeSweep.request;
@@ -172,12 +218,14 @@ async function mount(page) {
             distinctBaselineCount: 1,
             queryExecutionCount: body.queries.length
           },
+          overview: sweepOverview(body, points),
           points
         };
         return json({ sweep: {
           id: activeSweep.id,
           request: activeSweep.request,
           metrics: activeSweep.metrics,
+          overview: activeSweep.overview,
           page: { offset: 0, limit: 50, totalCount, items: points.slice(0, 50) }
         } });
       }
@@ -206,7 +254,7 @@ function endpointCalls(page, pathname) {
   return page.evaluate((value) => globalThis.__backtestSweepCalls.filter((call) => call.pathname === value), pathname);
 }
 
-test("Sweep pages 61 compact points and Open uses the exact existing Compare renderer without rerun", async ({ page }) => {
+test("Sweep pages 61 compact points, renders whole-run overview and Open uses the exact existing Compare renderer", async ({ page }) => {
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeHidden();
@@ -222,6 +270,13 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
   await expect(host.getByText("Requested: 61", { exact: true })).toBeVisible();
   await expect(host.getByText("Distinct baselines: 1", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 2", { exact: true })).toBeVisible();
+  const overview = host.getByRole("table", { name: "Sweep query overview" });
+  await expect(overview.locator("tbody tr")).toHaveCount(2);
+  await expect(overview).toContainText("Momentum A");
+  await expect(overview).toContainText("avg +31.00%");
+  await expect(overview).toContainText("Price B");
+  await expect(overview).toContainText("avg +32.00%");
+  await expect(host.getByText("Across point observations: union 61 · common 61 · position changes 0", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Sweep timeline points" }).locator("tbody tr")).toHaveCount(50);
   await expect(host.getByText("1-50 / 61", { exact: true })).toBeVisible();
 
@@ -242,6 +297,7 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
   expect(pageCalls[0].body).toEqual({ sweepId: "1", offset: 50, limit: 50 });
 
   await host.getByRole("button", { name: "Open Sweep point 61" }).click();
+  await expect(host.getByLabel("Sweep timeline")).toBeHidden();
   await expect(host.getByRole("heading", { name: "Compare result" })).toBeVisible();
   await expect(host.getByText("Resolved cycle: 7", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
@@ -255,7 +311,7 @@ test("Sweep pages 61 compact points and Open uses the exact existing Compare ren
   expect(await endpointCalls(page, "/api/point/run")).toHaveLength(0);
 });
 
-test("Sweep can freeze Query A only with minute cadence and Open into Inspect without rerun", async ({ page }) => {
+test("Sweep can freeze Query A only with minute cadence, summarize it and Open into Inspect without rerun", async ({ page }) => {
   const host = await mount(page);
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await host.getByLabel("Query A template").selectOption("q-a");
@@ -275,8 +331,12 @@ test("Sweep can freeze Query A only with minute cadence and Open into Inspect wi
   expect(runCalls[0].body.intervalUnit).toBe("minutes");
   await expect(host.getByText("Requested: 3", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 1", { exact: true })).toBeVisible();
+  const overview = host.getByRole("table", { name: "Sweep query overview" });
+  await expect(overview.locator("tbody tr")).toHaveCount(1);
+  await expect(overview).toContainText("avg +2.00%");
 
   await host.getByRole("button", { name: "Open Sweep point 1" }).click();
+  await expect(host.getByLabel("Sweep timeline")).toBeHidden();
   await expect(host.getByRole("heading", { name: "Inspect result" })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
   const openCalls = await endpointCalls(page, "/api/sweep/open");
