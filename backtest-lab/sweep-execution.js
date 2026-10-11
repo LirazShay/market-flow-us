@@ -9,7 +9,8 @@ import {
   buildBacktestPointResult,
   buildUnavailableBacktestPointResult,
   freezeBacktestPointRequest,
-  selectBacktestRows
+  selectBacktestRows,
+  summarizeBacktestItems
 } from "./point-result.js";
 
 export const BACKTEST_SWEEP_MAX_POINTS = 30000;
@@ -237,6 +238,90 @@ function compactTimelinePoint(index, point) {
   });
 }
 
+function pairKey(queryIds) {
+  return queryIds.join("\u0000");
+}
+
+function buildSweepOverview(request, points) {
+  const availablePoints = points.filter((point) => point.available);
+  const queries = request.queries.map((query, queryIndex) => {
+    const pointQueries = availablePoints.map((point) => {
+      const pointQuery = point.queries[queryIndex];
+      if (!pointQuery || pointQuery.id !== query.id) {
+        throw new TypeError("Sweep point Query order does not match the frozen request.");
+      }
+      return pointQuery;
+    });
+    const items = pointQueries.flatMap((pointQuery) => pointQuery.items);
+    return {
+      id: query.id,
+      name: query.name,
+      pointCount: pointQueries.length,
+      sourceRowCount: pointQueries.reduce((sum, pointQuery) => sum + pointQuery.sourceRowCount, 0),
+      selectedSourceRowCount: pointQueries.reduce((sum, pointQuery) => sum + pointQuery.selectedSourceRowCount, 0),
+      evaluatedUniqueCount: pointQueries.reduce((sum, pointQuery) => sum + pointQuery.evaluatedUniqueCount, 0),
+      duplicateRowCount: pointQueries.reduce((sum, pointQuery) => sum + pointQuery.duplicateRowCount, 0),
+      summary: summarizeBacktestItems(items, request.horizonsMs)
+    };
+  });
+
+  let comparison = null;
+  if (request.queries.length > 1) {
+    const exclusiveObservationCounts = request.queries.map(() => 0);
+    const pairs = [];
+    for (let a = 0; a < request.queries.length; a += 1) {
+      for (let b = a + 1; b < request.queries.length; b += 1) {
+        pairs.push({
+          queryIds: [request.queries[a].id, request.queries[b].id],
+          overlapObservationCount: 0,
+          unionObservationCount: 0,
+          onlyObservationCounts: [0, 0],
+          positionChangeObservationCount: 0
+        });
+      }
+    }
+    const pairByKey = new Map(pairs.map((pair) => [pairKey(pair.queryIds), pair]));
+    let unionObservationCount = 0;
+    let commonObservationCount = 0;
+
+    for (const point of availablePoints) {
+      if (!point.comparison || point.comparison.exclusiveCounts.length !== request.queries.length) {
+        throw new TypeError("Sweep point comparison does not match the frozen request.");
+      }
+      unionObservationCount += point.comparison.unionCount;
+      commonObservationCount += point.comparison.commonCount;
+      point.comparison.exclusiveCounts.forEach((count, index) => {
+        exclusiveObservationCounts[index] += count;
+      });
+      for (const pointPair of point.comparison.pairs) {
+        const aggregate = pairByKey.get(pairKey(pointPair.queryIds));
+        if (!aggregate) {
+          throw new TypeError("Sweep point pair comparison does not match the frozen request.");
+        }
+        aggregate.overlapObservationCount += pointPair.overlapCount;
+        aggregate.unionObservationCount += pointPair.unionCount;
+        aggregate.onlyObservationCounts[0] += pointPair.onlyCounts[0];
+        aggregate.onlyObservationCounts[1] += pointPair.onlyCounts[1];
+        aggregate.positionChangeObservationCount += pointPair.positionChanges.length;
+      }
+    }
+
+    comparison = {
+      pointCount: availablePoints.length,
+      unionObservationCount,
+      commonObservationCount,
+      exclusiveObservationCounts,
+      pairs
+    };
+  }
+
+  return freezeCopy({
+    availablePointCount: availablePoints.length,
+    queries,
+    comparison
+  });
+}
+
 function createSweepRun({ request, points, queryExecutionCount, distinctBaselineCount }) {
   const timeline = Object.freeze(points.map((point, index) => compactTimelinePoint(index, point)));
   const metrics = Object.freeze({
@@ -246,10 +331,12 @@ function createSweepRun({ request, points, queryExecutionCount, distinctBaseline
     distinctBaselineCount,
     queryExecutionCount
   });
+  const overview = buildSweepOverview(request, points);
 
   return Object.freeze({
     request,
     metrics,
+    overview,
     page({ offset = 0, limit = 50 } = {}) {
       if (!Number.isSafeInteger(offset) || offset < 0
         || !Number.isSafeInteger(limit) || limit < 1 || limit > BACKTEST_SWEEP_PAGE_LIMIT) {
