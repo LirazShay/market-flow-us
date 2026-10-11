@@ -441,6 +441,10 @@ export async function startBacktestLabRuntime({
       if (request.method === "POST" && url.pathname === "/api/sweep/open" && url.search === "") {
         const body = validateSweepOpenRequest(await readJsonObject(request));
         const sweep = requireActiveSweep(body.sweepId);
+        if (!Number.isSafeInteger(sweep.metrics.requestedPointCount)
+          || body.index >= sweep.metrics.requestedPointCount) {
+          requestFailure("Backtest Sweep Open index is out of range.");
+        }
         writeJson(response, 200, {
           sweepId: body.sweepId,
           index: body.index,
