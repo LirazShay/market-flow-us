@@ -2,7 +2,7 @@
 
 ## 1. Architecture
 
-Preserve the proven MarketScope-derived market-analysis topology, the isolated branch-8 execution sidecar, and the branch-9 Market Recording + Replay lane:
+Preserve the proven MarketScope-derived market-analysis topology, the isolated execution sidecar, the Market Recording + Replay lane, and the isolated Historical Backtest Lab lane:
 
 ```text
 authenticated provider browser
@@ -43,9 +43,19 @@ validated browser snapshots
   → Replay Host-owned unchanged Market Flow US service child
   → replay-only DuckDB
   → existing Viewer / Current / Detail-History / Scanner / Demo Buy / AI surfaces
+
+separate Historical Backtest Lab process
+START_BACKTEST_LAB.cmd
+  → http://127.0.0.1:8767
+  → controlled active/archive Market Flow US source catalog
+  → dedicated hardened read-only DuckDB opener
+  → detached historical latest/history sandbox
+  → unchanged supported Scanner SQL
+  → point/outcome engine
+  → Inspect / Compare / Sweep browser surface
 ```
 
-Do not add a cloud backend, replace the existing market-data transport, create a second market-data authority/persistence implementation, add a Strategy Engine, background horizon worker or automatic AI integration. The branch-8 local HTTP API is an intentional **execution sidecar**. The branch-9 Replay Host is lifecycle orchestration only; it is not a second market-data server, and the shared producer protocol/service remain replay-unaware.
+Do not add a cloud backend, replace the existing market-data transport, create a second market-data authority/persistence implementation, add a Strategy Engine, background horizon worker or automatic AI integration. The local order HTTP API is an intentional **execution sidecar**. Replay Host is lifecycle orchestration only; it is not a second market-data server, and the shared producer protocol/service remain replay-unaware. Backtest Lab is a separate read-only analytical service; it is not a producer, does not own market authority, and does not reuse the normal mutating DB opener merely for historical research.
 
 ## 2. Runtime/tooling baseline
 
@@ -61,7 +71,7 @@ node:test
 @playwright/test / Chromium
 ```
 
-The order service reuses Node 24/native ESM and the existing DuckDB dependency where durable execution facts are required. Replay reuses the same browser build/test stack and unchanged Market Flow US service rather than introducing a second market-data persistence package. Do not add another database package without implementation evidence.
+The order service reuses Node 24/native ESM and the existing DuckDB dependency where durable execution facts are required. Replay reuses the same browser build/test stack and unchanged Market Flow US service rather than introducing a second market-data persistence package. Backtest also reuses Node 24/native ESM, the existing DuckDB package, Scanner admission/query code where applicable, esbuild/node:test/Chromium, and shared Demo Buy outcome arithmetic where semantics are identical. Do not add another database package or a new temporal subsystem without implementation evidence.
 
 ## 3. Canonical identity
 
@@ -71,7 +81,7 @@ securityId = String(PaperId)
 
 after fail-closed source-type validation. `Symbol`, row order, names and `PaperIdYatab` never become primary **market-data** identity.
 
-Demo Buy/AI targets use canonical `security_id` only.
+Demo Buy/AI targets use canonical `security_id` only. Backtest outcome evaluation also requires the canonical identity exposed by exactly one recognized `securityId` or `security_id` result column; returned position remains separate presentation/provenance.
 
 The IBKR sidecar intentionally has a separate instrument-resolution boundary because provider `conid` is not Market Flow US market-data identity. The local order intent starts from bounded U.S.-equity symbol/secType/currency/exchange fields and resolves provider identity through the adapter; provider account identity never becomes durable product identity.
 
@@ -92,6 +102,8 @@ complete validated ScreenerHulPaging3 response
 `history` remains keyed by `(cycle_id, security_id)` and `latest` by `security_id`.
 
 Demo Buy never mutates market authority. IBKR execution facts are stored separately and never become market authority. Replay recordings are source artifacts before Node authority; during Replay, only cycles committed normally by the unchanged service into the replay-only DuckDB become authority for that replay run.
+
+Backtest source files remain immutable market evidence. Its detached historical sandbox, selected Query rows, point results, comparison summaries and in-memory Sweep handles are derived research state only. None is persisted back into the source or promoted to market authority.
 
 ## 5. Schema v4
 
@@ -129,7 +141,7 @@ A v3 DB containing partial Demo Buy structures fails closed; do not normalize it
 
 No speculative `history` index is introduced before representative measurement proves one necessary.
 
-The branch-8 order service does **not** add order tables to this market-day DB. Any execution persistence is a separate local DuckDB owned by the order service. Replay adds no market schema tables/columns; Replay Host starts the unchanged service against a separate replay-owned DB path.
+The order service does **not** add order tables to this market-day DB. Any execution persistence is a separate local DuckDB owned by the order service. Replay adds no market schema tables/columns; Replay Host starts the unchanged service against a separate replay-owned DB path. Backtest adds no market tables, indexes, migration marker, saved-result store or background materialization to schema v3/v4 evidence. Selected Backtest sources are never migrated/bootstrap-repaired.
 
 ## 6. Demo Buy persisted schema
 
@@ -168,7 +180,7 @@ Use simple DuckDB CHECK constraints for direct row-shape/mode invariants where t
 
 A physical FK is not required in Phase 1; capture establishes the semantic baseline link and reads treat a missing link as corruption.
 
-## 7. Market-analysis protocol
+## 7. Market-analysis protocol and Backtest boundary
 
 Keep protocol version `1` unless implementation proves incompatibility.
 
@@ -182,9 +194,11 @@ demo.buy.capture.get
 demo.buy.ai-pack.create
 ```
 
-No second market-analysis API/transport is introduced.
+No second normal market-analysis API/transport is introduced.
 
 Replay adds no shared-protocol operation or field for `replayMode`, virtual clock, speed, recording identity, seek, load/reset or fast-forward. Market Player emits only the existing producer session/universe/cycle/heartbeat/stop contract and remains ACK-gated exactly like live acquisition.
+
+Backtest intentionally uses a separate loopback HTTP boundary on `127.0.0.1:8767` because it is an opt-in offline research process with a different read-only source lifecycle. It does not add Backtest operations to the normal Viewer WebSocket/shared producer protocol and does not cause the normal market service to become historical-time-aware.
 
 ## 8. `demo.buy.capture`
 
@@ -297,6 +311,8 @@ baselineAgeMs     = captured-baselineCollected when non-negative else null
 Negative relationships set a bounded `timingAnomaly` indicator. Never clamp to zero or reorder authority using timestamps.
 
 Replay preserves provider/source fields exactly while rebasing locally owned collection/cycle timestamps to the current replay timing segment. This keeps Scanner/Demo Buy wall-clock semantics coherent without introducing a service virtual clock.
+
+Backtest uses the requested historical timestamp `T0` only as simulated decision time. Baseline authority is resolved from successful complete committed cycle metadata; `T0` never overrides the resolved cycle watermark `B` for Query visibility.
 
 ## 12. Capture acknowledgement semantics
 
@@ -555,7 +571,7 @@ Auto changes apply only to future successful Scanner generations. Enabling Auto 
 
 A persistent top-level indicator exposes `Auto Demo Buy: All/Top X` and `Turn off` even while Scanner is hidden. Turn off prevents future generations; it does not pretend to cancel an already in-flight capture.
 
-Scanner/Demo Buy does not acquire an order-service caller token and does not submit an IBKR order in branch `8`/`9`.
+Scanner/Demo Buy does not acquire an order-service caller token and does not submit an IBKR order.
 
 ## 22. Resumable Scanner Stop
 
@@ -627,7 +643,7 @@ At most one Generate/Regenerate request is in flight per Viewer. Additional expo
 
 Clipboard follows existing support-snapshot behavior: `navigator.clipboard.writeText`, with visible/selectable fallback text when clipboard access is unavailable.
 
-No automatic AI call/upload or SQL activation exists. AI Investigation cannot submit broker orders in branch `8`/`9`.
+No automatic AI call/upload or SQL activation exists. AI Investigation cannot submit broker orders.
 
 ## 25. Viewer transport sequencing
 
@@ -635,7 +651,7 @@ Keep existing per-socket FIFO; do not redesign market-analysis transport solely 
 
 Demo Buy/AI requests are bounded and application-level capture/export slots prevent a second unbounded queue. Workload/Browser proof must ensure bounded Demo Buy refresh/export does not materially starve intended recurring Scanner use.
 
-The order-service HTTP transport is process-separated and does not share this FIFO. Replay Viewer reads use the same normal Viewer WebSocket/service path against the Replay Host-owned service child.
+The order-service HTTP transport is process-separated and does not share this FIFO. Replay Viewer reads use the same normal Viewer WebSocket/service path against the Replay Host-owned service child. Backtest HTTP is process-separated and does not share this FIFO or producer ACK path.
 
 ## 26. Diagnostics
 
@@ -657,6 +673,8 @@ Never include SQL text, Scanner rows, history rows, AI prompt/evidence, redacted
 The order service uses the same diagnosability pattern but may keep a separate component namespace such as `ibkr_order.*`; it exposes only product-owned local IDs, lifecycle state, stable error/checkpoint, and sanitized cause. Local caller token, provider account ID, credentials, provider session material and raw provider bodies are forbidden in diagnostics.
 
 Replay diagnostics may expose bounded recording/frame/player/Host/run/position/storage/checkpoint state only. Replay Host control credentials, provider auth/session/account material and private page state are forbidden in diagnostics or durable recordings.
+
+Backtest diagnostics use bounded source IDs/kinds, operation/checkpoint/error code, result counts and timings. Do not include user SQL, market rows, arbitrary filesystem paths, credentials/session material or raw authenticated provider data.
 
 ## 27. Fake Market / workload
 
@@ -691,6 +709,8 @@ Hosted CI remains correctness-first and bounded. Heavy target-machine profile re
 
 IBKR order proof uses a separate deterministic synthetic gateway/adapter rather than changing Fake Market semantics. Replay proof uses small deterministic synthetic recordings/fake clocks plus bounded real-service/browser composition; ordinary local acceptance must not acquire long real-time Replay waits.
 
+Backtest workload uses a directly seeded bounded schema-v4 source so the measurement pays only for the historical research layer under test. The representative hosted profile is approximately 1024 securities × 120 cycles with a 61-point one-second Sweep. It must preserve the expected requested/available point counts, 21 distinct baselines, 21/42 Query executions for one/two Queries, 61/122 independent outcome evaluations and byte-for-byte source hash while reporting diagnostic latency. Hosted latency is not a target-machine SLO.
+
 ## 28. New-day lifecycle
 
 Active market DB = one trading day.
@@ -710,7 +730,7 @@ inspect source without mutation
 
 Fresh v4 starts with empty Demo Buy tables. Demo Buy horizons never cross into the new active DB. v4 archive remains self-contained with its history/provenance; v3 archive remains a valid pre-feature historical DB.
 
-Order-service local execution state and replay-owned DuckDBs are not part of New Trading Day.
+Order-service local execution state and replay-owned DuckDBs are not part of New Trading Day. Backtest is also not part of rollover; it may later enumerate the resulting product-owned active/archive evidence read-only.
 
 ## 29. Build/local artifacts
 
@@ -720,9 +740,13 @@ Existing artifact names remain canonical Market Flow US names. Existing AI expor
 exports/ai-investigations/
 ```
 
-Branch `8` adds a standalone Windows/operator launcher/config surface for `ibkr-order-service`. The launcher must make DRY_RUN explicit and must require deliberate enablement for LIVE. No committed config may contain provider account identity or authentication data.
+The standalone Windows/operator launcher/config surface for `ibkr-order-service` makes DRY_RUN explicit and requires deliberate enablement for LIVE. No committed config may contain provider account identity or authentication data.
 
-Branch `9` adds a dedicated Replay browser build/runtime and `START_MARKET_REPLAY.cmd` operator launcher. Ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` retain their existing semantics and never auto-load Replay.
+Replay has a dedicated browser build/runtime and `START_MARKET_REPLAY.cmd` operator launcher.
+
+Backtest has the dedicated `START_BACKTEST_LAB.cmd` launcher. It checks Node 24/setup, refuses an occupied `127.0.0.1:8767` without terminating the foreign process, starts only the Backtest service, waits for readiness and opens the local Backtest page. It does not start provider acquisition, Replay or the order service.
+
+Ordinary `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` retain their existing semantics and never auto-load Replay or Backtest.
 
 ## 30. Security boundary
 
@@ -759,26 +783,27 @@ foreign port/process/path ambiguity → fail closed
 normal live DB path/bytes → never reset or deleted by Replay
 ```
 
-## 31. Final acceptance
-
-The deterministic post-branch-9 candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic Local Fake Leumi Demo Buy/AI proof, deterministic standalone IBKR order-service proof, and dedicated Replay acceptance covering recorder/file/player/Host composition, arbitrary middle-frame start without preroll, next-day local-time rebase, normal Current/History/Scanner/Demo Buy behavior and live-DB isolation.
-
-Final target-machine acceptance additionally proves the existing market-analysis path:
+Backtest security/isolation is independently normative:
 
 ```text
-focused Replay acceptance on the exact candidate
-local Demo Buy progressive + targeted observation refresh
-local AI pack generation/copy/regeneration
-AI pack sharing-safe projection / no operational-session leakage
-new-day v3/v4 → fresh-v4 lifecycle
-4096x180 + isolated day-bounded probes
-authenticated static smoke
-authenticated market-open movement gate
+bind only to loopback 127.0.0.1:8767
+browser selects a catalog source ID, never an arbitrary path
+catalog contains only product-owned active/archive patterns
+source opener is hardened READ_ONLY and performs no bootstrap/migration/recovery/write
+foreign file/process lock or incompatible/corrupt source → fail closed
+never kill/stop another process or steal a lock
+historical Query sandbox exposes only bounded latest/history objects
+underlying source catalog/future objects remain unreachable during user SQL
+source bytes remain unchanged
 ```
 
-The order-service target-machine gate proves startup, local caller protection, DRY_RUN/preview/restart/idempotency and CPGW session diagnostics. Actual live order placement is required only when external IBKR trading permission is available; otherwise record `PENDING_EXTERNAL_PERMISSION` without substituting fake live evidence.
+## 31. Deterministic product gates
 
-All acceptance evidence remains SHA-bound to the exact final post-branch-9 candidate.
+The deterministic product candidate must pass Fast, Browser, Planning and bounded Workload gates plus deterministic Local Fake Demo Buy/AI proof, deterministic standalone IBKR order-service proof, dedicated Replay acceptance and focused Backtest proof where each area is materially affected.
+
+Backtest-specific deterministic closure proves controlled read-only source enumeration, historical baseline resolution, anti-lookahead unchanged Scanner SQL, exact outcome arithmetic/unavailable semantics, Inspect/Compare evidence, seconds/minutes Sweep, repeated-baseline correctness, exact stored-point Open, beginner/offline operability and representative workload behavior without source mutation.
+
+Final target-machine acceptance remains a separate explicitly activated evidence family and additionally proves the existing market-analysis/provider path. Actual live order placement is required only when external IBKR trading permission is available; otherwise record `PENDING_EXTERNAL_PERMISSION` without substituting fake live evidence.
 
 ## 32. Explicit non-goals
 
@@ -788,13 +813,18 @@ Do not add:
 automatic Scanner -> live order placement
 Demo Buy -> live order placement
 AI Investigation -> live order placement
+Backtest -> live order placement
 manual Demo Buy price
 Demo Buy fill simulation
 fees/slippage or portfolio/risk state inside the analytical lane
-trade quantity/liquidity proof from Demo Buy
+trade quantity/liquidity proof from Demo Buy or Backtest
+automatic Backtest winner/recommendation
+Backtest strategy Score
+Backtest parameter optimizer
 aggregate strategy scorecards
 multi-day active market analytics
 background horizon materialization
+Backtest result database / experiment warehouse
 speculative history index
 capture replay queue
 server/shared-protocol Replay awareness
@@ -806,6 +836,7 @@ Replay into the normal active live DB
 AI provider/API key integration
 automatic AI SQL editing/activation
 web enrichment inside pack generation
+Backtest SQL text rewriting for historical predicates
 OS file-manager integration
 short selling
 options/futures/FX execution
@@ -819,7 +850,7 @@ cloud order service
 
 ## 33. IBKR order-service local API
 
-The branch-8 target API is:
+The target API is:
 
 ```text
 GET  /health
@@ -1014,3 +1045,84 @@ local caller auth/origin rejection
 ```
 
 All fixtures are synthetic/public-safe.
+
+## 42. Backtest process and source catalog
+
+The Backtest process owns only its local HTTP server, in-memory run state and read-only source/evidence handles. It must not start or attach to the provider Collector, normal market service producer lifecycle, Replay Host/Player or order service.
+
+Catalog enumeration is server-owned and restricted to the canonical active file plus canonical archive filename pattern under the product data roots. Browser requests identify a catalog entry by bounded source ID; no request can choose an arbitrary absolute/relative filesystem path.
+
+Source validation accepts only structurally compatible schema-v3/v4 market evidence required by the historical contract. It rejects durable running ownership, real foreign-process file locks, unsupported/corrupt structure and unsafe path ambiguity without mutation or recovery.
+
+## 43. Historical sandbox and SQL boundary
+
+For requested `T0`, resolve the last successful complete cycle where `committed_at_ms <= T0`, with deterministic tie-break when timestamps are equal. Call its cycle ID `B`.
+
+Construct the Query execution environment detached from the source connection/catalog. The user Query sees only historical `latest` and `history` corresponding to `B`:
+
+```text
+latest  := source history at cycle_id = B
+history := source history where cycle_id <= B
+```
+
+The Query text executes unchanged. Do not inject predicates by editing SQL text. Existing Scanner one-SELECT/zero-parameter/side-effect and external-read hardening remains in force. Source aliases/catalog objects, later history, cycles/sessions/universe/Demo Buy tables and external table-reading paths are unavailable from user SQL.
+
+The detached sandbox is ephemeral and is discarded after the point/selection work; it does not become a second market authority or persistent analytics DB.
+
+## 44. Backtest point and outcome authority
+
+A point is identified by the frozen source plus `(B,T0,Top-X,horizons,Queries)`. Per selected row preserve `(B,T0,returnedPosition,securityId)`.
+
+Top-X operates on source result rows before canonical-ID first-occurrence dedupe. Missing/invalid identity is explicit; no silent identity repair occurs.
+
+Baseline market facts come from exact `history(B,securityId)`. For each horizon `H`, future evidence is the first source row satisfying:
+
+```text
+security_id = selected security
+cycle_id > B
+collected_at_ms >= T0 + H
+ORDER BY collected_at_ms ASC, cycle_id ASC
+LIMIT 1
+```
+
+The first qualifying row is authoritative even when `Price` is NULL. Reuse the shared Demo Buy arithmetic/unavailable shaping for semantically identical cases, including unavailable baseline price, zero baseline, missing future observation and unavailable future Price. Missing baseline row is integrity failure.
+
+Outcome evaluation source access remains read-only. The evaluator may receive a caller-owned already validated read-only evidence handle; when a handle is borrowed, the evaluator must not close it. Standalone point execution may open/own its own handle. This ownership seam is internal and must not change public result/metrics shape.
+
+## 45. Inspect / Compare / Sweep runtime
+
+Inspect freezes one Query and returns the complete point result plus compact summary/provenance.
+
+Compare freezes two Queries by default and optional Query C over the exact same source/B/T0/Top-X/horizons. Query selections are independent, returned order remains Query-specific, comparison derives overlap/exclusive/position-change orientation from complete point results, and presentation filters never mutate the underlying result.
+
+Sweep generates inclusive positive-integer seconds/minutes requested timestamps. Baseline resolution runs in requested order. Query selection is reusable once per distinct baseline because the sandbox is identical for those points, but each requested `T0 × Query` outcome evaluation remains logically independent.
+
+One Sweep may borrow one shared validated read-only outcome-evidence handle and close it exactly once in its owning `finally` path, including failure. This is an internal optimization proven at a dependency seam; it must not leak diagnostic fields into the public HTTP contract.
+
+Public Sweep metrics are exactly:
+
+```text
+requestedPointCount
+availablePointCount
+unavailablePointCount
+distinctBaselineCount
+queryExecutionCount
+```
+
+The active run keeps compact point/results in memory only. Timeline page responses are bounded (first 50 by default; service page limit remains bounded), and `Open` retrieves the exact stored point then injects it into the existing Inspect/Compare renderer. `Open` does not call `/api/point/run` and does not re-resolve the point.
+
+## 46. Backtest performance and lifecycle discipline
+
+Representative measurement must distinguish selection work from outcome evaluation and preserve semantic counts. Repeated baseline Query work may be shared; repeated evidence open/validation may be shared by the owning Sweep; distinct `T0` horizon semantics may not be collapsed.
+
+The bounded hosted reference profile uses about 1024 securities × 120 cycles, Top 10, seven default horizons and 61 one-second requested points. The expected semantic shape is 21 distinct baselines, 21/42 Query executions and 61/122 outcome evaluations for one/two Query runs, with source SHA-256 identical before/after.
+
+Observed CI latency is diagnostic. Do not encode a brittle hosted timing SLO. The measured evidence-open reuse removed material repeated work while preserving semantics; no history index, precompute/background worker or result database is justified by current evidence.
+
+A newer successful Sweep invalidates the previous active handle. Process shutdown/failed execution must close owned evidence handles and leave source bytes unchanged. No background Backtest work survives the explicit process lifecycle.
+
+## 47. Backtest verification / release boundary
+
+Focused verification must cover source catalog/path/lock/read-only behavior, baseline resolution, sandbox anti-lookahead, unchanged Scanner SQL fidelity, outcome semantics, point/Compare model, HTTP request/response validation, Sweep repeated-baseline reuse with distinct outcomes, exact public metrics, evidence-handle ownership/cleanup, Chromium Inspect/Compare/Sweep/Open UX, Windows launcher behavior and representative workload/source immutability.
+
+Branch `10` is deterministically reclosed only when affected durable contracts are aligned, required Fast/Browser/Planning/materially affected Workload gates are green, final diff/security/public-safe review is clean, the PR is squash-merged, required `main` CI is green, and the open-PR audit is clean. Final target-machine/provider acceptance remains separate backlog work unless explicitly activated.
