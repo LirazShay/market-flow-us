@@ -25,14 +25,14 @@ current:
   chat: 33
   node: "10.5"
   title: "Scalable Sweep and drill-down"
-  status: in_progress
+  status: pending
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
   done: 47
-  pending: 1
-  in_progress: 1
+  pending: 2
+  in_progress: 0
   blocked: 0
   current_chat: 33
   current_node: "10.5"
@@ -41,8 +41,8 @@ execution_projection:
 next_pointer:
   task: "10.5"
   owner: "Chat 33"
-  status: in_progress
-  action: "Chat 33 is explicitly active on task 10.5. Implement and verify deterministic Sweep semantics, shared-baseline selection reuse, bounded timeline reporting and exact Open-point drill-down before advancing to 10.6."
+  status: pending
+  action: "Task 10.4 is closed by squash-merged PR #86 at d7af52514966fa36de78b34f74d81603159d07c0 with green main Fast #629, Browser #554, Planning #803 and Workload #377. Start Chat 33 explicitly before implementing 10.5 Sweep; generic continuation does not change chat identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
