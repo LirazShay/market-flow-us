@@ -1,7 +1,11 @@
 import http from "node:http";
+import { readFile } from "node:fs/promises";
 import {
   ProtocolValidationError
 } from "../shared/protocol/index.js";
+import {
+  MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES
+} from "../shared/scanner/builtins.js";
 import {
   BacktestSourceCatalogError,
   listBacktestEvidenceSources
@@ -24,15 +28,50 @@ export const BACKTEST_LAB_HOST = "127.0.0.1";
 export const BACKTEST_LAB_PORT = 8767;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const MAX_ERROR_MESSAGE = 256;
+const BACKTEST_BROWSER_ASSETS = Object.freeze({
+  "/app/index.js": new URL("../browser/backtest-lab/index.js", import.meta.url),
+  "/app/client.js": new URL("../browser/backtest-lab/client.js", import.meta.url),
+  "/app/surface.js": new URL("../browser/backtest-lab/surface.js", import.meta.url)
+});
+const BACKTEST_PAGE = `<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Flow US — Backtest Lab</title>
+</head>
+<body>
+  <script type="module" src="/app/index.js"></script>
+</body>
+</html>`;
+
+function baseHeaders(contentType) {
+  return {
+    "Content-Type": contentType,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY"
+  };
+}
 
 function writeJson(response, statusCode, payload) {
   const body = JSON.stringify(payload);
   response.writeHead(statusCode, {
-    "Content-Type": "application/json; charset=utf-8",
+    ...baseHeaders("application/json; charset=utf-8"),
     "Content-Length": Buffer.byteLength(body),
-    "Cache-Control": "no-store",
-    "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'"
+  });
+  response.end(body);
+}
+
+function writeText(response, statusCode, contentType, body, { html = false } = {}) {
+  response.writeHead(statusCode, {
+    ...baseHeaders(contentType),
+    "Content-Length": Buffer.byteLength(body),
+    "Content-Security-Policy": html
+      ? "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+      : "default-src 'none'; frame-ancestors 'none'"
   });
   response.end(body);
 }
@@ -187,6 +226,15 @@ function assertRuntimeOptions({ dataDir, host, port }) {
   }
 }
 
+function browserQueryTemplates() {
+  return MARKET_FLOW_US_BUILTIN_SCANNER_QUERIES.map((query) => ({
+    id: query.queryId,
+    name: query.name,
+    sql: query.sql,
+    source: query.source
+  }));
+}
+
 export async function startBacktestLabRuntime({
   dataDir,
   host = BACKTEST_LAB_HOST,
@@ -204,6 +252,17 @@ export async function startBacktestLabRuntime({
     try {
       const url = new URL(request.url ?? "/", `http://${BACKTEST_LAB_HOST}`);
 
+      if (request.method === "GET" && url.pathname === "/" && url.search === "") {
+        writeText(response, 200, "text/html; charset=utf-8", BACKTEST_PAGE, { html: true });
+        return;
+      }
+
+      if (request.method === "GET" && Object.hasOwn(BACKTEST_BROWSER_ASSETS, url.pathname) && url.search === "") {
+        const body = await readFile(BACKTEST_BROWSER_ASSETS[url.pathname], "utf8");
+        writeText(response, 200, "text/javascript; charset=utf-8", body);
+        return;
+      }
+
       if (request.method === "GET" && url.pathname === "/health" && url.search === "") {
         writeJson(response, 200, {
           ready: true,
@@ -217,6 +276,15 @@ export async function startBacktestLabRuntime({
         writeJson(response, 200, {
           sources,
           count: sources.length
+        });
+        return;
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/queries" && url.search === "") {
+        const queries = browserQueryTemplates();
+        writeJson(response, 200, {
+          queries,
+          count: queries.length
         });
         return;
       }
