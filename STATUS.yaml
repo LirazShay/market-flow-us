@@ -42,7 +42,7 @@ next_pointer:
   task: "10.4"
   owner: "Chat 32"
   status: in_progress
-  action: "Chat 32 task 10.4: checkpoint 2 shared-point execution is carried by PR #84 with Fast/Planning proof; after its required green closure, continue HTTP/UI Inspect/Compare integration and Chromium evidence. Keep 10.4 in_progress until the full leaf success evidence closes."
+  action: "Continue Chat 32 task 10.4: checkpoint 3 exposes the frozen shared-point engine through the dedicated Backtest HTTP boundary with green Fast/Planning proof. The next independent checkpoint is complete Inspect/Compare page rendering plus Chromium loading/empty/error/unsupported-query/beginner-guidance evidence. Keep 10.4 in_progress until the full leaf success evidence closes."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
