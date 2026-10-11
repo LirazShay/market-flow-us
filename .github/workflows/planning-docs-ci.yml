@@ -103,12 +103,45 @@ jobs:
             }
           }
 
+          require_execution_allocation() {
+            local task="$1"
+            local owner="$2"
+            local depends_on="$3"
+            awk -F'|' -v task="\`$task\`" -v owner="$owner" -v depends_on="$depends_on" '
+              function trim(value) {
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+                return value
+              }
+              {
+                row_task = trim($2)
+                row_owner = trim($3)
+                row_status = trim($4)
+                row_depends = trim($5)
+                status_ok = row_status == "`pending`" \
+                  || row_status == "`in_progress`" \
+                  || row_status == "`done`" \
+                  || row_status == "`blocked`"
+                if (row_task == task && row_owner == owner && row_depends == depends_on && status_ok) {
+                  found = 1
+                }
+              }
+              END { exit found ? 0 : 1 }
+            ' .planning/EXECUTION.md || {
+              echo "Missing/invalid execution allocation: task=$task owner=$owner depends=$depends_on"
+              exit 1
+            }
+          }
+
           require_text '# Market Flow US — Plan' .planning/PLAN.md
           require_text '# Market Flow US — Execution' .planning/EXECUTION.md
           require_text '| Task | Owner | Status | Depends on | Result/Evidence |' .planning/EXECUTION.md
           require_text 'Status vocabulary: `pending | in_progress | done | blocked`.' .planning/EXECUTION.md
-          require_text '| `10.1` | Chat 29 | `pending` | `7.6.5` |' .planning/EXECUTION.md
-          require_text 'The next executable task is `10.1` / Chat 29' .planning/EXECUTION.md
+          require_execution_allocation '10.1' 'Chat 29' '`7.6.5`'
+          require_execution_allocation '10.2' 'Chat 30' '`10.1`'
+          require_execution_allocation '10.3' 'Chat 31' '`10.2`'
+          require_execution_allocation '10.4' 'Chat 32' '`10.2`, `10.3`'
+          require_execution_allocation '10.5' 'Chat 33' '`10.4`'
+          require_execution_allocation '10.6' 'Chat 34' '`10.5`'
           require_text 'backlog/B-US-000-final-target-machine-provider-acceptance.md' .planning/EXECUTION.md
           require_text '# Market Flow US Backlog' backlog/README.md
           require_text 'Backlog items are **non-blocking by default**.' backlog/README.md
