@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run procedure is preserved while final target-machine acceptance is deferred and non-blocking", async () => {
+test("first-run procedure stays deferred/non-blocking while new Backtest execution can be allocated", async () => {
   const [
     startHere,
     historicalPlan,
@@ -147,7 +147,7 @@ test("first-run procedure is preserved while final target-machine acceptance is 
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
   assert.doesNotMatch(runbook, /accepted-post-branch-9-SHA|\.planning\/EXECUTOR_HANDOFF\.md|\.planning\/STATUS\.yaml/);
 
-  // Final acceptance is now backlog-only and must follow the latest intended runtime candidate when activated.
+  // Final acceptance stays backlog-only and must not block independently allocated development.
   assert.match(backlogIndex, /B-US-000/);
   assert.match(backlogIndex, /non-blocking by default/i);
   assert.match(backlogAcceptance, /Blocking: `No`/);
@@ -162,10 +162,13 @@ test("first-run procedure is preserved while final target-machine acceptance is 
   assert.match(finalExecution, /FR-2 exact selected-SHA checkout \| DEFERRED/);
   assert.match(finalExecution, new RegExp(historicalDeferredCandidate));
 
-  assert.match(execution, /There is currently \*\*no open allocated execution task\*\*/);
+  // EXECUTION may now contain unrelated allocated work; the durable invariant is that 7.4 stays backlog-only.
+  assert.match(execution, /Backtest Branch 10 is now explicitly allocated for sequential execution/);
+  assert.match(execution, /\| `10\.1` \| Chat 29 \| `pending` \| `7\.6\.5` \|/);
+  assert.match(execution, /The next executable task is `10\.1` \/ Chat 29/);
   assert.match(execution, /backlog\/B-US-000-final-target-machine-provider-acceptance\.md/);
   assert.doesNotMatch(execution, /\| `7\.4` \| Chat 28 \| `pending`/);
-  assert.match(execution, /Pending rows: \*\*0\*\*/);
+  assert.match(execution, /Pending rows: \*\*6\*\*/);
 
   assert.match(runbook, /test:acceptance:replay/);
   assert.match(runbook, /build:replay/);
