@@ -116,7 +116,7 @@ async function assertReadOnlySource({ dataDir, sourceId, expectedSchemaVersion }
       source.connection,
       "SELECT value FROM duckdb_settings() WHERE name = 'access_mode'"
     );
-    assert.deepEqual(accessMode, [{ value: "READ_ONLY" }]);
+    assert.deepEqual(accessMode, [{ value: "read_only" }]);
 
     await assert.rejects(
       () => source.connection.run("CREATE TABLE backtest_must_not_write (id INTEGER)")
