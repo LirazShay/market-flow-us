@@ -74,9 +74,10 @@ RESET_DEMO.cmd
 1. עצור את ה־producer והשירות עם `Ctrl+C`.
 2. ודא שאין חלון Market Flow US ישן שממשיך להשתמש במסד.
 3. הפעל:
-   ```text
-   NEW_TRADING_DAY.cmd
-   ```
+
+```text
+NEW_TRADING_DAY.cmd
+```
 
 הפעולה:
 
