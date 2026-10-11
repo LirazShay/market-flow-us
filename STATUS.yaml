@@ -19,34 +19,36 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: ready_for_new_work
+overall_status: backtest_lab_allocated_pending_planning_merge
 
 current:
-  chat: null
-  node: null
-  title: "No active allocated execution task"
-  status: none
+  chat: 29
+  node: "10.1"
+  title: "Safe offline evidence access"
+  status: pending
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
-  active_execution_rows: 43
+  active_execution_rows: 49
   done: 43
-  pending: 0
+  pending: 6
   in_progress: 0
   blocked: 0
-  current_chat: null
-  current_node: null
+  current_chat: 29
+  current_node: "10.1"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: null
-  owner: null
-  status: none
-  action: "Plan and explicitly allocate the next work from fresh main. Backlog items are non-blocking and do not activate themselves."
+  task: "10.1"
+  owner: "Chat 29"
+  status: pending
+  action: "After the Branch-10 planning changes are merged to main, start Chat 29 from fresh main. Do not start 10.2-10.6 before their declared dependencies are done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
   backlog: "backlog/README.md"
+  backtest_contract: "docs/BACKTEST_LAB.md"
+  executor_routing: "docs/EXECUTOR_ROUTING.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
   pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
   first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
