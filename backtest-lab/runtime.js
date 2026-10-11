@@ -23,11 +23,17 @@ import {
   BacktestPointResultError,
   freezeBacktestPointRequest
 } from "./point-result.js";
+import {
+  BacktestSweepError,
+  executeBacktestSweep,
+  freezeBacktestSweepRequest
+} from "./sweep-execution.js";
 
 export const BACKTEST_LAB_HOST = "127.0.0.1";
 export const BACKTEST_LAB_PORT = 8767;
 const MAX_REQUEST_BYTES = 16 * 1024;
 const MAX_ERROR_MESSAGE = 256;
+const BACKTEST_SWEEP_FIRST_PAGE_LIMIT = 50;
 const BACKTEST_BROWSER_ASSETS = Object.freeze({
   "/app/index.js": new URL("../browser/backtest-lab/index.js", import.meta.url),
   "/app/client.js": new URL("../browser/backtest-lab/client.js", import.meta.url),
@@ -186,13 +192,17 @@ function validateSourceRequest(value) {
   return value.sourceId;
 }
 
+function validateQueryArray(queries, failureMessage) {
+  if (!Array.isArray(queries) || queries.some((query) => !hasExactKeys(query, ["id", "name", "sql"]))) {
+    requestFailure(failureMessage);
+  }
+}
+
 function validatePointRunRequest(value) {
   if (!hasExactKeys(value, ["sourceId", "requestedAtMs", "queries", "topX", "horizonsMs"])) {
     requestFailure("Backtest point request has an invalid shape.");
   }
-  if (!Array.isArray(value.queries) || value.queries.some((query) => !hasExactKeys(query, ["id", "name", "sql"]))) {
-    requestFailure("Backtest point Queries must contain only id, name and sql.");
-  }
+  validateQueryArray(value.queries, "Backtest point Queries must contain only id, name and sql.");
 
   try {
     return freezeBacktestPointRequest(value);
@@ -204,9 +214,64 @@ function validatePointRunRequest(value) {
   }
 }
 
+function validateSweepRunRequest(value) {
+  if (!hasExactKeys(value, [
+    "sourceId", "fromAtMs", "toAtMs", "intervalValue", "intervalUnit",
+    "queries", "topX", "horizonsMs"
+  ])) {
+    requestFailure("Backtest Sweep request has an invalid shape.");
+  }
+  validateQueryArray(value.queries, "Backtest Sweep Queries must contain only id, name and sql.");
+
+  try {
+    return freezeBacktestSweepRequest(value);
+  } catch (error) {
+    if (error instanceof BacktestSweepError || error instanceof BacktestPointResultError) {
+      requestFailure(error.message);
+    }
+    throw error;
+  }
+}
+
+function validateSweepPageRequest(value) {
+  if (!hasExactKeys(value, ["sweepId", "offset", "limit"])
+    || typeof value.sweepId !== "string" || value.sweepId.length === 0 || value.sweepId.length > 32
+    || !Number.isSafeInteger(value.offset) || value.offset < 0
+    || !Number.isSafeInteger(value.limit) || value.limit < 1 || value.limit > 250) {
+    requestFailure("Backtest Sweep page request is invalid.");
+  }
+  return Object.freeze({ sweepId: value.sweepId, offset: value.offset, limit: value.limit });
+}
+
+function validateSweepOpenRequest(value) {
+  if (!hasExactKeys(value, ["sweepId", "index"])
+    || typeof value.sweepId !== "string" || value.sweepId.length === 0 || value.sweepId.length > 32
+    || !Number.isSafeInteger(value.index) || value.index < 0) {
+    requestFailure("Backtest Sweep Open request is invalid.");
+  }
+  return Object.freeze({ sweepId: value.sweepId, index: value.index });
+}
+
+function compactSweepRequest(request) {
+  return Object.freeze({
+    sourceId: request.sourceId,
+    fromAtMs: request.fromAtMs,
+    toAtMs: request.toAtMs,
+    intervalValue: request.intervalValue,
+    intervalUnit: request.intervalUnit,
+    intervalMs: request.intervalMs,
+    queries: request.queries,
+    topX: request.topX,
+    horizonsMs: request.horizonsMs
+  });
+}
+
 function requestError(error) {
   if (error?.code === "BACKTEST_REQUEST_TOO_LARGE") {
     return { statusCode: 413, code: error.code, message: error.message };
+  }
+  if (error?.code === "BACKTEST_SWEEP_STALE_RUN") {
+    return { statusCode: 409, code: error.code, message: error.message };
   }
   if (error?.code === "BACKTEST_REQUEST_INVALID") {
     return { statusCode: 400, code: error.code, message: error.message };
@@ -241,11 +306,22 @@ export async function startBacktestLabRuntime({
   port = BACKTEST_LAB_PORT,
   listSources = listBacktestEvidenceSources,
   openSource = openBacktestEvidenceSource,
-  runPoint = executeBacktestPoint
+  runPoint = executeBacktestPoint,
+  runSweep = executeBacktestSweep
 } = {}) {
   assertRuntimeOptions({ dataDir, host, port });
-  if (typeof runPoint !== "function") {
-    throw new TypeError("runPoint must be a function");
+  if (typeof runPoint !== "function" || typeof runSweep !== "function") {
+    throw new TypeError("Backtest point and Sweep runners must be functions");
+  }
+
+  let nextSweepId = 1;
+  let activeSweep = null;
+
+  function requireActiveSweep(sweepId) {
+    if (activeSweep === null || activeSweep.id !== sweepId) {
+      requestFailure("Backtest Sweep is no longer active. Run it again.", "BACKTEST_SWEEP_STALE_RUN");
+    }
+    return activeSweep.run;
   }
 
   const server = http.createServer(async (request, response) => {
@@ -319,6 +395,60 @@ export async function startBacktestLabRuntime({
         return;
       }
 
+      if (request.method === "POST" && url.pathname === "/api/sweep/run" && url.search === "") {
+        const body = await readJsonObject(request);
+        const sweepRequest = validateSweepRunRequest(body);
+        const sweep = await runSweep({
+          dataDir,
+          sourceId: sweepRequest.sourceId,
+          fromAtMs: sweepRequest.fromAtMs,
+          toAtMs: sweepRequest.toAtMs,
+          intervalValue: sweepRequest.intervalValue,
+          intervalUnit: sweepRequest.intervalUnit,
+          queries: sweepRequest.queries,
+          topX: sweepRequest.topX,
+          horizonsMs: sweepRequest.horizonsMs
+        });
+        if (!sweep || typeof sweep.page !== "function" || typeof sweep.openPoint !== "function"
+          || !sweep.metrics || typeof sweep.metrics !== "object") {
+          throw new TypeError("Backtest Sweep runner returned an invalid run.");
+        }
+
+        const sweepId = String(nextSweepId);
+        nextSweepId += 1;
+        activeSweep = Object.freeze({ id: sweepId, run: sweep });
+        writeJson(response, 200, {
+          sweep: {
+            id: sweepId,
+            request: compactSweepRequest(sweepRequest),
+            metrics: sweep.metrics,
+            page: sweep.page({ offset: 0, limit: BACKTEST_SWEEP_FIRST_PAGE_LIMIT })
+          }
+        });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/sweep/page" && url.search === "") {
+        const body = validateSweepPageRequest(await readJsonObject(request));
+        const sweep = requireActiveSweep(body.sweepId);
+        writeJson(response, 200, {
+          sweepId: body.sweepId,
+          page: sweep.page({ offset: body.offset, limit: body.limit })
+        });
+        return;
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/sweep/open" && url.search === "") {
+        const body = validateSweepOpenRequest(await readJsonObject(request));
+        const sweep = requireActiveSweep(body.sweepId);
+        writeJson(response, 200, {
+          sweepId: body.sweepId,
+          index: body.index,
+          point: sweep.openPoint(body.index)
+        });
+        return;
+      }
+
       writeJson(response, 404, {
         error: {
           code: "BACKTEST_ROUTE_NOT_FOUND",
@@ -363,6 +493,7 @@ export async function startBacktestLabRuntime({
     async close() {
       if (closed) return;
       closed = true;
+      activeSweep = null;
       await new Promise((resolve, reject) => {
         server.close((error) => error ? reject(error) : resolve());
       });
