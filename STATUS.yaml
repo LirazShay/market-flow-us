@@ -48,8 +48,8 @@ next_pointer:
 navigation:
   backlog: "backlog/README.md"
   post_backtest_ai_mcp_backlog: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
-  post_backtest_ai_mcp_mandate: ".planning/POST_BACKTEST_AI_MCP_MANDATE.md"
-  post_backtest_ai_mcp_autonomy_amendment: ".planning/POST_BACKTEST_AI_MCP_AUTONOMY_AMENDMENT.md"
+  post_backtest_ai_mcp_supporting_mandate: ".planning/POST_BACKTEST_AI_MCP_MANDATE.md"
+  post_backtest_ai_mcp_supporting_autonomy_amendment: ".planning/POST_BACKTEST_AI_MCP_AUTONOMY_AMENDMENT.md"
   backtest_contract: "docs/BACKTEST_LAB.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
