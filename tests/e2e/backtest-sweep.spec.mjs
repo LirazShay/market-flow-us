@@ -197,7 +197,7 @@ async function mount(page) {
   await page.addScriptTag({ content: appBundle });
   const host = page.locator("#market-flow-us-backtest-lab");
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeEnabled();
-  await expect(host.getByLabel("Sweep")).toBeVisible();
+  await expect(host.getByRole("radio", { name: "Sweep", exact: true })).toBeVisible();
   return host;
 }
 
@@ -207,11 +207,11 @@ function endpointCalls(page, pathname) {
 
 test("Sweep pages 51 compact points and Open uses the exact existing Compare renderer without rerun", async ({ page }) => {
   const host = await mount(page);
-  await host.getByLabel("Sweep").check();
+  await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeHidden();
   await host.getByLabel("Sweep from").fill("2026-10-11T14:00:00");
   await host.getByLabel("Sweep to").fill("2026-10-11T14:08:20");
-  await host.getByLabel("Sweep interval").fill("10");
+  await host.getByLabel("Sweep interval", { exact: true }).fill("10");
   await host.getByLabel("Sweep interval unit").selectOption("seconds");
   await host.getByRole("button", { name: "Run Sweep" }).click();
 
@@ -253,12 +253,12 @@ test("Sweep pages 51 compact points and Open uses the exact existing Compare ren
 
 test("Sweep can freeze Query A only with minute cadence", async ({ page }) => {
   const host = await mount(page);
-  await host.getByLabel("Sweep").check();
+  await host.getByRole("radio", { name: "Sweep", exact: true }).check();
   await host.getByLabel("Sweep query set").selectOption("single");
   await expect(host.getByLabel("Query B SQL")).toBeHidden();
   await host.getByLabel("Sweep from").fill("2026-10-11T14:00:00");
   await host.getByLabel("Sweep to").fill("2026-10-11T14:02:00");
-  await host.getByLabel("Sweep interval").fill("1");
+  await host.getByLabel("Sweep interval", { exact: true }).fill("1");
   await host.getByLabel("Sweep interval unit").selectOption("minutes");
   await host.getByRole("button", { name: "Run Sweep" }).click();
 
