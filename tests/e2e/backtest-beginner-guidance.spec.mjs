@@ -56,8 +56,9 @@ test("Sweep explains repeated baselines without implying point deduplication", a
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeEnabled();
 
   await host.getByRole("radio", { name: "Sweep", exact: true }).check();
-  const guidance = host.getByRole("region", { name: "Repeated baseline guidance" });
+  const guidance = host.locator(".sweep-baseline-help");
   await expect(guidance).toBeVisible();
+  await expect(guidance).toHaveAttribute("aria-label", "Repeated baseline guidance");
   await expect(guidance).toContainText("כמה זמני T0 שונים יכולים להיפתר לאותו market cycle");
   await expect(guidance).toContainText("כל T0 נשאר נקודת החלטה נפרדת");
   await expect(guidance).toContainText("יעדי horizon ותוצאות משלו");
