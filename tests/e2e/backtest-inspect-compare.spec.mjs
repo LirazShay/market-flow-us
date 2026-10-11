@@ -209,7 +209,7 @@ async function mount(page) {
 }
 
 async function configureTime(host) {
-  await host.getByLabel("Historical decision time").fill("2026-10-11T14:00:00");
+  await host.getByLabel("Historical decision time").fill("2026-10-11T14:00");
 }
 
 test("Compare keeps one frozen point, renders full side-by-side evidence and uses filters as presentation only", async ({ page }) => {
