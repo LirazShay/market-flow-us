@@ -76,7 +76,7 @@ export function selectBacktestRows(result, topX) {
     evaluatedUniqueCount: items.length, duplicateRowCount: selectedRows.length - items.length, items });
 }
 
-function summarize(items, horizonsMs) {
+export function summarizeBacktestItems(items, horizonsMs) {
   return horizonsMs.map((horizonMs, index) => {
     const values = items.map(item => item.horizons[index].changePercent).filter(Number.isFinite).sort((a, b) => a - b);
     const count = values.length;
@@ -111,7 +111,7 @@ export function buildBacktestPointResult({ request, baseline, queryResults }) {
     return { ...query, sourceRowCount: selection.sourceRowCount,
       selectedSourceRowCount: selection.selectedSourceRowCount, evaluatedUniqueCount: selection.evaluatedUniqueCount,
       duplicateRowCount: selection.duplicateRowCount, items: evaluation.items,
-      summary: summarize(evaluation.items, request.horizonsMs) };
+      summary: summarizeBacktestItems(evaluation.items, request.horizonsMs) };
   });
   const indexes = queries.map(query => new Map(query.items.map(item => [item.securityId, item])));
   const union = [...new Set(queries.flatMap(query => query.items.map(item => item.securityId)))];
