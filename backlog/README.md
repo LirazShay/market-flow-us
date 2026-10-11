@@ -24,6 +24,7 @@ There is currently **no approved backlog priority order**. Every item is `Unprio
 | [B-US-005](B-US-005-replay-pre-user-run-hardening-audit.md) | Preserved Replay hardening backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-006](B-US-006-basic-in-product-buy.md) | Preserved basic BUY backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-007](B-US-007-prioritize-backlog.md) | Review the full backlog against fresh `main`, remove/supersede stale items, and assign an explicit priority/order. | Backlog | Unprioritized | No |
+| [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | After Branch 10 closes, plan and build an end-to-end autonomous local AI/MCP strategy researcher with sufficient read-only data access, debugging and reproducible evidence to derive the strongest justified Scanner SQL. | Backlog | Unprioritized | No |
 
 ## Backlog rules
 
