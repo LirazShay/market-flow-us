@@ -205,3 +205,29 @@ test("Sweep rejects baseline authority that does not preserve requested ordering
     evaluateOutcomes: async () => { throw new Error("must not evaluate"); }
   }), /regressed to unavailable/);
 });
+
+test("Sweep closes an opened historical sandbox when its baseline authority mismatches the resolved series", async () => {
+  let closeCount = 0;
+  await assert.rejects(executeBacktestSweep({
+    dataDir: "/product/data",
+    sourceId: "active",
+    fromAtMs: 2000,
+    toAtMs: 2000,
+    intervalValue: 1,
+    intervalUnit: "seconds",
+    queries: [query("A")],
+    horizonsMs: [10000],
+    resolveBaselines: async () => [
+      { requestedAtMs: 2000, baseline: { cycleId: 2, committedAtMs: 1500 } }
+    ],
+    openHistoricalScanner: async () => Object.freeze({
+      available: true,
+      requestedAtMs: 2000,
+      baseline: Object.freeze({ cycleId: 3, committedAtMs: 1500 }),
+      scanner: Object.freeze({ execute: async () => scannerResult(["A"]) }),
+      close: async () => { closeCount += 1; }
+    }),
+    evaluateOutcomes: async () => { throw new Error("must not evaluate"); }
+  }), /does not match the resolved Sweep baseline/);
+  assert.equal(closeCount, 1);
+});
