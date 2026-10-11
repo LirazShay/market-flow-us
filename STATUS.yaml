@@ -42,7 +42,7 @@ next_pointer:
   task: "10.6"
   owner: "Chat 34"
   status: in_progress
-  action: "PR #89 merged the offline START_BACKTEST_LAB.cmd + beginner guidance checkpoint as b5c3f0c2b7838ff26e9f07e6c916162b65caaaaf with green Fast and Planning on main. Next: measure representative Inspect, Compare and second-level Sweep workloads; remove only measured avoidable work, then complete affected deterministic reclosure before marking 10.6 done."
+  action: "PR #91 measurement candidate records bounded 1024x120 Backtest evidence: Inspect median 187.651 ms, Compare median 211.959 ms, 61-point 1s Sweep 4832.004 ms, and 61-point 1s Sweep Compare 7406.295 ms. Query selection reuse is already correct at 21 distinct baselines / 21 or 42 Query executions, while current outcome evaluation still performs 61 or 122 per-point/per-query read-only evidence opens. Source SHA-256 stayed unchanged. Next: remove only that measured repeated evidence-open work through the smallest existing-boundary reuse seam, remeasure the same probe, then continue deterministic reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
