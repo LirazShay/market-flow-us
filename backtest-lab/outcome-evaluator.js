@@ -404,13 +404,28 @@ function emptyResult(request) {
   });
 }
 
+function assertReusableEvidence(evidence, sourceId) {
+  if (
+    evidence === null
+    || typeof evidence !== "object"
+    || evidence.source?.sourceId !== sourceId
+    || evidence.connection === null
+    || typeof evidence.connection !== "object"
+    || typeof evidence.connection.runAndReadAll !== "function"
+  ) {
+    throw invalid("Reusable Backtest evidence does not match sourceId.");
+  }
+  return evidence;
+}
+
 export async function evaluateBacktestOutcomes({
   dataDir,
   sourceId,
   baselineCycleId,
   requestedAtMs,
   selectedItems,
-  horizonsMs = DEMO_BUY_DEFAULT_HORIZONS_MS
+  horizonsMs = DEMO_BUY_DEFAULT_HORIZONS_MS,
+  evidence = null
 } = {}) {
   const request = validateRequest({
     baselineCycleId,
@@ -427,9 +442,13 @@ export async function evaluateBacktestOutcomes({
   statement.values.baselineCycleId = request.baselineCycleId;
   statement.values.requestedAtMs = request.requestedAtMs;
 
-  const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  const ownsEvidence = evidence === null;
+  const activeEvidence = ownsEvidence
+    ? await openBacktestEvidenceSource({ dataDir, sourceId })
+    : assertReusableEvidence(evidence, sourceId);
+
   try {
-    const rows = await queryRows(evidence.connection, statement.sql, statement.values);
+    const rows = await queryRows(activeEvidence.connection, statement.sql, statement.values);
     return Object.freeze({
       baselineCycleId: request.baselineCycleId,
       requestedAtMs: request.requestedAtMs,
@@ -449,6 +468,8 @@ export async function evaluateBacktestOutcomes({
       { cause: error }
     );
   } finally {
-    await evidence.close();
+    if (ownsEvidence) {
+      await activeEvidence.close();
+    }
   }
 }
