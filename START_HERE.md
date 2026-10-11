@@ -32,6 +32,29 @@ START_DEMO.cmd
 
 נתוני הדמו נשמרים רק תחת `.demo/market-flow-us.duckdb`.
 
+## רוצה לחקור היסטוריה כשהשוק סגור?
+
+הפעל:
+
+```text
+START_BACKTEST_LAB.cmd
+```
+
+זהו מסלול Offline נפרד. הוא מרים **רק** את Backtest Lab על `127.0.0.1:8767` ופותח את העמוד בדפדפן רק לאחר שה־Lab מוכן. אין צורך בעמוד ספק, login, bookmarklet, Collector, Replay, שירות IBKR או שוק פתוח.
+
+ה־Lab מציע רק מקורות נתונים ששייכים למוצר:
+
+```text
+data/market-flow-us.duckdb
+data/archive/market-flow-us-*.duckdb
+```
+
+מסדי המקור נפתחים לקריאה בלבד. ה־Lab אינו מבצע migration/repair, אינו שומר תוצאות Backtest לתוך מסד המקור ואינו עוצר תהליך אחר כדי להשיג lock. אם פורט `8767` כבר תפוס, ה־launcher נכשל לפני פתיחת הדפדפן ומבקש לסגור את התהליך הישן ידנית.
+
+המסלול הפשוט להתחלה הוא **Compare**: בחר מקור היסטורי וזמן, השווה שתי Queries, השאר `Top 10` ואת horizons ברירת המחדל `10s, 20s, 30s, 45s, 60s, 90s, 120s`, ולחץ Run. `Inspect` מיועד לחקירת Query אחת בנקודה אחת; `Sweep` מריץ נקודות זמן חוזרות ו־Open מחזיר מהשורה המסכמת אל הראיות המלאות של אותה נקודה.
+
+השאר את חלון `START_BACKTEST_LAB.cmd` פתוח. לעצירה: `Ctrl+C`.
+
 ## רוצה למחוק את נתוני הדמו?
 
 קודם עצור את הדמו, ואז הפעל:
@@ -51,10 +74,9 @@ RESET_DEMO.cmd
 1. עצור את ה־producer והשירות עם `Ctrl+C`.
 2. ודא שאין חלון Market Flow US ישן שממשיך להשתמש במסד.
 3. הפעל:
-
-```text
-NEW_TRADING_DAY.cmd
-```
+   ```text
+   NEW_TRADING_DAY.cmd
+   ```
 
 הפעולה:
 
