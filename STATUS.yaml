@@ -42,7 +42,7 @@ next_pointer:
   task: "10.4"
   owner: "Chat 32"
   status: in_progress
-  action: "Continue Chat 32 task 10.4: shared-point execution, Inspect/Compare UI and Chromium evidence; close each coherent PR with green main CI before the next unit."
+  action: "Chat 32 task 10.4: checkpoint 2 shared-point execution is carried by PR #84 with Fast/Planning proof; after its required green closure, continue HTTP/UI Inspect/Compare integration and Chromium evidence. Keep 10.4 in_progress until the full leaf success evidence closes."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
