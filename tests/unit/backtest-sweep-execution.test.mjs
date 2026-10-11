@@ -81,11 +81,20 @@ test("Sweep request generates deterministic inclusive seconds/minutes timestamps
   }), (error) => error.code === "BACKTEST_SWEEP_TOO_LARGE");
 });
 
-test("Sweep reuses selection once per distinct baseline while preserving every T0 and exact Open evidence", async () => {
+test("Sweep reuses selection and one outcome evidence handle while preserving every T0 and exact Open evidence", async () => {
   const executed = [];
   const opened = [];
   const closed = [];
   const evaluations = [];
+  const evidenceOpens = [];
+  let evidenceCloseCount = 0;
+  const sharedEvidence = Object.freeze({
+    source: Object.freeze({ sourceId: "active" }),
+    connection: Object.freeze({
+      runAndReadAll: async () => { throw new Error("unit evaluator must not query shared evidence"); }
+    }),
+    close: async () => { evidenceCloseCount += 1; }
+  });
   const baselineByRequestedAt = new Map([
     [2000, { cycleId: 2, committedAtMs: 1500 }],
     [4000, { cycleId: 4, committedAtMs: 3500 }]
@@ -136,6 +145,10 @@ test("Sweep reuses selection once per distinct baseline while preserving every T
         close: async () => { closed.push(requestedAtMs); }
       });
     },
+    openEvidenceSource: async (request) => {
+      evidenceOpens.push(request);
+      return sharedEvidence;
+    },
     evaluateOutcomes: async (request) => {
       evaluations.push(request);
       return evaluationFor(request);
@@ -150,12 +163,15 @@ test("Sweep reuses selection once per distinct baseline while preserving every T
   assert.deepEqual(opened, [2000, 4000]);
   assert.deepEqual(closed, [2000, 4000]);
   assert.deepEqual(executed, ["2:sql-a", "2:sql-b", "4:sql-a", "4:sql-b"]);
+  assert.deepEqual(evidenceOpens, [{ dataDir: "/product/data", sourceId: "active" }]);
+  assert.equal(evidenceCloseCount, 1);
   assert.deepEqual(run.metrics, {
     requestedPointCount: 4,
     availablePointCount: 3,
     unavailablePointCount: 1,
     distinctBaselineCount: 2,
-    queryExecutionCount: 4
+    queryExecutionCount: 4,
+    evidenceOpenCount: 1
   });
   assert.deepEqual(run.overview, {
     availablePointCount: 3,
@@ -216,6 +232,7 @@ test("Sweep reuses selection once per distinct baseline while preserving every T
     }
   });
   assert.equal(evaluations.length, 6);
+  assert.ok(evaluations.every((call) => call.evidence === sharedEvidence));
   assert.deepEqual(evaluations.map((call) => [call.baselineCycleId, call.requestedAtMs]), [
     [2, 2000], [2, 2000], [2, 3000], [2, 3000], [4, 4000], [4, 4000]
   ]);
@@ -260,12 +277,14 @@ test("Sweep rejects baseline authority that does not preserve requested ordering
       { requestedAtMs: 2000, baseline: null }
     ],
     openHistoricalScanner: async () => { throw new Error("must not open"); },
+    openEvidenceSource: async () => { throw new Error("must not open evidence"); },
     evaluateOutcomes: async () => { throw new Error("must not evaluate"); }
   }), /regressed to unavailable/);
 });
 
 test("Sweep closes an opened historical sandbox when its baseline authority mismatches the resolved series", async () => {
   let closeCount = 0;
+  let evidenceCloseCount = 0;
   await assert.rejects(executeBacktestSweep({
     dataDir: "/product/data",
     sourceId: "active",
@@ -285,7 +304,40 @@ test("Sweep closes an opened historical sandbox when its baseline authority mism
       scanner: Object.freeze({ execute: async () => scannerResult(["A"]) }),
       close: async () => { closeCount += 1; }
     }),
+    openEvidenceSource: async () => Object.freeze({
+      close: async () => { evidenceCloseCount += 1; }
+    }),
     evaluateOutcomes: async () => { throw new Error("must not evaluate"); }
   }), /does not match the resolved Sweep baseline/);
   assert.equal(closeCount, 1);
+  assert.equal(evidenceCloseCount, 1);
+});
+
+test("Sweep closes shared outcome evidence when evaluation fails", async () => {
+  let evidenceCloseCount = 0;
+  await assert.rejects(executeBacktestSweep({
+    dataDir: "/product/data",
+    sourceId: "active",
+    fromAtMs: 2000,
+    toAtMs: 2000,
+    intervalValue: 1,
+    intervalUnit: "seconds",
+    queries: [query("A", "sql-a")],
+    horizonsMs: [10000],
+    resolveBaselines: async () => [
+      { requestedAtMs: 2000, baseline: { cycleId: 2, committedAtMs: 1500 } }
+    ],
+    openHistoricalScanner: async () => Object.freeze({
+      available: true,
+      requestedAtMs: 2000,
+      baseline: Object.freeze({ cycleId: 2, committedAtMs: 1500 }),
+      scanner: Object.freeze({ execute: async () => scannerResult(["A"]) }),
+      close: async () => {}
+    }),
+    openEvidenceSource: async () => Object.freeze({
+      close: async () => { evidenceCloseCount += 1; }
+    }),
+    evaluateOutcomes: async () => { throw new Error("synthetic outcome failure"); }
+  }), /synthetic outcome failure/);
+  assert.equal(evidenceCloseCount, 1);
 });
