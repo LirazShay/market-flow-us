@@ -144,6 +144,9 @@ export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
         </select>
       </label>
     </div>
+    <div class="help sweep-baseline-help" aria-label="Repeated baseline guidance">
+      <div><strong>Repeated baseline ב־Sweep מהיר</strong><br>כמה זמני T0 שונים יכולים להיפתר לאותו market cycle כשמרווח ה־Sweep מהיר מקצב הנתונים. כל T0 נשאר נקודת החלטה נפרדת עם יעדי horizon ותוצאות משלו; המערכת מציגה את ה־resolved cycle ואינה מאחדת את הנקודות.</div>
+    </div>
     <div class="run-row">
       <button class="sweep-run primary" type="button">Run Sweep</button>
       <span class="sweep-status" role="status" aria-live="polite"></span>

@@ -159,6 +159,51 @@ COMPLETE_OUTCOME
 
 חשוב: `QUERY.sql` הוא SQL שכתב המשתמש ונשמר verbatim. ה־export מסנן operational/session metadata ומצמצם Scanner text שאינו שדה שוק בטוח, אבל לפני העלאה חיצונית יש לעבור על כל הקבצים שנוצרו.
 
+## Backtest Lab — מחקר היסטורי offline
+
+`Backtest Lab` הוא מסלול נפרד למחקר היסטורי של Scanner SQL. הוא מיועד גם לשעות שבהן השוק סגור ואינו דורש עמוד ספק, login, bookmarklet, Collector/Recorder, Replay או IBKR order service.
+
+להפעלה ב־Windows:
+
+```text
+START_BACKTEST_LAB.cmd
+```
+
+ה־launcher מרים רק את שירות ה־Backtest המקומי על loopback ופותח את דף ה־Lab. השאר את החלון פתוח; `Ctrl+C` עוצר את ה־Lab.
+
+מקורות ה־evidence היחידים שה־Lab רשאי לקרוא הם קבצי Market Flow US שבבעלות המוצר:
+
+```text
+data/market-flow-us.duckdb
+data/archive/market-flow-us-*.duckdb
+```
+
+המקור נפתח כ־read-only evidence. ה־Lab אינו מתקן, ממיר, מאתחל, מזיז, מוחק או כותב למסד המקור, ואינו עוצר תהליך אחר כדי להשיג גישה אליו. מקור נעול/לא תואם נכשל בצורה גלויה.
+
+ברירת המחדל המומלצת למתחיל היא `Compare`: שני Queries, `Top 10`, וה־horizons:
+
+```text
+10s, 20s, 30s, 45s, 60s, 90s, 120s
+```
+
+שלושת המצבים הם:
+
+- **Inspect** — Query אחד בנקודת זמן היסטורית אחת.
+- **Compare** — שני Queries כברירת מחדל, עם אפשרות ל־Query C, על אותו source / baseline / T0 / Top-X / horizons.
+- **Sweep** — אותו מבחן לאורך טווח, כל מספר שלם חיובי של שניות או דקות, עם `Open` חזרה ל־Inspect/Compare המלא של נקודה ספציפית.
+
+מונחים חשובים במסך:
+
+- **Historical decision time / T0** — הזמן שבו מדמים את ההחלטה; הוא אינו זמן “קנייה” שנלקח מהעתיד.
+- **Resolved cycle** — ה־cycle המלא האחרון שנשמר בזמן או לפני T0. זהו watermark שמונע מה־Query לראות עובדות שוק מאוחרות יותר.
+- **No-lookahead** — ה־SQL רץ ללא שינוי מול `latest/history` היסטוריים המוגבלים ל־baseline; הוא אינו מקבל גישה לנתוני future.
+- **Top X / returned position** — אלו X השורות הראשונות שה־Query החזיר. Position הוא מיקום מוחזר ניטרלי; הוא אינו אומר “הכי טוב” אלא אם ה־SQL עצמו מגדיר סדר כזה.
+- **Repeated baseline ב־Sweep מהיר** — כמה זמני T0 שונים יכולים להיפתר לאותו cycle כאשר ה־Sweep מהיר מקצב snapshots. הנקודות אינן מתאחדות: לכל T0 יש יעדי horizon ותוצאות משלו.
+- **Pending / Unavailable** — evidence עתידי חסר או Price לא שמיש אינם מומצאים כ־0; הסיבה נשמרת ומוצגת.
+- **Summary מול evidence** — Summary הוא orientation בלבד. הטבלאות המלאות וה־Side-by-Side הן הראיה; המוצר אינו מכריז אוטומטית על Query “מנצח”.
+
+SQL מתקדם, Query C, horizons ארוכים יותר ופרטי timing/provenance זמינים דרך ה־UI בלי לשנות את ברירת המחדל הפשוטה.
+
 ## 9. איפה הנתונים נשמרים?
 
 בשימוש הרגיל ברירת המחדל היא:
