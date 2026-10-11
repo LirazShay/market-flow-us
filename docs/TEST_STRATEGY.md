@@ -670,9 +670,9 @@ exact post-branch-9 candidate SHA recorded
 
 ## 44. Current completion rule
 
-Market Recording + Replay is now an additional evidence family. Recorder/storage correctness, portable-format correctness, Player timing, Host isolation, composed replay behavior, normal market-analysis behavior, standalone order-service behavior and authenticated target-machine/provider proof are distinct; none substitutes for another.
+Market Recording + Replay remains a completed evidence family. Recorder/storage correctness, portable-format correctness, Player timing, Host isolation, composed replay behavior, normal market-analysis behavior, standalone order-service behavior, Historical Backtest behavior and authenticated target-machine/provider proof are distinct; none substitutes for another.
 
-Overall product completion requires the exact post-branch-9 candidate to satisfy all assigned leaves and required deterministic gates before `7.4` supplies final target-machine/provider acceptance.
+Current deterministic product completion requires Branch `10` Backtest tasks to satisfy their assigned success evidence and required affected gates. Deferred target-machine/provider acceptance remains separate backlog work and becomes required only when that backlog scope is explicitly activated; no historical post-Branch-9 candidate is treated as the current final candidate.
 
 ## 45. Historical Backtest Lab evidence family
 
@@ -686,7 +686,7 @@ Source tests must cover only product-owned active/archive DuckDB inputs, schema-
 
 ### Historical anti-lookahead / Query fidelity
 
-For requested decision time `T`, prove baseline resolution is the last successful committed cycle with `committed_at_ms <= T`, with deterministic equal-time tie-break. Freeze `B = baseline.cycle_id` and `T0 = T` independently.
+For requested decision time `T`, prove baseline resolution is the last successful complete committed cycle with `committed_at_ms <= T`, with deterministic equal-time tie-break. Freeze `B = baseline.cycle_id` and `T0 = T` independently.
 
 Execute unchanged hardened Scanner SQL only against detached historical `latest = cycle B` and `history = cycles <= B`. Future/source catalog access, later cycles and non-exposed tables must remain unreachable, including qualification/catalog bypass attempts. Built-in, saved and edited Query SQL that uses the supported `latest`/`history` surface must preserve exact returned order and existing Scanner admission semantics.
 
