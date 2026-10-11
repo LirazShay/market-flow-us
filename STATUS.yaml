@@ -25,14 +25,14 @@ current:
   chat: 30
   node: "10.2"
   title: "Truthful historical Scanner sandbox"
-  status: pending
+  status: in_progress
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
   done: 44
-  pending: 5
-  in_progress: 0
+  pending: 4
+  in_progress: 1
   blocked: 0
   current_chat: 30
   current_node: "10.2"
@@ -41,8 +41,8 @@ execution_projection:
 next_pointer:
   task: "10.2"
   owner: "Chat 30"
-  status: pending
-  action: "Start Chat 30 from fresh main for task 10.2. Do not start 10.3-10.6 before their declared dependencies are done."
+  status: in_progress
+  action: "Continue Chat 30 task 10.2 closure evidence. Do not start 10.3-10.6 before their declared dependencies are done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
