@@ -46,8 +46,8 @@ async function seedEvidence(dbPath) {
         stop_reason, last_heartbeat_at_ms, completed_cycles, failed_cycles,
         last_completed_cycle_id, last_completed_at_ms, config_json, last_error_json
       ) VALUES (
-        'session-runtime-proof', 'producer-runtime-proof', 'running', 1000, NULL,
-        NULL, 1100, 0, 0, NULL, NULL, '{}', NULL
+        'session-runtime-proof', 'producer-runtime-proof', 'stopped', 1000, 1200,
+        'normal', 1100, 0, 0, NULL, NULL, '{}', NULL
       )
     `);
     await database.writerConnection.run(`
@@ -229,8 +229,8 @@ test("Backtest runtime maps private unexpected failures to bounded public-safe d
   }
 });
 
-test("Backtest read-only open fails closed while the same source is owned by the live database and never disrupts that owner", async () => {
-  const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-locked-"));
+test("Backtest runtime rejects durable active ownership and never disrupts the existing live database owner", async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-owned-"));
   const dbPath = path.join(dataDir, "market-flow-us.duckdb");
   let database = null;
   let runtime = null;
@@ -241,12 +241,32 @@ test("Backtest read-only open fails closed while the same source is owned by the
       productVersion: "live-owner-proof",
       now: () => 1700000000000
     });
+    await database.writerConnection.run(`
+      INSERT INTO sessions (
+        session_id, producer_instance_id, status, started_at_ms, stopped_at_ms,
+        stop_reason, last_heartbeat_at_ms, completed_cycles, failed_cycles,
+        last_completed_cycle_id, last_completed_at_ms, config_json, last_error_json
+      ) VALUES (
+        'session-live-owner', 'producer-live-owner', 'running', 1000, NULL,
+        NULL, 1100, 0, 0, NULL, NULL, '{}', NULL
+      )
+    `);
+
     runtime = await startBacktestLabRuntime({ dataDir, port: 0 });
 
     const response = await postJson(runtime, "/api/source/validate", { sourceId: "active" });
     assert.equal(response.status, 409);
-    assert.equal(response.body.error.code, "BACKTEST_SOURCE_UNAVAILABLE");
+    assert.equal(response.body.error.code, "BACKTEST_SOURCE_IN_USE");
     assert.equal(response.text.includes(dataDir), false);
+
+    const sessionReader = await database.viewerReadConnection.runAndReadAll(
+      "SELECT status, stopped_at_ms, stop_reason FROM sessions WHERE session_id = 'session-live-owner'"
+    );
+    assert.deepEqual(sessionReader.getRowObjectsJson(), [{
+      status: "running",
+      stopped_at_ms: null,
+      stop_reason: null
+    }]);
 
     await database.writerConnection.run(`
       INSERT INTO scanner_saved_queries VALUES (

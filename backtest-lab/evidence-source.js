@@ -115,6 +115,19 @@ async function validateMarketFlowUsEvidence(connection) {
   return schemaVersion;
 }
 
+async function assertEvidenceSourceNotInUse(connection) {
+  const rows = await queryRows(
+    connection,
+    "SELECT 1 AS in_use FROM sessions WHERE status = 'running' LIMIT 1"
+  );
+  if (rows.length > 0) {
+    throw new BacktestEvidenceSourceError(
+      "Backtest evidence source is currently in use.",
+      "BACKTEST_SOURCE_IN_USE"
+    );
+  }
+}
+
 async function lockConnectionConfiguration(connection) {
   await connection.run("SET allowed_configs = []");
   await connection.run("SET lock_configuration = true");
@@ -165,6 +178,7 @@ export async function openBacktestEvidenceSource({ dataDir, sourceId }) {
   try {
     await lockConnectionConfiguration(connection);
     const schemaVersion = await validateMarketFlowUsEvidence(connection);
+    await assertEvidenceSourceNotInUse(connection);
     let closed = false;
 
     return Object.freeze({

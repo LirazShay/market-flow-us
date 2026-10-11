@@ -38,6 +38,7 @@ function publicRuntimeError(error) {
       : error.code === "BACKTEST_SOURCE_MISSING"
         ? 404
         : error.code === "BACKTEST_SOURCE_UNAVAILABLE"
+          || error.code === "BACKTEST_SOURCE_IN_USE"
           ? 409
           : error.code === "BACKTEST_SOURCE_INCOMPATIBLE"
             || error.code === "BACKTEST_SOURCE_INVALID_TYPE"

@@ -25,33 +25,39 @@ import {
 } from "../../backtest-lab/evidence-source.js";
 import { listBacktestEvidenceSources } from "../../backtest-lab/source-catalog.js";
 
-async function seedRunningSession(connection) {
-  await connection.run(`
-    INSERT INTO sessions (
+async function seedSession(connection, { status = "stopped" } = {}) {
+  const running = status === "running";
+  await connection.run(
+    `INSERT INTO sessions (
       session_id, producer_instance_id, status, started_at_ms, stopped_at_ms,
       stop_reason, last_heartbeat_at_ms, completed_cycles, failed_cycles,
       last_completed_cycle_id, last_completed_at_ms, config_json, last_error_json
     ) VALUES (
-      'session-running', 'producer-test', 'running', 1000, NULL,
-      NULL, 1100, 0, 0, NULL, NULL, '{}', NULL
-    )
-  `);
+      'session-evidence', 'producer-test', $status, 1000, $stoppedAtMs,
+      $stopReason, 1100, 0, 0, NULL, NULL, '{}', NULL
+    )`,
+    {
+      status,
+      stoppedAtMs: running ? null : 1200,
+      stopReason: running ? null : "normal"
+    }
+  );
 }
 
-async function seedV4(dbPath) {
+async function seedV4(dbPath, { sessionStatus = "stopped" } = {}) {
   const database = await openMarketFlowUsDatabase({
     dbPath,
     productVersion: "backtest-test-v4",
     now: () => 1700000000000
   });
   try {
-    await seedRunningSession(database.writerConnection);
+    await seedSession(database.writerConnection, { status: sessionStatus });
   } finally {
     await database.close();
   }
 }
 
-async function seedV3(dbPath) {
+async function seedV3(dbPath, { sessionStatus = "stopped" } = {}) {
   const instance = await DuckDBInstance.create(dbPath, DUCKDB_HARDENING);
   const connection = await instance.connect();
   try {
@@ -63,7 +69,7 @@ async function seedV3(dbPath) {
       "INSERT INTO schema_info VALUES ($schemaVersion, 1700000000000, 'backtest-test-v3')",
       { schemaVersion: MARKET_FLOW_US_V3_SCHEMA_VERSION }
     );
-    await seedRunningSession(connection);
+    await seedSession(connection, { status: sessionStatus });
     await connection.run("COMMIT");
   } catch (error) {
     try {
@@ -81,6 +87,17 @@ async function seedV3(dbPath) {
 async function queryRows(connection, sql) {
   const reader = await connection.runAndReadAll(sql);
   return reader.getRowObjectsJson();
+}
+
+async function rawRows(dbPath, sql) {
+  const instance = await DuckDBInstance.create(dbPath, DUCKDB_HARDENING);
+  const connection = await instance.connect();
+  try {
+    return await queryRows(connection, sql);
+  } finally {
+    connection.closeSync();
+    instance.closeSync();
+  }
 }
 
 async function assertReadOnlySource({ dataDir, sourceId, expectedSchemaVersion }) {
@@ -105,10 +122,10 @@ async function assertReadOnlySource({ dataDir, sourceId, expectedSchemaVersion }
         "SELECT session_id, status, stopped_at_ms, stop_reason FROM sessions"
       ),
       [{
-        session_id: "session-running",
-        status: "running",
-        stopped_at_ms: null,
-        stop_reason: null
+        session_id: "session-evidence",
+        status: "stopped",
+        stopped_at_ms: "1200",
+        stop_reason: "normal"
       }]
     );
 
@@ -120,11 +137,6 @@ async function assertReadOnlySource({ dataDir, sourceId, expectedSchemaVersion }
 
     await assert.rejects(
       () => source.connection.run("CREATE TABLE backtest_must_not_write (id INTEGER)")
-    );
-
-    assert.deepEqual(
-      await queryRows(source.connection, "SELECT status FROM sessions WHERE session_id = 'session-running'"),
-      [{ status: "running" }]
     );
   } finally {
     await source.close();
@@ -163,7 +175,7 @@ test("Backtest source catalog enumerates only product-owned active/archive DuckD
   }
 });
 
-test("Backtest opens schema v4 evidence read-only without stale-session recovery or byte mutation", async () => {
+test("Backtest opens schema v4 evidence read-only without mutation", async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-v4-"));
   try {
     await seedV4(path.join(dataDir, "market-flow-us.duckdb"));
@@ -190,6 +202,42 @@ test("Backtest opens schema v3 archive evidence read-only without migrating it t
       sourceId: `archive:${archiveName}`,
       expectedSchemaVersion: MARKET_FLOW_US_V3_SCHEMA_VERSION
     });
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("Backtest rejects durable running-session ownership without stale-session recovery or source mutation", async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-in-use-"));
+  const dbPath = path.join(dataDir, "market-flow-us.duckdb");
+
+  try {
+    await seedV4(dbPath, { sessionStatus: "running" });
+    const before = await readFile(dbPath);
+
+    await assert.rejects(
+      () => openBacktestEvidenceSource({ dataDir, sourceId: "active" }),
+      (error) => {
+        assert.ok(error instanceof BacktestEvidenceSourceError);
+        assert.equal(error.code, "BACKTEST_SOURCE_IN_USE");
+        assert.equal(error.message.includes(dataDir), false);
+        return true;
+      }
+    );
+
+    assert.deepEqual(await readFile(dbPath), before);
+    assert.deepEqual(
+      await rawRows(
+        dbPath,
+        "SELECT session_id, status, stopped_at_ms, stop_reason FROM sessions"
+      ),
+      [{
+        session_id: "session-evidence",
+        status: "running",
+        stopped_at_ms: null,
+        stop_reason: null
+      }]
+    );
   } finally {
     await rm(dataDir, { recursive: true, force: true });
   }
