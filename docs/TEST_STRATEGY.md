@@ -670,6 +670,58 @@ exact post-branch-9 candidate SHA recorded
 
 ## 44. Current completion rule
 
-Market Recording + Replay is now an additional evidence family. Recorder/storage correctness, portable-format correctness, Player timing, Host isolation, composed replay behavior, normal market-analysis behavior, standalone order-service behavior and authenticated target-machine/provider proof are distinct; none substitutes for another.
+Market Recording + Replay remains a completed evidence family. Recorder/storage correctness, portable-format correctness, Player timing, Host isolation, composed replay behavior, normal market-analysis behavior, standalone order-service behavior, Historical Backtest behavior and authenticated target-machine/provider proof are distinct; none substitutes for another.
 
-Overall product completion requires the exact post-branch-9 candidate to satisfy all assigned leaves and required deterministic gates before `7.4` supplies final target-machine/provider acceptance.
+Current deterministic product completion requires Branch `10` Backtest tasks to satisfy their assigned success evidence and required affected gates. Deferred target-machine/provider acceptance remains separate backlog work and becomes required only when that backlog scope is explicitly activated; no historical post-Branch-9 candidate is treated as the current final candidate.
+
+## 45. Historical Backtest Lab evidence family
+
+Backtest Lab is a fourth independent evidence family governed in detail by `BACKTEST_LAB.md`. Its verification must preserve every existing market-analysis, execution and Replay proof above rather than repurposing those paths.
+
+### Source isolation / startup
+
+Prove `START_BACKTEST_LAB.cmd` starts only the dedicated loopback Backtest process on `127.0.0.1:8767`, requires Node 24/setup, opens the local page only after readiness, fails closed on a foreign occupied port and never starts/stops provider acquisition, Collector/Recorder, Replay or the IBKR order service.
+
+Source tests must cover only product-owned active/archive DuckDB inputs, schema-v3/v4 compatibility, locked/corrupt/incompatible sources, no arbitrary browser path, and byte-for-byte source immutability. The Lab must not bootstrap, migrate, repair, rotate, rename, delete, write saved queries, write Demo Buy facts or persist backtest results into source evidence.
+
+### Historical anti-lookahead / Query fidelity
+
+For requested decision time `T`, prove baseline resolution is the last successful complete committed cycle with `committed_at_ms <= T`, with deterministic equal-time tie-break. Freeze `B = baseline.cycle_id` and `T0 = T` independently.
+
+Execute unchanged hardened Scanner SQL only against detached historical `latest = cycle B` and `history = cycles <= B`. Future/source catalog access, later cycles and non-exposed tables must remain unreachable, including qualification/catalog bypass attempts. Built-in, saved and edited Query SQL that uses the supported `latest`/`history` surface must preserve exact returned order and existing Scanner admission semantics.
+
+### Outcome fidelity
+
+For every returned `(returnedPosition, securityId)`, prove baseline facts come from `history(B, securityId)` and future evidence requires both `cycle_id > B` and `collected_at_ms >= T0 + H`, ordered by earliest timestamp then lowest cycle ID. The first qualifying NULL `Price` row is authoritative rather than skipped. Percentage and unavailable shaping must remain equivalent to the shared Demo Buy arithmetic, while missing baseline row remains an integrity error.
+
+Default horizons are exactly `10s,20s,30s,45s,60s,90s,120s`; optional `3m,5m,10m` remain supported where requested.
+
+### Inspect / Compare
+
+Inspect proves one frozen Query at one historical point produces the compact summary plus every selected security/horizon row and exact SQL/timing provenance.
+
+Compare proves two Queries, with optional Query C, share the exact same source/B/T0/Top-X/horizon configuration while preserving each Query's returned order independently. Verify complete Side-by-Side evidence, overlap/exclusive sets, returned-position changes, available-only aggregates and presentation-only All/Common/Differences filtering. Summary never substitutes for complete security evidence or declares an automatic winner.
+
+### Sweep / drill-down
+
+Sweep proves deterministic inclusive timestamps `from, from+interval, ... <= to` for any supported positive integer seconds/minutes cadence. Early no-baseline points stay explicit. Multiple requested times may resolve to one baseline cycle, but each requested `T0` remains an independent decision point with independent future horizon targets.
+
+Query selection may be reused once per distinct baseline, but outcome evaluation remains once per requested `T0 × Query`. Public Sweep metrics remain exactly `requestedPointCount`, `availablePointCount`, `unavailablePointCount`, `distinctBaselineCount`, and `queryExecutionCount`; implementation diagnostics such as evidence-open counts are not public API.
+
+Verify bounded overview/timeline paging and that `Open` uses the exact stored point result without rerunning `/api/point/run`, reproducing full Inspect or Compare evidence for that timestamp.
+
+### Chromium beginner UX
+
+Full Chromium proof must cover the default Compare/Top-10/default-horizons path, Inspect, Compare, seconds Sweep, minutes Sweep, paging, Open drill-down and inline beginner guidance for historical decision time, resolved cycle, no-lookahead, Top X, neutral returned position, repeated baseline cycles, Pending/Unavailable and Summary versus Side-by-Side. A repeated-baseline explanation must state that shared baseline does not deduplicate distinct `T0` decisions.
+
+### Representative performance / hosted workload
+
+Hosted CI uses a bounded representative Backtest probe rather than a product SLO. Measure Inspect, Compare, second-level Sweep and second-level Sweep-Compare over deterministic synthetic active-day evidence, verify source hash unchanged and report semantic work counts.
+
+The accepted bounded profile is `1024 × 120` history generation with a 61-point 1-second Sweep and Top 10/default seven horizons. Preserve 21/42 Query executions when 61 requested points resolve to 21 distinct baselines and preserve 61/122 distinct outcome evaluations. Do not expose test instrumentation through the public HTTP contract.
+
+Performance work follows measured evidence: remove avoidable repeated work first; do not add a history index, temporal precompute, background worker, result database or new Strategy Engine merely because Sweep is second-level. Heavy target-machine performance remains separate from hosted correctness timing.
+
+### Backtest reclosure gate
+
+Before Branch 10 closes, require focused unit/service proof, full Chromium/Browser acceptance for affected Backtest UX, Planning Docs CI, bounded Backtest Workload, source immutability/security/public-safe review, merged PR, green required `main` checks and clean open-PR audit. Backtest never substitutes for deferred authenticated provider acceptance and never activates the post-Backtest AI/MCP backlog automatically.
