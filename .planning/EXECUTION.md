@@ -14,9 +14,9 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Backtest Branch 10 is explicitly allocated for sequential execution. Task `10.1` owned by Chat 29 is complete; task `10.2` owned by Chat 30 is the next executable Backtest task. Tasks `10.3`–`10.6` remain `pending` behind their declared dependencies and must not start early.
+Backtest Branch 10 is explicitly allocated for sequential execution. Tasks `10.1` and `10.2` are complete; tasks `10.3`–`10.6` remain `pending` behind their declared dependencies and process boundary.
 
-Chat 30 may begin only after the `10.1` closure PR is merged to fresh `main`. A numbered executor activates only through an explicit request such as `אני צאט 30 תתחיל`; a generic continuation never changes chat identity.
+Chat 30 remains the explicitly activated current executor until its task `10.2` PR is merged and required `main` CI is green. Task `10.3` is the next dependency-valid implementation task, but Chat 31 must still be activated explicitly in a new conversation after Chat 30 merge/main closure; a generic continuation never changes chat identity.
 
 Former task `7.4` final target-machine/provider acceptance remains in `backlog/B-US-000-final-target-machine-provider-acceptance.md` as non-blocking future work. It is not a dependency of Branch 10.
 
@@ -68,7 +68,7 @@ Former task `7.4` final target-machine/provider acceptance remains in `backlog/B
 | `9.5` | Chat 24 | `done` | `9.4`, `8.4` | Branch-9 deterministic Replay reclosure is complete. PR #53 squash-merged as exact post-branch-9 candidate 243f4f2e78e434378ff2202ba95af7b8626a0369 after integrated arbitrary-start/next-day Replay proof, focused Replay acceptance, contract/release-truth repairs and final diff review. Fast #469, Browser #428 including bounded Local Fake, Planning Docs #601 and Workload #256 were green on main, and the open-PR audit was clean. |
 | `9.6` | Chat 25 | `done` | `9.5` | Replay pre-user-run hardening completed with all mandatory audit areas PASS. The exact runtime/test candidate 52becaaeaddde01457199d17c88dd6ce61c98d42 passed Planning #625, Workload #269, Fast #483, Replay #12 and Browser #441 after root-cause fixes and deterministic regressions for recorder Start/Stop ownership, final/in-flight Pause authority, stale Player callbacks, stale concurrent source loads, run-coordinator/Host lifecycle races and late session-start cleanup. The shared protocol/server remains Replay-unaware, final diff review found no remaining known material Replay defect or unproved risk, and the durable audit is .planning/REPLAY_HARDENING_AUDIT.md. |
 | `10.1` | Chat 29 | `done` | `7.6.5` | Dedicated `127.0.0.1` Backtest runtime and controlled active/archive catalog now open only product-owned schema-v3/v4 DuckDB evidence in hardened `READ_ONLY` mode, reject arbitrary paths, durable running ownership and real foreign-process file locks without recovery/mutation/process killing, and expose bounded public-safe diagnostics. Focused proof preserves source bytes plus schema/session/saved-query/market/Demo-Buy facts and proves no provider/Collector/Replay/order ownership hooks. Closure candidate `4f4b079481a1c1bd1abf4a85a85c2bfa5cd691a9` passed Fast #574, Browser #520, Replay #91, Planning #748 and Workload #343 after RCA of the same-process DuckDB lock assumption. |
-| `10.2` | Chat 30 | `pending` | `10.1` | Pending implementation. Definition of done is PLAN 10.2: exact committed-cycle resolution plus hardened detached historical `latest/history` sandbox, unchanged Scanner SQL admission/execution and future/source-catalog canary proof. |
+| `10.2` | Chat 30 | `done` | `10.1` | Exact `committed_at_ms` baseline resolution, deterministic equal-time tie-break, detached hardened in-memory `history <= B` / `latest = B` sandbox and unchanged Scanner admission are implemented. Focused proof covers before/between/equal/after/no-prior boundaries, failed-cycle exclusion, current built-in/saved/editable SQL unchanged, future/source-catalog/table/external-read canaries, source immutability and SQL-path punctuation safety. First execution exposed DuckDB `ATTACH` path-parameter grammar as the sole defect; RCA narrowed the product-owned path exception to one literal encoder with regression proof. Code/test candidate `50fc62daab5f6d523336bfa09628b3fd13da7d06` passed Fast #590 and Planning #764; final diff/security audit found no remaining scoped blocker after removing unrelated execution-history wording drift. |
 | `10.3` | Chat 31 | `pending` | `10.2` | Pending implementation. Definition of done is PLAN 10.3: set-wise post-decision evaluator using `(B,T0,returned position,securityId)`, Demo Buy-equivalent horizon semantics, explicit unavailable/integrity behavior and focused equivalence proof without Backtest persistence. |
 | `10.4` | Chat 32 | `pending` | `10.2`, `10.3` | Pending implementation. Definition of done is PLAN 10.4: beginner-first Inspect plus Compare A/B/(optional C), compact summary and mandatory full Side-by-Side per-security evidence with overlap/exclusive/position-change drill-down. |
 | `10.5` | Chat 33 | `pending` | `10.4` | Pending implementation. Definition of done is PLAN 10.5: deterministic seconds/minutes Sweep, shared-baseline selection reuse without collapsing distinct `T0`, bounded timeline reporting and Open-point drill-down into the exact Inspect/Compare evidence. |
@@ -83,11 +83,11 @@ Former task `7.4` final target-machine/provider acceptance remains in `backlog/B
 - Backtest Branch 10 adds **6** newly planned/allocated execution rows without changing historical completion evidence.
 - Current execution rows: **49**.
 - Unique current execution task IDs: **49**.
-- Done rows: **44**.
-- Pending rows: **5**.
+- Done rows: **45**.
+- Pending rows: **4**.
 - In-progress rows: **0**.
 - Blocked rows: **0**; dependency-gated pending work remains `pending` until predecessors are `done`.
 - Every current execution dependency references another execution task; no self-dependency or dependency cycle is present.
 - Historical results/evidence are preserved. Deferred target-machine/provider acceptance evidence remains in the final-acceptance runbook/ledger and `backlog/B-US-000-final-target-machine-provider-acceptance.md`.
 
-The next executable task is `10.2` / Chat 30 after the `10.1` closure is present on fresh `main`. No later Backtest chat may start before its declared dependency is `done`.
+The next dependency-valid task is `10.3` / Chat 31, but Chat 30 branch/PR closure remains mandatory first: merge PR #81, require green `main` CI and reconcile open-PR state before explicitly activating Chat 31. No generic continuation changes chat identity.
