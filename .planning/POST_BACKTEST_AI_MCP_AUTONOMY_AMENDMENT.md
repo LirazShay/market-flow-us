@@ -2,6 +2,8 @@
 
 Status: `DEFERRED_UNTIL_BACKTEST_COMPLETE`
 
+Supporting user-intent/design input for backlog authority `B-US-008` in `backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md`. This file does not activate execution and is not a second live backlog authority.
+
 This amendment records the latest user intent for `.planning/POST_BACKTEST_AI_MCP_MANDATE.md`.
 
 ## Primary correction
