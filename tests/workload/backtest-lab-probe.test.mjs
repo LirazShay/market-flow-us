@@ -254,8 +254,7 @@ async function measureSweep(runtime, queries) {
     queryCount: queries.length,
     topX: 10,
     horizonCount: DEFAULT_HORIZONS_MS.length,
-    derivedOutcomeEvaluationCount: metrics.availablePointCount * queries.length,
-    derivedCurrentEvidenceOpenCount: metrics.availablePointCount * queries.length
+    outcomeEvaluationCount: metrics.availablePointCount * queries.length
   };
 }
 
