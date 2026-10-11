@@ -26,6 +26,7 @@ test("Backtest Sweep Open rejects a non-negative index beyond the active run", a
       port: 0,
       runSweep: async () => Object.freeze({
         metrics: Object.freeze({ requestedPointCount: 2 }),
+        overview: Object.freeze({ availablePointCount: 2, queries: Object.freeze([]), comparison: null }),
         page: () => Object.freeze({ offset: 0, limit: 50, totalCount: 2, items: Object.freeze([]) }),
         openPoint: () => {
           openCalls += 1;
