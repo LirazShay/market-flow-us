@@ -67,13 +67,23 @@ function setSweepQueryVisibility(shadow, querySet) {
   }
 }
 
-function pointQuerySummary(point, compactQuery) {
-  const horizonMs = safeArray(point?.request?.horizonsMs).at(-1);
-  const summary = safeArray(compactQuery?.summary).find((item) => item.horizonMs === horizonMs)
-    ?? safeArray(compactQuery?.summary).at(-1)
+function lastHorizonSummary(horizonsMs, summaries) {
+  const horizonMs = safeArray(horizonsMs).at(-1);
+  return safeArray(summaries).find((item) => item.horizonMs === horizonMs)
+    ?? safeArray(summaries).at(-1)
     ?? null;
+}
+
+function pointQuerySummary(point, compactQuery) {
+  const summary = lastHorizonSummary(point?.request?.horizonsMs, compactQuery?.summary);
   if (!summary) return "אין summary";
   return `avg ${formatPercent(summary.averagePercent)} · ${summary.availableCount}/${summary.availableCount + summary.unavailableCount} available`;
+}
+
+function overviewQuerySummary(sweep, query) {
+  const summary = lastHorizonSummary(sweep?.request?.horizonsMs, query?.summary);
+  if (!summary) return "אין summary";
+  return `avg ${formatPercent(summary.averagePercent)} · median ${formatPercent(summary.medianPercent)} · positive ${summary.positiveCount}/${summary.availableCount}`;
 }
 
 export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
@@ -193,6 +203,7 @@ export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
 
   function exitSweep() {
     sweepPanel.hidden = true;
+    timeline.hidden = true;
     if (decisionLabel) decisionLabel.hidden = false;
     pointRun.hidden = false;
   }
@@ -226,8 +237,10 @@ export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
 
   function renderTimeline() {
     timeline.replaceChildren();
-    timeline.hidden = false;
-    if (!activeSweep || !currentPage) return;
+    if (!activeSweep || !currentPage) {
+      timeline.hidden = true;
+      return;
+    }
 
     timeline.append(document.createElement("h2"));
     timeline.querySelector("h2").textContent = "Sweep timeline";
@@ -248,6 +261,50 @@ export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
       metrics.append(span);
     }
     timeline.append(metrics);
+
+    const overviewHeading = document.createElement("h3");
+    overviewHeading.textContent = "Sweep overview";
+    timeline.append(overviewHeading);
+
+    const overviewWrap = document.createElement("div");
+    overviewWrap.className = "table-wrap";
+    const overviewTable = document.createElement("table");
+    overviewTable.setAttribute("aria-label", "Sweep query overview");
+    const overviewHead = document.createElement("tr");
+    for (const label of ["Query", "Points", "Selected / evaluated", "Summary"]) {
+      const th = document.createElement("th");
+      th.textContent = label;
+      overviewHead.append(th);
+    }
+    const overviewThead = document.createElement("thead");
+    overviewThead.append(overviewHead);
+    const overviewBody = document.createElement("tbody");
+    for (const query of safeArray(activeSweep.overview?.queries)) {
+      const row = document.createElement("tr");
+      for (const value of [
+        query.name ?? query.id,
+        String(query.pointCount ?? 0),
+        `${query.selectedSourceRowCount ?? 0} / ${query.evaluatedUniqueCount ?? 0}`,
+        overviewQuerySummary(activeSweep, query)
+      ]) {
+        const td = document.createElement("td");
+        td.textContent = value;
+        row.append(td);
+      }
+      overviewBody.append(row);
+    }
+    overviewTable.append(overviewThead, overviewBody);
+    overviewWrap.append(overviewTable);
+    timeline.append(overviewWrap);
+
+    if (activeSweep.overview?.comparison) {
+      const comparison = document.createElement("div");
+      comparison.className = "meta";
+      const positionChanges = safeArray(activeSweep.overview.comparison.pairs)
+        .reduce((sum, pair) => sum + (pair.positionChangeObservationCount ?? 0), 0);
+      comparison.textContent = `Across point observations: union ${activeSweep.overview.comparison.unionObservationCount} · common ${activeSweep.overview.comparison.commonObservationCount} · position changes ${positionChanges}`;
+      timeline.append(comparison);
+    }
 
     if (currentPage.items.length === 0) {
       const empty = document.createElement("div");
@@ -323,6 +380,7 @@ export function attachBacktestSweepUi({ client, surface, injectPoint } = {}) {
     next.addEventListener("click", () => void loadPage(currentPage.offset + currentPage.limit));
     pager.append(previous, next, pageText);
     timeline.append(pager);
+    timeline.hidden = !sweepRadio.checked;
   }
 
   async function loadPage(offset) {
