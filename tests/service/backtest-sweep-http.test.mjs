@@ -47,8 +47,14 @@ function fakeSweepRun({ marker = "first", openPoint = null } = {}) {
     distinctBaselineCount: 2,
     queryExecutionCount: 4
   });
+  const overview = Object.freeze({
+    availablePointCount: 4,
+    queries: Object.freeze([]),
+    comparison: null
+  });
   return Object.freeze({
     metrics,
+    overview,
     page({ offset, limit }) {
       return Object.freeze({
         offset,
@@ -106,6 +112,11 @@ test("Backtest Sweep HTTP freezes one exact run and exposes only a bounded first
       horizonsMs: [10_000, 20_000]
     });
     assert.equal(Object.hasOwn(response.body.sweep.request, "requestedAtMsList"), false);
+    assert.deepEqual(response.body.sweep.overview, {
+      availablePointCount: 4,
+      queries: [],
+      comparison: null
+    });
     assert.deepEqual(response.body.sweep.page, {
       offset: 0,
       limit: 50,
