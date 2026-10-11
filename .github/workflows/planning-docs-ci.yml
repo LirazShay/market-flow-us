@@ -72,7 +72,7 @@ jobs:
             docs/US_PRODUCT_DIRECTION.md docs/US_SOURCE_EVIDENCE.md
             docs/PRODUCT_REQUIREMENTS.md docs/PRODUCT_SPEC.md docs/DATA_CONTRACT.md
             docs/TECHNICAL_SPEC.md docs/TEST_STRATEGY.md docs/SOURCE_EXTRACTION.md
-            docs/SCANNER_SQL_GUIDE.md
+            docs/SCANNER_SQL_GUIDE.md docs/BACKTEST_LAB.md
             docs/DEMO_BUY_VALIDATION.md docs/DEMO_BUY_PROTOCOL_LIMITS.md
             docs/DEMO_BUY_UX.md docs/AI_INVESTIGATION_PACK.md
             docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md
@@ -106,7 +106,9 @@ jobs:
           require_text '# Market Flow US — Plan' .planning/PLAN.md
           require_text '# Market Flow US — Execution' .planning/EXECUTION.md
           require_text '| Task | Owner | Status | Depends on | Result/Evidence |' .planning/EXECUTION.md
-          require_text 'There is currently **no open allocated execution task**.' .planning/EXECUTION.md
+          require_text 'Status vocabulary: `pending | in_progress | done | blocked`.' .planning/EXECUTION.md
+          require_text '| `10.1` | Chat 29 | `pending` | `7.6.5` |' .planning/EXECUTION.md
+          require_text 'The next executable task is `10.1` / Chat 29' .planning/EXECUTION.md
           require_text 'backlog/B-US-000-final-target-machine-provider-acceptance.md' .planning/EXECUTION.md
           require_text '# Market Flow US Backlog' backlog/README.md
           require_text 'Backlog items are **non-blocking by default**.' backlog/README.md
@@ -119,12 +121,16 @@ jobs:
           require_text 'planning: ".planning/PLAN.md"' STATUS.yaml
           require_text 'execution: ".planning/EXECUTION.md"' STATUS.yaml
           require_text 'backlog: "backlog/README.md"' STATUS.yaml
+          require_text 'backtest_contract: "docs/BACKTEST_LAB.md"' STATUS.yaml
 
           require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
           require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
           require_text '# Market Flow US Data Contract' docs/DATA_CONTRACT.md
           require_text '# Market Flow US Technical Spec' docs/TECHNICAL_SPEC.md
           require_text '# Market Flow US Test Strategy' docs/TEST_STRATEGY.md
+          require_text '# Market Flow US — Backtest Lab Contract' docs/BACKTEST_LAB.md
+          require_text 'Compare MUST NOT reduce the result to aggregates only.' docs/BACKTEST_LAB.md
+          require_text 'Those points are **not automatically deduplicated**' docs/BACKTEST_LAB.md
           require_text '# Demo Buy Strategy Validation' docs/DEMO_BUY_VALIDATION.md
           require_text '# Demo Buy Protocol / Export Bounds' docs/DEMO_BUY_PROTOCOL_LIMITS.md
           require_text '# Demo Buy / AI Investigation UX Contract' docs/DEMO_BUY_UX.md
