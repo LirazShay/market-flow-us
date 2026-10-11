@@ -6,25 +6,26 @@ Execution ownership, live status, real execution dependencies and result/evidenc
 
 ## Desired outcome
 
-Market Flow US is a locally runnable U.S.-market product with three deliberately separated capability lanes:
+Market Flow US is a locally runnable U.S.-market product with four deliberately separated capability lanes:
 
 1. **Market analysis and strategy validation** — authenticated U.S. provider snapshots → exact validation → normal ProducerBridge → localhost Node.js service → active-day DuckDB → Current / Detail-History / editable Scanner SQL → Demo Buy → deterministic local AI Investigation evidence.
 2. **Order execution** — a standalone local Interactive Brokers order-service sidecar with authenticated localhost caller protection, DRY_RUN by default, fail-closed LIVE gates, restart-safe idempotency and explicit BUY/SELL lifecycle; the product has one deliberately narrow current-Detail BUY consumer through a trusted local confirmation boundary.
 3. **Market Recording + Replay** — validated browser snapshots → IndexedDB and/or portable recording → 1x Player → unchanged normal ProducerBridge/service path → isolated replay-only DuckDB → the same analytical surfaces.
+4. **Historical Backtest Lab** — existing active/archive Market Flow US DuckDB evidence → isolated read-only historical query context → unchanged Scanner SQL → post-decision outcome evaluation → beginner-first Inspect / Compare / Sweep investigation, without requiring a provider page, Collector, Replay, order service or open market.
 
-These lanes remain intentionally separated. Scanner, Demo Buy, AI Investigation and Current never automatically place orders. Replay never turns the normal market service into a replay-aware service.
+These lanes remain intentionally separated. Scanner, Demo Buy, AI Investigation and Current never automatically place orders. Replay never turns the normal market service into a replay-aware service. Backtest never becomes a producer, never mutates market authority and never becomes an order/fill/portfolio simulator.
 
 ## Current reality and completion boundary
 
-The repository contains completed implementation and deterministic reclosure evidence for the U.S. migration, Demo Buy, AI Investigation, standalone order service, Basic Detail BUY integration, Market Recording + Replay, Replay hardening and the staged pre-acceptance code audit. Final target-machine/provider acceptance remains the final product-completion boundary.
+The repository contains completed implementation and deterministic reclosure evidence for the U.S. migration, Demo Buy, AI Investigation, standalone order service, Basic Detail BUY integration, Market Recording + Replay, Replay hardening and the staged pre-acceptance code audit. Final target-machine/provider acceptance remains deferred as non-blocking backlog work. Backtest Lab is the newly planned active feature scope and is not implemented yet.
 
-The exact runtime candidate currently referenced by final acceptance is:
+The exact runtime candidate currently referenced by deferred final acceptance is:
 
 ```text
 682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
-`FINAL_ACCEPTANCE_RUNBOOK.md` and `FINAL_ACCEPTANCE_EXECUTION.md` own the acceptance procedure/evidence. `.planning/EXECUTION.md` owns the live task/owner/status. This PLAN does not duplicate that execution state.
+`FINAL_ACCEPTANCE_RUNBOOK.md` and `FINAL_ACCEPTANCE_EXECUTION.md` own the acceptance procedure/evidence. `.planning/EXECUTION.md` owns live task/owner/status once new Backtest leaves are explicitly allocated. This PLAN does not duplicate that execution state.
 
 ## Constraints and non-goals
 
@@ -49,32 +50,36 @@ The exact runtime candidate currently referenced by final acceptance is:
 - Replay `Seek` and Play-after-Stop start a fresh replay-owned service/DB at a real recorded frame with zero hidden preroll/fast-forward.
 - Replay Host controls only the service child and replay artifacts it owns; foreign process/path conflicts fail closed.
 - Replay-specific real-time waits remain opt-in; ordinary verification must not silently become slow.
+- Backtest source DBs are immutable evidence: no bootstrap, migration, stale-session recovery, saved-query writes, Demo Buy writes, market writes, rename/move/delete or repair.
+- Backtest historical SQL sees only historical `latest` / `history`; no SQL text rewrite is used to inject time predicates and no underlying future source catalog remains reachable while user SQL executes.
+- Backtest is comparison/research tooling, not an optimizer: no automatic winner, strategy Score, parameter search, capital/portfolio model, fee/slippage/fill simulation or cross-day result warehouse in the initial scope.
 - All diagnostics, fixtures, recordings, reports and evidence remain public-safe: no credentials, cookies, auth/session data, real account identifiers or raw authenticated dumps.
 
 ## Root S&T
 
 ### Strategy
 
-Deliver one complete local U.S.-market product that preserves the proven analysis/validation model, keeps the isolated permission-gated IBKR execution boundary, supports one explicit user-confirmed Detail BUY integration, and keeps Market Recording + Replay isolated from live authority.
+Deliver one complete local U.S.-market product that preserves the proven live analysis/validation model, keeps the isolated permission-gated IBKR execution boundary, supports Market Recording + Replay without contaminating live authority, and adds trustworthy offline historical strategy research without requiring live acquisition.
 
 ### Tactic
 
-Complete nine necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI Investigation, deterministic offline proof, operational tooling, deterministic release/audit/final acceptance, standalone IBKR execution plus the narrow Detail BUY integration, and Market Recording + Replay plus adversarial hardening.
+Complete ten necessary capability branches covering acquisition, market authority, trusted reads, Scanner/Demo Buy/AI Investigation, deterministic offline proof, operational tooling, deterministic release/audit/final acceptance, standalone IBKR execution plus the narrow Detail BUY integration, Market Recording + Replay plus adversarial hardening, and an isolated read-only Backtest Lab.
 
 ### Parallel assumptions
 
 - Proven mechanisms are reused unless evidence requires change.
-- Scanner SQL remains strategy authority; Demo Buy and AI Investigation remain evidence layers.
+- Scanner SQL remains strategy authority; Demo Buy, AI Investigation and Backtest remain evidence/research layers.
 - IBKR execution remains a separate local boundary; Basic BUY consumes it through a trusted Node-owned seam.
 - Replay remains an external producer/orchestrator over the normal producer/service path.
+- Backtest operates directly on product-owned active/archive DuckDB evidence rather than replaying it through the live producer path.
 
 ### Necessity
 
-Each branch owns a capability that cannot be removed without losing an explicit product requirement: trustworthy acquisition, durable authority, inspectable reads, strategy learning, deterministic offline proof, operability/performance tooling, release/acceptance closure, safe execution, or replayability.
+Each branch owns a capability that cannot be removed without losing an explicit product requirement: trustworthy acquisition, durable authority, inspectable reads, strategy learning, deterministic offline proof, operability/performance tooling, release/acceptance closure, safe execution, replayability, or deterministic historical query comparison while the live market/provider path is unavailable.
 
 ### Sufficiency
 
-The nine branches are sufficient for the current requested product because Basic BUY extends execution branch 8 and Replay hardening extends branch 9; neither requires a new root capability family. Cross-branch deterministic reclosure and final target-machine/provider acceptance are owned by branch 7.
+Branches 1–9 preserve the existing completed product capabilities. Branch 10 adds the newly requested historical research outcome through safe evidence access, truthful historical query execution, shared outcome evaluation, Inspect/Compare investigation, Sweep investigation and integrated offline reclosure. No new Strategy Engine, Replay semantics or order coupling is needed.
 
 ### Root success evidence
 
@@ -83,8 +88,9 @@ The nine branches are sufficient for the current requested product because Basic
 - Standalone IBKR BUY/SELL lifecycle is deterministically proven with authenticated localhost caller protection, public-safe diagnostics and restart-safe idempotency.
 - Basic BUY is Detail-only, explicit, quantity-configured, MKT/DAY and uses a trusted local confirmation boundary without browser-visible sidecar credentials or automatic execution.
 - Market Recording + Replay is adversarially hardened with no known material untested Replay risk before final acceptance.
-- Fast, Browser, affected product-specific and bounded Workload gates are green on the exact final candidate without turning Replay waits into ordinary-suite cost.
-- Final target-machine/provider acceptance passes on that exact candidate; actual live IBKR submission is either proven when permission exists or recorded exactly as `PENDING_EXTERNAL_PERMISSION`.
+- Backtest Lab can run offline over active/archive evidence, execute unchanged Scanner SQL with anti-lookahead, compare complete per-security outcomes, Sweep by seconds/minutes and drill any point back to exact evidence without mutating the source DB.
+- Fast, Browser, affected product-specific and bounded Workload gates stay green without turning Replay/Backtest heavy workloads into ordinary-suite cost.
+- Deferred final target-machine/provider acceptance, when explicitly activated later, runs on the latest intended runtime candidate; actual live IBKR submission is either proven when permission exists or recorded exactly as `PENDING_EXTERNAL_PERMISSION`.
 
 ---
 
@@ -182,7 +188,7 @@ The nine branches are sufficient for the current requested product because Basic
 
 **Tactic:** Adapt Current model/surface to U.S. columns/display fallback while retaining refresh, diagnostics, navigation and sort/scroll restoration.
 
-**Success evidence:** Unit/E2E prove columns, `DailyVolume DESC`, zero/missing rendering and state restoration.
+**Success evidence:** Unit/E2E prove columns, `DailyVolume DESC`, zero/missing formatting and state restoration.
 
 ### 3.3 — Detail/History
 
@@ -386,15 +392,15 @@ The nine branches are sufficient for the current requested product because Basic
 
 ## Branch 7 — Reclosure, code audit and final acceptance
 
-**Strategy:** Deterministically re-close every requested capability extension, perform one final scoped code-centric audit of the recent extension delta, then accept the exact final target-machine/provider candidate.
+**Strategy:** Deterministically re-close every requested capability extension, perform one final scoped code-centric audit of the recent extension delta, then accept the exact final target-machine/provider candidate when that deferred backlog work is explicitly activated.
 
-**Tactic:** Preserve completed U.S./Demo Buy/AI/order/Replay evidence, complete Replay hardening + Basic BUY, audit/reclose the combined recent extension code, then execute final user-dependent acceptance.
+**Tactic:** Preserve completed U.S./Demo Buy/AI/order/Replay evidence, completed Replay hardening + Basic BUY and combined code audit; future final acceptance remains deferred until explicitly activated.
 
-**Parallel assumptions:** Target-machine/authenticated checks remain last; deterministic code audit does not replace user-dependent acceptance.
+**Parallel assumptions:** Target-machine/authenticated checks remain external/user-dependent and do not block unrelated new development.
 
-**Necessity:** Final acceptance must run against a candidate that includes all current capabilities and has received deterministic reclosure plus the requested combined code audit.
+**Necessity:** Final acceptance, when activated, must run against the latest intended candidate with all then-current capabilities.
 
-**Sufficiency:** Historical deterministic proof + Replay hardening + Basic BUY + five-stage pre-acceptance audit + final 7.4 acceptance establish end-to-end completion.
+**Sufficiency:** Historical deterministic proof + Replay hardening + Basic BUY + completed pre-acceptance audit preserve the release evidence needed before future final acceptance.
 
 ### 7.1 — Deterministic release candidate
 
@@ -430,7 +436,7 @@ The nine branches are sufficient for the current requested product because Basic
 
 ### Substrategy 7.6 — Pre-acceptance code audit
 
-**Strategy:** Review and deterministically re-close the complete recent extension delta so final acceptance is not the first discovery point for material order/BUY/Replay/shared-integration defects.
+**Strategy:** Review and deterministically re-close the complete recent extension delta so future final acceptance is not the first discovery point for material order/BUY/Replay/shared-integration defects.
 
 **Tactic:** Execute five stages: exact delta inventory; order/BUY deep audit; Replay deep audit; shared integration audit; adversarial verification/reclosure, with root-cause fixes for every blocker.
 
@@ -476,15 +482,15 @@ The nine branches are sufficient for the current requested product because Basic
 
 **Tactic:** Run focused regressions plus full unit/service/order/replay acceptance, browser/replay builds, Chromium, materially affected Local Fake/Planning/bounded Workload; inspect recurring cost, final diff, PR/main CI and open-PR state; pin exact audited runtime SHA.
 
-**Success evidence:** Unit, service, Replay acceptance, order acceptance, browser build, replay build and Chromium are green; materially affected Local Fake, planning-doc and Workload sanity are green without redundant long work; audit report records range/defects/RCA/fixes/regressions/stage dispositions/candidate; audit PR/main CI/open-PR state are clean; final acceptance points to the exact audited candidate.
+**Success evidence:** Unit, service, Replay acceptance, order acceptance, browser build, replay build and Chromium are green; materially affected Local Fake, planning-doc and Workload sanity are green without redundant long work; audit report records range/defects/RCA/fixes/regressions/stage dispositions/candidate; audit PR/main CI/open-PR state are clean; deferred final acceptance can later select the latest intended runtime candidate.
 
 ### 7.4 — Final target-machine/provider acceptance
 
-**Strategy:** Accept the exact final audited/reclosed candidate on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, Basic Detail BUY compatibility, standalone IBKR compatibility, authenticated static compatibility and market-open movement.
+**Strategy:** Accept the exact final intended candidate on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, Basic Detail BUY compatibility, standalone IBKR compatibility, authenticated static compatibility and market-open movement.
 
-**Tactic:** Run final target-machine local market/order/replay acceptance first, including Detail BUY confirmation, then authenticated market-data static smoke and market-open SHA-bound gate; real IBKR live-order proof runs only when external permission exists.
+**Tactic:** When backlog item `B-US-000` is explicitly activated, select the then-current intended candidate, reconcile the runbook, run final target-machine local market/order/replay acceptance first, then authenticated market-data static smoke and market-open SHA-bound gate; real IBKR live-order proof runs only when external permission exists.
 
-**Success evidence:** Local Fake static/moving/failure/restart PASS; Demo Buy journey proves capture + progressive/targeted horizons + sharing-safe AI generation/copy/regeneration on final SHA; Replay records/exports/imports or directly opens portable recording, plays at 1x with contemporary local timing, pauses/resumes, Stop→Play fresh run, Seek fresh replay DB with zero preroll and leaves normal live DB untouched; standalone IBKR service starts independently, protects localhost caller access and proves DRY_RUN/provider-session/restart-safe idempotency without exposing credential/account/session data; BUY-enabled composition proves current Detail → immutable ticket → trusted confirmation → existing sidecar DRY_RUN with no browser-visible token/generic order proxy and duplicate-click safety; if LIVE permission exists the same integrated path proves an explicitly confirmed real order under all gates, otherwise submission remains exactly `PENDING_EXTERNAL_PERMISSION`; 4096×180 and isolated one-day probes pass target criteria; New Day accepts valid v3/v4, preserves saved queries and starts clean v4 Demo Buy state; authenticated static and market-open movement gates pass with sanitized SHA-bound reports; no private credential/session/account material enters repo/reports/recordings/BUY browser surfaces/shareable artifacts.
+**Success evidence:** This work is intentionally deferred to non-blocking backlog and is not represented as current execution until explicitly planned/allocated again.
 
 ---
 
@@ -604,6 +610,95 @@ The nine branches are sufficient for the current requested product because Basic
 
 ---
 
+## Branch 10 — Historical Backtest Lab
+
+**Strategy:** Let the user deterministically test and compare Scanner SQL strategies on historical market evidence, including second-level repeated testing, while preserving exact no-lookahead semantics, complete drillable evidence and a beginner-friendly offline workflow.
+
+**Tactic:** Add one isolated loopback Backtest Lab that opens only product-owned day databases as immutable evidence, resolves each simulated decision time to an authoritative committed cycle, executes unchanged Scanner SQL inside a restricted historical DuckDB sandbox, evaluates post-decision outcomes through shared Demo Buy-compatible semantics, and presents Inspect / Compare / Sweep as views over the same engine.
+
+### Tactic-validity assumptions
+
+- `cycles` records successful complete commits with authoritative `cycle_id` and `committed_at_ms`; the existing writer stores the complete `history` snapshot and replaces `latest` from that same cycle transactionally.
+- A historical Query only needs the documented Scanner strategy surface `latest` and `history` in the initial version; queries that intentionally reference other tables can fail explicitly rather than weakening isolation.
+- `history(cycle_id=B)` is the exact market snapshot corresponding to baseline cycle `B` because each complete cycle contains the exact validated universe membership.
+- The user wants deterministic research/visual comparison, not broker-fill or portfolio P&L simulation.
+- Active/archive day files are sufficient source units initially; cross-day aggregation is not required to prove this outcome.
+
+### Material alternatives considered
+
+- **Modify the normal live service** — rejected because its database lifecycle can bootstrap/migrate/recover sessions and its startup path assumes provider/browser concerns that are unnecessary for offline research.
+- **Use Replay as the engine** — rejected because Replay validates live runtime behavior over time, while Backtest needs direct random-access historical decisions, fast repeated evaluation and no server virtual clock.
+- **Rewrite arbitrary SQL with injected time predicates** — rejected because CTEs/windows/joins/history logic make text rewriting fragile and semantically unsafe.
+- **Run user SQL directly against the source DB with temporary views** — rejected because schema/catalog qualification could bypass shadow views and expose future rows.
+- **Copy a fresh full bounded database per requested Sweep timestamp** — rejected as needlessly expensive; a sandbox can advance by baseline cycle and identical-baseline Query selections can be reused while each requested time keeps its own outcome `T0`.
+- **Aggregate-only Compare/Sweep** — rejected because the user explicitly needs to see every selected security and every post-selection percentage before deciding whether a Query is better.
+
+### Invalidation conditions
+
+Reopen this tactic if executable proof shows that DuckDB cannot provide a safe detached historical sandbox with existing hardening, or if representative second-level Sweep remains impractical after eliminating avoidable repeated work. Do not jump directly to a new index/precompute/warehouse before measurement identifies the actual bottleneck.
+
+### Necessity
+
+Without safe evidence access the Lab can mutate or depend on live runtime. Without historical SQL isolation the result can contain hindsight. Without a shared outcome authority percentages can drift from Demo Buy semantics. Without complete Inspect/Compare evidence the user cannot understand why strategies differ. Without Sweep the user cannot tell whether one-point behavior repeats. Without offline operational/reclosure proof the feature does not meet the closed-market use case.
+
+### Sufficiency
+
+Leaves 10.1–10.6 jointly provide immutable evidence access, exact historical execution, trustworthy outcomes, direct visual comparison, repeated-time investigation and an operable/reclosed product. More elaborate optimizer/persistence/portfolio machinery is not required for the requested outcome.
+
+### Branch success evidence
+
+A fresh local operator can launch Backtest Lab with the market closed and no provider/Collector/Replay/order service, select active/archive evidence, run unchanged Scanner SQL at historical times, compare two Queries (optionally three), inspect every selected security and horizon, Sweep every X seconds/minutes, open any Sweep point into the same detailed evidence, and reproduce the result while source-file hashes/content remain unchanged and future-canary attempts cannot leak through the Query sandbox.
+
+### 10.1 — Safe offline evidence access
+
+**Strategy:** Backtest can discover and read valid historical day evidence independently without mutating or taking ownership of live/Replay/order state.
+
+**Tactic:** Build a dedicated Backtest loopback runtime and source catalog limited to `data/market-flow-us.duckdb` plus `data/archive/market-flow-us-*.duckdb`, with a read-only schema-v3/v4 validation path that performs no bootstrap, migration, stale-session recovery, repair or arbitrary browser-path access.
+
+**Success evidence:** Unit/service proof enumerates only product-owned sources; valid v3/v4 opens read-only; empty/missing/corrupt/incompatible/locked sources fail clearly; source bytes/schema/session/status/saved-query/market/Demo-Buy facts are unchanged before/after runs; no provider, Collector, Replay Host/Player or order service starts; no process is killed to obtain a lock; diagnostics contain only bounded public-safe source IDs/metadata rather than private paths/data dumps.
+
+### 10.2 — Truthful historical Scanner sandbox
+
+**Strategy:** Exact Scanner SQL at requested time `T` can see everything strategy-authoritative up to the last successful committed cycle at-or-before `T`, and nothing later.
+
+**Tactic:** Resolve `B` using `cycles.status='complete' AND committed_at_ms <= T` with deterministic `committed_at_ms DESC, cycle_id DESC` tie-break; prepare a separate hardened in-memory DuckDB sandbox containing only bounded `history <= B` and `latest = history(B)`; when source attachment/copy is used for preparation it is explicitly read-only and detached before user SQL execution; execute the original SQL through existing Scanner admission without predicate rewriting.
+
+**Success evidence:** SQL preflight precedes material historical SQL execution; deterministic fixtures prove exact boundary resolution including ties/no-prior-cycle; representative saved/built-in/editable `latest`/`history` queries execute unchanged with exact row/column order; attempts to reach future history, source catalog, `cycles`, `sessions`, `universe`, saved-query/Demo-Buy tables, qualified source names or external-reading functions cannot expose source/future facts; unsupported table references fail clearly; existing one-SELECT/no-parameters/forbidden-function/hardening rules remain at least as strict as normal Scanner.
+
+### 10.3 — Trustworthy post-decision outcome evidence
+
+**Strategy:** Every selected security has one deterministic baseline and future horizon result whose calculation matches the product's established Demo Buy outcome semantics wherever those semantics are identical.
+
+**Tactic:** Introduce the smallest shared evaluator seam needed to reuse exact baseline-price, first-post-watermark/first-at-or-after matching, percentage/outcome and unavailable-state rules; Backtest supplies `(B, T0=requested time, returned position, securityId)` rather than persisted Demo Buy captures, and outcome SQL reads the immutable source evidence set-wise.
+
+**Success evidence:** Material evaluation SQL passes static preflight; focused equivalence tests prove baseline `history(B,S)`, `cycle_id > B`, `collected_at_ms >= T0+H`, deterministic `collected_at_ms/cycle_id` tie-break, percentage math and existing unavailable reasons; default 10/20/30/45/60/90/120s plus optional 3m/5m/10m are correctly ordered; missing baseline is integrity failure; baseline age/resolved timing is inspectable; Backtest creates no `demo_buy_*` rows and does not fork a second drifting change-percent implementation.
+
+### 10.4 — Complete Inspect and Compare investigation
+
+**Strategy:** A beginner can understand one Query and visually compare strategy Queries at one historical decision point without losing the raw per-security evidence behind aggregate summaries.
+
+**Tactic:** Build one point-result model used by Inspect and Compare; freeze one shared source/B/T0/Top-X/horizon configuration per run, execute Query A/B and optional C independently, preserve source-row returned positions, apply source-row-first Top-X before canonical-security dedupe as in Demo Buy selection semantics, calculate compact aggregates/overlap/position deltas, then render complete per-Query rows in Side-by-Side with differences/common filtering as presentation only.
+
+**Success evidence:** Inspect shows exact SQL/provenance on demand, small summary and every evaluated security/horizon; Compare proves all Queries use identical B/T0/config yet retain independent returned order; duplicate identities do not silently promote lower rows into Top-X and source-row/evaluated-unique counts remain explicit; overlap, only-A/B/C and returned-position changes are exact; Side-by-Side exposes every selected security, baseline price and selected horizon percentage/price/unavailable state; filters never alter the frozen result; no UI wording claims a global winner merely from the aggregates; Chromium covers loading/empty/error/unsupported-query and beginner guidance.
+
+### 10.5 — Scalable Sweep and drill-down
+
+**Strategy:** The user can test one Query or the current Compare set every X seconds/minutes over a historical range, understand the large result and enter any interesting point without losing determinism.
+
+**Tactic:** Generate requested timestamps inclusively and in order; resolve each to `(B,T0)`; process baselines monotonically so the private historical sandbox can advance rather than rebuild from zero where safe; execute a frozen Query once per distinct baseline `B` and reuse that selection for requested points sharing `B`, while evaluating each point with its own `T0`; expose a compact paged/virtualized timeline and `Open` into the exact 10.4 point-result model.
+
+**Success evidence:** Tests prove 1-second and minute cadence, endpoint inclusion, unavailable early points, multiple requested times sharing B but producing different horizon targets/outcomes, stable ordering/paging/filtering and frozen Query/config semantics; Query execution count is bounded by distinct baselines rather than blindly by requested timestamps when baselines repeat; one-Query and A/B(/C) Sweep summaries exactly reconcile to opened point results; no browser-driven `points × queries × securities × horizons` request loop; opening any point reproduces complete Inspect/Compare evidence.
+
+### 10.6 — Beginner offline operation, performance and deterministic reclosure
+
+**Strategy:** Backtest Lab is easy to start/use when the market is closed and the integrated implementation is measured, documented and regression-safe without adding speculative infrastructure.
+
+**Tactic:** Add `START_BACKTEST_LAB.cmd` plus minimal build/package/user guidance, default Compare with two Queries/Top-10/10s–120s and progressive disclosure for Query C/longer horizons/SQL/timing metadata; run focused unit/service/Chromium acceptance plus bounded representative Inspect/Compare/second-level Sweep/Sweep-Compare measurements, remove observed repeated work, update affected durable product/technical/test/user contracts and run materially affected broad CI/reclosure.
+
+**Success evidence:** Fresh Windows path starts only the loopback Lab and opens a usable page without provider login or market hours; inline help explains historical time/resolved cycle/no-lookahead/Top-X/returned position/repeated baseline/Pending-Unavailable/Summary-vs-evidence; bounded measurements are recorded for representative day data and no new index/precompute/background worker/result DB is added absent evidence; focused tests plus Fast/Browser/Planning and materially affected bounded Workload are green; final diff/security/public-safe diagnostics review finds no source mutation/lookahead/execution coupling; PR merges by repository policy, main CI is green and open-PR state is reconciled.
+
+---
+
 ## Material planning decisions carried forward
 
 `.planning/DECISIONS.md` remains the durable decision register. The following decision families materially constrain this plan:
@@ -613,9 +708,11 @@ The nine branches are sufficient for the current requested product because Basic
 - **Demo Buy/AI authority:** D-US-023, 024, 026–033.
 - **IBKR/order authority:** D-US-034–038, 047.
 - **Replay authority:** D-US-041–046.
-- **Current capability sequencing/history:** D-US-025, 039, 040 and 048 explain why later capabilities were inserted before final acceptance; their process-order details are historical rationale, while real current task dependencies/status live only in `EXECUTION.md`.
+- **Current capability sequencing/history:** D-US-025, 039, 040 and 048 explain why later capabilities were inserted before deferred final acceptance; their process-order details are historical rationale, while real current task dependencies/status live only in `EXECUTION.md`.
 
 D-US-017 described the former V1 planner ceremony. It is not a ST Planner 2.0 planning invariant and is intentionally not reproduced as live PLAN process.
+
+Backtest Lab material choices are expressed directly in Branch 10 plus `docs/BACKTEST_LAB.md`: isolated offline process, read-only source evidence, private detached historical sandbox rather than SQL rewrite/direct-source execution, shared Demo Buy-compatible outcome semantics, Compare-first complete Side-by-Side evidence, and Sweep selection reuse by baseline while preserving per-request `T0`. A separate decision-register entry is unnecessary unless later evidence requires supersession/history beyond those durable sources.
 
 ## Material review findings incorporated into current S&T
 
@@ -631,6 +728,16 @@ The review history contains no unresolved current planning blocker. Material fin
 - Replay Host credential security includes a usable ephemeral one-run bootstrap/pairing path with no durable persistence.
 - Missing pre-start Replay history is ordinary startup state; generic crashes are fixed as normal live-start defects, not by adding replay-specific server behavior.
 - Replay hardening and the later pre-acceptance code audit require static review plus executable proof; prior green CI is not sufficient evidence for a newly identified material risk.
+- Backtest cannot reuse the normal database opener because that opener bootstraps/migrates and recovers stale sessions; immutable evidence needs a dedicated read-only path.
+- Backtest baseline authority uses successful persisted cycle commit time, not guessed wall-clock snapshot timestamps; `T0` remains the requested simulated decision time for future horizons.
+- Historical SQL isolation is achieved by absence of future/source objects from the user-query sandbox, not by trusting unqualified name resolution or fragile SQL rewriting.
+- Sweep may reuse a Query selection across requested times sharing the same baseline cycle because historical strategy-visible state is identical, but it must not dedupe the requested points because their future target times differ.
+
+## Final Planning Review — Branch 10
+
+Outside-in review found the Branch 10 boundary correctly limited to deterministic historical strategy research. The selected tactics preserve existing authority instead of introducing a Strategy Engine or replay-aware server. Each child passes the removal test: removing 10.1 loses immutable offline evidence, 10.2 loses no-lookahead truth, 10.3 loses trustworthy outcomes, 10.4 loses the requested understandable comparison, 10.5 loses repeated-time validation, and 10.6 loses an operable/reclosed product. Together they are sufficient for the requested outcome without an optimizer, persisted experiment warehouse, cross-day feature store or speculative temporal index.
+
+The highest-risk assumption is practical sandbox/Sweep performance. That risk is deliberately tested by 10.2/10.5/10.6 and is not pre-solved with a new subsystem. The leaves are decision-complete at the planning level: implementation may choose local code organization, protocol names and UI component structure, but no executor should need to decide the product semantics, trust boundary, comparison model, Sweep time model or performance escalation policy.
 
 ## Alternatives deliberately rejected
 
@@ -655,6 +762,12 @@ Replay Host market persistence
 playback-speed subsystem
 cloud recording service
 recording editor/merger
+Backtest SQL timestamp rewriting
+Backtest direct user-SQL execution against the source catalog
+Backtest result database / experiment warehouse
+Backtest optimizer / automatic winner / strategy Score
+Backtest fee/slippage/fill/portfolio simulator
+more than three simultaneous Backtest comparison Queries
 multi-hour real-time CI prerequisite
 ```
 
@@ -677,6 +790,7 @@ Important domain contracts include:
 - Demo Buy / AI: `docs/DEMO_BUY_PROTOCOL_LIMITS.md`, `docs/DEMO_BUY_UX.md`, `docs/AI_INVESTIGATION_PACK.md`, `docs/DEMO_BUY_VALIDATION.md`.
 - Basic BUY / order service: `docs/BASIC_BUY_INTEGRATION.md`, `docs/IBKR_ORDER_SERVICE.md`, `docs/IBKR_ORDER_SERVICE_SECURITY.md`.
 - Replay: `docs/MARKET_REPLAY.md`, `docs/REPLAY_HARDENING.md`.
+- Backtest Lab: `docs/BACKTEST_LAB.md`.
 - Shared current product truth: `docs/PRODUCT_REQUIREMENTS.md`, `docs/PRODUCT_SPEC.md`, `docs/DATA_CONTRACT.md`, `docs/TECHNICAL_SPEC.md`, `docs/TEST_STRATEGY.md`.
 
 Execution truth is deliberately separate:
@@ -688,7 +802,7 @@ STATUS.yaml            = non-authoritative projection only
 
 ## Implementation-leaf coverage
 
-The PLAN contains exactly the 44 implementation leaves represented in `.planning/EXECUTION.md`:
+The PLAN now contains the existing 44 historical implementation leaves plus six implementation-ready Backtest leaves:
 
 ```text
 1.1  1.2
@@ -700,10 +814,11 @@ The PLAN contains exactly the 44 implementation leaves represented in `.planning
 7.1  7.2  7.3  7.5  7.6.1  7.6.2  7.6.3  7.6.4  7.6.5  7.4
 8.1  8.2  8.3  8.4  8.5
 9.1  9.2  9.3  9.4  9.5  9.6
+10.1  10.2  10.3  10.4  10.5  10.6
 ```
 
-Dependencies are intentionally not duplicated here; `.planning/EXECUTION.md` owns the executable dependency graph.
+The six Branch-10 leaves are planning-complete but must still be explicitly allocated in `.planning/EXECUTION.md` before implementation starts. Dependencies belong only in that execution map.
 
 ## Program completion condition
 
-The current program is complete only when all durable capability evidence above remains valid and final target-machine/provider acceptance closes on the exact final candidate, including local Fake, Demo Buy/AI, Replay, Basic BUY/order-sidecar compatibility, target performance/new-day checks, authenticated static and market-open market-data evidence, with live IBKR submission either actually proven under permission or preserved exactly as `PENDING_EXTERNAL_PERMISSION`. Repository/main CI and open-PR state must be clean, and no blocking defect may remain.
+The current product program is complete only when all durable capability evidence above remains valid, Backtest Branch 10 is implemented/reclosed with its root success evidence green, repository/main CI and open-PR state are clean, and no blocking defect remains. Deferred target-machine/provider acceptance remains separate non-blocking backlog work until explicitly activated; when activated it must select the latest intended runtime candidate and reconcile all then-current capabilities rather than relying blindly on the historical candidate.

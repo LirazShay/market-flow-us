@@ -48,5 +48,11 @@ Backlog items, including `B-US-000` deferred target-machine/provider acceptance,
 | `9.4` Replay Host/isolation | MARKET_REPLAY Stop/Seek/Host/Viewer sections; D-US-043/044; TEST_STRATEGY Stop/Seek/isolation/bootstrap; existing service `--db`/`--port`/`--allowed-origin` seams |
 | `9.5` branch-9 reclosure | MARKET_REPLAY + affected generic PRODUCT/DATA/TECHNICAL/TEST contracts + focused Replay acceptance + materially affected broad evidence + PR/main/open-PR truth |
 | `9.6` Replay hardening | REPLAY_HARDENING; MARKET_REPLAY; extension review; existing Replay tests/code only as routed by the hardening contract |
+| `10.1` Backtest offline evidence access | BACKTEST_LAB source-isolation/read-only sections; PLAN 10.1; current database/schema openers; New Trading Day/archive discovery seams; AGENTS security/diagnostics; focused database/service tests |
+| `10.2` historical Scanner sandbox | BACKTEST_LAB historical-time/anti-lookahead/Query-source sections; PLAN 10.2; current Scanner admission; cycle schema/persistence authority; AGENTS SQL preflight; focused Scanner/DuckDB tests |
+| `10.3` Backtest outcome evaluator | BACKTEST_LAB baseline/future-outcome sections; PLAN 10.3; existing Demo Buy evaluator/outcome-shaping seams; shared Demo Buy outcome helpers; AGENTS SQL preflight; focused equivalence tests |
+| `10.4` Inspect/Compare UX | BACKTEST_LAB Inspect/Compare/beginner-UX sections; PLAN 10.4; current Viewer/Scanner client/runtime/view patterns; 10.2/10.3 APIs; focused unit/Chromium proof |
+| `10.5` Sweep engine/reporting | BACKTEST_LAB Sweep semantics/reporting/performance sections; PLAN 10.5; 10.2–10.4 engine/result seams; workload/paging patterns; focused unit/service/Chromium proof |
+| `10.6` Backtest operation/reclosure | BACKTEST_LAB offline UX/performance/acceptance; PLAN 10.6; packaging/launcher/user-guide/test-strategy seams; all Branch-10 results; affected Fast/Browser/Planning/Workload and PR/main/open-PR truth |
 
 The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done for allocated PLAN tasks. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence. This routing file must never duplicate or override either authority.
