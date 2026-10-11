@@ -148,7 +148,6 @@ function baselineKey(baseline) {
 function assertHistoricalMatches(entry, historical) {
   if (!historical || historical.available !== true
     || !historical.baseline || !historical.scanner || typeof historical.scanner.execute !== "function"
-    || typeof historical.close !== "function"
     || historical.baseline.cycleId !== entry.baseline.cycleId
     || historical.baseline.committedAtMs !== entry.baseline.committedAtMs) {
     throw new TypeError("Historical Scanner does not match the resolved Sweep baseline.");
@@ -178,9 +177,12 @@ async function loadBaselineSelections({
     requestedAtMs: entry.requestedAtMs,
     now
   });
-  assertHistoricalMatches(entry, historical);
+  if (!historical || typeof historical.close !== "function") {
+    throw new TypeError("Historical Scanner Sweep point is invalid.");
+  }
 
   try {
+    assertHistoricalMatches(entry, historical);
     const selections = [];
     for (const query of request.queries) {
       const scannerResult = await historical.scanner.execute(query.sql);
