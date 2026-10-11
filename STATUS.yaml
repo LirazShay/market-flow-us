@@ -19,30 +19,30 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: backtest_lab_ready
+overall_status: backtest_lab_reclosed
 
 current:
-  chat: 34
-  node: "10.6"
-  title: "Backtest Lab productization and reclosure"
-  status: in_progress
+  chat: null
+  node: null
+  title: null
+  status: done
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
-  done: 48
+  done: 49
   pending: 0
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 34
-  current_node: "10.6"
+  current_chat: null
+  current_node: null
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "10.6"
-  owner: "Chat 34"
-  status: in_progress
-  action: "PR #92 merged the measured Sweep outcome-evidence reuse as 909b4a6628c417d5df7dd0bb7ccf440af730a66e. The same bounded 1024x120 probe preserved 21/42 Query executions and 61/122 distinct outcome evaluations while reducing 61-point 1s Sweep from 4832.004 ms to 2789.553 ms and Sweep Compare from 7406.295 ms to 3350.556 ms; source SHA-256 remained unchanged. An initial Fast failure exposed diagnostic contract drift from a temporary public evidenceOpenCount metric; RCA removed that field from the HTTP contract and kept open-once/close-once proof at the internal dependency seam. Fast, Planning and Workload are green on PR #92 and main. Next: complete final 10.6 deterministic reclosure — focused Chromium/Browser acceptance as required, durable user/technical/test contract review, final security/public-safe diff review, then mark 10.6 done only if all PLAN success evidence and open-PR/main-CI checks are green."
+  task: null
+  owner: null
+  status: done
+  action: "Backtest Branch 10 / task 10.6 is deterministically complete. PR #94 final head d23db7d6ccd927199ebf1a4bf9af2a4dd175233d passed Fast #672, Browser #580 including full Chromium plus bounded Local Fake, Planning #852 and Workload #408. PR #95 reconciled the durable product/technical/test contracts and passed Planning #855 plus main #856. Final cumulative security/public-safe review found no blocking defect. No execution task is active. B-US-000 remains non-blocking backlog; B-US-008 is now eligible only for explicit future activation and is not activated by this projection."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
