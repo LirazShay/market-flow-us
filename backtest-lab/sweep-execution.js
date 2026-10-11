@@ -327,8 +327,7 @@ function createSweepRun({
   request,
   points,
   queryExecutionCount,
-  distinctBaselineCount,
-  evidenceOpenCount
+  distinctBaselineCount
 }) {
   const timeline = Object.freeze(points.map((point, index) => compactTimelinePoint(index, point)));
   const metrics = Object.freeze({
@@ -336,8 +335,7 @@ function createSweepRun({
     availablePointCount: points.filter((point) => point.available).length,
     unavailablePointCount: points.filter((point) => !point.available).length,
     distinctBaselineCount,
-    queryExecutionCount,
-    evidenceOpenCount
+    queryExecutionCount
   });
   const overview = buildSweepOverview(request, points);
 
@@ -408,7 +406,6 @@ export async function executeBacktestSweep({
   const selectionCache = new Map();
   const points = [];
   let queryExecutionCount = 0;
-  let evidenceOpenCount = 0;
   let sharedEvidence = null;
 
   if (baselineSeries.some((entry) => entry.baseline !== null)) {
@@ -419,7 +416,6 @@ export async function executeBacktestSweep({
     if (!sharedEvidence || typeof sharedEvidence.close !== "function") {
       throw new TypeError("Backtest Sweep evidence source is invalid.");
     }
-    evidenceOpenCount = 1;
   }
 
   try {
@@ -471,7 +467,6 @@ export async function executeBacktestSweep({
     request,
     points: Object.freeze(points),
     queryExecutionCount,
-    distinctBaselineCount: selectionCache.size,
-    evidenceOpenCount
+    distinctBaselineCount: selectionCache.size
   });
 }
