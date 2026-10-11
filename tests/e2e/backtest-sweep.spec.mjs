@@ -28,12 +28,10 @@ async function mount(page) {
   await page.evaluate(() => {
     const calls = [];
     let activeSweep = null;
-
     const json = (body, status = 200) => new Response(JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" }
     });
-
     const summary = (horizonMs, averagePercent) => ({
       horizonMs,
       availableCount: 1,
@@ -45,27 +43,26 @@ async function mount(page) {
       bestPercent: averagePercent,
       worstPercent: averagePercent
     });
-
-    const compactPoint = (index, requestedAtMs, queries, horizonsMs) => ({
+    const compactPoint = (index, request) => ({
       index,
-      requestedAtMs,
+      requestedAtMs: request.fromAtMs + index * request.intervalValue * (request.intervalUnit === "minutes" ? 60_000 : 1000),
       available: true,
       unavailableReason: null,
-      baseline: { cycleId: 7, committedAtMs: requestedAtMs - 1000 },
-      queries: queries.map((query, queryIndex) => ({
+      baseline: { cycleId: 7, committedAtMs: request.fromAtMs - 1000 },
+      queries: request.queries.map((query, queryIndex) => ({
         id: query.id,
         sourceRowCount: 2,
         selectedSourceRowCount: 1,
         evaluatedUniqueCount: 1,
         duplicateRowCount: 0,
-        summary: horizonsMs.map((horizonMs) => summary(horizonMs, index + queryIndex + 1))
+        summary: request.horizonsMs.map((horizonMs) => summary(horizonMs, index + queryIndex + 1))
       })),
       comparison: {
         unionCount: 1,
         commonCount: 1,
-        exclusiveCounts: queries.map(() => 0),
-        pairs: queries.length > 1 ? [{
-          queryIds: [queries[0].id, queries[1].id],
+        exclusiveCounts: request.queries.map(() => 0),
+        pairs: request.queries.length > 1 ? [{
+          queryIds: [request.queries[0].id, request.queries[1].id],
           overlapCount: 1,
           unionCount: 1,
           overlapRate: 1,
@@ -74,52 +71,50 @@ async function mount(page) {
         }] : []
       }
     });
-
     const fullPoint = (index) => {
       const compact = activeSweep.points[index];
-      const horizonsMs = activeSweep.request.horizonsMs;
-      const makeItem = (queryIndex) => ({
-        returnedPosition: 1,
-        securityId: "sec-aaa",
-        baseline: {
-          cycleId: 7,
-          collectedAtMs: compact.requestedAtMs - 1200,
-          price: 100,
-          symbol: "AAA",
-          paperName: "AAA Corp",
-          exchangeName: "NASDAQ",
-          ageMs: 1200,
-          timingAnomaly: null
-        },
-        horizons: horizonsMs.map((horizonMs, horizonIndex) => ({
-          horizonMs,
-          targetAtMs: compact.requestedAtMs + horizonMs,
-          futureCycleId: 8 + horizonIndex,
-          observedAtMs: compact.requestedAtMs + horizonMs + 100,
-          actualElapsedMs: horizonMs + 100,
-          price: 101 + index + queryIndex + horizonIndex,
-          changePercent: index + queryIndex + horizonIndex + 1,
-          outcome: "UP",
-          unavailableReason: null,
-          timingAnomaly: null
-        }))
-      });
-      const queries = activeSweep.request.queries.map((query, queryIndex) => ({
+      const request = activeSweep.request;
+      const queries = request.queries.map((query, queryIndex) => ({
         ...query,
         sourceRowCount: 2,
         selectedSourceRowCount: 1,
         evaluatedUniqueCount: 1,
         duplicateRowCount: 0,
-        items: [makeItem(queryIndex)],
-        summary: horizonsMs.map((horizonMs, horizonIndex) => summary(horizonMs, index + queryIndex + horizonIndex + 1))
+        items: [{
+          returnedPosition: 1,
+          securityId: "sec-aaa",
+          baseline: {
+            cycleId: 7,
+            collectedAtMs: compact.requestedAtMs - 1200,
+            price: 100,
+            symbol: "AAA",
+            paperName: "AAA Corp",
+            exchangeName: "NASDAQ",
+            ageMs: 1200,
+            timingAnomaly: null
+          },
+          horizons: request.horizonsMs.map((horizonMs, horizonIndex) => ({
+            horizonMs,
+            targetAtMs: compact.requestedAtMs + horizonMs,
+            futureCycleId: 8 + horizonIndex,
+            observedAtMs: compact.requestedAtMs + horizonMs + 100,
+            actualElapsedMs: horizonMs + 100,
+            price: 101 + index + queryIndex + horizonIndex,
+            changePercent: index + queryIndex + horizonIndex + 1,
+            outcome: "UP",
+            unavailableReason: null,
+            timingAnomaly: null
+          }))
+        }],
+        summary: request.horizonsMs.map((horizonMs, horizonIndex) => summary(horizonMs, index + queryIndex + horizonIndex + 1))
       }));
       return {
         available: true,
-        sourceId: activeSweep.request.sourceId,
+        sourceId: request.sourceId,
         requestedAtMs: compact.requestedAtMs,
         baseline: compact.baseline,
-        topX: activeSweep.request.topX,
-        horizonsMs,
+        topX: request.topX,
+        horizonsMs: request.horizonsMs,
         queries,
         comparison: {
           unionCount: 1,
@@ -150,7 +145,6 @@ async function mount(page) {
       const pathname = String(url);
       const body = options.body ? JSON.parse(options.body) : null;
       calls.push({ pathname, body });
-
       if (pathname === "/api/sources") {
         return json({ sources: [{ sourceId: "active", kind: "active", fileName: "market-flow-us.duckdb" }], count: 1 });
       }
@@ -165,38 +159,34 @@ async function mount(page) {
         return json({ error: { code: "POINT_RERUN_FORBIDDEN", message: "Sweep Open must not rerun the point." } }, 500);
       }
       if (pathname === "/api/sweep/run") {
-        const points = [0, 1, 2].map((index) => compactPoint(
-          index,
-          body.fromAtMs + index * body.intervalValue * (body.intervalUnit === "minutes" ? 60_000 : 1000),
-          body.queries,
-          body.horizonsMs
-        ));
+        const totalCount = body.queries.length === 1 ? 3 : 51;
+        const points = Array.from({ length: totalCount }, (_, index) => compactPoint(index, body));
         activeSweep = {
           id: String(calls.filter((call) => call.pathname === "/api/sweep/run").length),
           request: { ...body, intervalMs: body.intervalValue * (body.intervalUnit === "minutes" ? 60_000 : 1000) },
           metrics: {
-            requestedPointCount: 3,
-            availablePointCount: 3,
+            requestedPointCount: totalCount,
+            availablePointCount: totalCount,
             unavailablePointCount: 0,
             distinctBaselineCount: 1,
             queryExecutionCount: body.queries.length
           },
           points
         };
-        return json({
-          sweep: {
-            id: activeSweep.id,
-            request: activeSweep.request,
-            metrics: activeSweep.metrics,
-            page: { offset: 0, limit: 50, totalCount: 3, items: points.slice(0, 2) }
-          }
-        });
+        return json({ sweep: {
+          id: activeSweep.id,
+          request: activeSweep.request,
+          metrics: activeSweep.metrics,
+          page: { offset: 0, limit: 50, totalCount, items: points.slice(0, 50) }
+        } });
       }
       if (pathname === "/api/sweep/page") {
-        return json({
-          sweepId: body.sweepId,
-          page: { offset: body.offset, limit: body.limit, totalCount: 3, items: activeSweep.points.slice(body.offset, body.offset + body.limit) }
-        });
+        return json({ sweepId: body.sweepId, page: {
+          offset: body.offset,
+          limit: body.limit,
+          totalCount: activeSweep.points.length,
+          items: activeSweep.points.slice(body.offset, body.offset + body.limit)
+        } });
       }
       if (pathname === "/api/sweep/open") {
         return json({ sweepId: body.sweepId, index: body.index, point: fullPoint(body.index) });
@@ -205,7 +195,6 @@ async function mount(page) {
     };
   });
   await page.addScriptTag({ content: appBundle });
-
   const host = page.locator("#market-flow-us-backtest-lab");
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeEnabled();
   await expect(host.getByLabel("Sweep")).toBeVisible();
@@ -216,43 +205,39 @@ function endpointCalls(page, pathname) {
   return page.evaluate((value) => globalThis.__backtestSweepCalls.filter((call) => call.pathname === value), pathname);
 }
 
-test("Sweep renders bounded pages and Open reuses the exact Inspect/Compare renderer without point rerun", async ({ page }) => {
+test("Sweep pages 51 compact points and Open uses the exact existing Compare renderer without rerun", async ({ page }) => {
   const host = await mount(page);
-
   await host.getByLabel("Sweep").check();
   await expect(host.getByRole("button", { name: "Run Backtest" })).toBeHidden();
-  await expect(host.getByRole("button", { name: "Run Sweep" })).toBeVisible();
   await host.getByLabel("Sweep from").fill("2026-10-11T14:00:00");
-  await host.getByLabel("Sweep to").fill("2026-10-11T14:00:20");
+  await host.getByLabel("Sweep to").fill("2026-10-11T14:08:20");
   await host.getByLabel("Sweep interval").fill("10");
   await host.getByLabel("Sweep interval unit").selectOption("seconds");
-
   await host.getByRole("button", { name: "Run Sweep" }).click();
+
   await expect(host.getByRole("heading", { name: "Sweep timeline" })).toBeVisible();
-  await expect(host.getByText("Requested: 3", { exact: true })).toBeVisible();
+  await expect(host.getByText("Requested: 51", { exact: true })).toBeVisible();
   await expect(host.getByText("Distinct baselines: 1", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 2", { exact: true })).toBeVisible();
-
-  const firstPage = host.getByRole("table", { name: "Sweep timeline points" });
-  await expect(firstPage.locator("tbody tr")).toHaveCount(2);
-  await expect(firstPage.locator("tbody tr").first()).toContainText("Momentum A: avg +1.00%");
-  await expect(host.getByText("1-2 / 3", { exact: true })).toBeVisible();
+  await expect(host.getByRole("table", { name: "Sweep timeline points" }).locator("tbody tr")).toHaveCount(50);
+  await expect(host.getByText("1-50 / 51", { exact: true })).toBeVisible();
 
   const runCalls = await endpointCalls(page, "/api/sweep/run");
   expect(runCalls).toHaveLength(1);
   expect(runCalls[0].body.intervalValue).toBe(10);
   expect(runCalls[0].body.intervalUnit).toBe("seconds");
   expect(runCalls[0].body.queries).toHaveLength(2);
-  expect(runCalls[0].body.toAtMs - runCalls[0].body.fromAtMs).toBe(20_000);
+  expect(runCalls[0].body.toAtMs - runCalls[0].body.fromAtMs).toBe(500_000);
 
   await host.getByRole("button", { name: "Next" }).click();
-  await expect(host.getByRole("table", { name: "Sweep timeline points" }).locator("tbody tr")).toHaveCount(1);
-  await expect(host.getByText("3-3 / 3", { exact: true })).toBeVisible();
+  const secondPage = host.getByRole("table", { name: "Sweep timeline points" });
+  await expect(secondPage.locator("tbody tr")).toHaveCount(1);
+  await expect(host.getByText("51-51 / 51", { exact: true })).toBeVisible();
   const pageCalls = await endpointCalls(page, "/api/sweep/page");
   expect(pageCalls).toHaveLength(1);
   expect(pageCalls[0].body).toEqual({ sweepId: "1", offset: 50, limit: 50 });
 
-  await host.getByRole("button", { name: "Open Sweep point 3" }).click();
+  await host.getByRole("button", { name: "Open Sweep point 51" }).click();
   await expect(host.getByRole("heading", { name: "Compare result" })).toBeVisible();
   await expect(host.getByText("Resolved cycle: 7", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
@@ -262,11 +247,11 @@ test("Sweep renders bounded pages and Open reuses the exact Inspect/Compare rend
 
   const openCalls = await endpointCalls(page, "/api/sweep/open");
   expect(openCalls).toHaveLength(1);
-  expect(openCalls[0].body).toEqual({ sweepId: "1", index: 2 });
+  expect(openCalls[0].body).toEqual({ sweepId: "1", index: 50 });
   expect(await endpointCalls(page, "/api/point/run")).toHaveLength(0);
 });
 
-test("Sweep can freeze Query A only and minute cadence without changing the point Query path", async ({ page }) => {
+test("Sweep can freeze Query A only with minute cadence", async ({ page }) => {
   const host = await mount(page);
   await host.getByLabel("Sweep").check();
   await host.getByLabel("Sweep query set").selectOption("single");
@@ -282,6 +267,7 @@ test("Sweep can freeze Query A only and minute cadence without changing the poin
   expect(runCalls[0].body.queries).toHaveLength(1);
   expect(runCalls[0].body.intervalValue).toBe(1);
   expect(runCalls[0].body.intervalUnit).toBe("minutes");
+  await expect(host.getByText("Requested: 3", { exact: true })).toBeVisible();
   await expect(host.getByText("Query executions: 1", { exact: true })).toBeVisible();
   expect(await endpointCalls(page, "/api/point/run")).toHaveLength(0);
 });
