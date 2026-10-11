@@ -25,24 +25,24 @@ current:
   chat: 30
   node: "10.2"
   title: "Truthful historical Scanner sandbox"
-  status: in_progress
+  status: done
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
-  done: 44
+  done: 45
   pending: 4
-  in_progress: 1
+  in_progress: 0
   blocked: 0
   current_chat: 30
   current_node: "10.2"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "10.2"
-  owner: "Chat 30"
-  status: in_progress
-  action: "Continue Chat 30 task 10.2 closure evidence. Do not start 10.3-10.6 before their declared dependencies are done."
+  task: "10.3"
+  owner: "Chat 31"
+  status: pending
+  action: "After Chat 30 PR #81 is merged, required main CI is green and open-PR state is reconciled, explicitly start Chat 31 for task 10.3."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
