@@ -22,27 +22,27 @@ phase: implementation
 overall_status: backtest_lab_ready
 
 current:
-  chat: 31
-  node: "10.3"
-  title: "Trustworthy post-decision outcome evidence"
-  status: done
+  chat: 32
+  node: "10.4"
+  title: "Complete Inspect and Compare investigation"
+  status: in_progress
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
   done: 46
-  pending: 3
-  in_progress: 0
+  pending: 2
+  in_progress: 1
   blocked: 0
-  current_chat: 31
-  current_node: "10.3"
+  current_chat: 32
+  current_node: "10.4"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "10.4"
   owner: "Chat 32"
-  status: pending
-  action: "After Chat 31 PR #82 is merged, required main CI is green and open-PR state is reconciled, explicitly start Chat 32 for task 10.4."
+  status: in_progress
+  action: "Continue Chat 32 task 10.4: shared-point execution, Inspect/Compare UI and Chromium evidence; close each coherent PR with green main CI before the next unit."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
