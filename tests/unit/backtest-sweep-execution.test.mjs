@@ -157,6 +157,64 @@ test("Sweep reuses selection once per distinct baseline while preserving every T
     distinctBaselineCount: 2,
     queryExecutionCount: 4
   });
+  assert.deepEqual(run.overview, {
+    availablePointCount: 3,
+    queries: [
+      {
+        id: "A",
+        name: "Query A",
+        pointCount: 3,
+        sourceRowCount: 8,
+        selectedSourceRowCount: 8,
+        evaluatedUniqueCount: 6,
+        duplicateRowCount: 2,
+        summary: [{
+          horizonMs: 10000,
+          availableCount: 6,
+          unavailableCount: 0,
+          averagePercent: 3,
+          medianPercent: 3,
+          positiveCount: 6,
+          positiveRate: 1,
+          bestPercent: 4,
+          worstPercent: 2
+        }]
+      },
+      {
+        id: "B",
+        name: "Query B",
+        pointCount: 3,
+        sourceRowCount: 6,
+        selectedSourceRowCount: 6,
+        evaluatedUniqueCount: 6,
+        duplicateRowCount: 0,
+        summary: [{
+          horizonMs: 10000,
+          availableCount: 6,
+          unavailableCount: 0,
+          averagePercent: 3,
+          medianPercent: 3,
+          positiveCount: 6,
+          positiveRate: 1,
+          bestPercent: 4,
+          worstPercent: 2
+        }]
+      }
+    ],
+    comparison: {
+      pointCount: 3,
+      unionObservationCount: 9,
+      commonObservationCount: 3,
+      exclusiveObservationCounts: [3, 3],
+      pairs: [{
+        queryIds: ["A", "B"],
+        overlapObservationCount: 3,
+        unionObservationCount: 9,
+        onlyObservationCounts: [3, 3],
+        positionChangeObservationCount: 3
+      }]
+    }
+  });
   assert.equal(evaluations.length, 6);
   assert.deepEqual(evaluations.map((call) => [call.baselineCycleId, call.requestedAtMs]), [
     [2, 2000], [2, 2000], [2, 3000], [2, 3000], [4, 4000], [4, 4000]
