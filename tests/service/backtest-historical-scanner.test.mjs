@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  mkdir,
   mkdtemp,
   readFile,
   rm,
@@ -224,6 +225,47 @@ test("Backtest historical Scanner returns explicit unavailable before the first 
       await point.close();
     }
   });
+});
+
+test("Backtest historical Scanner safely attaches a product-owned path containing SQL punctuation", async () => {
+  const rootDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-path-"));
+  const dataDir = path.join(rootDir, "quote'; CREATE TABLE injected(i INTEGER); --");
+  const dbPath = path.join(dataDir, "market-flow-us.duckdb");
+
+  try {
+    await mkdir(dataDir, { recursive: true });
+    await seedEvidence(dbPath);
+
+    const point = await openBacktestHistoricalScanner({
+      dataDir,
+      sourceId: "active",
+      requestedAtMs: 2_000
+    });
+
+    try {
+      const visible = await point.scanner.execute(`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'main'
+        ORDER BY table_name
+      `);
+      assert.deepEqual(visible.rows, [["history"], ["latest"]]);
+
+      const latest = await point.scanner.execute(`
+        SELECT security_id, Price
+        FROM latest
+        ORDER BY security_id
+      `);
+      assert.deepEqual(latest.rows, [
+        ["1001", 11],
+        ["1002", 21]
+      ]);
+    } finally {
+      await point.close();
+    }
+  } finally {
+    await rm(rootDir, { recursive: true, force: true });
+  }
 });
 
 test("Backtest historical Scanner exposes only detached latest/history and blocks source-catalog/future authority bypass", async () => {
