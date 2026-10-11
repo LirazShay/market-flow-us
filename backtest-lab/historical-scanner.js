@@ -10,6 +10,13 @@ function assertRequestedAtMs(requestedAtMs) {
   }
 }
 
+function sqlStringLiteral(value) {
+  if (typeof value !== "string" || value.length === 0 || value.includes("\0")) {
+    throw new TypeError("SQL string literal source must be a non-empty string without NUL.");
+  }
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 async function queryRows(connection, sql, values = undefined) {
   const reader = values === undefined
     ? await connection.runAndReadAll(sql)
@@ -72,9 +79,9 @@ async function createHistoricalSandbox({ sourcePath, baseline }) {
     instance = await DuckDBInstance.create(":memory:");
     connection = await instance.connect();
 
+    const evidencePathLiteral = sqlStringLiteral(sourcePath);
     await connection.run(
-      "ATTACH $sourcePath AS evidence (READ_ONLY)",
-      { sourcePath }
+      `ATTACH ${evidencePathLiteral} AS evidence (READ_ONLY, TYPE DUCKDB)`
     );
     await connection.run(
       `CREATE TABLE history AS
