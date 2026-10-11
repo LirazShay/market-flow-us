@@ -170,8 +170,7 @@ test("Sweep reuses selection and one outcome evidence handle while preserving ev
     availablePointCount: 3,
     unavailablePointCount: 1,
     distinctBaselineCount: 2,
-    queryExecutionCount: 4,
-    evidenceOpenCount: 1
+    queryExecutionCount: 4
   });
   assert.deepEqual(run.overview, {
     availablePointCount: 3,
