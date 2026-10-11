@@ -24,11 +24,12 @@ There is currently **no approved backlog priority order**. Every item is `Unprio
 | [B-US-005](B-US-005-replay-pre-user-run-hardening-audit.md) | Preserved Replay hardening backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-006](B-US-006-basic-in-product-buy.md) | Preserved basic BUY backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-007](B-US-007-prioritize-backlog.md) | Review the full backlog against fresh `main`, remove/supersede stale items, and assign an explicit priority/order. | Backlog | Unprioritized | No |
+| [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | After Branch 10 closes, plan and build an end-to-end autonomous local AI/MCP strategy researcher with sufficient read-only data access, debugging and reproducible evidence to derive the strongest justified Scanner SQL. | Backlog | Unprioritized | No |
 
 ## Backlog rules
 
 - Keep one Markdown file per backlog item.
 - Keep this README as the short index only; detailed scope belongs in the item file.
-- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth.
+- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth. Supporting requirement/design dossiers may live elsewhere only when the backlog item remains the sole activation/authority record.
 - Moving an item into active execution requires explicit PLAN/EXECUTION work; its presence or ordering here never activates it.
 - If fresh `main` proves an item already completed, mark/remove/supersede it during backlog review rather than re-implementing it.

@@ -22,31 +22,34 @@ phase: implementation
 overall_status: backtest_lab_ready
 
 current:
-  chat: 30
-  node: "10.2"
-  title: "Truthful historical Scanner sandbox"
+  chat: 31
+  node: "10.3"
+  title: "Trustworthy post-decision outcome evidence"
   status: done
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
-  done: 45
-  pending: 4
+  done: 46
+  pending: 3
   in_progress: 0
   blocked: 0
-  current_chat: 30
-  current_node: "10.2"
+  current_chat: 31
+  current_node: "10.3"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "10.3"
-  owner: "Chat 31"
+  task: "10.4"
+  owner: "Chat 32"
   status: pending
-  action: "After Chat 30 PR #81 is merged, required main CI is green and open-PR state is reconciled, explicitly start Chat 31 for task 10.3."
+  action: "After Chat 31 PR #82 is merged, required main CI is green and open-PR state is reconciled, explicitly start Chat 32 for task 10.4."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
   backlog: "backlog/README.md"
+  post_backtest_ai_mcp_backlog: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
+  post_backtest_ai_mcp_supporting_mandate: ".planning/POST_BACKTEST_AI_MCP_MANDATE.md"
+  post_backtest_ai_mcp_supporting_autonomy_amendment: ".planning/POST_BACKTEST_AI_MCP_AUTONOMY_AMENDMENT.md"
   backtest_contract: "docs/BACKTEST_LAB.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
