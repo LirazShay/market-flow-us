@@ -1,4 +1,5 @@
 import { DEMO_BUY_DEFAULT_HORIZONS_MS } from "../shared/demo-buy/outcome-evidence.js";
+import { openBacktestEvidenceSource } from "./evidence-source.js";
 import {
   openBacktestHistoricalScanner,
   resolveBacktestBaselineSeries
@@ -322,14 +323,21 @@ function buildSweepOverview(request, points) {
   });
 }
 
-function createSweepRun({ request, points, queryExecutionCount, distinctBaselineCount }) {
+function createSweepRun({
+  request,
+  points,
+  queryExecutionCount,
+  distinctBaselineCount,
+  evidenceOpenCount
+}) {
   const timeline = Object.freeze(points.map((point, index) => compactTimelinePoint(index, point)));
   const metrics = Object.freeze({
     requestedPointCount: points.length,
     availablePointCount: points.filter((point) => point.available).length,
     unavailablePointCount: points.filter((point) => !point.available).length,
     distinctBaselineCount,
-    queryExecutionCount
+    queryExecutionCount,
+    evidenceOpenCount
   });
   const overview = buildSweepOverview(request, points);
 
@@ -371,10 +379,12 @@ export async function executeBacktestSweep({
   now,
   resolveBaselines = resolveBacktestBaselineSeries,
   openHistoricalScanner = openBacktestHistoricalScanner,
+  openEvidenceSource = openBacktestEvidenceSource,
   evaluateOutcomes = evaluateBacktestOutcomes
 } = {}) {
   if (typeof resolveBaselines !== "function"
     || typeof openHistoricalScanner !== "function"
+    || typeof openEvidenceSource !== "function"
     || typeof evaluateOutcomes !== "function") {
     throw new TypeError("Backtest Sweep dependencies must be functions.");
   }
@@ -398,51 +408,70 @@ export async function executeBacktestSweep({
   const selectionCache = new Map();
   const points = [];
   let queryExecutionCount = 0;
+  let evidenceOpenCount = 0;
+  let sharedEvidence = null;
 
-  for (const entry of baselineSeries) {
-    const pointRequest = pointRequestFor(request, entry.requestedAtMs);
-    if (entry.baseline === null) {
-      points.push(buildUnavailableBacktestPointResult({ request: pointRequest }));
-      continue;
+  if (baselineSeries.some((entry) => entry.baseline !== null)) {
+    sharedEvidence = await openEvidenceSource({
+      dataDir,
+      sourceId: request.sourceId
+    });
+    if (!sharedEvidence || typeof sharedEvidence.close !== "function") {
+      throw new TypeError("Backtest Sweep evidence source is invalid.");
     }
+    evidenceOpenCount = 1;
+  }
 
-    const key = baselineKey(entry.baseline);
-    let selections = selectionCache.get(key);
-    if (!selections) {
-      selections = await loadBaselineSelections({
-        dataDir,
-        request,
-        entry,
-        now,
-        openHistoricalScanner
-      });
-      selectionCache.set(key, selections);
-      queryExecutionCount += request.queries.length;
-    }
+  try {
+    for (const entry of baselineSeries) {
+      const pointRequest = pointRequestFor(request, entry.requestedAtMs);
+      if (entry.baseline === null) {
+        points.push(buildUnavailableBacktestPointResult({ request: pointRequest }));
+        continue;
+      }
 
-    const queryResults = [];
-    for (const selection of selections) {
-      const evaluation = await evaluateOutcomes({
-        dataDir,
-        sourceId: request.sourceId,
-        baselineCycleId: entry.baseline.cycleId,
-        requestedAtMs: entry.requestedAtMs,
-        selectedItems: selection.items,
-        horizonsMs: request.horizonsMs
-      });
-      queryResults.push({ selection, evaluation });
+      const key = baselineKey(entry.baseline);
+      let selections = selectionCache.get(key);
+      if (!selections) {
+        selections = await loadBaselineSelections({
+          dataDir,
+          request,
+          entry,
+          now,
+          openHistoricalScanner
+        });
+        selectionCache.set(key, selections);
+        queryExecutionCount += request.queries.length;
+      }
+
+      const queryResults = [];
+      for (const selection of selections) {
+        const evaluation = await evaluateOutcomes({
+          dataDir,
+          sourceId: request.sourceId,
+          baselineCycleId: entry.baseline.cycleId,
+          requestedAtMs: entry.requestedAtMs,
+          selectedItems: selection.items,
+          horizonsMs: request.horizonsMs,
+          evidence: sharedEvidence
+        });
+        queryResults.push({ selection, evaluation });
+      }
+      points.push(buildBacktestPointResult({
+        request: pointRequest,
+        baseline: entry.baseline,
+        queryResults
+      }));
     }
-    points.push(buildBacktestPointResult({
-      request: pointRequest,
-      baseline: entry.baseline,
-      queryResults
-    }));
+  } finally {
+    await sharedEvidence?.close();
   }
 
   return createSweepRun({
     request,
     points: Object.freeze(points),
     queryExecutionCount,
-    distinctBaselineCount: selectionCache.size
+    distinctBaselineCount: selectionCache.size,
+    evidenceOpenCount
   });
 }
