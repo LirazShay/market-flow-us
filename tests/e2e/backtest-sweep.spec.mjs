@@ -297,7 +297,7 @@ test("Sweep pages 61 compact points, renders whole-run overview and Open uses th
   expect(pageCalls[0].body).toEqual({ sweepId: "1", offset: 50, limit: 50 });
 
   await host.getByRole("button", { name: "Open Sweep point 61" }).click();
-  await expect(host.getByLabel("Sweep timeline")).toBeHidden();
+  await expect(host.getByRole("region", { name: "Sweep timeline" })).toBeHidden();
   await expect(host.getByRole("heading", { name: "Compare result" })).toBeVisible();
   await expect(host.getByText("Resolved cycle: 7", { exact: true })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
@@ -336,7 +336,7 @@ test("Sweep can freeze Query A only with minute cadence, summarize it and Open i
   await expect(overview).toContainText("avg +2.00%");
 
   await host.getByRole("button", { name: "Open Sweep point 1" }).click();
-  await expect(host.getByLabel("Sweep timeline")).toBeHidden();
+  await expect(host.getByRole("region", { name: "Sweep timeline" })).toBeHidden();
   await expect(host.getByRole("heading", { name: "Inspect result" })).toBeVisible();
   await expect(host.getByRole("table", { name: "Evidence Momentum A" })).toContainText("AAA");
   const openCalls = await endpointCalls(page, "/api/sweep/open");
