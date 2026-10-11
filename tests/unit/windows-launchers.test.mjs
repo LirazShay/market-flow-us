@@ -37,6 +37,9 @@ test("Windows launchers remain thin wrappers around canonical npm commands", asy
 
   assert.match(backtest, /call npm run backtest-lab/);
   assert.match(backtest, /http:\/\/127\.0\.0\.1:8767\//);
+  assert.match(backtest, /\[System\.Net\.Sockets\.TcpClient\]::new\('127\.0\.0\.1',8767\)/);
+  assert.match(backtest, /Invoke-WebRequest[^\n]+127\.0\.0\.1:8767/);
+  assert.match(backtest, /StatusCode -eq 200[^\n]+Market Flow US\.\+Backtest Lab/);
   assert.match(backtest, /No provider login or open market is required/i);
   assert.match(backtest, /opened read-only/i);
   assert.match(backtest, /does not start Collector, Replay, or IBKR order service/i);
