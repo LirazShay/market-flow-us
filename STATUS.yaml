@@ -22,27 +22,27 @@ phase: implementation
 overall_status: backtest_lab_ready
 
 current:
-  chat: 29
-  node: "10.1"
-  title: "Safe offline evidence access"
+  chat: 30
+  node: "10.2"
+  title: "Truthful historical Scanner sandbox"
   status: pending
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 49
-  done: 43
-  pending: 6
+  done: 44
+  pending: 5
   in_progress: 0
   blocked: 0
-  current_chat: 29
-  current_node: "10.1"
+  current_chat: 30
+  current_node: "10.2"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "10.1"
-  owner: "Chat 29"
+  task: "10.2"
+  owner: "Chat 30"
   status: pending
-  action: "Start Chat 29 from fresh main for task 10.1. Do not start 10.2-10.6 before their declared dependencies are done."
+  action: "Start Chat 30 from fresh main for task 10.2. Do not start 10.3-10.6 before their declared dependencies are done."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
