@@ -410,7 +410,8 @@ export async function startBacktestLabRuntime({
           horizonsMs: sweepRequest.horizonsMs
         });
         if (!sweep || typeof sweep.page !== "function" || typeof sweep.openPoint !== "function"
-          || !sweep.metrics || typeof sweep.metrics !== "object") {
+          || !sweep.metrics || typeof sweep.metrics !== "object"
+          || !sweep.overview || typeof sweep.overview !== "object") {
           throw new TypeError("Backtest Sweep runner returned an invalid run.");
         }
 
@@ -422,6 +423,7 @@ export async function startBacktestLabRuntime({
             id: sweepId,
             request: compactSweepRequest(sweepRequest),
             metrics: sweep.metrics,
+            overview: sweep.overview,
             page: sweep.page({ offset: 0, limit: BACKTEST_SWEEP_FIRST_PAGE_LIMIT })
           }
         });
