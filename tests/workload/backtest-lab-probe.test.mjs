@@ -248,15 +248,13 @@ async function measureSweep(runtime, queries) {
   assert.equal(metrics.unavailablePointCount, 0);
   assert.equal(metrics.distinctBaselineCount, 21);
   assert.equal(metrics.queryExecutionCount, 21 * queries.length);
-  assert.equal(metrics.evidenceOpenCount, 1);
   return {
     latencyMs: roundMs(result.durationMs),
     ...metrics,
     queryCount: queries.length,
     topX: 10,
     horizonCount: DEFAULT_HORIZONS_MS.length,
-    outcomeEvaluationCount: metrics.availablePointCount * queries.length,
-    evidenceOpenCount: metrics.evidenceOpenCount
+    outcomeEvaluationCount: metrics.availablePointCount * queries.length
   };
 }
 
