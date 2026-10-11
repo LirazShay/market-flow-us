@@ -42,7 +42,7 @@ next_pointer:
   task: "10.6"
   owner: "Chat 34"
   status: in_progress
-  action: "PR #91 measurement candidate records bounded 1024x120 Backtest evidence: Inspect median 187.651 ms, Compare median 211.959 ms, 61-point 1s Sweep 4832.004 ms, and 61-point 1s Sweep Compare 7406.295 ms. Query selection reuse is already correct at 21 distinct baselines / 21 or 42 Query executions, while current outcome evaluation still performs 61 or 122 per-point/per-query read-only evidence opens. Source SHA-256 stayed unchanged. Next: remove only that measured repeated evidence-open work through the smallest existing-boundary reuse seam, remeasure the same probe, then continue deterministic reclosure."
+  action: "PR #92 merged the measured Sweep outcome-evidence reuse as 909b4a6628c417d5df7dd0bb7ccf440af730a66e. The same bounded 1024x120 probe preserved 21/42 Query executions and 61/122 distinct outcome evaluations while reducing 61-point 1s Sweep from 4832.004 ms to 2789.553 ms and Sweep Compare from 7406.295 ms to 3350.556 ms; source SHA-256 remained unchanged. An initial Fast failure exposed diagnostic contract drift from a temporary public evidenceOpenCount metric; RCA removed that field from the HTTP contract and kept open-once/close-once proof at the internal dependency seam. Fast, Planning and Workload are green on PR #92 and main. Next: complete final 10.6 deterministic reclosure — focused Chromium/Browser acceptance as required, durable user/technical/test contract review, final security/public-safe diff review, then mark 10.6 done only if all PLAN success evidence and open-PR/main-CI checks are green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
