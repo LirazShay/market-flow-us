@@ -2,11 +2,11 @@
 
 ## Ownership
 
-This document owns **what the user must be able to do and understand**. Exact provider/data semantics belong to `DATA_CONTRACT.md`; implementation/protocol mechanics to `TECHNICAL_SPEC.md` and `DEMO_BUY_PROTOCOL_LIMITS.md`; browser interaction details to `DEMO_BUY_UX.md`; AI-pack contents to `AI_INVESTIGATION_PACK.md`; the standalone execution sidecar to `IBKR_ORDER_SERVICE.md` plus `IBKR_ORDER_SERVICE_SECURITY.md`; Market Recording + Replay to `MARKET_REPLAY.md`; verification to `TEST_STRATEGY.md`.
+This document owns **what the user must be able to do and understand**. Exact provider/data semantics belong to `DATA_CONTRACT.md`; implementation/protocol mechanics to `TECHNICAL_SPEC.md` and `DEMO_BUY_PROTOCOL_LIMITS.md`; browser interaction details to `DEMO_BUY_UX.md`; AI-pack contents to `AI_INVESTIGATION_PACK.md`; the standalone execution sidecar to `IBKR_ORDER_SERVICE.md` plus `IBKR_ORDER_SERVICE_SECURITY.md`; Market Recording + Replay to `MARKET_REPLAY.md`; Historical Backtest Lab details to `BACKTEST_LAB.md`; verification to `TEST_STRATEGY.md`.
 
 ## 1. Product outcome
 
-Market Flow US is a local, single-user U.S.-market product with three separated lanes:
+Market Flow US is a local, single-user U.S.-market product with four separated lanes:
 
 ```text
 validated U.S. market snapshots
@@ -27,9 +27,16 @@ separate Market Recording + Replay lane
 → normal producer protocol
 → unchanged Market Flow US service
 → isolated replay-only DuckDB
+
+separate Historical Backtest Lab lane
+→ product-owned active/archive Market Flow US DuckDB evidence
+→ isolated read-only historical latest/history context
+→ unchanged Scanner SQL
+→ post-decision outcome evaluation
+→ Inspect / Compare / Sweep research
 ```
 
-Demo Buy remains analytical evidence only. It does not place or simulate broker orders, fills, portfolios, fees, sell rules or liquidity/fillability. The IBKR order service is isolated and is **not** automatically driven by Scanner, Demo Buy, AI Investigation or Current. Replay is also isolated and does not add replay awareness to the normal market-data service/protocol.
+Demo Buy remains analytical evidence only. It does not place or simulate broker orders, fills, portfolios, fees, sell rules or liquidity/fillability. The IBKR order service is isolated and is **not** automatically driven by Scanner, Demo Buy, AI Investigation or Current. Replay is also isolated and does not add replay awareness to the normal market-data service/protocol. Backtest Lab is separately launched offline research tooling: it never becomes a producer, never writes market authority, never requires Replay or the order service, and never places or simulates broker orders.
 
 ## 2. Core user outcomes
 
@@ -59,13 +66,19 @@ The user can:
 22. use a media-player-style `Play`, `Pause`, `Stop` and seekable progress bar at `1x`, preserving the exact observed gaps between recorded frames rather than a nominal poll cadence;
 23. start or seek to any real recorded frame with no hidden warm-up, so missing earlier history behaves exactly like a normal live start in the middle of the trading day;
 24. replay on a later day while provider market values stay original and local collection/cycle timestamps are externally rebased to contemporary wall-clock time;
-25. run the normal Current/Detail-History/Scanner/Demo Buy/AI Investigation surfaces against a replay-only DB while the server/shared producer protocol remain replay-unaware.
+25. run the normal Current/Detail-History/Scanner/Demo Buy/AI Investigation surfaces against a replay-only DB while the server/shared producer protocol remain replay-unaware;
+26. launch `START_BACKTEST_LAB.cmd` for offline historical research without a provider page/login, Collector/Recorder, Replay, IBKR order service or open market;
+27. choose only product-owned active/archive schema-v3/v4 Market Flow US DuckDB evidence, with locked/in-use/incompatible/corrupt sources failing visibly and without mutation, repair, migration or process termination;
+28. run unchanged supported Scanner SQL at a requested historical decision time using the last complete committed cycle at-or-before that time, with no future catalog/data reachable to the Query;
+29. Inspect one Query or Compare two Queries by default (optionally Query C) against the exact same source/baseline/T0/Top-X/horizons and inspect every selected security with returned position, baseline Price and future horizon evidence;
+30. Sweep one Query or the current Compare set every positive integer number of seconds/minutes across a range, keep repeated-baseline `T0` values distinct, page the timeline, and `Open` any point into the exact stored Inspect/Compare evidence without rerunning it;
+31. use Summary as orientation only: complete security-level evidence remains inspectable and Backtest never automatically declares a winning strategy.
 
 ## 3. Canonical identity and authority
 
 Canonical market-data identity is validated `String(PaperId)`. `Symbol` and display names are metadata only.
 
-Market authority remains successful committed `history`/`latest` rows. Demo Buy never mutates market authority. The isolated order service has a separate execution responsibility and does not become market-data authority. Replay recordings are source artifacts before Node authority; once replayed, only normally committed replay DB rows become market authority for that replay session.
+Market authority remains successful committed `history`/`latest` rows. Demo Buy never mutates market authority. The isolated order service has a separate execution responsibility and does not become market-data authority. Replay recordings are source artifacts before Node authority; once replayed, only normally committed replay DB rows become market authority for that replay session. Backtest source DBs remain immutable evidence; Backtest historical `latest`/`history` and result models are derivative read-only research views and never become market authority.
 
 For one Demo Buy item:
 
@@ -83,6 +96,8 @@ post-capture authority:    cycle_id > buy_cycle_id
 ```
 
 Wall-clock timestamps remain useful diagnostics but never override writer/cycle ordering.
+
+For Backtest point `(B,T0)`, `B` is the last successful complete committed cycle with `committed_at_ms <= T0`. Query visibility is limited to `history.cycle_id <= B` and `latest = history at B`; future outcomes require `cycle_id > B` and are evaluated only after Query selection.
 
 ## 4. Current and History
 
@@ -108,7 +123,7 @@ It provides:
 
 Stopping recurring scan stops future Scanner generations and therefore future Auto Demo Buy attempts. Auto configuration may remain armed for the next later Activate.
 
-Scanner has no direct order-submit authority in branch `8` and no replay-specific SQL authority in branch `9`.
+Scanner has no direct order-submit authority in branch `8` and no replay-specific SQL authority in branch `9`. Backtest reuses Scanner SQL/admission semantics but does not add saved-query CRUD, automatic SQL rewriting or a second strategy library.
 
 ## 6. Demo Buy selection
 
@@ -235,7 +250,7 @@ New Trading Day accepts a structurally valid Market Flow US v3 or v4 source, rej
 
 Demo Buy evidence never crosses into a new active-day DB without its referenced history. Archived v4 DBs remain self-contained; archived v3 DBs remain valid pre-Demo-Buy historical databases.
 
-Order-service idempotency/reconciliation persistence is a separate local execution concern and must not be copied into the market-day DB lifecycle. Replay DBs are also separate temporary/local authorities and are never treated as the normal active trading-day DB.
+Order-service idempotency/reconciliation persistence is a separate local execution concern and must not be copied into the market-day DB lifecycle. Replay DBs are also separate temporary/local authorities and are never treated as the normal active trading-day DB. Archived/active DBs may later be selected by Backtest only through the controlled read-only catalog; Backtest never changes rollover ownership or lifecycle.
 
 ## 13. Security / privacy
 
@@ -247,11 +262,13 @@ Loopback binding alone is not authorization for an order-capable service. Every 
 
 Replay Host control is also loopback-only, exact-Origin-scoped and limited to a child process/DB it owns. It must fail closed rather than attach to, stop or reset an unrelated service/DB.
 
+Backtest is loopback-only offline research over a controlled product-owned source catalog. The browser cannot supply an arbitrary path, source DBs are opened with a dedicated hardened read-only path, and source lock/ownership conflicts fail closed rather than killing/stopping another process or performing recovery.
+
 Generated AI packs are explicit local user artifacts and are git-ignored. Support diagnostics may contain bounded status/counters/IDs, not SQL text or evidence payloads.
 
 ## 14. Analytical-lane non-goals
 
-The following remain non-goals for Scanner / Demo Buy / AI Investigation themselves:
+The following remain non-goals for Scanner / Demo Buy / AI Investigation / Backtest themselves:
 
 ```text
 automatic real orders
@@ -260,15 +277,19 @@ portfolio/P&L/risk
 fees/slippage/sell automation
 trade quantity accounting
 liquidity/fillability proof
+automatic strategy winner/recommendation
+strategy Score
+parameter optimizer
 aggregate strategy dashboard/scorecard
 background horizon materialization
 Strategy Engine
-cross-day strategy warehouse
+cross-day strategy/result warehouse
+Backtest result database
 AI API/provider integration
 automatic AI SQL mutation
 ```
 
-Branch `8` deliberately adds a **separate** order-execution sidecar; this does not convert Demo Buy into execution. Order-service non-goals additionally include short selling, options/futures/FX, bracket/OCA/algo orders, automated CPGW login, credential storage and permission bypass.
+Branch `8` deliberately adds a **separate** order-execution sidecar; this does not convert Demo Buy or Backtest into execution. Order-service non-goals additionally include short selling, options/futures/FX, bracket/OCA/algo orders, automated CPGW login, credential storage and permission bypass.
 
 Liquidity/volume/fillability strategy analysis remains a later phase.
 
@@ -328,12 +349,30 @@ Replay Host must never attach to or terminate a process it did not create, and m
 
 Normal `RUN_TESTS.cmd`, `RUN_LOCAL_ACCEPTANCE.cmd`, `START_DEMO.cmd` and `START_MARKET_FLOW_US.cmd` retain their existing semantics and do not auto-load Replay.
 
-## 17. Completion requirement
+## 17. Historical Backtest Lab requirements
 
-Branch `9` is ready for implementation only when the Replay durable/generic contracts, decisions, TREE, tests, allocation and handoff are mutually consistent and the plan is frozen/authorized.
+The durable Backtest contract is `BACKTEST_LAB.md`.
 
-Branch `9` implementation is complete only after deterministic recorder/file/player/host/next-day/mid-recording-start acceptance is green, affected normal verification remains green without hidden long real-time waits, the exact complete-product candidate is re-pinned, and final target-machine/provider acceptance `7.4` resumes on that candidate.
+The operator launches Backtest explicitly through:
 
-Software implementation of the already-completed branch `8` remains governed by its existing order-service contract; actual live submission may remain exactly `PENDING_EXTERNAL_PERMISSION` when external IBKR permission is unavailable.
+```text
+START_BACKTEST_LAB.cmd
+```
 
-Overall product completion still requires all assigned leaves, deterministic re-closure, final target-machine/provider acceptance, merged PRs, green main CI and no blocking defect.
+The Lab must run independently of live acquisition and Replay. Its only allowed market evidence is the product-owned active DB and archive pattern documented by the Backtest contract. It must not migrate/bootstrap/recover/write/rename/move/delete the source or persist Backtest results into it.
+
+At requested decision time `T0`, the Lab resolves the last successful complete committed baseline cycle `B` at-or-before `T0`, builds an isolated historical SQL surface where only `latest` at `B` and `history <= B` are visible, and runs the user's supported Scanner SQL unchanged. Unsupported object access fails explicitly.
+
+Inspect, Compare and Sweep share that same historical authority and the same outcome semantics. Compare freezes source, `B`, `T0`, Top-X and horizons across Queries. Sweep freezes Query/config for the run, accepts positive integer seconds/minutes cadence, preserves every requested `T0`, may reuse Query selection for repeated resolved baselines, and must not collapse distinct outcome targets. `Open` drills the exact stored Sweep point into the existing Inspect/Compare evidence without rerunning `/api/point/run`.
+
+Backtest output must preserve neutral returned-position semantics, full per-security evidence, explicit unavailable reasons, exact SQL/provenance and source immutability. Summary/aggregate views are orientation only and may not replace detailed evidence or choose a strategy winner automatically.
+
+## 18. Completion requirement
+
+Backtest Branch `10` is complete only after `10.1`–`10.6` satisfy `BACKTEST_LAB.md`, affected generic durable contracts are reconciled, focused unit/service/Chromium/workload verification is green, final public-safe/security/diff review finds no blocking defect, the reclosure PR is merged, required `main` CI is green and the open-PR audit is clean.
+
+Software implementation of the already-completed branch `8` remains governed by its existing order-service contract; actual live submission may remain exactly `PENDING_EXTERNAL_PERMISSION` when external IBKR permission is unavailable. Market Recording + Replay remains governed by `MARKET_REPLAY.md` and its completed deterministic reclosure evidence.
+
+Final target-machine/provider acceptance remains a separate explicitly activated evidence family/backlog item; it must not be fabricated or silently treated as completed by Backtest reclosure.
+
+Overall product completion requires all active execution tasks and required deterministic gates to be green, merged and reflected in execution truth, with deferred target-machine/provider acceptance completed only when that backlog scope is explicitly activated.
