@@ -22,28 +22,28 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 37
-  node: "11.3"
-  title: "Phase-aware research SQL data surface"
-  status: in_progress
-  activation_required: false
+  chat: 38
+  node: "11.4"
+  title: "Durable jobs, result handles and resource governance"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 51
+  done: 52
   pending: 5
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 37
-  current_node: "11.3"
+  current_chat: 38
+  current_node: "11.4"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.3"
-  owner: "Chat 37"
-  status: in_progress
-  action: "Continue Chat 37 / 11.3 from Draft PR #101 with implementation and adversarial SQL admission/escape proof complete; perform final 11.3 success-evidence reclosure, PR readiness/merge and green-main verification before advancing to Chat 38."
+  task: "11.4"
+  owner: "Chat 38"
+  status: pending
+  action: "Chat 37 / 11.3 is complete after green success-evidence reclosure. Start Chat 38 / 11.4 only through explicit numbered-chat activation; generic continuation in the completed Chat 37 conversation must not switch executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
