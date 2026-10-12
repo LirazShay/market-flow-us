@@ -1,3 +1,4 @@
+import { assertResearchResultCapacity } from "./growth-governance.js";
 import { openResearchJobLedger } from "./job-ledger.js";
 import {
   DEFAULT_RESEARCH_RESULT_LIMITS,
@@ -105,6 +106,7 @@ export async function openResearchResultLedger(options = {}) {
   const schemaVersion = storage.schemaVersion;
   const limits = storage.limits;
   let closed = false;
+  let createTail = Promise.resolve();
 
   function requireOpen() {
     if (closed || !storage) throw new Error("Research Result Ledger is closed");
@@ -115,20 +117,42 @@ export async function openResearchResultLedger(options = {}) {
     storage = await openResearchResultStorage(options);
   }
 
+  async function serializeCreate(operation) {
+    const previous = createTail;
+    let release;
+    createTail = new Promise((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      if (closed) throw new Error("Research Result Ledger is closed");
+      return await operation();
+    } finally {
+      release();
+    }
+  }
+
   return Object.freeze({
     schemaVersion,
     limits,
 
     async createResult(input) {
-      requireOpen();
-      await storage.close();
-      storage = null;
-      try {
-        await reserveManagedResultBudget(options, input);
-      } finally {
-        await reopenStorage();
-      }
-      return await storage.createResult(input);
+      return await serializeCreate(async () => {
+        requireOpen();
+        await storage.close();
+        storage = null;
+        try {
+          await assertResearchResultCapacity({
+            dbPath: options.dbPath,
+            growthLimits: options.growthLimits,
+            researchRunId: input?.researchRunId
+          });
+          await reserveManagedResultBudget(options, input);
+        } finally {
+          await reopenStorage();
+        }
+        return await storage.createResult(input);
+      });
     },
 
     async getResult(researchRunId, resultHandle) {
@@ -142,6 +166,7 @@ export async function openResearchResultLedger(options = {}) {
     async close() {
       if (closed) return;
       closed = true;
+      await createTail;
       if (storage) {
         await storage.close();
         storage = null;
