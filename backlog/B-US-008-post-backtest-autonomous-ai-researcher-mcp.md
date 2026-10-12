@@ -1,6 +1,6 @@
 # B-US-008 — Post-Backtest Autonomous AI Researcher / Local MCP
 
-Status: `Active discovery / requirements`
+Status: `S&T consolidated / authoritative promotion pending`
 Priority: `Active planning`
 Blocking: `No` for completed Branch 10.
 
@@ -22,19 +22,23 @@ Individual missions such as 30-second continuation, 60/120-second continuation, 
 
 ## Activation state
 
-The Branch-10 activation gate is satisfied on fresh `main`: tasks `10.1`–`10.6` are complete/reclosed and the follow-on project is now explicitly activated for discovery/requirements work.
+The Branch-10 activation gate is satisfied on fresh `main`: tasks `10.1`–`10.6` are complete/reclosed and the follow-on project is explicitly activated for planning.
 
-Active discovery truth is recorded in:
+Discovery and deep S&T consolidation are complete enough for authoritative promotion. The promotion candidate is:
+
+- `.planning/AI_RESEARCHER_SNT_CONSOLIDATION.md` — reviewed Branch-11 S&T, implementation leaves `11.1`–`11.8`, material decisions to promote, feature/context-driven Chat 35–42 allocation candidate, real dependencies and promotion checklist.
+
+Supporting discovery truth is recorded in:
 
 - `.planning/AI_RESEARCHER_DISCOVERY.md`
-- `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
-- `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; still pre-implementation.
-- `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; still pre-implementation.
-- `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected phase-aware research projection, SQL sandbox, raw/typed evidence and multi-day data-surface direction; still pre-implementation.
-- `.planning/AI_RESEARCHER_OPERATING_CONTRACT.md` — selected Plugin/Skill + MCP bootstrap, progressive-disclosure, autonomy, resume and final-output operating contract; still pre-implementation.
-- `.planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md` — selected threat model, SQL/sandbox defense-in-depth, resource/cancellation/restart governance and required workload/security proof; still pre-implementation.
+- `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; pre-implementation.
+- `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; pre-implementation.
+- `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; pre-implementation.
+- `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected phase-aware research projection, SQL sandbox, raw/typed evidence and multi-day data-surface direction; pre-implementation.
+- `.planning/AI_RESEARCHER_OPERATING_CONTRACT.md` — selected Plugin/Skill + MCP bootstrap, progressive-disclosure, autonomy, resume and final-output operating contract; pre-implementation.
+- `.planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md` — selected threat model, SQL/sandbox defense-in-depth, resource/cancellation/restart governance and required workload/security proof; pre-implementation.
 
-Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
+Do not begin implementation merely from these discovery files. The next planning unit must promote the reviewed S&T into the repository authorities (`.planning/PLAN.md`, `.planning/DECISIONS.md`, `.planning/EXECUTION.md`, `docs/EXECUTOR_ROUTING.md`, then `STATUS.yaml`) and complete the normal planning PR/CI/merge cycle. Only afterward may explicitly activated executor chats start Branch 11.
 
 ## Required planning scope
 
@@ -98,6 +102,10 @@ The AI may choose its own hypotheses, experiment order, research SQL, ablations,
 
 Bootstrap is progressive: small Skill instructions + live `describe_research_environment`/resume state first, then schema/evidence/results on demand. Context is not used as a warehouse; summaries and stable result handles precede raw-row drill-down.
 
+### Execution context is durable and feature-oriented
+
+Executor chats are grouped by the natural feature/code/contract context, not by an arbitrary goal to minimize or maximize chat count. A fresh executor must reconstruct everything correctness-critical from GitHub authorities and routed contracts; previous-chat memory is convenience only.
+
 ### Security and workload validity are proven, not assumed
 
 AI-authored SQL/tool input is treated as untrusted analytical input even on localhost. Original evidence is reachable only through allowlisted read-only server code; AI SQL runs in an isolated hardened sandbox with unauthorized evidence physically absent. Resource limits are nested, observable, cancellable and configurable rather than unbounded.
@@ -117,8 +125,8 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, the research projection/data-surface design, the Plugin/Skill + MCP operating contract for fresh/resumed AI sessions, and the defense-in-depth security/resource/workload proof model.
+The newer active planning documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, the research projection/data-surface design, the Plugin/Skill + MCP operating contract for fresh/resumed AI sessions, the defense-in-depth security/resource/workload proof model, and the reviewed Branch-11 S&T/execution shape awaiting authoritative promotion.
 
 ## Completion boundary
 
-This backlog item is complete only after the full future ST Planner project is planned, implemented, deterministically verified, merged/reclosed, and proven end-to-end on the intended local desktop ChatGPT/MCP setup. Merely exposing one `run_sql` tool, mirroring the human Backtest APIs, generating a prompt, optimizing one fixed historical objective, or forcing research to remain within today's human-oriented product surfaces is insufficient.
+This backlog item is complete only after the full ST Planner project is promoted, implemented, deterministically verified, merged/reclosed, and proven end-to-end on the intended local desktop ChatGPT/MCP setup. Merely exposing one `run_sql` tool, mirroring the human Backtest APIs, generating a prompt, optimizing one fixed historical objective, or forcing research to remain within today's human-oriented product surfaces is insufficient.
