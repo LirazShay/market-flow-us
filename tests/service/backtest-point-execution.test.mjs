@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +7,7 @@ import test from "node:test";
 
 import { executeBacktestPoint } from "../../backtest-lab/point-execution.js";
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
+import { executeAuthoritativeExperimentPoint } from "../../research-server/experiment-authority.js";
 
 async function seedPointEvidence(dbPath) {
   const database = await openMarketFlowUsDatabase({
@@ -72,6 +74,10 @@ async function seedPointEvidence(dbPath) {
   }
 }
 
+function sha256(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
 test("Backtest shared-point execution composes exact historical Scanner order with future outcome evidence", async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-backtest-point-"));
   const dbPath = path.join(dataDir, "market-flow-us.duckdb");
@@ -107,6 +113,73 @@ test("Backtest shared-point execution composes exact historical Scanner order wi
       { securityId: "2002", positions: [1, 2], delta: 1 },
       { securityId: "1001", positions: [2, 1], delta: -1 }
     ]);
+    assert.deepEqual(await readFile(dbPath), before);
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("TREE 11.2 experiment point is exactly Backtest authority with immutable Query Artifact provenance", async () => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-experiment-authority-"));
+  const dbPath = path.join(dataDir, "market-flow-us.duckdb");
+  const researchRunId = "run_11111111-1111-4111-8111-111111111111";
+  const highSql = "SELECT security_id FROM latest ORDER BY Price DESC";
+  const lowSql = "SELECT security_id FROM latest ORDER BY Price ASC";
+  const queryArtifacts = [
+    Object.freeze({
+      queryArtifactId: "qry_11111111-1111-4111-8111-111111111111",
+      researchRunId,
+      sqlText: highSql,
+      sqlHash: sha256(highSql),
+      scannerContractVersion: "scanner-authority-v1",
+      label: "Highest baseline price"
+    }),
+    Object.freeze({
+      queryArtifactId: "qry_22222222-2222-4222-8222-222222222222",
+      researchRunId,
+      sqlText: lowSql,
+      sqlHash: sha256(lowSql),
+      scannerContractVersion: "scanner-authority-v1",
+      label: "Lowest baseline price"
+    })
+  ];
+
+  try {
+    await seedPointEvidence(dbPath);
+    const before = await readFile(dbPath);
+
+    const direct = await executeBacktestPoint({
+      dataDir,
+      sourceId: "active",
+      requestedAtMs: 2_000,
+      queries: queryArtifacts.map((artifact) => ({
+        id: artifact.queryArtifactId,
+        name: artifact.label,
+        sql: artifact.sqlText
+      })),
+      topX: 2,
+      horizonsMs: [10_000]
+    });
+
+    const experiment = await executeAuthoritativeExperimentPoint({
+      dataDir,
+      sourceId: "active",
+      requestedAtMs: 2_000,
+      queryArtifacts,
+      topX: 2,
+      horizonsMs: [10_000]
+    });
+
+    assert.equal(experiment.researchRunId, researchRunId);
+    assert.deepEqual(experiment.queryArtifacts, queryArtifacts.map((artifact) => ({
+      queryArtifactId: artifact.queryArtifactId,
+      sqlHash: artifact.sqlHash,
+      scannerContractVersion: artifact.scannerContractVersion
+    })));
+    assert.deepEqual(experiment.point, direct);
+    assert.equal(Object.isFrozen(experiment), true);
+    assert.equal(Object.isFrozen(experiment.queryArtifacts), true);
+    assert.equal(Object.isFrozen(experiment.point), true);
     assert.deepEqual(await readFile(dbPath), before);
   } finally {
     await rm(dataDir, { recursive: true, force: true });
