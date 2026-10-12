@@ -132,17 +132,17 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "ESGScope", type: "DOUBLE", nullable: true, origin: "source_typed", meaning: "Provider field named ESGScope.", scanner_equivalent: "history.ESGScope / latest.ESGScope", decision_time_eligible: true, research_only: false },
       { column: "raw_data", type: "JSON", nullable: false, origin: "source_raw", meaning: "Persisted provider market-row JSON for discovery of fields not yet promoted to the typed projection.", scanner_equivalent: "history.raw_data / latest.raw_data", decision_time_eligible: true, research_only: false, caveats: ["Provider-shaped JSON; key meanings and units may be unverified.", "Missing, null, empty-string and numeric-zero source facts may differ and must not be conflated."] }
     ]),
-    manifestRelation("research_universe", "Partition-local identity/display coverage derived only from authorized research_history rows.", [
+    manifestRelation("research_universe", "Source-persisted universe lifecycle/display context for securities present in the authorized research partition; not exact historical T0 membership.", [
       { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security" },
-      { column: "is_current", type: "BOOLEAN", nullable: false, origin: "research_derived", meaning: "Whether this security is present in the final complete cycle inside the authorized partition.", caveats: ["Partition-local coverage fact; not the source database global lifecycle flag."] },
-      { column: "universe_revision", type: "BIGINT", nullable: false, origin: "research_derived", meaning: "Maximum observed universe revision for this security inside the authorized partition." },
-      { column: "first_seen_at_ms", type: "BIGINT", nullable: false, origin: "research_derived", meaning: "First authorized collected_at_ms for this security inside the partition.", known_unit: "milliseconds" },
-      { column: "last_seen_at_ms", type: "BIGINT", nullable: false, origin: "research_derived", meaning: "Last authorized collected_at_ms for this security inside the partition.", known_unit: "milliseconds" },
-      { column: "Symbol", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "Symbol from the latest authorized observation in the partition." },
-      { column: "PaperNameEng", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "English paper name from the latest authorized observation in the partition." },
-      { column: "PaperNameHeb", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "Hebrew paper name from the latest authorized observation in the partition." },
-      { column: "ExchangeName", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "Exchange display field from the latest authorized observation in the partition." }
+      { column: "is_current", type: "BOOLEAN", nullable: false, origin: "source_typed", meaning: "Persisted source-universe current-lifecycle flag.", future_dependent: true, caveats: ["Source lifecycle state is not exact historical membership at an arbitrary decision T0; use authoritative baseline history for that question."] },
+      { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source-universe lifecycle revision.", future_dependent: true, caveats: ["May reflect source lifecycle state after a historical decision T0."] },
+      { column: "first_seen_at_ms", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source-universe first-seen lifecycle time.", known_unit: "milliseconds", future_dependent: true, caveats: ["Lifecycle context is source-persisted and is not partition-local decision-time authority."] },
+      { column: "last_seen_at_ms", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source-universe last-seen lifecycle time.", known_unit: "milliseconds", future_dependent: true, caveats: ["Lifecycle context may extend beyond a historical decision T0 or partition time bound."] },
+      { column: "Symbol", type: "VARCHAR", nullable: true, origin: "source_typed", meaning: "Persisted source-universe symbol display field.", future_dependent: true, caveats: ["Display value may reflect a later source-universe update than a historical decision T0."] },
+      { column: "PaperNameEng", type: "VARCHAR", nullable: true, origin: "source_typed", meaning: "Persisted source-universe English paper name.", future_dependent: true, caveats: ["Display value may reflect a later source-universe update than a historical decision T0."] },
+      { column: "PaperNameHeb", type: "VARCHAR", nullable: true, origin: "source_typed", meaning: "Persisted source-universe Hebrew paper name.", future_dependent: true, caveats: ["Display value may reflect a later source-universe update than a historical decision T0."] },
+      { column: "ExchangeName", type: "VARCHAR", nullable: true, origin: "source_typed", meaning: "Persisted source-universe exchange display field.", future_dependent: true, caveats: ["Display value may reflect a later source-universe update than a historical decision T0."] }
     ])
   ])
 });
@@ -470,6 +470,29 @@ async function projectAttachedSource(connection, partition, source) {
        AND ($allowedToMs IS NULL OR c.committed_at_ms <= $allowedToMs)`,
     bounds
   );
+
+  await connection.run(
+    `INSERT INTO research_universe
+     SELECT
+       $sourceId,
+       u.security_id,
+       u.is_current,
+       u.universe_revision,
+       u.first_seen_at_ms,
+       u.last_seen_at_ms,
+       u.Symbol,
+       u.PaperNameEng,
+       u.PaperNameHeb,
+       u.ExchangeName
+     FROM evidence.main.universe AS u
+     WHERE EXISTS (
+       SELECT 1
+       FROM research_history AS h
+       WHERE h.source_id = $sourceId
+         AND h.security_id = u.security_id
+     )`,
+    { sourceId: source.sourceId }
+  );
 }
 
 async function insertSourceSummary(connection, source, schemaVersion, sourceClass) {
@@ -494,72 +517,6 @@ async function insertSourceSummary(connection, source, schemaVersion, sourceClas
       sourceClass
     }
   );
-}
-
-async function deriveResearchUniverse(connection) {
-  await connection.run(`
-    INSERT INTO research_universe
-    WITH latest_cycle AS (
-      SELECT source_id, cycle_id
-      FROM (
-        SELECT
-          source_id,
-          cycle_id,
-          ROW_NUMBER() OVER (
-            PARTITION BY source_id
-            ORDER BY committed_at_ms DESC, cycle_id DESC
-          ) AS row_number
-        FROM research_cycles
-      ) AS ranked_cycles
-      WHERE row_number = 1
-    ),
-    stats AS (
-      SELECT
-        source_id,
-        security_id,
-        MAX(universe_revision) AS universe_revision,
-        MIN(collected_at_ms) AS first_seen_at_ms,
-        MAX(collected_at_ms) AS last_seen_at_ms
-      FROM research_history
-      GROUP BY source_id, security_id
-    ),
-    latest_observation AS (
-      SELECT *
-      FROM (
-        SELECT
-          source_id,
-          security_id,
-          cycle_id,
-          Symbol,
-          PaperNameEng,
-          PaperNameHeb,
-          ExchangeName,
-          ROW_NUMBER() OVER (
-            PARTITION BY source_id, security_id
-            ORDER BY cycle_committed_at_ms DESC, cycle_id DESC, collected_at_ms DESC
-          ) AS row_number
-        FROM research_history
-      ) AS ranked_history
-      WHERE row_number = 1
-    )
-    SELECT
-      observation.source_id,
-      observation.security_id,
-      observation.cycle_id = latest_cycle.cycle_id AS is_current,
-      stats.universe_revision,
-      stats.first_seen_at_ms,
-      stats.last_seen_at_ms,
-      observation.Symbol,
-      observation.PaperNameEng,
-      observation.PaperNameHeb,
-      observation.ExchangeName
-    FROM latest_observation AS observation
-    JOIN stats
-      ON stats.source_id = observation.source_id
-     AND stats.security_id = observation.security_id
-    JOIN latest_cycle
-      ON latest_cycle.source_id = observation.source_id
-  `);
 }
 
 async function applySandboxHardening(connection) {
@@ -655,7 +612,6 @@ export async function openDevelopmentResearchSqlSandbox({
       await verifySourceFingerprint(verificationInput);
     }
 
-    await deriveResearchUniverse(connection);
     if (includeControlledInputs) {
       await materializeControlledResearchInputs({ connection, inputs: controlledInputs });
     }
