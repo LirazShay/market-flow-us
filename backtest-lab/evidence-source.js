@@ -9,6 +9,10 @@ import {
   MARKET_FLOW_US_V3_SCHEMA_VERSION
 } from "../local-service/database/schema.js";
 import {
+  researchDuckDbConfig,
+  resolveResearchDuckDbResourceLimits
+} from "./duckdb-resource-limits.js";
+import {
   BacktestSourceCatalogError,
   describeBacktestEvidenceSource,
   resolveBacktestEvidenceSourcePath
@@ -141,7 +145,7 @@ function closeQuietly(value) {
   }
 }
 
-export async function openBacktestEvidenceSource({ dataDir, sourceId }) {
+export async function openBacktestEvidenceSource({ dataDir, sourceId, duckdbResourceLimits } = {}) {
   let source;
   let sourcePath;
   try {
@@ -160,10 +164,20 @@ export async function openBacktestEvidenceSource({ dataDir, sourceId }) {
 
   await assertRegularEvidenceFile(sourcePath);
 
+  const resourceLimits = duckdbResourceLimits === undefined
+    ? null
+    : resolveResearchDuckDbResourceLimits(duckdbResourceLimits);
+  const config = resourceLimits === null
+    ? BACKTEST_DUCKDB_CONFIG
+    : Object.freeze({
+      ...BACKTEST_DUCKDB_CONFIG,
+      ...researchDuckDbConfig(resourceLimits)
+    });
+
   let instance = null;
   let connection = null;
   try {
-    instance = await DuckDBInstance.create(sourcePath, BACKTEST_DUCKDB_CONFIG);
+    instance = await DuckDBInstance.create(sourcePath, config);
     connection = await instance.connect();
   } catch (error) {
     closeQuietly(connection);
@@ -185,6 +199,7 @@ export async function openBacktestEvidenceSource({ dataDir, sourceId }) {
       source,
       schemaVersion,
       connection,
+      resourceLimits,
       async close() {
         if (closed) return;
         closed = true;
