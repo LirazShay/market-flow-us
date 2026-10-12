@@ -11,7 +11,7 @@ import {
 
 const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
 
-function expectedRun() {
+function expectedRun(timestamp = 1_800_000_000_000) {
   return {
     researchRunId: RUN_ID,
     userIntent: "Find a robust short-horizon US momentum method.",
@@ -24,8 +24,8 @@ function expectedRun() {
       productVersion: "0.1.0",
       nodeVersion: "24.x"
     },
-    createdAtMs: 1_800_000_000_000,
-    updatedAtMs: 1_800_000_000_000
+    createdAtMs: timestamp,
+    updatedAtMs: timestamp
   };
 }
 
@@ -123,7 +123,10 @@ test("TREE 11.1 Research Run creation validates stable identity inputs and list 
         userIntent: "A duplicate generated identity must fail closed."
       })
     );
-    assert.deepEqual(await ledger.listResearchRuns({ limit: 1 }), [expectedRun()]);
+    assert.deepEqual(
+      await ledger.listResearchRuns({ limit: 1 }),
+      [expectedRun(1_800_000_100_000)]
+    );
   } finally {
     if (ledger) await ledger.close();
     await rm(tempDir, { recursive: true, force: true });
