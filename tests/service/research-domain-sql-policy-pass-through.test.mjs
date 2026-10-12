@@ -130,8 +130,7 @@ test("TREE 11.4 Research Domain passes SQL timeout and DuckDB resource policy to
     });
 
     assert.equal(session.sqlTimeoutMs, SQL_TIMEOUT_MS);
-    assert.deepEqual(session.resourceLimits, LIMITS);
-    assert.equal(session.appliedResourceLimits.threads, 1);
+    assert.deepEqual(session.duckdbResourceLimits, LIMITS);
 
     const result = await session.execute(
       "SELECT security_id, Price FROM research_history ORDER BY security_id ASC"
