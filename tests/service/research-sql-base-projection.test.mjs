@@ -259,7 +259,7 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
     assert.equal(field(historyManifest, "Price").future_dependent, false);
     assert.equal(field(historyManifest, "raw_data").origin, "source_raw");
     assert.equal(field(historyManifest, "raw_data").decision_time_eligible, true);
-    assert.match(field(historyManifest, "raw_data").caveats.join(" "), /provider-shaped JSON/u);
+    assert.match(field(historyManifest, "raw_data").caveats.join(" "), /provider-shaped JSON/iu);
     assert.equal(field(historyManifest, "cycle_committed_at_ms").origin, "authority_derived");
     assert.equal(field(historyManifest, "cycle_committed_at_ms").research_only, true);
 
