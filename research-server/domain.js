@@ -82,138 +82,151 @@ function assertPublicSafeValue(value, label) {
   return value;
 }
 
-async function closeQuietly(component) {
+async function withComponent(opener, options, operation) {
+  const component = await opener(options);
   try {
-    await component?.close();
-  } catch {
-    // Preserve the original startup/operation error.
+    return await operation(component);
+  } finally {
+    await component.close();
   }
 }
 
-export async function openResearchDomain(options = {}) {
-  let ledger = null;
-  let evidence = null;
-  let memory = null;
-  let closed = false;
+async function bootstrapComponent(opener, options) {
+  return await withComponent(opener, options, async (component) => component.schemaVersion);
+}
 
-  try {
-    ledger = await openResearchLedger(options);
-    evidence = await openResearchEvidenceDomain(options);
-    memory = await openResearchMemory(options);
-  } catch (error) {
-    await closeQuietly(memory);
-    await closeQuietly(evidence);
-    await closeQuietly(ledger);
-    throw error;
+export async function openResearchDomain(options = {}) {
+  const schemaVersions = Object.freeze({
+    ledger: await bootstrapComponent(openResearchLedger, options),
+    evidence: await bootstrapComponent(openResearchEvidenceDomain, options),
+    memory: await bootstrapComponent(openResearchMemory, options)
+  });
+
+  let accepting = true;
+  let queue = Promise.resolve();
+
+  function enqueue(operation) {
+    if (!accepting) {
+      return Promise.reject(new Error("Research Domain is closed"));
+    }
+    const result = queue.then(operation);
+    queue = result.catch(() => undefined);
+    return result;
+  }
+
+  function useLedger(operation) {
+    return enqueue(() => withComponent(openResearchLedger, options, operation));
+  }
+
+  function useEvidence(operation) {
+    return enqueue(() => withComponent(openResearchEvidenceDomain, options, operation));
+  }
+
+  function useMemory(operation) {
+    return enqueue(() => withComponent(openResearchMemory, options, operation));
   }
 
   return Object.freeze({
-    schemaVersions: Object.freeze({
-      ledger: ledger.schemaVersion,
-      evidence: evidence.schemaVersion,
-      memory: memory.schemaVersion
-    }),
+    schemaVersions,
 
     async createResearchRun(input) {
       assertPublicSafeValue(input, "research run");
-      return await ledger.createResearchRun(input);
+      return await useLedger((ledger) => ledger.createResearchRun(input));
     },
 
     async getResearchRun(researchRunId) {
-      return await ledger.getResearchRun(researchRunId);
+      return await useLedger((ledger) => ledger.getResearchRun(researchRunId));
     },
 
-    async listResearchRuns(options) {
-      return await ledger.listResearchRuns(options);
+    async listResearchRuns(listOptions) {
+      return await useLedger((ledger) => ledger.listResearchRuns(listOptions));
     },
 
     async createObjectiveVersion(input) {
       assertPublicSafeValue(input, "objective version");
-      return await ledger.createObjectiveVersion(input);
+      return await useLedger((ledger) => ledger.createObjectiveVersion(input));
     },
 
     async getObjectiveVersion(researchRunId, objectiveVersionId) {
-      return await ledger.getObjectiveVersion(researchRunId, objectiveVersionId);
+      return await useLedger((ledger) => ledger.getObjectiveVersion(researchRunId, objectiveVersionId));
     },
 
     async getCurrentObjectiveVersion(researchRunId) {
-      return await ledger.getCurrentObjectiveVersion(researchRunId);
+      return await useLedger((ledger) => ledger.getCurrentObjectiveVersion(researchRunId));
     },
 
-    async listObjectiveVersions(researchRunId, options) {
-      return await ledger.listObjectiveVersions(researchRunId, options);
+    async listObjectiveVersions(researchRunId, listOptions) {
+      return await useLedger((ledger) => ledger.listObjectiveVersions(researchRunId, listOptions));
     },
 
     async createQueryArtifact(input) {
       assertPublicSafeValue(input, "query artifact");
-      return await ledger.createQueryArtifact(input);
+      return await useLedger((ledger) => ledger.createQueryArtifact(input));
     },
 
     async getQueryArtifact(researchRunId, queryArtifactId) {
-      return await ledger.getQueryArtifact(researchRunId, queryArtifactId);
+      return await useLedger((ledger) => ledger.getQueryArtifact(researchRunId, queryArtifactId));
     },
 
-    async listQueryArtifacts(researchRunId, options) {
-      return await ledger.listQueryArtifacts(researchRunId, options);
+    async listQueryArtifacts(researchRunId, listOptions) {
+      return await useLedger((ledger) => ledger.listQueryArtifacts(researchRunId, listOptions));
     },
 
     async createEvidenceInventory(input) {
       assertPublicSafeValue(input, "evidence inventory");
-      return await evidence.createEvidenceInventory(input);
+      return await useEvidence((evidence) => evidence.createEvidenceInventory(input));
     },
 
     async getEvidenceInventory(researchRunId, evidenceInventoryId) {
-      return await evidence.getEvidenceInventory(researchRunId, evidenceInventoryId);
+      return await useEvidence((evidence) => evidence.getEvidenceInventory(researchRunId, evidenceInventoryId));
     },
 
-    async listEvidenceInventories(researchRunId, options) {
-      return await evidence.listEvidenceInventories(researchRunId, options);
+    async listEvidenceInventories(researchRunId, listOptions) {
+      return await useEvidence((evidence) => evidence.listEvidenceInventories(researchRunId, listOptions));
     },
 
     async createEvidencePlan(input) {
       assertPublicSafeValue(input, "evidence plan");
-      return await evidence.createEvidencePlan(input);
+      return await useEvidence((evidence) => evidence.createEvidencePlan(input));
     },
 
     async getEvidencePlan(researchRunId, evidencePlanId) {
-      return await evidence.getEvidencePlan(researchRunId, evidencePlanId);
+      return await useEvidence((evidence) => evidence.getEvidencePlan(researchRunId, evidencePlanId));
     },
 
     async getCurrentEvidencePlan(researchRunId) {
-      return await evidence.getCurrentEvidencePlan(researchRunId);
+      return await useEvidence((evidence) => evidence.getCurrentEvidencePlan(researchRunId));
     },
 
-    async listEvidencePlans(researchRunId, options) {
-      return await evidence.listEvidencePlans(researchRunId, options);
+    async listEvidencePlans(researchRunId, listOptions) {
+      return await useEvidence((evidence) => evidence.listEvidencePlans(researchRunId, listOptions));
     },
 
     async getPartition(researchRunId, partitionId) {
-      return await evidence.getPartition(researchRunId, partitionId);
+      return await useEvidence((evidence) => evidence.getPartition(researchRunId, partitionId));
     },
 
     async listPartitions(researchRunId, evidencePlanId) {
-      return await evidence.listPartitions(researchRunId, evidencePlanId);
+      return await useEvidence((evidence) => evidence.listPartitions(researchRunId, evidencePlanId));
     },
 
     async recordResearchNote(input) {
       assertPublicSafeValue(input, "research note");
-      return await memory.recordResearchNote(input);
+      return await useMemory((memory) => memory.recordResearchNote(input));
     },
 
-    async listResearchNotes(researchRunId, options) {
-      return await memory.listResearchNotes(researchRunId, options);
+    async listResearchNotes(researchRunId, listOptions) {
+      return await useMemory((memory) => memory.listResearchNotes(researchRunId, listOptions));
     },
 
-    async resumeResearchRun(researchRunId, options) {
-      return await memory.resumeResearchRun(researchRunId, options);
+    async resumeResearchRun(researchRunId, resumeOptions) {
+      return await useMemory((memory) => memory.resumeResearchRun(researchRunId, resumeOptions));
     },
 
     async close() {
-      if (closed) return;
-      closed = true;
-      await closeQuietly(memory);
-      await closeQuietly(evidence);
-      await closeQuietly(ledger);
+      if (!accepting) return;
+      accepting = false;
+      await queue;
     }
   });
 }
