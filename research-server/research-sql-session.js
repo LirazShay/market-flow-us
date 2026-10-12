@@ -341,17 +341,29 @@ export async function openDevelopmentResearchSqlSession({
     verifySourceFingerprint
   });
 
-  let execute;
+  let executeResearchSql;
   try {
     await verifyResearchSqlSandboxHardening({ execute: sandbox.execute });
-    execute = createResearchSqlExecute({ execute: sandbox.execute });
+    executeResearchSql = createResearchSqlExecute({ execute: sandbox.execute });
   } catch (error) {
     await sandbox.close();
     throw error;
   }
 
-  const rawData = createResearchRawDataDiscovery({ execute });
+  const activeExecutions = new Set();
   let closed = false;
+  async function execute(sql) {
+    if (closed) throw new Error("Research SQL session is closed");
+    const execution = executeResearchSql(sql);
+    activeExecutions.add(execution);
+    try {
+      return await execution;
+    } finally {
+      activeExecutions.delete(execution);
+    }
+  }
+
+  const rawData = createResearchRawDataDiscovery({ execute });
 
   return Object.freeze({
     dataSurfaceVersion: sandbox.dataSurfaceVersion,
@@ -366,6 +378,10 @@ export async function openDevelopmentResearchSqlSession({
     async close() {
       if (closed) return;
       closed = true;
+      if (activeExecutions.size > 0 && typeof sandbox.interrupt === "function") {
+        sandbox.interrupt();
+        await Promise.allSettled([...activeExecutions]);
+      }
       await sandbox.close();
     }
   });
