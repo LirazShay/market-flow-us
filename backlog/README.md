@@ -8,7 +8,7 @@ Backlog items are **non-blocking by default**. A backlog item must not prevent u
 
 ## Priority
 
-There is currently **no approved backlog priority order**. Every item is `Unprioritized` until `B-US-007` is completed.
+There is currently **no approved backlog priority order**. Every remaining backlog item is `Unprioritized` until `B-US-007` is completed.
 
 `B-US-000` is listed first only because the user explicitly requested the deferred final target-machine/provider acceptance to be the first backlog item. Its first position is **not** a dependency and does **not** block other work.
 
@@ -24,12 +24,17 @@ There is currently **no approved backlog priority order**. Every item is `Unprio
 | [B-US-005](B-US-005-replay-pre-user-run-hardening-audit.md) | Preserved Replay hardening backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-006](B-US-006-basic-in-product-buy.md) | Preserved basic BUY backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-007](B-US-007-prioritize-backlog.md) | Review the full backlog against fresh `main`, remove/supersede stale items, and assign an explicit priority/order. | Backlog | Unprioritized | No |
-| [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | After Branch 10 closes, plan and build an end-to-end autonomous local AI/MCP strategy researcher with sufficient read-only data access, debugging and reproducible evidence to derive the strongest justified Scanner SQL. | Backlog | Unprioritized | No |
+
+## Promoted / historical records
+
+| Item | Current disposition |
+|---|---|
+| [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | Promoted to active **Branch 11 — Autonomous AI Researcher**. Current planning/execution authority is `.planning/PLAN.md` + `.planning/EXECUTION.md`; the backlog file is provenance/supporting context only. |
 
 ## Backlog rules
 
-- Keep one Markdown file per backlog item.
-- Keep this README as the short index only; detailed scope belongs in the item file.
-- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth. Supporting requirement/design dossiers may live elsewhere only when the backlog item remains the sole activation/authority record.
+- Keep one Markdown file per backlog item or promoted historical record when provenance remains useful.
+- Keep this README as the short index only; detailed scope belongs in the item/authority files.
+- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth. Once promoted, PLAN/EXECUTION become authority and the old backlog file becomes historical/supporting context only.
 - Moving an item into active execution requires explicit PLAN/EXECUTION work; its presence or ordering here never activates it.
 - If fresh `main` proves an item already completed, mark/remove/supersede it during backlog review rather than re-implementing it.

@@ -13,9 +13,11 @@ STATUS.yaml            = non-authoritative navigation projection only
 backlog/README.md      = future non-blocking work only; never execution authority
 ```
 
-Load only the row(s) relevant to the explicitly assigned task(s); do not preload the whole repository. A numbered executor activates only from an explicit request such as `אני צאט N תתחיל`; generic continuation or a projected current pointer never changes chat identity.
+Load only the row(s) relevant to the explicitly assigned task(s); do not preload the whole repository. A numbered executor activates only from an explicit request such as `אני צאט 35 תתחיל`; generic continuation or a projected current pointer never changes chat identity.
 
-Backlog items, including `B-US-000` deferred target-machine/provider acceptance, have no executor routing until they are explicitly planned and allocated in `.planning/EXECUTION.md`.
+Every fresh Branch-11 executor must be able to reconstruct its work entirely from GitHub. Previous-chat memory is optional context only and never authority.
+
+Backlog item `B-US-000` has no executor routing until it is explicitly planned/allocated again. `B-US-008` is no longer backlog-only: it is promoted as Branch 11 in `.planning/PLAN.md` and `.planning/EXECUTION.md`.
 
 | Task / PLAN leaf | Primary durable truth |
 |---|---|
@@ -54,5 +56,15 @@ Backlog items, including `B-US-000` deferred target-machine/provider acceptance,
 | `10.4` Inspect/Compare UX | BACKTEST_LAB Inspect/Compare/beginner-UX sections; PLAN 10.4; current Viewer/Scanner client/runtime/view patterns; 10.2/10.3 APIs; focused unit/Chromium proof |
 | `10.5` Sweep engine/reporting | BACKTEST_LAB Sweep semantics/reporting/performance sections; PLAN 10.5; 10.2–10.4 engine/result seams; workload/paging patterns; focused unit/service/Chromium proof |
 | `10.6` Backtest operation/reclosure | BACKTEST_LAB offline UX/performance/acceptance; PLAN 10.6; packaging/launcher/user-guide/test-strategy seams; all Branch-10 results; affected Fast/Browser/Planning/Workload and PR/main/open-PR truth |
+| `11.1` Research Server + ledger foundation | PLAN 11.1; DECISIONS D-US-049/050; AI_RESEARCHER_API_LEDGER_CONTRACT; AI_RESEARCHER_ARCHITECTURE_DISCOVERY; AI_RESEARCHER_SECURITY_RESOURCE_MODEL; current DuckDB hardening/database patterns; focused ledger/domain tests |
+| `11.2` authoritative experiments/diagnostics | PLAN 11.2; DECISIONS D-US-049/051; BACKTEST_LAB; AI_RESEARCHER_EXPERIMENT_MODEL; AI_RESEARCHER_API_LEDGER_CONTRACT; backtest-lab source/baseline/scanner/outcome modules; SCANNER_SQL_GUIDE; AGENTS SQL preflight; focused equivalence/immutability tests |
+| `11.3` research SQL data surface | PLAN 11.3; DECISIONS D-US-049/051/052/055; AI_RESEARCHER_DATA_SURFACE; AI_RESEARCHER_SECURITY_RESOURCE_MODEL; DATA_CONTRACT; SCANNER_SQL_GUIDE; current DuckDB hardening/Scanner admission patterns; AGENTS SQL preflight; focused sandbox/adversarial tests |
+| `11.4` jobs/results/resources | PLAN 11.4; DECISION D-US-053; AI_RESEARCHER_API_LEDGER_CONTRACT; AI_RESEARCHER_SECURITY_RESOURCE_MODEL; 11.2/11.3 public seams/tests; current workload infrastructure; focused cancel/restart/idempotency/paging tests |
+| `11.5` validation/holdout/final recommendation | PLAN 11.5; DECISIONS D-US-050/052/053; AI_RESEARCHER_EXPERIMENT_MODEL; AI_RESEARCHER_API_LEDGER_CONTRACT; AI_RESEARCHER_DATA_SURFACE; 11.2–11.4 seams; focused partition/exposure/finalist/holdout tests |
+| `11.6` Plugin/Skill + MCP integration | PLAN 11.6; DECISION D-US-054; AI_RESEARCHER_OPERATING_CONTRACT; AI_RESEARCHER_API_LEDGER_CONTRACT; stable Research Domain API from 11.1–11.5; current official OpenAI Plugin/MCP docs reverified at execution time; focused adapter/bootstrap/resume tests |
+| `11.7` adversarial hardening | PLAN 11.7; DECISIONS D-US-049–055; AI_RESEARCHER_SECURITY_RESOURCE_MODEL; all Branch-11 domain contracts; changed production/runtime/tests from 11.1–11.6; hostile SQL/ID/phase/fault/restart matrix; source-fingerprint proof |
+| `11.8` workload/desktop acceptance/reclosure | PLAN 11.8; AI_RESEARCHER_SECURITY_RESOURCE_MODEL workload gates; AI_RESEARCHER_OPERATING_CONTRACT final-output/desktop path; all Branch-11 results; workload scripts; target-machine evidence; affected durable PRODUCT/DATA/TECHNICAL/TEST/user docs; Fast/Browser/Planning/Workload/PR/main/open-PR truth |
 
-The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done for allocated PLAN tasks. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence. This routing file must never duplicate or override either authority.
+The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done for allocated tasks. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence.
+
+For Branch 11 specifically, detailed `.planning/AI_RESEARCHER_*` files are routed implementation context, not competing planning authorities. If an implementation finding materially contradicts PLAN/DECISIONS, use the Planning Impact Test and repair the smallest affected authority before coding forward.

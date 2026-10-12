@@ -301,7 +301,7 @@ Replay has dedicated entry/artifact/launcher and focused proof. Existing ordinar
 
 **Status:** resolved
 
-`9.6` statically and executably audits the completed Replay path across recording, IndexedDB, portable parsing/file source, Player scheduling/rebase/generation cancellation, ProducerBridge ACK flow, Replay Host ownership/security/lifecycle, unchanged service seams, replay DB isolation, product surfaces and operator/diagnostic paths. A pre-existing green suite does not close a newly identified material risk; every blocker stays with the audit through root cause -> fix -> regression proof -> affected verification -> green. Hardening does not add speculative Replay capability.
+`9.6` statically and executably audits the completed Replay path across recording/IndexedDB/portable parsing/file source, Player scheduling/rebase/generation cancellation, ProducerBridge ACK flow, Replay Host ownership/security/lifecycle, unchanged service seams, replay DB isolation, product surfaces and operator/diagnostic paths. A pre-existing green suite does not close a newly identified material risk; every blocker stays with the audit through root cause -> fix -> regression proof -> affected verification -> green. Hardening does not add speculative Replay capability.
 
 ## D-US-047 — Basic in-product BUY uses immutable preparation plus trusted local confirmation
 
@@ -331,10 +331,67 @@ The serial work order never creates false technical dependencies. Current real e
 
 The historical post-Branch-9 candidate `243f4f2e78e434378ff2202ba95af7b8626a0369` remains provenance only. The current exact final-acceptance runtime candidate is owned by `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` / `.planning/FINAL_ACCEPTANCE_EXECUTION.md` and is not inferred from planning-document commits.
 
-## Decision audit result for ST Planner 2.0 migration
+## D-US-049 — Autonomous research uses a hybrid server-owned interface
 
-- Durable decisions preserved: `D-US-001`–`D-US-016`, `D-US-018`–`D-US-048`.
+**Status:** resolved
+
+The AI Researcher is a dedicated local Research Server, not a Strategy Engine and not direct AI-owned DuckDB access. It exposes both typed authoritative capabilities and bounded general read-only research SQL. Human Backtest is reused for proven authority semantics/engines but is not the machine API blueprint.
+
+Typed-only tools are insufficient for open-ended signal discovery; direct AI-owned DuckDB access weakens evidence-phase, source, resource and provenance control. Original market databases remain immutable and are never the researcher's writable state store.
+
+## D-US-050 — Durable research truth is independent of chat memory
+
+**Status:** resolved
+
+Research Runs, Objective Versions, evidence plans/partitions, immutable Query Artifacts, experiments/analyses, jobs/results, validation exposures, finalists and recommendation artifacts live in a separate project-owned Research Ledger. A fresh conversation resumes from stable IDs and a compact Resume Capsule rather than prior-chat transcript or saved chain-of-thought.
+
+The ledger stores explicit reproducibility/resume facts only; private model reasoning is neither required nor persisted.
+
+## D-US-051 — Strategy truth and exploratory research truth are physically distinct
+
+**Status:** resolved
+
+Authoritative candidate evaluation always executes Scanner SQL through the proven decision-time historical authority (`T0` → baseline `B`, Scanner-visible `latest/history`, unchanged Scanner admission, established outcome semantics). General `research_sql` runs only against a separate server-built research projection/sandbox whose relation names and evidence roles make its exploratory/post-experiment nature explicit.
+
+A research finding becomes a strategy candidate only after conversion to Scanner SQL and re-execution through the authoritative Scanner path. Future-dependent evidence is never silently injected into decision-time predictor rows.
+
+## D-US-052 — Development, Validation and Sealed Holdout are server-enforced evidence roles
+
+**Status:** resolved
+
+Development permits broad exploration. Validation uses deterministic/frozen evidence schedules with exposure accounting. Sealed Holdout rows/outcomes remain physically unavailable to general research until an immutable Finalist Set and Objective Version/evaluation profile are frozen for controlled final evaluation.
+
+If SQL is changed because of holdout output, that holdout is no longer independent proof for the revised lineage. Final reporting exposes search breadth, denominators, validation/holdout status and insufficient-evidence conditions; `NO_RECOMMENDATION` is a valid outcome.
+
+## D-US-053 — Long autonomous work uses durable jobs, bounded results and measured resource limits
+
+**Status:** resolved
+
+Expensive experiments/analyses use durable jobs, stable result handles/pages, retry-safe idempotency, cancellation and restart-safe state. Success is durable only after results/metrics/provenance commit; interrupted/partial work never masquerades as complete.
+
+CPU/memory/disk/time/concurrency/result limits are configurable and selected from bounded CI plus representative/target-machine measurement. Hard ceilings are failure bounds, not performance targets. Do not introduce a permanent warehouse/cache/index/precompute subsystem until measured repeated work proves the simpler model insufficient.
+
+## D-US-054 — ChatGPT integration is a compact Skill plus thin MCP adapter
+
+**Status:** resolved
+
+The intended operator path is desktop ChatGPT using a project-owned Plugin with a compact research Skill plus a thin local MCP adapter over the Research Domain API. The Skill teaches mission, authority boundaries, progressive disclosure, durable-state discipline, autonomy/holdout invariants and final-output requirements; schema/evidence/results remain live on-demand server data.
+
+Exact OpenAI packaging/transport support is time-sensitive and must be reverified at implementation/acceptance time. Product semantics must not depend on a particular transport, and MCP must not duplicate ledger/experiment/holdout logic.
+
+## D-US-055 — Research is cadence-agnostic and capability gaps re-enter normal product planning
+
+**Status:** resolved
+
+Actual recorded timestamps/cycles and measured cadence/gaps are evidence; approximately 10-second collection is not a product constant. The researcher must return the strongest defensible result from current evidence and explicitly report material resolution limitations.
+
+If comparable research later proves that denser collection (for example 5s/3s), a new typed field, derived/precomputed feature, cache/index or another Market Flow capability would materially improve research, that becomes normal evidence-backed S&T/product work with regressions and affected verification. A Research Run itself may not self-modify production code/configuration or silently change live Collector cadence.
+
+## Decision audit result for ST Planner 2.0 + Branch-11 promotion
+
+- Durable decisions preserved: `D-US-001`–`D-US-016`, `D-US-018`–`D-US-055`.
 - Retired as V1 ceremony-only: `D-US-017`.
 - No decision owns task status, owner or dependency truth; `.planning/EXECUTION.md` does.
 - No decision owns S&T structure; `.planning/PLAN.md` does.
 - Superseded sequencing decisions remain only where they explain still-relevant product/release history.
+- Branch-11 decisions are supporting rationale for the authoritative Branch-11 S&T in `.planning/PLAN.md`; detailed discovery documents are implementation context, not competing planning authority.

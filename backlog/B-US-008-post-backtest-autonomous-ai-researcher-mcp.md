@@ -1,52 +1,60 @@
 # B-US-008 — Post-Backtest Autonomous AI Researcher / Local MCP
 
-Status: `Backlog`
-Priority: `Unprioritized`
-Blocking: `No` for Branch 10; activation is explicitly gated on complete Branch 10 closure.
+Status: `Promoted to Branch 11 / active execution plan`
+Priority: `Owned by PLAN/EXECUTION`
+Blocking: `No` for unrelated work.
 
-## User outcome
+## Current authority
 
-After Historical Backtest Lab Branch 10 is fully complete, plan and implement a new end-to-end local AI research capability that lets ChatGPT (or another approved MCP-capable AI client) autonomously investigate Market Flow US historical evidence and produce the strongest evidence-backed Scanner SQL it can justify under an explicit objective and validation protocol.
+`B-US-008` is no longer a live backlog item. It has been promoted into the normal ST Planner authorities:
 
-This is a **new project**, not unfinished Backtest UI work and not UI automation.
+- `.planning/PLAN.md` — **Branch 11 — Autonomous AI Researcher**, leaves `11.1`–`11.8`, S&T and success evidence.
+- `.planning/EXECUTION.md` — Chat 35–42 ownership, statuses and real dependencies.
+- `.planning/DECISIONS.md` — `D-US-049`–`D-US-055` durable architecture/methodology decisions.
+- `docs/EXECUTOR_ROUTING.md` — fresh-chat context routing for each Branch-11 leaf.
+- `STATUS.yaml` — non-authoritative projection to first runnable `11.1 / Chat 35`.
 
-## Activation gate
+This file remains only as the historical backlog/provenance entry that led to Branch 11. It does not independently authorize, redefine or sequence implementation.
 
-Do not start implementation-authorized planning or implementation until all of `10.1`–`10.6` are done, required verification is green, Backtest PRs are merged, `main` is green and open-PR state is clean.
+## User outcome preserved
 
-When that gate is satisfied, start a fresh ST Planner cycle from fresh `main`. The new cycle must design/freeze the complete S&T, contracts, security model, success evidence and execution allocation before coding.
+Build a local AI research capability that lets desktop ChatGPT autonomously investigate Market Flow US historical evidence and return the strongest defensible Scanner SQL it can justify for the **short-horizon U.S.-equity upward-momentum / buy-candidate objective supplied at Research Run time**, together with reproducible evidence and honest limitations.
 
-## Required planning scope
+The project is not a fixed optimizer, general-purpose finance platform or automatic trading system. Scanner SQL remains strategy authority; the researcher is the evidence-backed autonomous research layer around it.
 
-The later project must plan the complete usable path, including:
+## Supporting discovery / contract records
 
-- local research-server lifecycle and process boundary;
-- MCP integration supported by the intended ChatGPT client at implementation time;
-- autonomous access to schema, field semantics, source coverage and exact numeric evidence;
-- safe reuse of the proven Backtest baseline/no-lookahead/Scanner/outcome authority;
-- explicit evaluation of typed MCP tools versus general read-only analytical SQL and/or a read-only DuckDB research sandbox;
-- strict separation between authoritative decision-time data and broader post-experiment research/debug evidence;
-- exact returned-row, non-return, tie-break, null/missing and horizon debugging/provenance;
-- experiment execution, comparison, sweep/validation, cancellation and resource governance;
-- restart-safe research state/ledger and reproducibility;
-- anti-overfitting/holdout methodology and definition of what “best” means;
-- enough research freedom for the AI to choose its own investigation approach rather than following a rigid hard-coded reasoning workflow;
-- final copy/paste-ready Scanner SQL plus a reproducible evidence report;
-- target-machine ChatGPT → MCP → local server → Backtest/evidence → recommendation acceptance.
+The promotion was derived from these project-owned records, which remain routed implementation context rather than competing planning authorities:
 
-## Hard boundaries
-
-Research autonomy does not grant unrelated machine authority. The later design must preserve source DB immutability, no broker/order authority, no provider/browser credentials/session data, no arbitrary source-path mutation, bounded/cancellable expensive work, public-safe diagnostics and reproducible authority separation.
-
-## Supporting requirement dossier
-
-The detailed user-intent/design questions captured during Branch 10 are supporting inputs, not active execution authority:
-
+- `.planning/AI_RESEARCHER_DISCOVERY.md`
+- `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md`
+- `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md`
+- `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md`
+- `.planning/AI_RESEARCHER_DATA_SURFACE.md`
+- `.planning/AI_RESEARCHER_OPERATING_CONTRACT.md`
+- `.planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md`
+- `.planning/AI_RESEARCHER_SNT_CONSOLIDATION.md` — promotion/review provenance.
 - `.planning/POST_BACKTEST_AI_MCP_MANDATE.md`
 - `.planning/POST_BACKTEST_AI_MCP_AUTONOMY_AMENDMENT.md`
 
-The amendment is the later correction where it conflicts with earlier restrictive wording: the future planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
+## Durable boundaries preserved by promotion
+
+- Human Backtest contributes proven authority semantics/engines; its UI/API is not the AI-interface blueprint.
+- Architecture is hybrid: typed authoritative operations plus bounded general read-only research SQL through a server-owned sandbox.
+- Original market DuckDB evidence remains immutable and is never AI-owned writable state.
+- Strategy-time Scanner authority and broader post-experiment research/debug evidence remain explicitly separated.
+- Development / Validation / Sealed Holdout are server-enforced evidence roles.
+- Research truth is durable server/ledger state referenced by stable IDs, not previous-chat memory or chain-of-thought.
+- Expensive work uses bounded durable jobs/results, cancellation/restart semantics and measured resource limits.
+- Desktop ChatGPT uses a compact project Skill plus thin MCP adapter; current OpenAI packaging/transport is reverified at implementation time.
+- Actual timestamps/cycles define cadence; current ~10s evidence is useful immediately and future denser cadence is a separately justified capability change if evidence warrants it.
+- Research Runs cannot self-modify production code/configuration, silently change Collector cadence, activate Scanner SQL or place broker orders.
+- `NO_RECOMMENDATION` is a legitimate evidence-backed result.
+
+## Execution start
+
+Implementation begins only after the Branch-11 planning promotion PR is merged and required `main` CI is green, and only through explicit activation of the assigned executor. The first allocated leaf is `11.1`, owner `Chat 35`; a generic continuation message does not activate that identity.
 
 ## Completion boundary
 
-This backlog item is complete only after the future ST Planner project is planned, implemented, deterministically verified, merged/reclosed, and proven end-to-end on the intended local ChatGPT/MCP setup. Merely exposing one `run_sql` tool or generating a prompt is insufficient.
+The original B-US-008 outcome is complete only when Branch `11.1`–`11.8` are done with their PLAN success evidence, the intended target-machine desktop ChatGPT → Plugin/Skill + MCP → Research Server → historical evidence → recommendation path is proven, durable contracts are reconciled, no blocking defect remains, the final implementation/reclosure PR is merged, `main` CI is green and open-PR state is clean.
