@@ -69,7 +69,7 @@ GitHub `main` overrides chat history. `STATUS.yaml` may project the current task
 
 ## Fresh executor flow
 
-A numbered executor starts only from an explicit request such as `אני צאט N תתחיל` / `I am chat N`. A generic `continue`, repository current pointer, handoff text or previous chat identity must never silently activate another numbered chat.
+A numbered executor starts only from an explicit request such as `אני צאט N תתחיל`, `אני צאט N חלק K תתחיל` / `I am chat N`. A generic `continue`, repository current pointer, handoff text or previous chat identity must never silently activate another numbered chat or part.
 
 After the ST Planner 2.0 bootstrap above:
 
@@ -85,6 +85,28 @@ After the ST Planner 2.0 bootstrap above:
 10. complete the branch/PR/CI workflow before starting an independent next work unit.
 
 A chat may own several tasks. Execute them in dependency-valid order from `.planning/EXECUTION.md`; chat numbering itself is not dependency truth and need not be contiguous.
+
+### Numbered chat parts
+
+`Chat N` is the execution owner in `.planning/EXECUTION.md`. If one assigned execution unit outgrows a single physical conversation but the owner/task allocation is still coherent, continue it in explicit sequential parts: `Chat N Part 1`, `Chat N Part 2`, and so on.
+
+Before moving from one Part to the next:
+
+```text
+finish + verify the current segment
+→ stop at a safe meaningful checkpoint
+→ persist all correctness-critical state in GitHub
+→ update EXECUTION result/evidence when materially changed
+→ update STATUS navigation with the exact next action and next Part
+→ ensure PR/CI/blocker/discovery state is recoverable from the repo
+→ start the next physical conversation explicitly as Chat N Part K+1
+```
+
+The next Part must be able to recover from GitHub without relying on the previous conversation transcript. Do not use a new Part as an excuse to leave half-applied work, unstated blockers, or correctness-critical context only in chat history.
+
+A Part is a conversation boundary only. It does not change `.planning/EXECUTION.md` ownership or create a new task by itself. `STATUS.yaml` may project `current_chat_part` / `next_chat_part` (or equivalent navigation fields) for recoverability, but those fields are non-authoritative and must agree with `.planning/EXECUTION.md`.
+
+If scope, dependencies, risk, or discoveries materially change the execution shape itself, do not keep adding Parts merely to preserve an obsolete allocation. Reassess the smallest affected execution mapping, split/redistribute tasks when needed, and assign new `Chat N` owners explicitly. Execution allocation is current best judgment, not immutable planning truth.
 
 If the requested Chat N is not the current owner of any executable task, or required dependencies are not `done`, do not rewrite planning/execution truth to fit the request. Report the blocker briefly.
 
