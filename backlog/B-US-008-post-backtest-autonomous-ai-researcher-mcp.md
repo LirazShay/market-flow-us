@@ -29,6 +29,7 @@ Active discovery truth is recorded in:
 - `.planning/AI_RESEARCHER_DISCOVERY.md`
 - `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
 - `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; still pre-implementation.
+- `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -80,6 +81,12 @@ Development, Validation and Sealed Holdout evidence are distinct server-enforced
 
 If SQL is changed in response to holdout results, that holdout is no longer independent proof for the revised lineage. Final reporting must expose search breadth, validation exposure, exact denominators and insufficient-evidence conditions rather than always declaring a winner.
 
+### Research continuity is durable server state, not chat memory
+
+Correctness-critical research state lives in the local Research Server / Research Ledger and is referenced through stable IDs. A fresh desktop ChatGPT conversation must be able to resume from `researchRunId` and retrieve objective/evidence/query/experiment/job/validation/finalist state without depending on prior chat history or stored chain-of-thought.
+
+MCP is a thin adapter over this durable domain contract. Large results use bounded result handles/pages; expensive work uses durable jobs with progress/cancellation rather than one giant synchronous model call.
+
 ## Hard boundaries
 
 Research autonomy does not grant unrelated machine authority. The design must preserve source DB immutability, no broker/order authority, no provider/browser credentials/session data, no arbitrary source-path mutation, no automatic live Scanner activation/trading, bounded/cancellable expensive work, public-safe diagnostics and reproducible authority separation.
@@ -93,7 +100,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, and the selected Development/Validation/Sealed-Holdout research-validity model.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, and the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work.
 
 ## Completion boundary
 
