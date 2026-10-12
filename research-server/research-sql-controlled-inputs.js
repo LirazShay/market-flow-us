@@ -1,9 +1,10 @@
+import { deriveDemoBuyHorizonOutcome } from "../shared/demo-buy/outcome-evidence.js";
+
 const MAX_CONTROLLED_ROWS = 20_000;
 const EXPERIMENT_ID = /^exp_[0-9a-f-]{36}$/u;
 const QUERY_ARTIFACT_ID = /^qry_[0-9a-f-]{36}$/u;
 const METRIC_SET_ID = /^metrics_[0-9a-f-]{36}$/u;
 const SOURCE_ID = /^[A-Za-z0-9._:-]{1,256}$/u;
-const OUTCOMES = new Set(["UP", "FLAT", "DOWN", "UNAVAILABLE"]);
 const AVAILABILITY = new Set(["AVAILABLE", "UNAVAILABLE"]);
 
 export const CONTROLLED_RESEARCH_RELATIONS = Object.freeze([
@@ -59,9 +60,9 @@ export const CONTROLLED_RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       field("source_id", "VARCHAR"),
       field("requested_t0_ms", "BIGINT"),
       field("baseline_cycle_id", "BIGINT"),
-      field("security_id", "VARCHAR", { decisionTimeEligible: false }),
+      field("security_id", "VARCHAR"),
       field("horizon_ms", "BIGINT"),
-      field("baseline_price", "DOUBLE"),
+      field("baseline_price", "DOUBLE", { nullable: true }),
       field("baseline_collected_at_ms", "BIGINT"),
       field("future_cycle_id", "BIGINT", { nullable: true, futureDependent: true }),
       field("future_collected_at_ms", "BIGINT", { nullable: true, futureDependent: true }),
@@ -87,7 +88,7 @@ export const CONTROLLED_RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       field("point_ref", "VARCHAR"),
       field("security_id", "VARCHAR"),
       field("returned_position", "BIGINT"),
-      field("baseline_price", "DOUBLE"),
+      field("baseline_price", "DOUBLE", { nullable: true }),
       field("baseline_collected_at_ms", "BIGINT")
     ]),
     relation("experiment_outcomes", [
@@ -135,7 +136,7 @@ const CREATE_STATEMENTS = Object.freeze([
     baseline_cycle_id BIGINT NOT NULL,
     security_id VARCHAR NOT NULL,
     horizon_ms BIGINT NOT NULL,
-    baseline_price DOUBLE NOT NULL,
+    baseline_price DOUBLE NULL,
     baseline_collected_at_ms BIGINT NOT NULL,
     future_cycle_id BIGINT NULL,
     future_collected_at_ms BIGINT NULL,
@@ -163,7 +164,7 @@ const CREATE_STATEMENTS = Object.freeze([
     point_ref VARCHAR NOT NULL,
     security_id VARCHAR NOT NULL,
     returned_position BIGINT NOT NULL,
-    baseline_price DOUBLE NOT NULL,
+    baseline_price DOUBLE NULL,
     baseline_collected_at_ms BIGINT NOT NULL,
     PRIMARY KEY (experiment_id, query_artifact_id, point_ref, returned_position)
   )`,
@@ -238,49 +239,42 @@ function assertSourceId(value, label) {
   return value;
 }
 
-function outcomeFields(row, label) {
-  const outcome = boundedText(row.outcome, `${label}.outcome`, 32);
-  if (!OUTCOMES.has(outcome)) invalid(`${label}.outcome is invalid`);
-  const unavailableReason = row.unavailableReason === null || row.unavailableReason === undefined
-    ? null
-    : boundedText(row.unavailableReason, `${label}.unavailableReason`, 128);
+function authoritativeOutcomeFields(row, label, baselinePrice) {
   const futureCycleId = safeInteger(row.futureCycleId, `${label}.futureCycleId`, { nullable: true, min: 1 });
   const futureCollectedAtMs = safeInteger(row.futureCollectedAtMs, `${label}.futureCollectedAtMs`, { nullable: true });
   const futurePrice = finite(row.futurePrice, `${label}.futurePrice`, { nullable: true });
-  const changePercent = finite(row.changePercent, `${label}.changePercent`, { nullable: true });
-
-  if (outcome === "UNAVAILABLE") {
-    if (unavailableReason === null) invalid(`${label} unavailable outcome requires unavailableReason`);
-    if (futureCycleId !== null || futureCollectedAtMs !== null || futurePrice !== null || changePercent !== null) {
-      invalid(`${label} unavailable outcome cannot carry future values`);
-    }
-  } else {
-    if (unavailableReason !== null) invalid(`${label} available outcome cannot carry unavailableReason`);
-    if (futureCycleId === null || futureCollectedAtMs === null || futurePrice === null || changePercent === null) {
-      invalid(`${label} available outcome requires complete future values`);
-    }
+  if ((futureCycleId === null) !== (futureCollectedAtMs === null)) {
+    invalid(`${label} future cycle/time authority is inconsistent`);
   }
-  return { outcome, unavailableReason, futureCycleId, futureCollectedAtMs, futurePrice, changePercent };
+
+  const derived = deriveDemoBuyHorizonOutcome({ baselinePrice, futureCycleId, futurePrice });
+  const changePercent = finite(row.changePercent, `${label}.changePercent`, { nullable: true });
+  const outcome = boundedText(row.outcome, `${label}.outcome`, 32);
+  const unavailableReason = row.unavailableReason === null || row.unavailableReason === undefined
+    ? null
+    : boundedText(row.unavailableReason, `${label}.unavailableReason`, 128);
+  if (outcome !== derived.outcome || unavailableReason !== derived.unavailableReason || changePercent !== derived.changePercent) {
+    invalid(`${label} does not match authoritative outcome semantics`);
+  }
+  return { futureCycleId, futureCollectedAtMs, futurePrice, changePercent, outcome, unavailableReason };
 }
 
 function normalizeDecisionPoints(input) {
   return rows(input, "decisionPoints").map((entry, index) => {
-    const row = object(entry, `decisionPoints[${index}]`);
-    const baselineAvailable = row.baselineAvailable;
-    if (typeof baselineAvailable !== "boolean") invalid(`decisionPoints[${index}].baselineAvailable must be boolean`);
-    const baselineCycleId = safeInteger(row.baselineCycleId, `decisionPoints[${index}].baselineCycleId`, { nullable: true, min: 1 });
-    const baselineCommittedAtMs = safeInteger(row.baselineCommittedAtMs, `decisionPoints[${index}].baselineCommittedAtMs`, { nullable: true });
-    if (baselineAvailable !== (baselineCycleId !== null && baselineCommittedAtMs !== null)) {
-      invalid(`decisionPoints[${index}] baseline availability is inconsistent`);
-    }
-    if (row.partitionRole !== "DEVELOPMENT") invalid(`decisionPoints[${index}].partitionRole must be DEVELOPMENT`);
+    const label = `decisionPoints[${index}]`;
+    const row = object(entry, label);
+    if (typeof row.baselineAvailable !== "boolean") invalid(`${label}.baselineAvailable must be boolean`);
+    const baselineCycleId = safeInteger(row.baselineCycleId, `${label}.baselineCycleId`, { nullable: true, min: 1 });
+    const baselineCommittedAtMs = safeInteger(row.baselineCommittedAtMs, `${label}.baselineCommittedAtMs`, { nullable: true });
+    if (row.baselineAvailable !== (baselineCycleId !== null && baselineCommittedAtMs !== null)) invalid(`${label} baseline availability is inconsistent`);
+    if (row.partitionRole !== "DEVELOPMENT") invalid(`${label}.partitionRole must be DEVELOPMENT`);
     return {
-      pointId: id(row.pointId, `decisionPoints[${index}].pointId`),
-      sourceId: assertSourceId(row.sourceId, `decisionPoints[${index}].sourceId`),
-      requestedT0Ms: safeInteger(row.requestedT0Ms, `decisionPoints[${index}].requestedT0Ms`),
+      pointId: id(row.pointId, `${label}.pointId`),
+      sourceId: assertSourceId(row.sourceId, `${label}.sourceId`),
+      requestedT0Ms: safeInteger(row.requestedT0Ms, `${label}.requestedT0Ms`),
       baselineCycleId,
       baselineCommittedAtMs,
-      baselineAvailable,
+      baselineAvailable: row.baselineAvailable,
       partitionRole: "DEVELOPMENT"
     };
   });
@@ -296,9 +290,8 @@ function normalizeAuthoritativeOutcomes(input, pointMap) {
     const sourceId = assertSourceId(row.sourceId, `${label}.sourceId`);
     const requestedT0Ms = safeInteger(row.requestedT0Ms, `${label}.requestedT0Ms`);
     const baselineCycleId = safeInteger(row.baselineCycleId, `${label}.baselineCycleId`, { min: 1 });
-    if (sourceId !== point.sourceId || requestedT0Ms !== point.requestedT0Ms || baselineCycleId !== point.baselineCycleId) {
-      invalid(`${label} does not match its controlled decision point authority`);
-    }
+    if (sourceId !== point.sourceId || requestedT0Ms !== point.requestedT0Ms || baselineCycleId !== point.baselineCycleId) invalid(`${label} does not match its controlled decision point authority`);
+    const baselinePrice = finite(row.baselinePrice, `${label}.baselinePrice`, { nullable: true });
     return {
       pointId,
       sourceId,
@@ -306,9 +299,9 @@ function normalizeAuthoritativeOutcomes(input, pointMap) {
       baselineCycleId,
       securityId: boundedText(row.securityId, `${label}.securityId`),
       horizonMs: safeInteger(row.horizonMs, `${label}.horizonMs`, { min: 1 }),
-      baselinePrice: finite(row.baselinePrice, `${label}.baselinePrice`),
+      baselinePrice,
       baselineCollectedAtMs: safeInteger(row.baselineCollectedAtMs, `${label}.baselineCollectedAtMs`),
-      ...outcomeFields(row, label)
+      ...authoritativeOutcomeFields(row, label, baselinePrice)
     };
   });
 }
@@ -349,7 +342,7 @@ function normalizeExperimentCandidates(input, pointMap) {
       pointRef: id(row.pointRef, `${label}.pointRef`),
       securityId: boundedText(row.securityId, `${label}.securityId`),
       returnedPosition: safeInteger(row.returnedPosition, `${label}.returnedPosition`, { min: 1 }),
-      baselinePrice: finite(row.baselinePrice, `${label}.baselinePrice`),
+      baselinePrice: finite(row.baselinePrice, `${label}.baselinePrice`, { nullable: true }),
       baselineCollectedAtMs: safeInteger(row.baselineCollectedAtMs, `${label}.baselineCollectedAtMs`)
     };
     const point = pointMap.get(experimentKey(normalized));
@@ -366,18 +359,20 @@ function normalizeExperimentOutcomes(input, candidateMap) {
   return rows(input, "experimentOutcomes").map((entry, index) => {
     const label = `experimentOutcomes[${index}]`;
     const row = object(entry, label);
-    const normalized = {
+    const identity = {
       experimentId: id(row.experimentId, `${label}.experimentId`, EXPERIMENT_ID),
       queryArtifactId: id(row.queryArtifactId, `${label}.queryArtifactId`, QUERY_ARTIFACT_ID),
       pointRef: id(row.pointRef, `${label}.pointRef`),
       securityId: boundedText(row.securityId, `${label}.securityId`),
-      returnedPosition: safeInteger(row.returnedPosition, `${label}.returnedPosition`, { min: 1 }),
-      horizonMs: safeInteger(row.horizonMs, `${label}.horizonMs`, { min: 1 }),
-      ...outcomeFields(row, label)
+      returnedPosition: safeInteger(row.returnedPosition, `${label}.returnedPosition`, { min: 1 })
     };
-    const candidate = candidateMap.get(candidateKey(normalized));
-    if (!candidate || candidate.securityId !== normalized.securityId) invalid(`${label} must reference an exact experiment candidate`);
-    return normalized;
+    const candidate = candidateMap.get(candidateKey(identity));
+    if (!candidate || candidate.securityId !== identity.securityId) invalid(`${label} must reference an exact experiment candidate`);
+    return {
+      ...identity,
+      horizonMs: safeInteger(row.horizonMs, `${label}.horizonMs`, { min: 1 }),
+      ...authoritativeOutcomeFields(row, label, candidate.baselinePrice)
+    };
   });
 }
 
@@ -387,13 +382,10 @@ function normalizeMetrics(input, experimentIds) {
     const row = object(entry, label);
     const experimentId = id(row.experimentId, `${label}.experimentId`, EXPERIMENT_ID);
     if (!experimentIds.has(experimentId)) invalid(`${label} must reference a materialized experiment`);
-    const queryArtifactId = row.queryArtifactId === null || row.queryArtifactId === undefined
-      ? null
-      : id(row.queryArtifactId, `${label}.queryArtifactId`, QUERY_ARTIFACT_ID);
     return {
       experimentId,
       metricSetId: id(row.metricSetId, `${label}.metricSetId`, METRIC_SET_ID),
-      queryArtifactId,
+      queryArtifactId: row.queryArtifactId === null || row.queryArtifactId === undefined ? null : id(row.queryArtifactId, `${label}.queryArtifactId`, QUERY_ARTIFACT_ID),
       metricName: boundedText(row.metricName, `${label}.metricName`, 128),
       horizonMs: safeInteger(row.horizonMs, `${label}.horizonMs`, { nullable: true, min: 1 }),
       numerator: finite(row.numerator, `${label}.numerator`, { nullable: true }),
@@ -413,16 +405,14 @@ function unique(rowsToCheck, keyFn, label) {
   }
 }
 
-async function insertRows(connection, statement, rowsToInsert, bindings) {
-  for (const row of rowsToInsert) await connection.run(statement, bindings(row));
+async function insertRows(connection, statement, rowsToInsert) {
+  for (const row of rowsToInsert) await connection.run(statement, row);
 }
 
 export async function materializeControlledResearchInputs({ connection, inputs = {} } = {}) {
   if (!connection || typeof connection.run !== "function") invalid("connection is required");
   object(inputs, "inputs");
-  if (inputs.partitionRole !== undefined && inputs.partitionRole !== "DEVELOPMENT") {
-    invalid("controlled research inputs are currently DEVELOPMENT only");
-  }
+  if (inputs.partitionRole !== undefined && inputs.partitionRole !== "DEVELOPMENT") invalid("controlled research inputs are currently DEVELOPMENT only");
 
   const decisionPoints = normalizeDecisionPoints(inputs.decisionPoints);
   unique(decisionPoints, (row) => row.pointId, "decisionPoints");
@@ -445,32 +435,12 @@ export async function materializeControlledResearchInputs({ connection, inputs =
   await connection.run("BEGIN TRANSACTION");
   try {
     for (const statement of CREATE_STATEMENTS) await connection.run(statement);
-
-    await insertRows(connection,
-      `INSERT INTO research_decision_points VALUES ($pointId,$sourceId,$requestedT0Ms,$baselineCycleId,$baselineCommittedAtMs,$baselineAvailable,$partitionRole)`,
-      decisionPoints,
-      (row) => row);
-    await insertRows(connection,
-      `INSERT INTO research_authoritative_outcomes VALUES ($pointId,$sourceId,$requestedT0Ms,$baselineCycleId,$securityId,$horizonMs,$baselinePrice,$baselineCollectedAtMs,$futureCycleId,$futureCollectedAtMs,$futurePrice,$changePercent,$outcome,$unavailableReason)`,
-      authoritativeOutcomes,
-      (row) => row);
-    await insertRows(connection,
-      `INSERT INTO experiment_points VALUES ($experimentId,$queryArtifactId,$pointRef,$sourceId,$requestedT0Ms,$baselineCycleId,$returnedRowCount,$evaluatedUniqueCount,$availability)`,
-      experimentPoints,
-      (row) => row);
-    await insertRows(connection,
-      `INSERT INTO experiment_candidates VALUES ($experimentId,$queryArtifactId,$pointRef,$securityId,$returnedPosition,$baselinePrice,$baselineCollectedAtMs)`,
-      experimentCandidates,
-      (row) => row);
-    await insertRows(connection,
-      `INSERT INTO experiment_outcomes VALUES ($experimentId,$queryArtifactId,$pointRef,$securityId,$returnedPosition,$horizonMs,$futureCycleId,$futureCollectedAtMs,$futurePrice,$changePercent,$outcome,$unavailableReason)`,
-      experimentOutcomes,
-      (row) => row);
-    await insertRows(connection,
-      `INSERT INTO experiment_metrics VALUES ($experimentId,$metricSetId,$queryArtifactId,$metricName,$horizonMs,$numerator,$denominator,$excludedCount,$value)`,
-      experimentMetrics,
-      (row) => row);
-
+    await insertRows(connection, `INSERT INTO research_decision_points VALUES ($pointId,$sourceId,$requestedT0Ms,$baselineCycleId,$baselineCommittedAtMs,$baselineAvailable,$partitionRole)`, decisionPoints);
+    await insertRows(connection, `INSERT INTO research_authoritative_outcomes VALUES ($pointId,$sourceId,$requestedT0Ms,$baselineCycleId,$securityId,$horizonMs,$baselinePrice,$baselineCollectedAtMs,$futureCycleId,$futureCollectedAtMs,$futurePrice,$changePercent,$outcome,$unavailableReason)`, authoritativeOutcomes);
+    await insertRows(connection, `INSERT INTO experiment_points VALUES ($experimentId,$queryArtifactId,$pointRef,$sourceId,$requestedT0Ms,$baselineCycleId,$returnedRowCount,$evaluatedUniqueCount,$availability)`, experimentPoints);
+    await insertRows(connection, `INSERT INTO experiment_candidates VALUES ($experimentId,$queryArtifactId,$pointRef,$securityId,$returnedPosition,$baselinePrice,$baselineCollectedAtMs)`, experimentCandidates);
+    await insertRows(connection, `INSERT INTO experiment_outcomes VALUES ($experimentId,$queryArtifactId,$pointRef,$securityId,$returnedPosition,$horizonMs,$futureCycleId,$futureCollectedAtMs,$futurePrice,$changePercent,$outcome,$unavailableReason)`, experimentOutcomes);
+    await insertRows(connection, `INSERT INTO experiment_metrics VALUES ($experimentId,$metricSetId,$queryArtifactId,$metricName,$horizonMs,$numerator,$denominator,$excludedCount,$value)`, experimentMetrics);
     await connection.run("COMMIT");
   } catch (error) {
     try { await connection.run("ROLLBACK"); } catch {}
