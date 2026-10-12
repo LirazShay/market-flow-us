@@ -1,6 +1,10 @@
 import { DuckDBInstance } from "@duckdb/node-api";
 import { DUCKDB_HARDENING } from "../local-service/database/database.js";
 import { createScannerAuthority } from "../local-service/scanner/scanner.js";
+import {
+  researchDuckDbConfig,
+  resolveResearchDuckDbResourceLimits
+} from "./duckdb-resource-limits.js";
 import { openBacktestEvidenceSource } from "./evidence-source.js";
 import { resolveBacktestEvidenceSourcePath } from "./source-catalog.js";
 
@@ -95,7 +99,8 @@ export async function resolveBacktestBaselineSeries({
   dataDir,
   sourceId,
   requestedAtMsList,
-  signal
+  signal,
+  duckdbResourceLimits
 } = {}) {
   if (!Array.isArray(requestedAtMsList) || requestedAtMsList.length === 0) {
     throw new TypeError("requestedAtMsList must contain at least one point.");
@@ -112,7 +117,7 @@ export async function resolveBacktestBaselineSeries({
   }
 
   throwIfAborted(boundedSignal);
-  const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  const evidence = await openBacktestEvidenceSource({ dataDir, sourceId, duckdbResourceLimits });
   const releaseAbort = bindAbortInterrupt(boundedSignal, evidence.connection);
   try {
     const resolved = [];
@@ -147,14 +152,22 @@ function closeQuietly(value) {
   }
 }
 
-async function createHistoricalSandbox({ sourcePath, baseline, signal }) {
+async function createHistoricalSandbox({ sourcePath, baseline, signal, duckdbResourceLimits }) {
   let instance = null;
   let connection = null;
   let releaseAbort = () => undefined;
+  const resourceLimits = duckdbResourceLimits === undefined
+    ? null
+    : resolveResearchDuckDbResourceLimits(duckdbResourceLimits);
 
   try {
     throwIfAborted(signal);
-    instance = await DuckDBInstance.create(":memory:");
+    instance = resourceLimits === null
+      ? await DuckDBInstance.create(":memory:")
+      : await DuckDBInstance.create(":memory:", {
+        ...DUCKDB_HARDENING,
+        ...researchDuckDbConfig(resourceLimits)
+      });
     connection = await instance.connect();
     releaseAbort = bindAbortInterrupt(signal, connection);
 
@@ -182,7 +195,7 @@ async function createHistoricalSandbox({ sourcePath, baseline, signal }) {
     await applySandboxHardening(connection);
     throwIfAborted(signal);
 
-    return { instance, connection, releaseAbort };
+    return { instance, connection, releaseAbort, resourceLimits };
   } catch (error) {
     releaseAbort();
     closeQuietly(connection);
@@ -198,6 +211,7 @@ function unavailablePoint(requestedAtMs) {
     requestedAtMs,
     baseline: null,
     scanner: null,
+    resourceLimits: null,
     interrupt() {},
     async close() {
       if (closed) return;
@@ -211,16 +225,24 @@ export async function openBacktestHistoricalScanner({
   sourceId,
   requestedAtMs,
   now = () => Date.now(),
-  signal
+  signal,
+  duckdbResourceLimits
 } = {}) {
   assertRequestedAtMs(requestedAtMs);
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
   const boundedSignal = assertAbortSignal(signal);
+  const resourceLimits = duckdbResourceLimits === undefined
+    ? null
+    : resolveResearchDuckDbResourceLimits(duckdbResourceLimits);
   throwIfAborted(boundedSignal);
 
-  const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  const evidence = await openBacktestEvidenceSource({
+    dataDir,
+    sourceId,
+    ...(resourceLimits === null ? {} : { duckdbResourceLimits: resourceLimits })
+  });
   const releaseEvidenceAbort = bindAbortInterrupt(boundedSignal, evidence.connection);
   let sandbox = null;
 
@@ -234,7 +256,12 @@ export async function openBacktestHistoricalScanner({
     }
 
     const sourcePath = resolveBacktestEvidenceSourcePath({ dataDir, sourceId });
-    sandbox = await createHistoricalSandbox({ sourcePath, baseline, signal: boundedSignal });
+    sandbox = await createHistoricalSandbox({
+      sourcePath,
+      baseline,
+      signal: boundedSignal,
+      ...(resourceLimits === null ? {} : { duckdbResourceLimits: resourceLimits })
+    });
     await evidence.close();
 
     const scanner = await createScannerAuthority({
@@ -249,6 +276,7 @@ export async function openBacktestHistoricalScanner({
       requestedAtMs,
       baseline,
       scanner,
+      resourceLimits: sandbox.resourceLimits,
       interrupt() {
         if (closed) return;
         sandbox.connection.interrupt();
