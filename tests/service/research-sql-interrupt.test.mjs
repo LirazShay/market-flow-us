@@ -6,10 +6,13 @@ import test from "node:test";
 
 import { openMarketFlowUsDatabase } from "../../local-service/database/database.js";
 import { openDevelopmentResearchSqlSandbox } from "../../research-server/research-sql.js";
+import { openDevelopmentResearchSqlSession } from "../../research-server/research-sql-session.js";
 import { fingerprintResearchEvidenceSource } from "../../research-server/source-fingerprint.js";
 
+const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
 const PARTITION_ID = "part_11111111-1111-4111-8111-111111111111";
 const PLAN_ID = "plan_11111111-1111-4111-8111-111111111111";
+const INVENTORY_ID = "inv_11111111-1111-4111-8111-111111111111";
 const LONG_SQL = "SELECT SUM(sin(i::DOUBLE)) AS total FROM range(0, 1000000000) AS t(i)";
 
 async function seedMarketData(dataDir) {
@@ -51,6 +54,34 @@ function timeoutAfter(ms) {
   });
 }
 
+function researchAuthority(fingerprint) {
+  const partition = {
+    partitionId: PARTITION_ID,
+    evidencePlanId: PLAN_ID,
+    role: "DEVELOPMENT",
+    partition: { sourceIds: ["active"] }
+  };
+  const inventory = {
+    evidenceInventoryId: INVENTORY_ID,
+    inventory: {
+      sources: [{
+        sourceId: "active",
+        sourceFingerprint: fingerprint,
+        classification: "ACTIVE",
+        schemaVersion: 4
+      }]
+    }
+  };
+  return { partition, inventory };
+}
+
+async function verifyFingerprint({ dataDir, sourceId, expectedFingerprint }) {
+  assert.equal(
+    await fingerprintResearchEvidenceSource({ dataDir, sourceId }),
+    expectedFingerprint
+  );
+}
+
 test("TREE 11.4 Research SQL sandbox directly interrupts active DuckDB work without closing the sandbox", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-sql-interrupt-"));
   let sandbox = null;
@@ -58,24 +89,11 @@ test("TREE 11.4 Research SQL sandbox directly interrupts active DuckDB work with
   try {
     await seedMarketData(tempDir);
     const fingerprint = await fingerprintResearchEvidenceSource({ dataDir: tempDir, sourceId: "active" });
+    const { partition, inventory } = researchAuthority(fingerprint);
     sandbox = await openDevelopmentResearchSqlSandbox({
       dataDir: tempDir,
-      partition: {
-        partitionId: PARTITION_ID,
-        evidencePlanId: PLAN_ID,
-        role: "DEVELOPMENT",
-        partition: { sourceIds: ["active"] }
-      },
-      inventory: {
-        inventory: {
-          sources: [{
-            sourceId: "active",
-            sourceFingerprint: fingerprint,
-            classification: "ACTIVE",
-            schemaVersion: 4
-          }]
-        }
-      },
+      partition,
+      inventory,
       now: () => 1_860_000_000_000
     });
 
@@ -100,6 +118,56 @@ test("TREE 11.4 Research SQL sandbox directly interrupts active DuckDB work with
     );
   } finally {
     if (sandbox) await sandbox.close();
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("TREE 11.4 Research SQL session close interrupts and drains active DuckDB work before closing", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-sql-session-interrupt-"));
+  let session = null;
+
+  try {
+    await seedMarketData(tempDir);
+    const fingerprint = await fingerprintResearchEvidenceSource({ dataDir: tempDir, sourceId: "active" });
+    const { partition, inventory } = researchAuthority(fingerprint);
+    session = await openDevelopmentResearchSqlSession({
+      dataDir: tempDir,
+      researchRunId: RUN_ID,
+      partitionId: PARTITION_ID,
+      experimentIds: [],
+      now: () => 1_860_000_000_000,
+      verifySourceFingerprint: verifyFingerprint,
+      getPartition: async () => partition,
+      getEvidencePlan: async () => ({
+        evidencePlanId: PLAN_ID,
+        evidenceInventoryId: INVENTORY_ID
+      }),
+      getEvidenceInventory: async () => inventory,
+      reconstructExperiment: async () => {
+        throw new Error("No Experiment reconstruction is expected for an empty reference set");
+      }
+    });
+
+    let settled = false;
+    const outcome = session.execute(LONG_SQL).then(
+      (value) => ({ status: "fulfilled", value }),
+      (error) => ({ status: "rejected", error })
+    ).finally(() => {
+      settled = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(settled, false, "long SQL must still be active before session cancellation");
+
+    await Promise.race([session.close(), timeoutAfter(2_000)]);
+    const interrupted = await outcome;
+    assert.equal(interrupted.status, "rejected");
+    await assert.rejects(() => session.execute("SELECT 1 AS value"), /session is closed/u);
+    assert.equal(
+      await fingerprintResearchEvidenceSource({ dataDir: tempDir, sourceId: "active" }),
+      fingerprint
+    );
+  } finally {
+    if (session) await session.close();
     await rm(tempDir, { recursive: true, force: true });
   }
 });
