@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with hierarchical budgets and bounded concurrency. Durable jobs/idempotency/restart, frozen run-scoped result handles with bounded paging, and cooperative cancellation with deterministic cancel/success race handling are already implemented and green in PR #102. Actual DuckDB interrupt wiring remains for the later 11.2/11.3 composition checkpoint."
+  action: "Continue Chat 38 / 11.4 with composition around the completed 11.2 experiment and 11.3 research-SQL execution families. Durable jobs/idempotency/restart, frozen bounded result handles, cooperative cancellation, and the hierarchical budget/concurrency governor are already implemented and green in PR #102. Wire the governor/job controller/results to real execution, add durable budget/progress reporting, and prove real DuckDB interrupt propagation without changing 11.2/11.3 semantics."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
