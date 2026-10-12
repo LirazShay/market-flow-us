@@ -15,7 +15,6 @@ const INVENTORY_ID = "inv_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PLAN_ID = "plan_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PART_DEV = "part_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PART_VALIDATION = "part_bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
-const EXPERIMENT_ID = "exp_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const METRIC_SET_ID = "metrics_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const JOB_EXPERIMENT = "job_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const JOB_SQL = "job_bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
@@ -118,7 +117,6 @@ function domainOptions(tempDir, resourcePolicy = RESOURCE_POLICY) {
     evidenceInventoryIdFactory: () => INVENTORY_ID,
     evidencePlanIdFactory: () => PLAN_ID,
     partitionIdFactory: sequence([PART_DEV, PART_VALIDATION]),
-    experimentIdFactory: () => EXPERIMENT_ID,
     metricSetIdFactory: () => METRIC_SET_ID,
     jobIdFactory: sequence([JOB_EXPERIMENT, JOB_SQL]),
     resultHandleFactory: sequence([RESULT_EXPERIMENT, RESULT_SQL])
@@ -214,13 +212,16 @@ test("TREE 11.4 managed Run exposes durable budget used/remaining and experiment
       topX: 1,
       horizonsMs: [10_000]
     });
-    assert.equal((await waitForTerminal(domain, experiment.jobId)).status, "SUCCEEDED");
+    assert.match(experiment.experimentId, /^exp_[0-9a-f-]{36}$/u);
+    const experimentJob = await waitForTerminal(domain, experiment.jobId);
+    assert.equal(experimentJob.status, "SUCCEEDED");
+    assert.equal(experimentJob.progress.experimentId, experiment.experimentId);
 
     const analysis = await domain.submitDevelopmentResearchSql({
       clientRequestId: "run-accounting-sql",
       researchRunId: RUN_ID,
       partitionId: PART_DEV,
-      experimentIds: [EXPERIMENT_ID],
+      experimentIds: [experiment.experimentId],
       sql: "SELECT security_id, Price FROM research_history ORDER BY cycle_id",
       purpose: "DEBUG",
       outputMode: "PAGED_RESULT"
@@ -253,7 +254,7 @@ test("TREE 11.4 managed Run exposes durable budget used/remaining and experiment
         clientRequestId: "must-not-create-job-under-drifted-policy",
         researchRunId: RUN_ID,
         partitionId: PART_DEV,
-        experimentIds: [EXPERIMENT_ID],
+        experimentIds: [experiment.experimentId],
         sql: "SELECT 1",
         purpose: "DEBUG",
         outputMode: "PREVIEW"
