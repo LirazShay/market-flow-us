@@ -2,6 +2,9 @@ import { openResearchEvidenceLedger } from "./evidence-ledger.js";
 
 const PATH_KEY_SUFFIX = /(?:path|filepath|filename|directory|folder)$/iu;
 const RELATIVE_FILE_PATH = /(?:^|[\\/])(?:[^\\/]+[\\/])+[^\\/]+\.(?:duckdb|db|sqlite|sqlite3|json|csv|parquet|arrow)$/iu;
+const SOURCE_ID = /^[A-Za-z0-9._:-]{1,256}$/u;
+const SOURCE_FINGERPRINT = /^[0-9a-f]{64}$/u;
+const PARTITION_ROLES = new Set(["DEVELOPMENT", "VALIDATION", "SEALED_HOLDOUT"]);
 
 function assertLogicalEvidenceValue(value, label) {
   const seen = new Set();
@@ -48,6 +51,64 @@ function assertLogicalEvidenceValue(value, label) {
   return value;
 }
 
+function assertEvidenceInventory(inventory) {
+  if (inventory === null || typeof inventory !== "object" || Array.isArray(inventory)) {
+    throw new TypeError("inventory must be an object");
+  }
+  if (!Array.isArray(inventory.sources) || inventory.sources.length > 512) {
+    throw new TypeError("inventory.sources must be an array with at most 512 entries");
+  }
+
+  const sourceIds = new Set();
+  for (const source of inventory.sources) {
+    if (source === null || typeof source !== "object" || Array.isArray(source)) {
+      throw new TypeError("each inventory source must be an object");
+    }
+    if (typeof source.sourceId !== "string" || !SOURCE_ID.test(source.sourceId)) {
+      throw new TypeError("each inventory source requires a bounded logical sourceId");
+    }
+    if (typeof source.sourceFingerprint !== "string" || !SOURCE_FINGERPRINT.test(source.sourceFingerprint)) {
+      throw new TypeError("each inventory source requires a SHA-256 sourceFingerprint");
+    }
+    if (sourceIds.has(source.sourceId)) {
+      throw new TypeError(`inventory contains duplicate sourceId ${source.sourceId}`);
+    }
+    sourceIds.add(source.sourceId);
+  }
+
+  assertLogicalEvidenceValue(inventory, "inventory");
+  return inventory;
+}
+
+function assertEvidencePlanPartitions(partitions) {
+  if (!Array.isArray(partitions) || partitions.length < 2 || partitions.length > 3) {
+    throw new TypeError("partitions must contain DEVELOPMENT and VALIDATION, with optional SEALED_HOLDOUT");
+  }
+
+  const roles = new Set();
+  for (const entry of partitions) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new TypeError("partition definition must be an object");
+    }
+    if (!PARTITION_ROLES.has(entry.role)) {
+      throw new TypeError("partition role is not supported");
+    }
+    if (roles.has(entry.role)) {
+      throw new TypeError(`duplicate partition role ${entry.role}`);
+    }
+    roles.add(entry.role);
+    assertLogicalEvidenceValue(entry.partition, "partition");
+  }
+
+  if (!roles.has("DEVELOPMENT") || !roles.has("VALIDATION")) {
+    throw new TypeError("partitions must contain DEVELOPMENT and VALIDATION, with optional SEALED_HOLDOUT");
+  }
+  if (partitions.length === 3 && !roles.has("SEALED_HOLDOUT")) {
+    throw new TypeError("third partition must be SEALED_HOLDOUT");
+  }
+  return partitions;
+}
+
 export async function openResearchEvidenceDomain(options = {}) {
   const ledger = await openResearchEvidenceLedger(options);
 
@@ -58,7 +119,7 @@ export async function openResearchEvidenceDomain(options = {}) {
       if (input === null || typeof input !== "object" || Array.isArray(input)) {
         throw new TypeError("evidence inventory request must be an object");
       }
-      assertLogicalEvidenceValue(input.inventory, "inventory");
+      assertEvidenceInventory(input.inventory);
       return await ledger.createEvidenceInventory(input);
     },
 
@@ -75,13 +136,7 @@ export async function openResearchEvidenceDomain(options = {}) {
         throw new TypeError("evidence plan request must be an object");
       }
       assertLogicalEvidenceValue(input.plan, "plan");
-      if (Array.isArray(input.partitions)) {
-        for (const entry of input.partitions) {
-          if (entry !== null && typeof entry === "object" && !Array.isArray(entry)) {
-            assertLogicalEvidenceValue(entry.partition, "partition");
-          }
-        }
-      }
+      assertEvidencePlanPartitions(input.partitions);
       return await ledger.createEvidencePlan(input);
     },
 
