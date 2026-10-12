@@ -7,6 +7,10 @@ import {
 } from "../backtest-lab/source-catalog.js";
 import { DUCKDB_HARDENING } from "../local-service/database/database.js";
 import { createScannerAuthority } from "../local-service/scanner/scanner.js";
+import {
+  CONTROLLED_RESEARCH_SCHEMA_MANIFEST,
+  materializeControlledResearchInputs
+} from "./research-sql-controlled-inputs.js";
 import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
 
 export const RESEARCH_DATA_SURFACE_VERSION = "research-data-surface-v1";
@@ -140,6 +144,31 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "PaperNameHeb", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "Hebrew paper name from the latest authorized observation in the partition." },
       { column: "ExchangeName", type: "VARCHAR", nullable: true, origin: "research_derived", meaning: "Exchange display field from the latest authorized observation in the partition." }
     ])
+  ])
+});
+
+const CONTROLLED_RELATION_MEANINGS = Object.freeze({
+  research_decision_points: "Server-controlled Development decision points resolved by proven Backtest baseline authority.",
+  research_authoritative_outcomes: "Server-controlled authoritative outcome labels; future-derived fields are explicit and never decision-time predictors.",
+  experiment_points: "Explicitly referenced authoritative Experiment point results.",
+  experiment_candidates: "Explicitly referenced authoritative Experiment candidate selections.",
+  experiment_outcomes: "Explicitly referenced authoritative Experiment outcome labels.",
+  experiment_metrics: "Normalized metric evidence from explicitly referenced authoritative Experiments."
+});
+
+const RESEARCH_SCHEMA_WITH_CONTROLLED_INPUTS = Object.freeze({
+  ...RESEARCH_SCHEMA_MANIFEST,
+  relations: Object.freeze([
+    ...RESEARCH_SCHEMA_MANIFEST.relations,
+    ...CONTROLLED_RESEARCH_SCHEMA_MANIFEST.relations.map((relation) => Object.freeze({
+      relation: relation.relation,
+      meaning: CONTROLLED_RELATION_MEANINGS[relation.relation],
+      fields: Object.freeze(relation.fields.map((field) => Object.freeze({
+        ...field,
+        meaning: field.meaning ?? `Server-controlled ${relation.relation}.${field.column} field.`,
+        identity_role: field.identity_role ?? null
+      })))
+    }))
   ])
 });
 
@@ -549,14 +578,17 @@ function closeQuietly(value) {
   }
 }
 
-export function describeResearchSqlSchema() {
-  return RESEARCH_SCHEMA_MANIFEST;
+export function describeResearchSqlSchema({ includeControlledInputs = false } = {}) {
+  return includeControlledInputs
+    ? RESEARCH_SCHEMA_WITH_CONTROLLED_INPUTS
+    : RESEARCH_SCHEMA_MANIFEST;
 }
 
 export async function openDevelopmentResearchSqlSandbox({
   dataDir,
   partition,
   inventory,
+  controlledInputs,
   now = () => Date.now(),
   verifySourceFingerprint = verifyResearchEvidenceSourceFingerprint
 } = {}) {
@@ -572,6 +604,7 @@ export async function openDevelopmentResearchSqlSandbox({
 
   const normalizedPartition = normalizePartition(partition);
   const sources = boundInventorySources(inventory, normalizedPartition.sourceIds);
+  const includeControlledInputs = controlledInputs !== undefined;
 
   let instance = null;
   let connection = null;
@@ -623,15 +656,21 @@ export async function openDevelopmentResearchSqlSandbox({
     }
 
     await deriveResearchUniverse(connection);
+    if (includeControlledInputs) {
+      await materializeControlledResearchInputs({ connection, inputs: controlledInputs });
+    }
     await applySandboxHardening(connection);
 
     const authority = await createScannerAuthority({ connection, now });
+    const schemaManifest = describeResearchSqlSchema({ includeControlledInputs });
     let closed = false;
 
     return Object.freeze({
       dataSurfaceVersion: RESEARCH_DATA_SURFACE_VERSION,
       phase: "DEVELOPMENT",
-      describeSchema: describeResearchSqlSchema,
+      describeSchema() {
+        return schemaManifest;
+      },
       async execute(sql) {
         if (closed) throw new Error("Research SQL sandbox is closed");
         return await authority.execute(sql);
