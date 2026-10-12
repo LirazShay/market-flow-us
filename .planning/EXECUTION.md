@@ -14,9 +14,9 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — is now planned and allocated but **no Branch-11 executor has started yet**.
+Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — implementation is active at `11.1`, owned by explicitly activated `Chat 35`.
 
-The first runnable task is `11.1`, owned by `Chat 35`. It starts only after explicit activation of that owner. A generic `תמשיך לשלב הבא` in a planning/review conversation does not become Chat 35.
+`11.1` is the only active Branch-11 task. `11.2` and `11.3` remain blocked by their real dependency on completed `11.1`; a generic `תמשיך לשלב הבא` never changes numbered executor identity.
 
 Allocation follows natural feature/context boundaries, not a target number of chats. `11.2` and `11.3` are intentionally independent after `11.1`; `11.4` joins both expensive execution families; later work depends only on real prerequisites.
 
@@ -77,7 +77,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `10.4` | Chat 32 | `done` | `10.2`, `10.3` | Inspect/Compare complete point evidence completed; PRs #83–#86 and Chromium/service proof preserved. |
 | `10.5` | Chat 33 | `done` | `10.4` | Deterministic seconds/minutes Sweep + exact drill-down completed; PR #88 and CI evidence preserved. |
 | `10.6` | Chat 34 | `done` | `10.5` | Backtest productization/performance/reclosure completed through PRs #89–#95; final source-immutability/security review and green main evidence preserved. |
-| `11.1` | Chat 35 | `pending` | `10.6` | — |
+| `11.1` | Chat 35 | `in_progress` | `10.6` | PR #98 draft: dedicated hardened Research Ledger + durable Research Run foundation implemented; immutable run-scoped Objective Versions and exact hash-bound Query Artifacts are under active verification. |
 | `11.2` | Chat 36 | `pending` | `11.1` | — |
 | `11.3` | Chat 37 | `pending` | `11.1` | — |
 | `11.4` | Chat 38 | `pending` | `11.2`, `11.3` | — |
@@ -106,12 +106,12 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - New Branch-11 implementation rows: **8**.
 - Current execution rows: **57**.
 - Done: **49**.
-- Pending: **8**.
-- In progress: **0**.
+- Pending: **7**.
+- In progress: **1**.
 - Blocked: **0**.
-- First runnable owner: `Chat 35`, task `11.1`.
+- Active owner: `Chat 35`, task `11.1`.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
 
-There is no active `in_progress` row. Branch 11 implementation begins only when the user explicitly activates an assigned executor such as `אני צאט 35 תתחיל`.
+`11.1` remains active until its complete success evidence is green and PR #98 is merged; later Branch-11 tasks remain pending until their real dependencies are done.
