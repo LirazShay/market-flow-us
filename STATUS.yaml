@@ -25,15 +25,15 @@ current:
   chat: 38
   node: "11.4"
   title: "Durable jobs, result handles and resource governance"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 52
-  pending: 5
-  in_progress: 0
+  pending: 4
+  in_progress: 1
   blocked: 0
   current_chat: 38
   current_node: "11.4"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.4"
   owner: "Chat 38"
-  status: pending
-  action: "Chat 37 / 11.3 is complete after green success-evidence reclosure. Start Chat 38 / 11.4 only through explicit numbered-chat activation; generic continuation in the completed Chat 37 conversation must not switch executor identity."
+  status: in_progress
+  action: "Continue Chat 38 / 11.4 from the durable jobs/result handles/resource-governance contract. The first checkpoint establishes persistent job lifecycle, clientRequestId idempotency and fail-closed restart state before cancellation, bounded results and hierarchical budgets."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
