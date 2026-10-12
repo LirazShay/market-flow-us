@@ -45,15 +45,14 @@ function managedOptions(dbPath) {
   };
 }
 
-function assertEmptyAccounting(run) {
-  assert.deepEqual(run.budgetPolicy, EXPECTED_POLICY);
-  assert.deepEqual(run.budget, {
+function assertEmptyAccounting(value) {
+  assert.deepEqual(value.budget, {
     policy: EXPECTED_POLICY,
     accountingAvailable: true,
     used: { resultBytes: 0, resultRows: 0, t0Evaluations: 0, workUnits: 0 },
     remaining: { resultBytes: 100_000, resultRows: 100, t0Evaluations: 100, workUnits: 10 }
   });
-  assert.deepEqual(run.counts, { experiments: 0, analyses: 0, jobs: 0 });
+  assert.deepEqual(value.counts, { experiments: 0, analyses: 0, jobs: 0 });
 }
 
 test("TREE 11.4 legacy empty Run budgetPolicy reconciles once to managed policy and remains durable", async () => {
@@ -78,7 +77,9 @@ test("TREE 11.4 legacy empty Run budgetPolicy reconciles once to managed policy 
     base = null;
 
     managed = await openManagedResearchDomain(managedOptions(dbPath));
-    assertEmptyAccounting(await managed.getResearchRun(RUN_ID));
+    const reconciledRun = await managed.getResearchRun(RUN_ID);
+    assert.deepEqual(reconciledRun.budgetPolicy, EXPECTED_POLICY);
+    assertEmptyAccounting(reconciledRun);
     assertEmptyAccounting(await managed.resumeResearchRun(RUN_ID));
     await managed.close();
     managed = null;
@@ -90,7 +91,9 @@ test("TREE 11.4 legacy empty Run budgetPolicy reconciles once to managed policy 
     base = null;
 
     managed = await openManagedResearchDomain(managedOptions(dbPath));
-    assertEmptyAccounting(await managed.getResearchRun(RUN_ID));
+    const reopenedRun = await managed.getResearchRun(RUN_ID);
+    assert.deepEqual(reopenedRun.budgetPolicy, EXPECTED_POLICY);
+    assertEmptyAccounting(reopenedRun);
   } finally {
     if (managed) await managed.close();
     if (base) await base.close();
