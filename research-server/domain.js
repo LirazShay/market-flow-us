@@ -7,6 +7,7 @@ import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchLedger } from "./ledger.js";
 import { openResearchMemory } from "./research-memory.js";
+import { openDevelopmentResearchSqlSession } from "./research-sql-session.js";
 import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
 
 const FORBIDDEN_KEY_SUFFIXES = Object.freeze([
@@ -49,6 +50,11 @@ const DISALLOWED_EXPERIMENT_AUTHORITY_KEYS = Object.freeze([
   "queryArtifacts",
   "sourceFingerprint",
   "sqlText"
+]);
+const RESEARCH_SQL_REQUEST_KEYS = new Set([
+  "researchRunId",
+  "partitionId",
+  "experimentIds"
 ]);
 
 function normalizedKey(value) {
@@ -126,6 +132,18 @@ function assertDevelopmentExperimentInput(input) {
   return input;
 }
 
+function assertDevelopmentResearchSqlInput(input) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("development research SQL request must be an object");
+  }
+  for (const key of Object.keys(input)) {
+    if (!RESEARCH_SQL_REQUEST_KEYS.has(key)) {
+      throw new TypeError(`${key} is not client-owned research SQL authority`);
+    }
+  }
+  return input;
+}
+
 function authorizedPartitionSource(partition, inventory, sourceId) {
   const sourceIds = partition?.partition?.sourceIds;
   if (!Array.isArray(sourceIds) || !sourceIds.includes(sourceId)) {
@@ -173,6 +191,7 @@ export async function openResearchDomain(options = {}) {
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
   const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
   const marketDataDir = options.marketDataDir ?? "data";
+  const researchSqlNow = options.now ?? (() => Date.now());
   if (typeof executeExperimentBatch !== "function") {
     throw new TypeError("executeExperimentBatch must be a function");
   }
@@ -182,9 +201,13 @@ export async function openResearchDomain(options = {}) {
   if (typeof marketDataDir !== "string" || marketDataDir.length === 0) {
     throw new TypeError("marketDataDir must be a non-empty server-owned path");
   }
+  if (typeof researchSqlNow !== "function") {
+    throw new TypeError("now must be a function");
+  }
 
   let accepting = true;
   let queue = Promise.resolve();
+  const researchSqlSessions = new Set();
 
   function enqueue(operation) {
     if (!accepting) {
@@ -293,12 +316,27 @@ export async function openResearchDomain(options = {}) {
     }
     return {
       experiment,
+      execution,
       diagnostics: createAuthoritativeExperimentDiagnostics({
         experimentId: experiment.experimentId,
         metricSetId: experiment.metricSetId,
         execution
       })
     };
+  }
+
+  function trackResearchSqlSession(session) {
+    researchSqlSessions.add(session);
+    let released = false;
+    return Object.freeze({
+      ...session,
+      async close() {
+        if (released) return;
+        released = true;
+        researchSqlSessions.delete(session);
+        await session.close();
+      }
+    });
   }
 
   return Object.freeze({
@@ -498,6 +536,30 @@ export async function openResearchDomain(options = {}) {
       return diagnostics.diagnoseMissingCandidate(request);
     },
 
+    async openDevelopmentResearchSql(input) {
+      assertPublicSafeValue(input, "development research SQL");
+      const request = assertDevelopmentResearchSqlInput(input);
+      const session = await openDevelopmentResearchSqlSession({
+        dataDir: marketDataDir,
+        researchRunId: request.researchRunId,
+        partitionId: request.partitionId,
+        experimentIds: request.experimentIds,
+        now: researchSqlNow,
+        verifySourceFingerprint,
+        getPartition: (researchRunId, partitionId) => useEvidence(
+          (evidence) => evidence.getPartition(researchRunId, partitionId)
+        ),
+        getEvidencePlan: (researchRunId, evidencePlanId) => useEvidence(
+          (evidence) => evidence.getEvidencePlan(researchRunId, evidencePlanId)
+        ),
+        getEvidenceInventory: (researchRunId, evidenceInventoryId) => useEvidence(
+          (evidence) => evidence.getEvidenceInventory(researchRunId, evidenceInventoryId)
+        ),
+        reconstructExperiment: reconstructDevelopmentExperiment
+      });
+      return trackResearchSqlSession(session);
+    },
+
     async recordResearchNote(input) {
       assertPublicSafeValue(input, "research note");
       return await useMemory((memory) => memory.recordResearchNote(input));
@@ -515,6 +577,9 @@ export async function openResearchDomain(options = {}) {
       if (!accepting) return;
       accepting = false;
       await queue;
+      const sessions = [...researchSqlSessions];
+      researchSqlSessions.clear();
+      await Promise.all(sessions.map((session) => session.close()));
     }
   });
 }
