@@ -101,7 +101,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
             futurePrice: null,
             changePercent: null,
             outcome: "UNAVAILABLE",
-            unavailableReason: "SOURCE_ENDED"
+            unavailableReason: "NO_FUTURE_OBSERVATION"
           }
         ],
         experimentPoints: [
@@ -215,7 +215,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
       ORDER BY horizon_ms
     `), [
       ["10000", "8", 101, 1, "UP", null],
-      ["20000", null, null, null, "UNAVAILABLE", "SOURCE_ENDED"]
+      ["20000", null, null, null, "UNAVAILABLE", "NO_FUTURE_OBSERVATION"]
     ]);
 
     assert.deepEqual(await rows(memory.connection, `
