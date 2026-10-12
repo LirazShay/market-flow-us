@@ -50,7 +50,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `5.3` | Chat 5 | `done` | `3.2`, `3.3`, `4.2`, `5.2` | Full Chromium U.S. journey completed; historical evidence preserved. |
 | `6.1` | Chat 6 | `done` | `2.1` | Packaging/branding completed; historical evidence preserved. |
 | `6.2` | Chat 6 | `done` | `2.3`, `3.1`, `4.2`, `6.1` | Diagnostics/live verification completed; historical evidence preserved. |
-| `6.3` | Chat 7 | `done` | `2.2`, `2.3` | Scalable workload tooling completed; historical evidence preserved. |
+| `6.3` | Chat 7 | `done` | `2.3`, `4.1` | Scalable workload tooling completed; historical evidence preserved. |
 | `7.1` | Chat 7 | `done` | `5.3`, `6.2`, `6.3` | Deterministic release candidate proof completed; historical evidence preserved. |
 | `7.2` | Chat 8 | `done` | `7.1` | Local Fake acceptance package completed; historical evidence preserved. |
 | `7.3` | Chat 9 | `done` | `7.2`, `6.1` | Repository/release coherence completed; historical evidence preserved. |
