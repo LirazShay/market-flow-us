@@ -38,7 +38,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `3.3` | Chat 3 | `done` | `3.1` | Detail/History completed; historical evidence preserved. |
 | `4.1` | Chat 4 | `done` | `2.2` | U.S. Scanner built-ins/query authoring completed; historical evidence preserved. |
 | `4.2` | Chat 4 | `done` | `4.1` | Scanner runtime/saved-query behavior completed; historical evidence preserved. |
-| `4.3.1` | Chat 10 | `done` | `4.3.1` | Demo Buy schema v4/persistence completed; PR #19 and durable contracts preserve evidence. |
+| `4.3.1` | Chat 10 | `done` | `2.1` | Demo Buy schema v4/persistence completed; PR #19 and durable contracts preserve evidence. |
 | `4.3.2` | Chat 10 | `done` | `4.3.1` | Demo Buy capture authority/protocol completed; PR #20 and durable contracts preserve evidence. |
 | `4.3.3` | Chat 11 | `done` | `4.3.1` | Demo Buy evaluation/read model completed; PR #21 and workload evidence preserved. |
 | `4.4.1` | Chat 12 | `done` | `4.3.2`, `4.2`, `5.2` | Scanner capture/Auto workflow completed; PR #22 evidence preserved. |
