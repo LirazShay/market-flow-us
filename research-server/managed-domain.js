@@ -1,6 +1,8 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
 
 import { openResearchDomain } from "./domain.js";
+import { executeInterruptibleAuthoritativeExperimentBatch } from "./interruptible-experiment.js";
 import { createResearchJobController } from "./job-control.js";
 import { openResearchJobLedger } from "./job-ledger.js";
 import { createResearchResourceGovernor } from "./resource-governor.js";
@@ -183,7 +185,18 @@ function cancellationPossible(job) {
 
 export async function openManagedResearchDomain(options = {}) {
   const resourcePolicy = assertResourcePolicy(options.resourcePolicy);
-  const base = await openResearchDomain(options);
+  const experimentExecutionContext = new AsyncLocalStorage();
+  const defaultExecuteExperimentBatch = async (input) => {
+    const context = experimentExecutionContext.getStore();
+    return await executeInterruptibleAuthoritativeExperimentBatch({
+      ...input,
+      ...(context?.signal ? { signal: context.signal } : {})
+    });
+  };
+  const base = await openResearchDomain({
+    ...options,
+    executeExperimentBatch: options.executeExperimentBatch ?? defaultExecuteExperimentBatch
+  });
   const jobSchemaVersion = await withComponent(
     openResearchJobLedger,
     options,
@@ -360,7 +373,10 @@ export async function openManagedResearchDomain(options = {}) {
           budget: requestBudget.snapshot()
         });
         control.checkpoint();
-        const experiment = await base.executeDevelopmentExperiment(intent);
+        const experiment = await experimentExecutionContext.run(
+          Object.freeze({ signal: control.signal }),
+          () => base.executeDevelopmentExperiment(intent)
+        );
         control.checkpoint();
         const summary = await base.getExperimentSummary(job.researchRunId, experiment.experimentId);
         const rows = [{
