@@ -236,3 +236,57 @@ test("TREE 11.4 clientRequestId retries reuse durable work and changed intent fa
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test("TREE 11.4 transient job-ledger access preserves RUNNING work while startup reconciliation still fails it closed", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-jobs-"));
+  const ledgerPath = path.join(tempDir, "research-ledger.duckdb");
+  let jobs = null;
+
+  try {
+    await createRun(ledgerPath);
+    jobs = await openResearchJobLedger({
+      dbPath: ledgerPath,
+      now: () => 1_800_000_020_000,
+      jobIdFactory: () => RUNNING_JOB_ID
+    });
+    await jobs.createJob({
+      researchRunId: RUN_ID,
+      operation: "execute_development_experiment",
+      clientRequestId: "transient-running-request",
+      intent: { sourceId: "primary" }
+    });
+    await jobs.markJobRunning(RUN_ID, RUNNING_JOB_ID);
+    await jobs.close();
+    jobs = null;
+
+    jobs = await openResearchJobLedger({
+      dbPath: ledgerPath,
+      now: () => 1_800_000_021_000,
+      reconcileInterrupted: false,
+      jobIdFactory: () => {
+        throw new Error("transient access must not allocate an ID");
+      }
+    });
+    const transientView = await jobs.getJob(RUN_ID, RUNNING_JOB_ID);
+    assert.equal(transientView.status, "RUNNING");
+    assert.equal(transientView.errorCode, null);
+    assert.equal(transientView.finishedAtMs, null);
+    await jobs.close();
+    jobs = null;
+
+    jobs = await openResearchJobLedger({
+      dbPath: ledgerPath,
+      now: () => 1_800_000_022_000,
+      jobIdFactory: () => {
+        throw new Error("startup reconciliation must not allocate an ID");
+      }
+    });
+    const reconciled = await jobs.getJob(RUN_ID, RUNNING_JOB_ID);
+    assert.equal(reconciled.status, "FAILED");
+    assert.equal(reconciled.errorCode, "RESEARCH_JOB_INTERRUPTED");
+    assert.equal(reconciled.finishedAtMs, 1_800_000_022_000);
+  } finally {
+    if (jobs) await jobs.close();
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
