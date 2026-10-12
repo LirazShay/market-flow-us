@@ -210,13 +210,32 @@ export async function openManagedResearchDomain(options = {}) {
   const queueWaits = new Map();
   const background = new Map();
   let accepting = true;
+  let storageTail = Promise.resolve();
+
+  async function serializeStorage(operation) {
+    const previous = storageTail;
+    let release;
+    storageTail = new Promise((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    try {
+      return await operation();
+    } finally {
+      release();
+    }
+  }
 
   async function useJobs(operation) {
-    return await withComponent(openResearchJobLedger, transientJobOptions, operation);
+    return await serializeStorage(
+      () => withComponent(openResearchJobLedger, transientJobOptions, operation)
+    );
   }
 
   async function useResults(operation) {
-    return await withComponent(openResearchResultLedger, options, operation);
+    return await serializeStorage(
+      () => withComponent(openResearchResultLedger, options, operation)
+    );
   }
 
   const controllerLedger = Object.freeze({
