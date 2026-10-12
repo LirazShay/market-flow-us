@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run procedure stays deferred/non-blocking while Backtest execution progresses", async () => {
+test("first-run procedure stays deferred/non-blocking while independently allocated development progresses", async () => {
   const [
     startHere,
     historicalPlan,
@@ -162,8 +162,7 @@ test("first-run procedure stays deferred/non-blocking while Backtest execution p
   assert.match(finalExecution, /FR-2 exact selected-SHA checkout \| DEFERRED/);
   assert.match(finalExecution, new RegExp(historicalDeferredCandidate));
 
-  // EXECUTION may advance through Branch 10; stable owner/dependency allocation must not depend on mutable task status/pointer text.
-  assert.match(execution, /Backtest Branch 10 is .*allocated for sequential execution/);
+  // Stable historical allocation and backlog separation must not depend on whichever branch is currently active.
   for (const allocation of [
     /\| `10\.1` \| Chat 29 \| `(pending|in_progress|done|blocked)` \| `7\.6\.5` \|/,
     /\| `10\.2` \| Chat 30 \| `(pending|in_progress|done|blocked)` \| `10\.1` \|/,

@@ -19,30 +19,30 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: ai_researcher_planned
+overall_status: ai_researcher_in_progress
 
 current:
-  chat: null
-  node: null
-  title: null
-  status: pending
+  chat: 35
+  node: "11.1"
+  title: "Research Server domain foundation and durable ledger"
+  status: in_progress
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 49
-  pending: 8
-  in_progress: 0
+  pending: 7
+  in_progress: 1
   blocked: 0
-  current_chat: null
-  current_node: null
+  current_chat: 35
+  current_node: "11.1"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "11.1"
   owner: "Chat 35"
-  status: pending
-  action: "Branch 11 Autonomous AI Researcher is planned and allocated. Start implementation only through explicit executor activation such as 'אני צאט 35 תתחיל'. Chat 35 owns Research Server domain + durable ledger/run-resume foundation. Generic continuation does not activate Chat 35."
+  status: in_progress
+  action: "Continue the active Research Server durable-ledger foundation through the remaining evidence identity/plan/partition, research notes, Resume Capsule and transaction-fault success evidence; do not start 11.2 or 11.3 before 11.1 is done and merged."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
