@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with durable run-level budget observability. Research SQL and Development experiment execution now have finite time ceilings and bounded DuckDB threads/RAM/temp-disk resource ceilings; explicit sqlTimeoutMs and duckdbResourceLimits pass through openResearchDomain to the Development SQL session. Fast #854 + Planning/Contract #1044 + Workload #440 are green on implementation head 951a8178. Next reconcile persisted Run budgetPolicy with managed policy and expose durable used/remaining plus experiment/analysis/job counts through getResearchRun/resumeResearchRun."
+  action: "Continue Chat 38 / 11.4 with durable ledger-growth/submission governance. Durable Run budget-policy reconciliation and run-level used/remaining plus experiment/analysis/job counts are now green across restart; legacy empty policies reconcile once and mismatched active policy fails closed before expensive submission. Fast #862 + Planning/Contract #1052 + Workload #448 are green on implementation head a70c03bf. Next bound retained Job/result growth and total run experiment/analysis submissions without changing completed 11.2/11.3 semantics."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
