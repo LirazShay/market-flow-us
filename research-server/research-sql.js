@@ -86,7 +86,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "max_authorized_horizon_ms", type: "BIGINT", nullable: true, origin: "provenance", meaning: "Maximum horizon authorized by the partition when supplied.", known_unit: "milliseconds" }
     ]),
     manifestRelation("research_cycles", "Complete authoritative cycle timing and coverage facts inside the authorized partition.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local authoritative cycle identity.", identity_role: "source_cycle" },
       { column: "universe_revision", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted source universe revision." },
       { column: "started_at_ms", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Local cycle start time.", known_unit: "milliseconds" },
@@ -101,7 +101,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "unexpected", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted unexpected-row diagnostic count." }
     ]),
     manifestRelation("research_history", "Authorized successful market observations across one or more logical sources.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local cycle identity.", identity_role: "source_cycle", scanner_equivalent: "history.cycle_id / latest.cycle_id", decision_time_eligible: true, research_only: false },
       { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source universe revision.", scanner_equivalent: "history.universe_revision / latest.universe_revision", decision_time_eligible: true, research_only: false },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security", scanner_equivalent: "history.security_id / latest.security_id", decision_time_eligible: true, research_only: false },
@@ -136,7 +136,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "raw_data", type: "JSON", nullable: false, origin: "source_raw", meaning: "Persisted provider market-row JSON for discovery of fields not yet promoted to the typed projection.", scanner_equivalent: "history.raw_data / latest.raw_data", decision_time_eligible: true, research_only: false, caveats: ["Provider-shaped JSON; key meanings and units may be unverified.", "Missing, null, empty-string and numeric-zero source facts may differ and must not be conflated."] }
     ]),
     manifestRelation("research_universe", "Source-persisted universe lifecycle/display context for securities present in the authorized research partition; not exact historical T0 membership.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security" },
       { column: "is_current", type: "BOOLEAN", nullable: false, origin: "source_typed", meaning: "Persisted source-universe current-lifecycle flag.", future_dependent: true, caveats: ["Source lifecycle state is not exact historical membership at an arbitrary decision T0; use authoritative baseline history for that question."] },
       { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source-universe lifecycle revision.", future_dependent: true, caveats: ["May reflect source lifecycle state after a historical decision T0."] },
