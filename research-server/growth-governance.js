@@ -174,7 +174,7 @@ export async function assertResearchSubmissionCapacity({
 
   return await withConnection(
     dbPath,
-    ["research_runs", "research_jobs", "research_results"],
+    ["research_runs", "research_jobs"],
     async (connection) => {
       const runRows = await queryRows(
         connection,
@@ -216,21 +216,13 @@ export async function assertResearchSubmissionCapacity({
           analysisOperation: RESEARCH_ANALYSIS_OPERATION
         }
       );
-      const results = await queryRows(
-        connection,
-        `SELECT COUNT(*) AS result_count
-         FROM research_results
-         WHERE research_run_id = $researchRunId`,
-        { researchRunId: runId }
-      );
-      if (counts.length !== 1 || results.length !== 1) {
-        throw new Error("Research growth count query returned invalid cardinality");
+      if (counts.length !== 1) {
+        throw new Error("Research Job growth count query returned invalid cardinality");
       }
 
       const jobCount = assertCount(counts[0].job_count, "Job count");
       const experimentCount = assertCount(counts[0].experiment_count ?? 0, "Experiment submission count");
       const analysisCount = assertCount(counts[0].analysis_count ?? 0, "Analysis submission count");
-      const resultCount = assertCount(results[0].result_count, "Result Handle count");
 
       if (
         operationId === RESEARCH_EXPERIMENT_OPERATION
@@ -254,13 +246,6 @@ export async function assertResearchSubmissionCapacity({
       }
       if (jobCount >= limits.maxJobsPerRun) {
         throw growthError({ dimension: "jobRecords", consumed: jobCount, limit: limits.maxJobsPerRun });
-      }
-      if (resultCount >= limits.maxResultHandlesPerRun) {
-        throw growthError({
-          dimension: "resultHandles",
-          consumed: resultCount,
-          limit: limits.maxResultHandlesPerRun
-        });
       }
       return Object.freeze({ existingRequest: false });
     }
