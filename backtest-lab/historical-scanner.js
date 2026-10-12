@@ -164,10 +164,7 @@ async function createHistoricalSandbox({ sourcePath, baseline, signal, duckdbRes
     throwIfAborted(signal);
     instance = resourceLimits === null
       ? await DuckDBInstance.create(":memory:")
-      : await DuckDBInstance.create(":memory:", {
-        ...DUCKDB_HARDENING,
-        ...researchDuckDbConfig(resourceLimits)
-      });
+      : await DuckDBInstance.create(":memory:", researchDuckDbConfig(resourceLimits));
     connection = await instance.connect();
     releaseAbort = bindAbortInterrupt(signal, connection);
 
