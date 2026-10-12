@@ -1,4 +1,7 @@
 import { evaluateBacktestOutcomes } from "../backtest-lab/outcome-evaluator.js";
+import {
+  resolveResearchDuckDbResourceLimits
+} from "../backtest-lab/duckdb-resource-limits.js";
 import { openBacktestEvidenceSource } from "../backtest-lab/evidence-source.js";
 import {
   openBacktestHistoricalScanner,
@@ -28,9 +31,9 @@ function throwIfAborted(signal) {
   throw error;
 }
 
-async function openInterruptibleEvidenceSource(input, signal) {
+async function openInterruptibleEvidenceSource(input, signal, duckdbResourceLimits) {
   throwIfAborted(signal);
-  const evidence = await openBacktestEvidenceSource(input);
+  const evidence = await openBacktestEvidenceSource({ ...input, duckdbResourceLimits });
   let closed = false;
   const interrupt = () => {
     try {
@@ -60,7 +63,12 @@ export async function executeInterruptibleAuthoritativeExperimentBatch(input = {
     return await executeAuthoritativeExperimentBatch(input);
   }
 
-  const { signal: _signal, ...request } = input;
+  const duckdbResourceLimits = resolveResearchDuckDbResourceLimits(input.duckdbResourceLimits);
+  const {
+    signal: _signal,
+    duckdbResourceLimits: _duckdbResourceLimits,
+    ...request
+  } = input;
   throwIfAborted(signal);
 
   const execution = await executeAuthoritativeExperimentBatch({
@@ -71,16 +79,28 @@ export async function executeInterruptibleAuthoritativeExperimentBatch(input = {
         ...sweepInput,
         resolveBaselines: async (baselineInput) => {
           throwIfAborted(signal);
-          const resolved = await resolveBacktestBaselineSeries({ ...baselineInput, signal });
+          const resolved = await resolveBacktestBaselineSeries({
+            ...baselineInput,
+            signal,
+            duckdbResourceLimits
+          });
           throwIfAborted(signal);
           return resolved;
         },
         openHistoricalScanner: async (scannerInput) => {
           throwIfAborted(signal);
-          return await openBacktestHistoricalScanner({ ...scannerInput, signal });
+          return await openBacktestHistoricalScanner({
+            ...scannerInput,
+            signal,
+            duckdbResourceLimits
+          });
         },
         openEvidenceSource: async (evidenceInput) => {
-          return await openInterruptibleEvidenceSource(evidenceInput, signal);
+          return await openInterruptibleEvidenceSource(
+            evidenceInput,
+            signal,
+            duckdbResourceLimits
+          );
         },
         evaluateOutcomes: async (outcomeInput) => {
           throwIfAborted(signal);
