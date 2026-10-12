@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 from the durable jobs/result handles/resource-governance contract. The first checkpoint establishes persistent job lifecycle, clientRequestId idempotency and fail-closed restart state before cancellation, bounded results and hierarchical budgets."
+  action: "Continue Chat 38 / 11.4 with cancellation propagation. Durable job lifecycle/idempotency/restart plus frozen durable result handles with run-scoped ownership, stable ordering, bounded row/byte paging and handle-scoped cursors are already implemented and green in PR #102."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
