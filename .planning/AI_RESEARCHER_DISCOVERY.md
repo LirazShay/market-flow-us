@@ -75,6 +75,39 @@ use current evidence fully
 
 The infrastructure should therefore remain cadence-agnostic within the existing market-data contract: experiments use actual collected timestamps/cycles, not a hard-coded 10s/5s/3s assumption.
 
+## Product-evolution freedom for AI research
+
+The completed Market Flow US product is the starting platform, not an immutable ceiling on what the AI researcher may need.
+
+If discovery, implementation measurements or actual AI research prove that an additional product capability would materially improve research quality, observability, efficiency or reproducibility, the project may add or adapt that capability. Examples that may be evaluated include:
+
+- denser configurable Collector cadence;
+- additional collection metadata or timing diagnostics;
+- carefully justified derived/precomputed features;
+- new machine-oriented service endpoints;
+- bounded batch APIs;
+- reusable evidence handles/caches;
+- profiling/statistics support;
+- additional provenance/instrumentation;
+- schema additions outside immutable source evidence when justified;
+- new local research-only persistence or indices when measurement proves direct reads insufficient.
+
+These are possibilities, not preapproved implementations. Every such change must pass the normal S&T necessity/tactic-validity test and preserve the existing proven product unless the new requirement explicitly supersedes it.
+
+Default engineering rule:
+
+```text
+identify AI research limitation with evidence
+→ determine whether existing capability can satisfy it
+→ if not, choose the smallest product/collector/server/schema change that materially solves it
+→ preserve current behavior/contracts where not intentionally changed
+→ add focused regression/proof
+→ run affected Fast/Browser/Workload/live verification as required
+→ only then rely on the new capability in AI research
+```
+
+The researcher itself must not silently mutate live collection configuration. Changes such as 10s → 5s/3s collection remain explicit product/operator configuration changes implemented and verified through normal Market Flow US boundaries.
+
 ## Critical design correction: human Backtest is not the AI interface blueprint
 
 The completed Backtest Lab was intentionally optimized for a human investigator using Inspect / Compare / Sweep. Those surfaces prove valuable semantics and engines, but their interaction model is not a requirement for the AI researcher.
@@ -229,7 +262,13 @@ Define the final artifact contract so the user receives at least copy/paste-read
 
 Define how the AI distinguishes a weak strategy idea from an information-resolution limitation. The platform should be able to report when current cadence/gaps materially limit a requested very-short-horizon objective and preserve enough experiment detail that later 5s/3s evidence can test the same hypotheses/query family comparably.
 
-This is an evidence-quality output, not permission for the researcher to modify the live Collector cadence itself.
+This is an evidence-quality output. Any actual Collector/data-contract enhancement follows the normal product change process rather than being hidden inside a research experiment.
+
+### 11. Product capability gap feedback loop
+
+Define how a Research Run can produce a structured recommendation that the platform itself lacks a materially useful capability (for example denser cadence, a missing diagnostic, a reusable derived value or a more efficient evidence operation) without allowing the AI to self-modify production code/configuration.
+
+Such findings should be promotable into normal ST Planner/product work with the experiment/evidence that motivated them. The research system should make capability gaps observable, reproducible and separable from weak-query failures.
 
 ## Hard boundaries already fixed
 
@@ -238,7 +277,8 @@ This is an evidence-quality output, not permission for the researcher to modify 
 - no provider/browser credentials, cookies or session/auth material;
 - no arbitrary filesystem mutation or arbitrary source paths;
 - no automatic Scanner activation or trading;
-- no authority for the researcher to change live collection cadence/configuration automatically;
+- no authority for the researcher to self-modify production code or silently change live collection configuration;
+- explicit planned product/Collector/server/schema changes are allowed when evidence shows they materially improve AI research and existing behavior is preserved or intentionally superseded with full proof;
 - expensive work is bounded and cancellable;
 - diagnostics/research artifacts remain public-safe;
 - meaningful experiments are reproducible;
@@ -253,9 +293,10 @@ Discovery is ready to become a full ST Planner implementation cycle only when:
 2. the architecture/data-access alternatives above have been investigated deeply enough to select and justify a tactic;
 3. the run-time objective contract is defined within the momentum candidate-selection domain without hard-coding one query mission;
 4. actual evidence cadence/coverage is first-class research metadata and does not become a hidden fixed assumption;
-5. the experiment/ledger/resume and validation model is sufficiently specified;
-6. MCP/desktop integration assumptions have been checked against current capabilities;
-7. security/resource/reproducibility boundaries are contract-ready;
-8. final target-machine acceptance can be stated end-to-end from desktop ChatGPT through MCP/research server to reproducible final SQL/report.
+5. the product-capability feedback/escalation path is defined so missing AI capabilities can be added safely without weakening existing product guarantees;
+6. the experiment/ledger/resume and validation model is sufficiently specified;
+7. MCP/desktop integration assumptions have been checked against current capabilities;
+8. security/resource/reproducibility boundaries are contract-ready;
+9. final target-machine acceptance can be stated end-to-end from desktop ChatGPT through MCP/research server to reproducible final SQL/report.
 
 Until then, do not allocate implementation tasks and do not write implementation code.
