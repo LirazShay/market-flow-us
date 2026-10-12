@@ -118,6 +118,26 @@ test("TREE 11.3 research SQL rejects escape attempts while preserving broad anal
       ["1002", 90, 95, "2"]
     ]);
 
+    const crossSecurity = await session.execute(`
+      SELECT
+        left_observation.security_id AS left_security_id,
+        right_observation.security_id AS right_security_id,
+        left_observation.Price - right_observation.Price AS price_spread
+      FROM research_history AS left_observation
+      JOIN research_history AS right_observation
+        ON right_observation.source_id = left_observation.source_id
+       AND right_observation.security_id > left_observation.security_id
+      ORDER BY left_security_id, right_security_id
+    `);
+    assert.deepEqual(crossSecurity.rows, [["1001", "1002", 10]]);
+
+    const correlation = await session.execute(`
+      SELECT corr(Price, ChangePercent) AS price_change_correlation
+      FROM research_history
+    `);
+    assert.equal(correlation.rowCount, 1);
+    assert.ok(Math.abs(correlation.rows[0][0] - 1) < 1e-12);
+
     const safeCatalog = await session.execute(`
       SELECT table_name
       FROM duckdb_tables()
