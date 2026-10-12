@@ -24,6 +24,7 @@ async function seedSource(dbPath, { securityId, excludedSecurityId, symbol, pric
     now: () => 1_700_000_000_000
   });
   const writer = database.writerConnection;
+  const universeOnlySecurityId = `${securityId}-universe-only`;
 
   try {
     await writer.run(`
@@ -36,6 +37,24 @@ async function seedSource(dbPath, { securityId, excludedSecurityId, symbol, pric
         (1, 'research-seed', 1, 'complete', 1900, 1990, 2000, 90, 1, 1, 1, 0, 0, 0, 1, '[]', NULL, NULL),
         (2, 'research-seed', 2, 'complete', 3900, 3990, 4000, 90, 1, 1, 1, 0, 0, 0, 1, '[]', NULL, NULL)
     `);
+
+    await writer.run(
+      `INSERT INTO universe (
+        security_id, is_current, universe_revision, first_seen_at_ms, last_seen_at_ms,
+        Symbol, PaperNameEng, PaperNameHeb, ExchangeName, raw_source
+      ) VALUES
+        ($securityId, false, 7, 100, 9000, $universeSymbol, 'Universe included', 'Universe Heb', 'NASDAQ', '{}'),
+        ($excludedSecurityId, true, 8, 3900, 4100, $excludedSymbol, 'Universe outside range', NULL, 'NYSE', '{}'),
+        ($universeOnlySecurityId, true, 9, 5000, 6000, $universeOnlySymbol, 'Universe only', NULL, 'NYSE', '{}')`,
+      {
+        securityId,
+        excludedSecurityId,
+        universeOnlySecurityId,
+        universeSymbol: `${symbol}-U`,
+        excludedSymbol: `${symbol}X-U`,
+        universeOnlySymbol: `${symbol}O-U`
+      }
+    );
 
     await writer.run(
       `INSERT INTO history (
@@ -204,13 +223,14 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
     }
 
     const universe = await sandbox.execute(`
-      SELECT source_id, security_id, is_current, first_seen_at_ms, last_seen_at_ms
+      SELECT source_id, security_id, is_current, universe_revision,
+             first_seen_at_ms, last_seen_at_ms, Symbol, PaperNameEng, PaperNameHeb, ExchangeName
       FROM research_universe
       ORDER BY source_id, security_id
     `);
     assert.deepEqual(universe.rows, [
-      ["active", "1001", true, "1995", "1995"],
-      [ARCHIVE_ID, "2001", true, "1995", "1995"]
+      ["active", "1001", false, "7", "100", "9000", "ACT-U", "Universe included", "Universe Heb", "NASDAQ"],
+      [ARCHIVE_ID, "2001", false, "7", "100", "9000", "ARC-U", "Universe included", "Universe Heb", "NASDAQ"]
     ]);
 
     const sources = await sandbox.execute(`
@@ -263,8 +283,18 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
     assert.equal(field(historyManifest, "cycle_committed_at_ms").origin, "authority_derived");
     assert.equal(field(historyManifest, "cycle_committed_at_ms").research_only, true);
 
+    const universeManifest = relation(manifest, "research_universe");
+    assert.match(universeManifest.meaning, /source-persisted/iu);
+    assert.equal(field(universeManifest, "is_current").origin, "source_typed");
+    assert.equal(field(universeManifest, "is_current").decision_time_eligible, false);
+    assert.equal(field(universeManifest, "is_current").future_dependent, true);
+    assert.match(field(universeManifest, "is_current").caveats.join(" "), /not exact historical membership/iu);
+    assert.equal(field(universeManifest, "last_seen_at_ms").origin, "source_typed");
+    assert.equal(field(universeManifest, "last_seen_at_ms").future_dependent, true);
+    assert.equal(field(universeManifest, "Symbol").future_dependent, true);
+
     const manifestText = JSON.stringify(manifest);
-    for (const forbidden of ["session_id", "source_metadata_json", "filesystem", "cookie", "authorization"] ) {
+    for (const forbidden of ["session_id", "source_metadata_json", "filesystem", "cookie", "authorization", "raw_source"] ) {
       assert.equal(manifestText.includes(forbidden), false, `manifest leaked ${forbidden}`);
     }
 
