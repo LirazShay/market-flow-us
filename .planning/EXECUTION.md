@@ -14,9 +14,9 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — implementation is active at `11.1`, owned by explicitly activated `Chat 35`.
+Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed foundation task `11.1`; no Branch-11 task is currently active.
 
-`11.1` is the only active Branch-11 task. `11.2` and `11.3` remain blocked by their real dependency on completed `11.1`; a generic `תמשיך לשלב הבא` never changes numbered executor identity.
+`11.2` / `Chat 36` and `11.3` / `Chat 37` are now independently dependency-unblocked siblings after completed `11.1`. Either starts only through explicit activation of its assigned numbered chat; a generic `תמשיך לשלב הבא` never changes numbered executor identity.
 
 Allocation follows natural feature/context boundaries, not a target number of chats. `11.2` and `11.3` are intentionally independent after `11.1`; `11.4` joins both expensive execution families; later work depends only on real prerequisites.
 
@@ -77,7 +77,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `10.4` | Chat 32 | `done` | `10.2`, `10.3` | Inspect/Compare complete point evidence completed; PRs #83–#86 and Chromium/service proof preserved. |
 | `10.5` | Chat 33 | `done` | `10.4` | Deterministic seconds/minutes Sweep + exact drill-down completed; PR #88 and CI evidence preserved. |
 | `10.6` | Chat 34 | `done` | `10.5` | Backtest productization/performance/reclosure completed through PRs #89–#95; final source-immutability/security review and green main evidence preserved. |
-| `11.1` | Chat 35 | `in_progress` | `10.6` | PR #98 draft: dedicated hardened Research Ledger + durable Research Run foundation implemented; immutable run-scoped Objective Versions and exact hash-bound Query Artifacts are under active verification. |
+| `11.1` | Chat 35 | `done` | `10.6` | PR #98 squash-merged as `49be2f619871a7cbe049ed0970c970738850f013`; hardened separate Research Ledger, run/objective/query/evidence/note/resume authority, cross-run fail-closed IDs, immutable hashes, logical evidence fingerprints, transaction rollback proof, public-safe persistence and composed restart proof all reclosed with green Fast/Planning CI on branch and main. |
 | `11.2` | Chat 36 | `pending` | `11.1` | — |
 | `11.3` | Chat 37 | `pending` | `11.1` | — |
 | `11.4` | Chat 38 | `pending` | `11.2`, `11.3` | — |
@@ -105,13 +105,14 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - Completed execution rows from Branches 1–10: **49**.
 - New Branch-11 implementation rows: **8**.
 - Current execution rows: **57**.
-- Done: **49**.
+- Done: **50**.
 - Pending: **7**.
-- In progress: **1**.
+- In progress: **0**.
 - Blocked: **0**.
-- Active owner: `Chat 35`, task `11.1`.
+- Active owner: **none**; explicit activation is required for the next numbered executor.
+- First normal sequence pointer: `Chat 36`, task `11.2`; sibling `Chat 37`, task `11.3`, is also dependency-unblocked and may be activated independently.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
 
-`11.1` remains active until its complete success evidence is green and PR #98 is merged; later Branch-11 tasks remain pending until their real dependencies are done.
+`11.1` is complete and merged. No Branch-11 task is active until the user explicitly activates an assigned executor; the normal next sequence pointer is `Chat 36 / 11.2`, while `Chat 37 / 11.3` is also independently runnable.
