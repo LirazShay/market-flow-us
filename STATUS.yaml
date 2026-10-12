@@ -43,7 +43,7 @@ next_pointer:
   task: "11.3"
   owner: "Chat 37"
   status: in_progress
-  action: "Continue Chat 37 / 11.3 from Draft PR #101 with Research Domain SQL composition complete; finish broader research-specific adversarial SQL admission/escape coverage and final success-evidence reclosure before advancing to Chat 38."
+  action: "Continue Chat 37 / 11.3 from Draft PR #101 with implementation and adversarial SQL admission/escape proof complete; perform final 11.3 success-evidence reclosure, PR readiness/merge and green-main verification before advancing to Chat 38."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
