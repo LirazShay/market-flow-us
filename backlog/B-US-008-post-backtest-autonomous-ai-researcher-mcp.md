@@ -32,6 +32,7 @@ Active discovery truth is recorded in:
 - `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; still pre-implementation.
 - `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected phase-aware research projection, SQL sandbox, raw/typed evidence and multi-day data-surface direction; still pre-implementation.
 - `.planning/AI_RESEARCHER_OPERATING_CONTRACT.md` — selected Plugin/Skill + MCP bootstrap, progressive-disclosure, autonomy, resume and final-output operating contract; still pre-implementation.
+- `.planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md` — selected threat model, SQL/sandbox defense-in-depth, resource/cancellation/restart governance and required workload/security proof; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -53,6 +54,7 @@ The project must plan the complete usable path, including:
 - anti-overfitting/holdout methodology and an objective interpretation contract that works across future momentum-run goals;
 - enough research freedom for the AI to choose its own investigation approach rather than following a rigid hard-coded reasoning workflow;
 - plugin/Skill bootstrap and progressive disclosure so a fresh AI conversation can operate correctly without a giant static prompt or prior chat history;
+- defense-in-depth SQL/source/holdout isolation plus measured CPU/memory/disk/time/concurrency governance and crash/cancellation proof;
 - final copy/paste-ready Scanner SQL plus a reproducible evidence report;
 - target-machine desktop ChatGPT → Plugin/Skill + MCP → local research server → Backtest/evidence → recommendation acceptance.
 
@@ -96,6 +98,12 @@ The AI may choose its own hypotheses, experiment order, research SQL, ablations,
 
 Bootstrap is progressive: small Skill instructions + live `describe_research_environment`/resume state first, then schema/evidence/results on demand. Context is not used as a warehouse; summaries and stable result handles precede raw-row drill-down.
 
+### Security and workload validity are proven, not assumed
+
+AI-authored SQL/tool input is treated as untrusted analytical input even on localhost. Original evidence is reachable only through allowlisted read-only server code; AI SQL runs in an isolated hardened sandbox with unauthorized evidence physically absent. Resource limits are nested, observable, cancellable and configurable rather than unbounded.
+
+Do not freeze performance limits from intuition. Extend the existing Market Flow US workload framework with deterministic CI, representative 4,096-security synthetic research profiles and final target-machine real-evidence acceptance. Security acceptance includes adversarial SQL, holdout isolation, cancellation/restart integrity and before/after source fingerprint/hash equality.
+
 ## Hard boundaries
 
 Research autonomy does not grant unrelated machine authority. The design must preserve source DB immutability, no broker/order authority, no provider/browser credentials/session data, no arbitrary source-path mutation, no automatic live Scanner activation/trading, bounded/cancellable expensive work, public-safe diagnostics and reproducible authority separation.
@@ -109,7 +117,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, the research projection/data-surface design and the Plugin/Skill + MCP operating contract for fresh/resumed AI sessions.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, the research projection/data-surface design, the Plugin/Skill + MCP operating contract for fresh/resumed AI sessions, and the defense-in-depth security/resource/workload proof model.
 
 ## Completion boundary
 
