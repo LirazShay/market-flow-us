@@ -42,7 +42,7 @@ next_pointer:
   task: "11.2"
   owner: "Chat 36"
   status: in_progress
-  action: "Continue Chat 36 / 11.2 from the active experiment-authority implementation. Chat 37 / 11.3 remains independently dependency-unblocked after 11.1 but generic continuation must not switch numbered executor identity."
+  action: "Continue Chat 36 / 11.2 with final success-evidence reclosure after the durable drill-down and source-fingerprint blocker fixes. Chat 37 / 11.3 remains independently dependency-unblocked after 11.1 but generic continuation must not switch numbered executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
