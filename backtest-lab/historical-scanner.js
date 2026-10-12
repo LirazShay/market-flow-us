@@ -10,6 +10,42 @@ function assertRequestedAtMs(requestedAtMs) {
   }
 }
 
+function assertAbortSignal(signal) {
+  if (signal === undefined || signal === null) return null;
+  if (
+    typeof signal !== "object"
+    || typeof signal.aborted !== "boolean"
+    || typeof signal.addEventListener !== "function"
+    || typeof signal.removeEventListener !== "function"
+  ) {
+    throw new TypeError("signal must be an AbortSignal.");
+  }
+  return signal;
+}
+
+function throwIfAborted(signal) {
+  if (!signal?.aborted) return;
+  if (typeof signal.throwIfAborted === "function") signal.throwIfAborted();
+  const error = new Error("Backtest execution was aborted.");
+  error.name = "AbortError";
+  throw error;
+}
+
+function bindAbortInterrupt(signal, connection) {
+  if (signal === null) return () => undefined;
+  throwIfAborted(signal);
+  const interrupt = () => {
+    try {
+      connection.interrupt();
+    } catch {
+      // Abort remains authoritative even if interrupt races connection close.
+    }
+  };
+  signal.addEventListener("abort", interrupt, { once: true });
+  if (signal.aborted) interrupt();
+  return () => signal.removeEventListener("abort", interrupt);
+}
+
 function sqlStringLiteral(value) {
   if (typeof value !== "string" || value.length === 0 || value.includes("\0")) {
     throw new TypeError("SQL string literal source must be a non-empty string without NUL.");
@@ -58,11 +94,13 @@ async function resolveBaseline(connection, requestedAtMs) {
 export async function resolveBacktestBaselineSeries({
   dataDir,
   sourceId,
-  requestedAtMsList
+  requestedAtMsList,
+  signal
 } = {}) {
   if (!Array.isArray(requestedAtMsList) || requestedAtMsList.length === 0) {
     throw new TypeError("requestedAtMsList must contain at least one point.");
   }
+  const boundedSignal = assertAbortSignal(signal);
 
   let previous = -1;
   for (const requestedAtMs of requestedAtMsList) {
@@ -73,17 +111,22 @@ export async function resolveBacktestBaselineSeries({
     previous = requestedAtMs;
   }
 
+  throwIfAborted(boundedSignal);
   const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  const releaseAbort = bindAbortInterrupt(boundedSignal, evidence.connection);
   try {
     const resolved = [];
     for (const requestedAtMs of requestedAtMsList) {
+      throwIfAborted(boundedSignal);
       resolved.push(Object.freeze({
         requestedAtMs,
         baseline: await resolveBaseline(evidence.connection, requestedAtMs)
       }));
+      throwIfAborted(boundedSignal);
     }
     return Object.freeze(resolved);
   } finally {
+    releaseAbort();
     await evidence.close();
   }
 }
@@ -104,18 +147,22 @@ function closeQuietly(value) {
   }
 }
 
-async function createHistoricalSandbox({ sourcePath, baseline }) {
+async function createHistoricalSandbox({ sourcePath, baseline, signal }) {
   let instance = null;
   let connection = null;
+  let releaseAbort = () => undefined;
 
   try {
+    throwIfAborted(signal);
     instance = await DuckDBInstance.create(":memory:");
     connection = await instance.connect();
+    releaseAbort = bindAbortInterrupt(signal, connection);
 
     const evidencePathLiteral = sqlStringLiteral(sourcePath);
     await connection.run(
       `ATTACH ${evidencePathLiteral} AS evidence (READ_ONLY, TYPE DUCKDB)`
     );
+    throwIfAborted(signal);
     await connection.run(
       `CREATE TABLE history AS
        SELECT *
@@ -123,6 +170,7 @@ async function createHistoricalSandbox({ sourcePath, baseline }) {
        WHERE cycle_id <= $baselineCycleId`,
       { baselineCycleId: baseline.cycleId }
     );
+    throwIfAborted(signal);
     await connection.run(
       `CREATE TABLE latest AS
        SELECT *
@@ -132,9 +180,11 @@ async function createHistoricalSandbox({ sourcePath, baseline }) {
     );
     await connection.run("DETACH evidence");
     await applySandboxHardening(connection);
+    throwIfAborted(signal);
 
-    return { instance, connection };
+    return { instance, connection, releaseAbort };
   } catch (error) {
+    releaseAbort();
     closeQuietly(connection);
     closeQuietly(instance);
     throw error;
@@ -148,6 +198,7 @@ function unavailablePoint(requestedAtMs) {
     requestedAtMs,
     baseline: null,
     scanner: null,
+    interrupt() {},
     async close() {
       if (closed) return;
       closed = true;
@@ -159,31 +210,38 @@ export async function openBacktestHistoricalScanner({
   dataDir,
   sourceId,
   requestedAtMs,
-  now = () => Date.now()
+  now = () => Date.now(),
+  signal
 } = {}) {
   assertRequestedAtMs(requestedAtMs);
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
+  const boundedSignal = assertAbortSignal(signal);
+  throwIfAborted(boundedSignal);
 
   const evidence = await openBacktestEvidenceSource({ dataDir, sourceId });
+  const releaseEvidenceAbort = bindAbortInterrupt(boundedSignal, evidence.connection);
   let sandbox = null;
 
   try {
     const baseline = await resolveBaseline(evidence.connection, requestedAtMs);
+    throwIfAborted(boundedSignal);
+    releaseEvidenceAbort();
     if (baseline === null) {
       await evidence.close();
       return unavailablePoint(requestedAtMs);
     }
 
     const sourcePath = resolveBacktestEvidenceSourcePath({ dataDir, sourceId });
-    sandbox = await createHistoricalSandbox({ sourcePath, baseline });
+    sandbox = await createHistoricalSandbox({ sourcePath, baseline, signal: boundedSignal });
     await evidence.close();
 
     const scanner = await createScannerAuthority({
       connection: sandbox.connection,
       now
     });
+    throwIfAborted(boundedSignal);
     let closed = false;
 
     return Object.freeze({
@@ -191,19 +249,26 @@ export async function openBacktestHistoricalScanner({
       requestedAtMs,
       baseline,
       scanner,
+      interrupt() {
+        if (closed) return;
+        sandbox.connection.interrupt();
+      },
       async close() {
         if (closed) return;
         closed = true;
+        sandbox.releaseAbort();
         sandbox.connection.closeSync();
         sandbox.instance.closeSync();
       }
     });
   } catch (error) {
+    releaseEvidenceAbort();
     try {
       await evidence.close();
     } catch {
       // Preserve the original preparation failure.
     }
+    sandbox?.releaseAbort?.();
     closeQuietly(sandbox?.connection);
     closeQuietly(sandbox?.instance);
     throw error;
