@@ -15,7 +15,6 @@ const INVENTORY_ID = "inv_11111111-1111-4111-8111-111111111111";
 const PLAN_ID = "plan_11111111-1111-4111-8111-111111111111";
 const PART_DEV = "part_11111111-1111-4111-8111-111111111111";
 const PART_VALIDATION = "part_22222222-2222-4222-8222-222222222222";
-const EXPERIMENT_ID = "exp_11111111-1111-4111-8111-111111111111";
 const METRIC_SET_ID = "metrics_11111111-1111-4111-8111-111111111111";
 const JOB_EXPERIMENT = "job_11111111-1111-4111-8111-111111111111";
 const JOB_SQL = "job_22222222-2222-4222-8222-222222222222";
@@ -110,7 +109,7 @@ function jobResultHandle(job) {
   return job.progress.resultHandles[0].resultHandle;
 }
 
-test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress and result handles around 11.2/11.3", async () => {
+test("TREE 11.4 managed Research Domain composes jobs, stable identities, budgets and durable results around 11.2/11.3", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-managed-research-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   let domain = null;
@@ -129,7 +128,6 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
       partitionIdFactory: sequence([PART_DEV, PART_VALIDATION]),
-      experimentIdFactory: () => EXPERIMENT_ID,
       metricSetIdFactory: () => METRIC_SET_ID,
       jobIdFactory: sequence([JOB_EXPERIMENT, JOB_SQL]),
       resultHandleFactory: sequence([RESULT_EXPERIMENT, RESULT_SQL])
@@ -182,7 +180,7 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       ]
     });
 
-    const submittedExperiment = await domain.submitDevelopmentExperiment({
+    const experimentRequest = {
       clientRequestId: "managed-experiment-1",
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
@@ -195,33 +193,37 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       intervalUnit: "seconds",
       topX: 1,
       horizonsMs: [10_000]
-    });
+    };
+    const submittedExperiment = await domain.submitDevelopmentExperiment(experimentRequest);
     assert.equal(submittedExperiment.jobId, JOB_EXPERIMENT);
+    assert.match(submittedExperiment.experimentId, /^exp_[0-9a-f-]{36}$/u);
+    const experimentId = submittedExperiment.experimentId;
 
     const experimentJob = await waitForTerminal(domain, RUN_ID, JOB_EXPERIMENT);
     assert.equal(experimentJob.status, "SUCCEEDED", terminalDiagnostic(experimentJob));
     assert.equal(experimentJob.errorCode, null);
     assert.equal(experimentJob.cancellationPossible, false);
-    assert.equal(experimentJob.progress.experimentId, EXPERIMENT_ID);
+    assert.equal(experimentJob.progress.experimentId, experimentId);
     assert.ok(experimentJob.progress.budget.some((scope) => scope.scope === "RUN"));
     const experimentResultHandle = jobResultHandle(experimentJob);
     assert.equal(experimentResultHandle, RESULT_EXPERIMENT);
     const experimentPage = await domain.getResultPage(RUN_ID, RESULT_EXPERIMENT, { pageSize: 10 });
     assert.equal(experimentPage.rows.length, 1);
-    assert.equal(experimentPage.rows[0].experimentId, EXPERIMENT_ID);
+    assert.equal(experimentPage.rows[0].experimentId, experimentId);
+    assert.deepEqual(await domain.submitDevelopmentExperiment(experimentRequest), submittedExperiment);
 
     const sqlRequest = {
       clientRequestId: "managed-sql-1",
       researchRunId: RUN_ID,
       partitionId: PART_DEV,
-      experimentIds: [EXPERIMENT_ID],
+      experimentIds: [experimentId],
       sql: "SELECT security_id, Price FROM research_history ORDER BY cycle_id",
       purpose: "DEBUG",
       outputMode: "PAGED_RESULT"
     };
     const submittedSql = await domain.submitDevelopmentResearchSql(sqlRequest);
     assert.equal(submittedSql.jobId, JOB_SQL);
-    assert.match(submittedSql.analysisId, /^analysis_/u);
+    assert.match(submittedSql.analysisId, /^analysis_[0-9a-f-]{36}$/u);
 
     const sqlJob = await waitForTerminal(domain, RUN_ID, JOB_SQL);
     assert.equal(sqlJob.status, "SUCCEEDED", terminalDiagnostic(sqlJob));
@@ -235,6 +237,27 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       { Price: 101, security_id: "1001" }
     ]);
 
+    const analysis = await domain.getAnalysis(RUN_ID, submittedSql.analysisId);
+    assert.equal(analysis.researchRunId, RUN_ID);
+    assert.equal(analysis.analysisId, submittedSql.analysisId);
+    assert.equal(analysis.jobId, JOB_SQL);
+    assert.equal(analysis.status, "SUCCEEDED");
+    assert.equal(analysis.errorCode, null);
+    assert.equal(analysis.resultHandle, RESULT_SQL);
+    assert.deepEqual(analysis.query, {
+      sql: sqlRequest.sql,
+      purpose: "DEBUG",
+      outputMode: "PAGED_RESULT",
+      partitionId: PART_DEV,
+      experimentIds: [experimentId]
+    });
+    assert.equal(analysis.provenance.analysisId, submittedSql.analysisId);
+    assert.equal(analysis.provenance.partitionId, PART_DEV);
+    assert.deepEqual(analysis.provenance.evidence.authorizedSources, [{
+      sourceId: "active",
+      sourceFingerprint: fingerprint
+    }]);
+
     const retrySql = await domain.submitDevelopmentResearchSql(sqlRequest);
     assert.deepEqual(retrySql, submittedSql);
     assert.deepEqual(await domain.getResultPage(RUN_ID, RESULT_SQL, { pageSize: 10 }), sqlPage);
@@ -244,6 +267,18 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       { jobId: JOB_EXPERIMENT, status: "SUCCEEDED" },
       { jobId: JOB_SQL, status: "SUCCEEDED" }
     ]);
+
+    await domain.close();
+    domain = null;
+    domain = await openManagedResearchDomain({
+      dbPath,
+      marketDataDir: tempDir,
+      now: () => 1_860_000_001_000,
+      resourcePolicy: RESOURCE_POLICY
+    });
+    assert.deepEqual(await domain.getAnalysis(RUN_ID, submittedSql.analysisId), analysis);
+    assert.deepEqual(await domain.submitDevelopmentExperiment(experimentRequest), submittedExperiment);
+    assert.deepEqual(await domain.submitDevelopmentResearchSql(sqlRequest), submittedSql);
     assert.equal(
       await fingerprintResearchEvidenceSource({ dataDir: tempDir, sourceId: "active" }),
       fingerprint
