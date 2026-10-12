@@ -29,6 +29,7 @@ const JOB_STATUSES = new Set([
   "CANCELLED"
 ]);
 const MAX_INTENT_CHARS = 65_536;
+const MAX_PROGRESS_CHARS = 65_536;
 
 const CREATE_RESEARCH_JOB_INFO = `
 CREATE TABLE research_job_info (
@@ -593,6 +594,42 @@ export async function openResearchJobLedger({
         { researchRunId: runId }
       );
       return Object.freeze(rows.map(normalizeJob));
+    },
+
+    async updateJobProgress(researchRunId, jobId, progress) {
+      const runId = await requireRun(researchRunId);
+      const durableJobId = assertJobId(jobId);
+      const progressJson = serializeCanonicalJsonObject(progress, "progress", MAX_PROGRESS_CHARS);
+      let result;
+
+      await inTransaction(connection, async () => {
+        const current = await requireJob(runId, durableJobId);
+        if (current.status !== "QUEUED" && current.status !== "RUNNING") {
+          throw new Error(`Research Job progress cannot change after ${current.status}`);
+        }
+        const timestamp = assertSafeTimestamp(now(), "now()");
+        await connection.run(
+          `UPDATE research_jobs
+           SET progress_json = $progressJson,
+               updated_at_ms = $timestamp
+           WHERE research_run_id = $researchRunId
+             AND job_id = $jobId
+             AND status = $currentStatus`,
+          {
+            researchRunId: runId,
+            jobId: durableJobId,
+            currentStatus: current.status,
+            progressJson,
+            timestamp
+          }
+        );
+        result = await requireJob(runId, durableJobId);
+        if (serializeCanonicalJsonObject(result.progress, "progress", MAX_PROGRESS_CHARS) !== progressJson) {
+          throw new Error("Research Job progress update did not persist atomically");
+        }
+      });
+
+      return result;
     },
 
     async markJobRunning(researchRunId, jobId) {
