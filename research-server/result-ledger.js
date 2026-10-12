@@ -499,9 +499,6 @@ export async function openResearchResultLedger({
   if (rowBytesLimit + 2 > pageBytesLimit) {
     throw new TypeError("maxRowBytes must leave room for JSON page framing within maxPageBytes");
   }
-  if (pageRowsLimit > resultRowsLimit) {
-    throw new TypeError("maxPageRows cannot exceed maxResultRows");
-  }
 
   await ensureParentDirectory(dbPath);
   const instance = await DuckDBInstance.create(dbPath, RESEARCH_LEDGER_DUCKDB_HARDENING);
