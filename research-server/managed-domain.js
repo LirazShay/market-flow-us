@@ -189,6 +189,10 @@ export async function openManagedResearchDomain(options = {}) {
     options,
     async (jobLedger) => jobLedger.schemaVersion
   );
+  const transientJobOptions = Object.freeze({
+    ...options,
+    reconcileInterrupted: false
+  });
   const resultSchemaVersion = await withComponent(
     openResearchResultLedger,
     options,
@@ -206,11 +210,9 @@ export async function openManagedResearchDomain(options = {}) {
   const queueWaits = new Map();
   const background = new Map();
   let accepting = true;
-  let activeJobLedger = null;
 
-  async function jobs() {
-    if (!activeJobLedger) activeJobLedger = await openResearchJobLedger(options);
-    return activeJobLedger;
+  async function useJobs(operation) {
+    return await withComponent(openResearchJobLedger, transientJobOptions, operation);
   }
 
   async function useResults(operation) {
@@ -219,23 +221,23 @@ export async function openManagedResearchDomain(options = {}) {
 
   const controllerLedger = Object.freeze({
     async getJob(researchRunId, jobId) {
-      return await (await jobs()).getJob(researchRunId, jobId);
+      return await useJobs((jobs) => jobs.getJob(researchRunId, jobId));
     },
     async markJobRunning(researchRunId, jobId) {
-      return await (await jobs()).markJobRunning(researchRunId, jobId);
+      return await useJobs((jobs) => jobs.markJobRunning(researchRunId, jobId));
     },
     async markJobSucceeded(researchRunId, jobId) {
-      return await (await jobs()).markJobSucceeded(researchRunId, jobId);
+      return await useJobs((jobs) => jobs.markJobSucceeded(researchRunId, jobId));
     },
     async markJobFailed(researchRunId, jobId, fallbackCode) {
-      return await (await jobs()).markJobFailed(
+      return await useJobs((jobs) => jobs.markJobFailed(
         researchRunId,
         jobId,
         failureCodes.get(jobKey(researchRunId, jobId)) ?? fallbackCode
-      );
+      ));
     },
     async finalizeJobCancelled(researchRunId, jobId) {
-      return await (await jobs()).finalizeJobCancelled(researchRunId, jobId);
+      return await useJobs((jobs) => jobs.finalizeJobCancelled(researchRunId, jobId));
     }
   });
   const controller = createResearchJobController({ jobLedger: controllerLedger });
@@ -245,7 +247,7 @@ export async function openManagedResearchDomain(options = {}) {
   }
 
   async function persistProgress(researchRunId, jobId, progress) {
-    return await (await jobs()).updateJobProgress(researchRunId, jobId, progress);
+    return await useJobs((jobs) => jobs.updateJobProgress(researchRunId, jobId, progress));
   }
 
   async function safeFailureProgress(researchRunId, jobId, error, budget) {
@@ -311,7 +313,7 @@ export async function openManagedResearchDomain(options = {}) {
           await controller.runJob({ researchRunId: job.researchRunId, jobId: job.jobId, work });
         });
       } catch (error) {
-        const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
+        const current = await useJobs((jobs) => jobs.getJob(job.researchRunId, job.jobId));
         if (current?.status === "CANCELLED" || error?.code === "RESEARCH_JOB_CANCELLED") return;
         if (current?.status === "QUEUED") await failQueuedAdmission(current, error);
       } finally {
@@ -474,14 +476,14 @@ export async function openManagedResearchDomain(options = {}) {
     async submitDevelopmentExperiment(input) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
       const intent = experimentIntent(input);
-      const job = await (await jobs()).createJob({
+      const job = await useJobs((jobs) => jobs.createJob({
         researchRunId: intent.researchRunId,
         operation: "execute_development_experiment",
         clientRequestId: input.clientRequestId,
         intent
-      });
+      }));
       await initializeQueuedProgress(job);
-      const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
+      const current = await useJobs((jobs) => jobs.getJob(job.researchRunId, job.jobId));
       if (current.status === "QUEUED") launchExperiment(current, intent);
       return Object.freeze({ researchRunId: current.researchRunId, jobId: current.jobId });
     },
@@ -490,26 +492,26 @@ export async function openManagedResearchDomain(options = {}) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
       const intent = sqlIntent(input);
       const analysisId = deterministicAnalysisId(intent.researchRunId, input.clientRequestId);
-      const job = await (await jobs()).createJob({
+      const job = await useJobs((jobs) => jobs.createJob({
         researchRunId: intent.researchRunId,
         operation: "execute_development_research_sql",
         clientRequestId: input.clientRequestId,
         intent
-      });
+      }));
       await initializeQueuedProgress(job, { analysisId });
-      const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
+      const current = await useJobs((jobs) => jobs.getJob(job.researchRunId, job.jobId));
       if (current.status === "QUEUED") launchResearchSql(current, intent, analysisId);
       return Object.freeze({ researchRunId: current.researchRunId, analysisId, jobId: current.jobId });
     },
 
     async getJob(researchRunId, jobId) {
-      const job = await (await jobs()).getJob(researchRunId, jobId);
+      const job = await useJobs((jobs) => jobs.getJob(researchRunId, jobId));
       if (!job) return null;
       return Object.freeze({ ...job, cancellationPossible: cancellationPossible(job) });
     },
 
     async listJobs(researchRunId, listOptions) {
-      const values = await (await jobs()).listJobs(researchRunId, listOptions);
+      const values = await useJobs((jobs) => jobs.listJobs(researchRunId, listOptions));
       return Object.freeze(values.map((job) => Object.freeze({
         ...job,
         cancellationPossible: cancellationPossible(job)
@@ -543,8 +545,6 @@ export async function openManagedResearchDomain(options = {}) {
         }
         await task;
       }));
-      await activeJobLedger?.close();
-      activeJobLedger = null;
       await base.close();
     }
   });
