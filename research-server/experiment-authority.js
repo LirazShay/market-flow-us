@@ -10,6 +10,9 @@ const MAX_QUERY_SQL_BYTES = 1024 * 1024;
 const EXPERIMENT_BATCH_CONTRACT_VERSION = "research-experiment-batch-v1";
 const EXPERIMENT_METRIC_CONTRACT_VERSION = "research-experiment-metrics-v1";
 const EXPERIMENT_PHASES = new Set(["DEVELOPMENT", "VALIDATION"]);
+const DAY_MS = 86_400_000;
+const HOUR_MS = 3_600_000;
+const SECURITY_CONCENTRATION_LIMIT = 10;
 
 function invalid(message) {
   throw new TypeError(message);
@@ -181,6 +184,157 @@ function incrementBreakdown(breakdown, key) {
   breakdown[key] = (breakdown[key] ?? 0) + 1;
 }
 
+function createHorizonAggregates(horizonsMs) {
+  return horizonsMs.map((horizonMs) => ({
+    horizonMs,
+    values: [],
+    upCount: 0,
+    flatCount: 0,
+    downCount: 0,
+    unavailableCount: 0,
+    unavailableReasons: {}
+  }));
+}
+
+function addOutcome(aggregate, outcome) {
+  if (!aggregate || outcome.horizonMs !== aggregate.horizonMs) {
+    invalid("Experiment outcome horizon order does not match the frozen request");
+  }
+  if (outcome.outcome === "UP") {
+    aggregate.upCount += 1;
+    aggregate.values.push(outcome.changePercent);
+  } else if (outcome.outcome === "FLAT") {
+    aggregate.flatCount += 1;
+    aggregate.values.push(outcome.changePercent);
+  } else if (outcome.outcome === "DOWN") {
+    aggregate.downCount += 1;
+    aggregate.values.push(outcome.changePercent);
+  } else if (outcome.outcome === "UNAVAILABLE") {
+    aggregate.unavailableCount += 1;
+    incrementBreakdown(aggregate.unavailableReasons, outcome.unavailableReason ?? "UNKNOWN");
+  } else {
+    invalid("Experiment outcome state is invalid");
+  }
+}
+
+function summarizeHorizonAggregate(aggregate) {
+  const availableOutcomeCount = aggregate.values.length;
+  const selectedObservationCount = availableOutcomeCount + aggregate.unavailableCount;
+  return {
+    horizonMs: aggregate.horizonMs,
+    selectedObservationCount,
+    availableOutcomeCount,
+    unavailableOutcomeCount: aggregate.unavailableCount,
+    coverageRate: rate(availableOutcomeCount, selectedObservationCount),
+    upCount: aggregate.upCount,
+    flatCount: aggregate.flatCount,
+    downCount: aggregate.downCount,
+    positiveRate: rate(aggregate.upCount, availableOutcomeCount),
+    flatRate: rate(aggregate.flatCount, availableOutcomeCount),
+    negativeRate: rate(aggregate.downCount, availableOutcomeCount),
+    averagePercent: average(aggregate.values),
+    medianPercent: median(aggregate.values),
+    p10Percent: quantile(aggregate.values, 0.10),
+    p25Percent: quantile(aggregate.values, 0.25),
+    p75Percent: quantile(aggregate.values, 0.75),
+    p90Percent: quantile(aggregate.values, 0.90),
+    bestPercent: aggregate.values.length > 0 ? Math.max(...aggregate.values) : null,
+    worstPercent: aggregate.values.length > 0 ? Math.min(...aggregate.values) : null,
+    unavailableReasonBreakdown: aggregate.unavailableReasons
+  };
+}
+
+function createSelectionGroup(horizonsMs) {
+  return {
+    pointCount: 0,
+    zeroResultPointCount: 0,
+    selectedObservationCount: 0,
+    securities: new Set(),
+    horizons: createHorizonAggregates(horizonsMs)
+  };
+}
+
+function addPointToSelectionGroup(group, query) {
+  group.pointCount += 1;
+  if (query.evaluatedUniqueCount === 0) group.zeroResultPointCount += 1;
+  group.selectedObservationCount += query.items.length;
+  for (const item of query.items) {
+    group.securities.add(item.securityId);
+    item.horizons.forEach((outcome, horizonIndex) => addOutcome(group.horizons[horizonIndex], outcome));
+  }
+}
+
+function summarizeSelectionGroup(group, identity) {
+  return {
+    ...identity,
+    pointCount: group.pointCount,
+    zeroResultPointCount: group.zeroResultPointCount,
+    zeroResultRate: rate(group.zeroResultPointCount, group.pointCount),
+    selectedObservationCount: group.selectedObservationCount,
+    distinctSecurityCount: group.securities.size,
+    horizons: group.horizons.map(summarizeHorizonAggregate)
+  };
+}
+
+function timeBucketKeys(requestedAtMs) {
+  return {
+    utcDayStartAtMs: Math.floor(requestedAtMs / DAY_MS) * DAY_MS,
+    utcHourOfDay: Math.floor((requestedAtMs % DAY_MS) / HOUR_MS)
+  };
+}
+
+function incrementPointAvailabilityGroup(map, key, point) {
+  let group = map.get(key);
+  if (!group) {
+    group = {
+      requestedPointCount: 0,
+      availablePointCount: 0,
+      unavailablePointCount: 0,
+      baselines: new Set(),
+      unavailableReasons: {}
+    };
+    map.set(key, group);
+  }
+  group.requestedPointCount += 1;
+  if (point.available) {
+    group.availablePointCount += 1;
+    group.baselines.add(`${point.baseline.cycleId}:${point.baseline.committedAtMs}`);
+  } else {
+    group.unavailablePointCount += 1;
+    incrementBreakdown(group.unavailableReasons, point.unavailableReason ?? "UNKNOWN");
+  }
+}
+
+function summarizePointAvailabilityGroup(group, identity) {
+  return {
+    ...identity,
+    requestedPointCount: group.requestedPointCount,
+    availablePointCount: group.availablePointCount,
+    unavailablePointCount: group.unavailablePointCount,
+    pointAvailabilityRate: rate(group.availablePointCount, group.requestedPointCount),
+    distinctBaselineCount: group.baselines.size,
+    unavailableReasonBreakdown: group.unavailableReasons
+  };
+}
+
+function buildSecurityConcentration(securityCounts, selectedObservationCount) {
+  const ordered = [...securityCounts.entries()]
+    .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]));
+  const maxSecurityObservationCount = ordered[0]?.[1] ?? 0;
+  return {
+    selectedObservationCount,
+    distinctSecurityCount: ordered.length,
+    repeatedSelectionObservationCount: Math.max(0, selectedObservationCount - ordered.length),
+    maxSecurityObservationCount,
+    maxSecurityShare: rate(maxSecurityObservationCount, selectedObservationCount),
+    topSecurities: ordered.slice(0, SECURITY_CONCENTRATION_LIMIT).map(([securityId, count]) => ({
+      securityId,
+      count,
+      share: rate(count, selectedObservationCount)
+    }))
+  };
+}
+
 export function durableAuthoritativeExperimentRequest(request) {
   if (request === null || typeof request !== "object" || Array.isArray(request)) {
     invalid("experiment request is invalid");
@@ -277,8 +431,13 @@ export function buildAuthoritativeExperimentMetrics({ request, sweep } = {}) {
 
   const unavailablePointReasons = {};
   const availablePoints = [];
+  const utcDayAvailability = new Map();
+  const utcHourAvailability = new Map();
   for (let index = 0; index < sweep.metrics.requestedPointCount; index += 1) {
     const point = sweep.openPoint(index);
+    const { utcDayStartAtMs, utcHourOfDay } = timeBucketKeys(point.requestedAtMs);
+    incrementPointAvailabilityGroup(utcDayAvailability, utcDayStartAtMs, point);
+    incrementPointAvailabilityGroup(utcHourAvailability, utcHourOfDay, point);
     if (point.available) {
       availablePoints.push(point);
     } else {
@@ -292,15 +451,11 @@ export function buildAuthoritativeExperimentMetrics({ request, sweep } = {}) {
     let evaluatedUniqueCount = 0;
     let duplicateRowCount = 0;
     let zeroResultPointCount = 0;
-    const horizons = request.schedule.horizonsMs.map((horizonMs) => ({
-      horizonMs,
-      values: [],
-      upCount: 0,
-      flatCount: 0,
-      downCount: 0,
-      unavailableCount: 0,
-      unavailableReasons: {}
-    }));
+    const horizons = createHorizonAggregates(request.schedule.horizonsMs);
+    const securityCounts = new Map();
+    const positionGroups = new Map();
+    const utcDayGroups = new Map();
+    const utcHourGroups = new Map();
 
     for (const point of availablePoints) {
       const query = point.queries[queryIndex];
@@ -313,30 +468,28 @@ export function buildAuthoritativeExperimentMetrics({ request, sweep } = {}) {
       duplicateRowCount += query.duplicateRowCount;
       if (query.evaluatedUniqueCount === 0) zeroResultPointCount += 1;
 
+      const { utcDayStartAtMs, utcHourOfDay } = timeBucketKeys(point.requestedAtMs);
+      if (!utcDayGroups.has(utcDayStartAtMs)) {
+        utcDayGroups.set(utcDayStartAtMs, createSelectionGroup(request.schedule.horizonsMs));
+      }
+      if (!utcHourGroups.has(utcHourOfDay)) {
+        utcHourGroups.set(utcHourOfDay, createSelectionGroup(request.schedule.horizonsMs));
+      }
+      addPointToSelectionGroup(utcDayGroups.get(utcDayStartAtMs), query);
+      addPointToSelectionGroup(utcHourGroups.get(utcHourOfDay), query);
+
       for (const item of query.items) {
+        securityCounts.set(item.securityId, (securityCounts.get(item.securityId) ?? 0) + 1);
+        let positionGroup = positionGroups.get(item.returnedPosition);
+        if (!positionGroup) {
+          positionGroup = createSelectionGroup(request.schedule.horizonsMs);
+          positionGroups.set(item.returnedPosition, positionGroup);
+        }
+        positionGroup.selectedObservationCount += 1;
+        positionGroup.securities.add(item.securityId);
         item.horizons.forEach((outcome, horizonIndex) => {
-          const aggregate = horizons[horizonIndex];
-          if (!aggregate || outcome.horizonMs !== aggregate.horizonMs) {
-            invalid("Experiment outcome horizon order does not match the frozen request");
-          }
-          if (outcome.outcome === "UP") {
-            aggregate.upCount += 1;
-            aggregate.values.push(outcome.changePercent);
-          } else if (outcome.outcome === "FLAT") {
-            aggregate.flatCount += 1;
-            aggregate.values.push(outcome.changePercent);
-          } else if (outcome.outcome === "DOWN") {
-            aggregate.downCount += 1;
-            aggregate.values.push(outcome.changePercent);
-          } else if (outcome.outcome === "UNAVAILABLE") {
-            aggregate.unavailableCount += 1;
-            incrementBreakdown(
-              aggregate.unavailableReasons,
-              outcome.unavailableReason ?? "UNKNOWN"
-            );
-          } else {
-            invalid("Experiment outcome state is invalid");
-          }
+          addOutcome(horizons[horizonIndex], outcome);
+          addOutcome(positionGroup.horizons[horizonIndex], outcome);
         });
       }
     }
@@ -350,32 +503,25 @@ export function buildAuthoritativeExperimentMetrics({ request, sweep } = {}) {
       selectedSourceRowCount,
       evaluatedUniqueCount,
       duplicateRowCount,
-      horizons: horizons.map((aggregate) => {
-        const availableOutcomeCount = aggregate.values.length;
-        const selectedObservationCount = availableOutcomeCount + aggregate.unavailableCount;
-        return {
-          horizonMs: aggregate.horizonMs,
-          selectedObservationCount,
-          availableOutcomeCount,
-          unavailableOutcomeCount: aggregate.unavailableCount,
-          coverageRate: rate(availableOutcomeCount, selectedObservationCount),
-          upCount: aggregate.upCount,
-          flatCount: aggregate.flatCount,
-          downCount: aggregate.downCount,
-          positiveRate: rate(aggregate.upCount, availableOutcomeCount),
-          flatRate: rate(aggregate.flatCount, availableOutcomeCount),
-          negativeRate: rate(aggregate.downCount, availableOutcomeCount),
-          averagePercent: average(aggregate.values),
-          medianPercent: median(aggregate.values),
-          p10Percent: quantile(aggregate.values, 0.10),
-          p25Percent: quantile(aggregate.values, 0.25),
-          p75Percent: quantile(aggregate.values, 0.75),
-          p90Percent: quantile(aggregate.values, 0.90),
-          bestPercent: aggregate.values.length > 0 ? Math.max(...aggregate.values) : null,
-          worstPercent: aggregate.values.length > 0 ? Math.min(...aggregate.values) : null,
-          unavailableReasonBreakdown: aggregate.unavailableReasons
-        };
-      })
+      horizons: horizons.map(summarizeHorizonAggregate),
+      robustness: {
+        positionSemantics: "SCANNER_RETURNED_POSITION_ONLY",
+        selectionConcentration: buildSecurityConcentration(securityCounts, evaluatedUniqueCount),
+        returnedPositionBreakdown: [...positionGroups.entries()]
+          .sort((left, right) => left[0] - right[0])
+          .map(([returnedPosition, group]) => ({
+            returnedPosition,
+            selectedObservationCount: group.selectedObservationCount,
+            distinctSecurityCount: group.securities.size,
+            horizons: group.horizons.map(summarizeHorizonAggregate)
+          })),
+        utcDayBreakdown: [...utcDayGroups.entries()]
+          .sort((left, right) => left[0] - right[0])
+          .map(([utcDayStartAtMs, group]) => summarizeSelectionGroup(group, { utcDayStartAtMs })),
+        utcHourOfDayBreakdown: [...utcHourGroups.entries()]
+          .sort((left, right) => left[0] - right[0])
+          .map(([utcHourOfDay, group]) => summarizeSelectionGroup(group, { utcHourOfDay }))
+      }
     };
   });
 
@@ -395,6 +541,15 @@ export function buildAuthoritativeExperimentMetrics({ request, sweep } = {}) {
     },
     exclusions: {
       unavailablePointReasonBreakdown: unavailablePointReasons
+    },
+    timeBreakdowns: {
+      timezone: "UTC",
+      days: [...utcDayAvailability.entries()]
+        .sort((left, right) => left[0] - right[0])
+        .map(([utcDayStartAtMs, group]) => summarizePointAvailabilityGroup(group, { utcDayStartAtMs })),
+      hoursOfDay: [...utcHourAvailability.entries()]
+        .sort((left, right) => left[0] - right[0])
+        .map(([utcHourOfDay, group]) => summarizePointAvailabilityGroup(group, { utcHourOfDay }))
     },
     queries
   });
