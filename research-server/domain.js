@@ -1,4 +1,5 @@
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
+import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchLedger } from "./ledger.js";
 import { openResearchMemory } from "./research-memory.js";
 
@@ -99,6 +100,7 @@ export async function openResearchDomain(options = {}) {
   const schemaVersions = Object.freeze({
     ledger: await bootstrapComponent(openResearchLedger, options),
     evidence: await bootstrapComponent(openResearchEvidenceDomain, options),
+    experiments: await bootstrapComponent(openResearchExperimentLedger, options),
     memory: await bootstrapComponent(openResearchMemory, options)
   });
 
@@ -120,6 +122,10 @@ export async function openResearchDomain(options = {}) {
 
   function useEvidence(operation) {
     return enqueue(() => withComponent(openResearchEvidenceDomain, options, operation));
+  }
+
+  function useExperiments(operation) {
+    return enqueue(() => withComponent(openResearchExperimentLedger, options, operation));
   }
 
   function useMemory(operation) {
@@ -208,6 +214,19 @@ export async function openResearchDomain(options = {}) {
 
     async listPartitions(researchRunId, evidencePlanId) {
       return await useEvidence((evidence) => evidence.listPartitions(researchRunId, evidencePlanId));
+    },
+
+    async recordCompletedExperiment(input) {
+      assertPublicSafeValue(input, "completed experiment");
+      return await useExperiments((experiments) => experiments.recordCompletedExperiment(input));
+    },
+
+    async getExperiment(researchRunId, experimentId) {
+      return await useExperiments((experiments) => experiments.getExperiment(researchRunId, experimentId));
+    },
+
+    async listExperiments(researchRunId, listOptions) {
+      return await useExperiments((experiments) => experiments.listExperiments(researchRunId, listOptions));
     },
 
     async recordResearchNote(input) {
