@@ -544,6 +544,8 @@ export async function openResearchDomain(options = {}) {
         researchRunId: request.researchRunId,
         partitionId: request.partitionId,
         experimentIds: request.experimentIds,
+        sqlTimeoutMs: options.sqlTimeoutMs,
+        duckdbResourceLimits: options.duckdbResourceLimits,
         now: researchSqlNow,
         verifySourceFingerprint,
         getPartition: (researchRunId, partitionId) => useEvidence(
