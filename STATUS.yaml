@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with final success-evidence review and PR readiness. Durable jobs/results/idempotency/restart, native SQL/experiment cancellation, durable hierarchical budget accounting including pre-result reservation, and bounded workload/cancellation-latency evidence are green. Fast #837 + Planning/Contract #1027 + Workload #423 are green on workload head 1a34652d. Review the full PR diff against 11.4 success evidence, resolve any remaining blocker, then ready/squash-merge only after the evidence is complete."
+  action: "Continue Chat 38 / 11.4 with durable run-level budget observability. Research SQL and Development experiment execution now have finite time ceilings and bounded DuckDB threads/RAM/temp-disk resource ceilings; explicit sqlTimeoutMs and duckdbResourceLimits pass through openResearchDomain to the Development SQL session. Fast #854 + Planning/Contract #1044 + Workload #440 are green on implementation head 951a8178. Next reconcile persisted Run budgetPolicy with managed policy and expose durable used/remaining plus experiment/analysis/job counts through getResearchRun/resumeResearchRun."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
