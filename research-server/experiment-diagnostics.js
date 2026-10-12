@@ -191,6 +191,16 @@ function assertDevelopment(execution) {
   }
 }
 
+function assertRequestedQuery(execution, queryArtifactId) {
+  const queryIndex = execution.request.queryArtifacts.findIndex(
+    (query) => query.queryArtifactId === queryArtifactId
+  );
+  if (queryIndex < 0) {
+    invalid("queryArtifactId is not part of this Experiment");
+  }
+  return queryIndex;
+}
+
 function queryAt(point, queryArtifactId) {
   const queryIndex = point.queries.findIndex((query) => query.id === queryArtifactId);
   if (queryIndex < 0) invalid("queryArtifactId is not part of this Experiment point");
@@ -287,6 +297,7 @@ export function createAuthoritativeExperimentDiagnostics({
     getCandidates({ pointRef: ref, queryArtifactId, offset = 0, limit = 50 } = {}) {
       assertDevelopment(completed);
       const boundedQueryArtifactId = assertQueryArtifactId(queryArtifactId);
+      assertRequestedQuery(completed, boundedQueryArtifactId);
       const page = assertPage({ offset, limit });
       const { index, point } = openPointByRef(ref);
       if (!point.available) {
@@ -375,6 +386,7 @@ export function createAuthoritativeExperimentDiagnostics({
     diagnoseMissingCandidate({ pointRef: ref, queryArtifactId, securityId } = {}) {
       assertDevelopment(completed);
       const boundedQueryArtifactId = assertQueryArtifactId(queryArtifactId);
+      assertRequestedQuery(completed, boundedQueryArtifactId);
       const boundedSecurityId = assertSecurityId(securityId);
       const { index, point } = openPointByRef(ref);
       if (!point.available) {
