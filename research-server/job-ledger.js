@@ -364,7 +364,8 @@ async function reconcileInterruptedRunningJobs(connection, timestamp) {
 export async function openResearchJobLedger({
   dbPath = DEFAULT_RESEARCH_LEDGER_PATH,
   now = Date.now,
-  jobIdFactory = () => `job_${randomUUID()}`
+  jobIdFactory = () => `job_${randomUUID()}`,
+  reconcileInterrupted = true
 } = {}) {
   if (typeof dbPath !== "string" || dbPath.length === 0) {
     throw new TypeError("dbPath is required");
@@ -375,6 +376,9 @@ export async function openResearchJobLedger({
   if (typeof jobIdFactory !== "function") {
     throw new TypeError("jobIdFactory must be a function");
   }
+  if (typeof reconcileInterrupted !== "boolean") {
+    throw new TypeError("reconcileInterrupted must be boolean");
+  }
 
   await ensureParentDirectory(dbPath);
   const instance = await DuckDBInstance.create(dbPath, RESEARCH_LEDGER_DUCKDB_HARDENING);
@@ -384,7 +388,9 @@ export async function openResearchJobLedger({
   try {
     const openedAtMs = assertSafeTimestamp(now(), "now()");
     await bootstrapOrValidate(connection, openedAtMs);
-    await reconcileInterruptedRunningJobs(connection, openedAtMs);
+    if (reconcileInterrupted) {
+      await reconcileInterruptedRunningJobs(connection, openedAtMs);
+    }
     await lockConfiguration(connection);
   } catch (error) {
     closeQuietly(connection);
