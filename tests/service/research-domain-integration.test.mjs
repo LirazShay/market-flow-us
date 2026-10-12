@@ -5,6 +5,10 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { openResearchDomain } from "../../research-server/domain.js";
+import {
+  durableAuthoritativeExperimentRequest,
+  freezeAuthoritativeExperimentBatchRequest
+} from "../../research-server/experiment-authority.js";
 
 const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
 const OBJECTIVE_ID = "obj_11111111-1111-4111-8111-111111111111";
@@ -13,6 +17,8 @@ const INVENTORY_ID = "inv_11111111-1111-4111-8111-111111111111";
 const PLAN_ID = "plan_11111111-1111-4111-8111-111111111111";
 const PART_DEV = "part_11111111-1111-4111-8111-111111111111";
 const PART_VALIDATION = "part_22222222-2222-4222-8222-222222222222";
+const EXPERIMENT_ID = "exp_11111111-1111-4111-8111-111111111111";
+const METRIC_SET_ID = "metrics_11111111-1111-4111-8111-111111111111";
 const NOTE_ID = "note_11111111-1111-4111-8111-111111111111";
 const NOW = 1_860_000_000_000;
 
@@ -37,7 +43,7 @@ async function expectPublicSafeRejection(promise, forbiddenValue) {
   });
 }
 
-test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-safe persistence", async () => {
+test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-public-safe persistence", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-domain-composed-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   let domain = null;
@@ -52,10 +58,12 @@ test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
       partitionIdFactory: sequence([PART_DEV, PART_VALIDATION]),
+      experimentIdFactory: () => EXPERIMENT_ID,
+      metricSetIdFactory: () => METRIC_SET_ID,
       noteIdFactory: () => NOTE_ID
     });
 
-    assert.deepEqual(domain.schemaVersions, { ledger: 1, evidence: 1, memory: 1 });
+    assert.deepEqual(domain.schemaVersions, { ledger: 1, evidence: 1, experiments: 1, memory: 1 });
 
     const browserSecret = "browser-session-secret-value";
     await expectPublicSafeRejection(
@@ -161,6 +169,63 @@ test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-
     });
     assert.equal(plan.evidencePlanId, PLAN_ID);
 
+    const frozenExperimentRequest = freezeAuthoritativeExperimentBatchRequest({
+      objectiveVersionId: OBJECTIVE_ID,
+      evidencePartitionId: PART_DEV,
+      phase: "DEVELOPMENT",
+      sourceId: "active",
+      sourceFingerprint: "a".repeat(64),
+      queryArtifacts: [query],
+      fromAtMs: 1_000,
+      toAtMs: 2_000,
+      intervalValue: 1,
+      intervalUnit: "seconds",
+      topX: 1,
+      horizonsMs: [10_000]
+    });
+    const durableRequest = durableAuthoritativeExperimentRequest(frozenExperimentRequest);
+    const metricSet = {
+      contractVersion: "research-experiment-metrics-v1",
+      requestFingerprint: durableRequest.requestFingerprint,
+      denominators: {
+        requestedPointCount: 2,
+        availablePointCount: 1,
+        unavailablePointCount: 1,
+        pointAvailabilityRate: 0.5,
+        distinctBaselineCount: 1,
+        repeatedBaselineRequestedPointCount: 0,
+        queryExecutionCount: 1
+      },
+      exclusions: {
+        unavailablePointReasonBreakdown: { NO_BASELINE: 1 }
+      },
+      queries: []
+    };
+    const experiment = await domain.recordCompletedExperiment({
+      researchRunId: RUN_ID,
+      request: durableRequest,
+      metrics: metricSet
+    });
+    assert.equal(experiment.experimentId, EXPERIMENT_ID);
+    assert.equal(experiment.metricSetId, METRIC_SET_ID);
+    assert.deepEqual(experiment.request, durableRequest);
+    assert.deepEqual(experiment.metrics, metricSet);
+    assert.equal(await domain.getExperiment("run_99999999-9999-4999-8999-999999999999", EXPERIMENT_ID), null);
+
+    const experimentSecret = "accountId=experiment-secret-value";
+    await expectPublicSafeRejection(
+      domain.recordCompletedExperiment({
+        researchRunId: RUN_ID,
+        request: durableRequest,
+        metrics: {
+          ...metricSet,
+          diagnostics: { accountIdentifier: experimentSecret }
+        }
+      }),
+      experimentSecret
+    );
+    assert.deepEqual(await domain.listExperiments(RUN_ID), [experiment]);
+
     const authSecret = "Authorization: Bearer secret-token-value";
     await expectPublicSafeRejection(
       domain.recordResearchNote({
@@ -208,6 +273,8 @@ test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-
     assert.deepEqual(await domain.getQueryArtifact(RUN_ID, QUERY_ID), query);
     assert.deepEqual(await domain.getEvidenceInventory(RUN_ID, INVENTORY_ID), inventory);
     assert.deepEqual(await domain.getEvidencePlan(RUN_ID, PLAN_ID), plan);
+    assert.deepEqual(await domain.getExperiment(RUN_ID, EXPERIMENT_ID), experiment);
+    assert.deepEqual(await domain.listExperiments(RUN_ID), [experiment]);
     assert.deepEqual(await domain.listResearchNotes(RUN_ID), [note]);
     assert.deepEqual(await domain.resumeResearchRun(RUN_ID), capsuleBeforeRestart);
 
@@ -217,12 +284,14 @@ test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-
       queries: await domain.listQueryArtifacts(RUN_ID),
       inventories: await domain.listEvidenceInventories(RUN_ID),
       plans: await domain.listEvidencePlans(RUN_ID),
+      experiments: await domain.listExperiments(RUN_ID),
       notes: await domain.listResearchNotes(RUN_ID),
       resume: await domain.resumeResearchRun(RUN_ID)
     });
     assert.equal(publicState.includes(browserSecret), false);
     assert.equal(publicState.includes(hiddenReasoning), false);
     assert.equal(publicState.includes(accountSecret), false);
+    assert.equal(publicState.includes(experimentSecret), false);
     assert.equal(publicState.includes(authSecret), false);
   } finally {
     if (domain) await domain.close();
