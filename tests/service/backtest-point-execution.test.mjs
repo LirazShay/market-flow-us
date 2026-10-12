@@ -83,6 +83,14 @@ function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+function assertApproximately(actual, expected, epsilon = 1e-12) {
+  assert.equal(Number.isFinite(actual), true);
+  assert.ok(
+    Math.abs(actual - expected) <= epsilon,
+    `Expected ${actual} to be within ${epsilon} of ${expected}`
+  );
+}
+
 function experimentQueryArtifacts(researchRunId) {
   const highSql = "SELECT security_id FROM latest ORDER BY Price DESC";
   const lowSql = "SELECT security_id FROM latest ORDER BY Price ASC";
@@ -296,7 +304,23 @@ test("TREE 11.2 batch freezes provenance, reproduces Sweep authority and exposes
       assert.equal(queryMetrics.selectedSourceRowCount, 4);
       assert.equal(queryMetrics.evaluatedUniqueCount, 4);
       assert.equal(queryMetrics.duplicateRowCount, 0);
-      assert.deepEqual(queryMetrics.horizons, [{
+
+      assert.equal(queryMetrics.horizons.length, 1);
+      const horizon = queryMetrics.horizons[0];
+      assert.deepEqual({
+        horizonMs: horizon.horizonMs,
+        selectedObservationCount: horizon.selectedObservationCount,
+        availableOutcomeCount: horizon.availableOutcomeCount,
+        unavailableOutcomeCount: horizon.unavailableOutcomeCount,
+        coverageRate: horizon.coverageRate,
+        upCount: horizon.upCount,
+        flatCount: horizon.flatCount,
+        downCount: horizon.downCount,
+        positiveRate: horizon.positiveRate,
+        flatRate: horizon.flatRate,
+        negativeRate: horizon.negativeRate,
+        unavailableReasonBreakdown: horizon.unavailableReasonBreakdown
+      }, {
         horizonMs: 10_000,
         selectedObservationCount: 4,
         availableOutcomeCount: 2,
@@ -308,16 +332,16 @@ test("TREE 11.2 batch freezes provenance, reproduces Sweep authority and exposes
         positiveRate: 0.5,
         flatRate: 0,
         negativeRate: 0.5,
-        averagePercent: 0,
-        medianPercent: 0,
-        p10Percent: -8,
-        p25Percent: -5,
-        p75Percent: 5,
-        p90Percent: 8,
-        bestPercent: 10.000000000000009,
-        worstPercent: -9.999999999999998,
         unavailableReasonBreakdown: { NO_FUTURE_OBSERVATION: 2 }
-      }]);
+      });
+      assertApproximately(horizon.averagePercent, 0);
+      assertApproximately(horizon.medianPercent, 0);
+      assertApproximately(horizon.p10Percent, -8);
+      assertApproximately(horizon.p25Percent, -5);
+      assertApproximately(horizon.p75Percent, 5);
+      assertApproximately(horizon.p90Percent, 8);
+      assertApproximately(horizon.bestPercent, 10);
+      assertApproximately(horizon.worstPercent, -10);
     }
     assert.equal(Object.isFrozen(experiment.metrics), true);
     assert.equal(Object.isFrozen(experiment.metrics.queries), true);
