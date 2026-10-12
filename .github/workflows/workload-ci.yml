@@ -8,6 +8,7 @@ on:
       - "local-service/**"
       - "shared/**"
       - "backtest-lab/**"
+      - "research-server/**"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -20,6 +21,7 @@ on:
       - "local-service/**"
       - "shared/**"
       - "backtest-lab/**"
+      - "research-server/**"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -171,3 +173,44 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
           path: test-results/workload/ci-backtest-lab.json
+
+  research-governance:
+    name: Research jobs cancellation/restart resource probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Run bounded Research resource-governance workload probe
+        env:
+          MARKET_FLOW_US_WORKLOAD_PROFILE: ci
+          MARKET_FLOW_US_RESEARCH_REPORT: test-results/workload/ci-research-resource.json
+        run: node --test tests/workload/research-resource-probe.test.mjs
+
+      - name: Print sanitized Research resource-governance report
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f test-results/workload/ci-research-resource.json ]]; then
+            cat test-results/workload/ci-research-resource.json
+          else
+            echo "Research resource-governance workload report was not produced."
+          fi
+
+      - name: Upload sanitized Research resource-governance report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: market-flow-us-workload-research-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: test-results/workload/ci-research-resource.json
