@@ -1,8 +1,13 @@
 import { executeAuthoritativeExperimentBatch } from "./experiment-authority.js";
+import {
+  createAuthoritativeExperimentDiagnostics,
+  RESEARCH_EXPERIMENT_DIAGNOSTICS_VERSION
+} from "./experiment-diagnostics.js";
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchLedger } from "./ledger.js";
 import { openResearchMemory } from "./research-memory.js";
+import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
 
 const FORBIDDEN_KEY_SUFFIXES = Object.freeze([
   "password",
@@ -133,6 +138,18 @@ function authorizedPartitionSource(partition, inventory, sourceId) {
   return matches[0];
 }
 
+function warningCodes(metrics) {
+  const warnings = [];
+  if (metrics.denominators?.unavailablePointCount > 0) warnings.push("UNAVAILABLE_POINTS");
+  if (metrics.denominators?.repeatedBaselineRequestedPointCount > 0) warnings.push("REPEATED_BASELINES");
+  if (metrics.queries?.some((query) => query.zeroResultPointCount > 0)) warnings.push("ZERO_RESULT_POINTS");
+  return warnings;
+}
+
+function sameJson(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 async function withComponent(opener, options, operation) {
   const component = await opener(options);
   try {
@@ -154,9 +171,13 @@ export async function openResearchDomain(options = {}) {
     memory: await bootstrapComponent(openResearchMemory, options)
   });
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
+  const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
   const marketDataDir = options.marketDataDir ?? "data";
   if (typeof executeExperimentBatch !== "function") {
     throw new TypeError("executeExperimentBatch must be a function");
+  }
+  if (typeof verifySourceFingerprint !== "function") {
+    throw new TypeError("verifySourceFingerprint must be a function");
   }
   if (typeof marketDataDir !== "string" || marketDataDir.length === 0) {
     throw new TypeError("marketDataDir must be a non-empty server-owned path");
@@ -188,6 +209,96 @@ export async function openResearchDomain(options = {}) {
 
   function useMemory(operation) {
     return enqueue(() => withComponent(openResearchMemory, options, operation));
+  }
+
+  async function loadQueryArtifacts(researchRunId, references) {
+    const queryArtifacts = [];
+    for (const reference of references) {
+      const queryArtifactId = typeof reference === "string" ? reference : reference?.queryArtifactId;
+      if (typeof queryArtifactId !== "string" || !QUERY_ARTIFACT_ID.test(queryArtifactId)) {
+        throw new TypeError("Experiment Query Artifact reference is invalid");
+      }
+      const queryArtifact = await useLedger((ledger) => ledger.getQueryArtifact(
+        researchRunId,
+        queryArtifactId
+      ));
+      if (!queryArtifact) {
+        throw new Error("Query Artifact was not found in this Research Run");
+      }
+      if (typeof reference === "object" && reference !== null) {
+        if (
+          queryArtifact.sqlHash !== reference.sqlHash
+          || queryArtifact.scannerContractVersion !== reference.scannerContractVersion
+        ) {
+          throw new Error("Durable Experiment Query Artifact provenance no longer matches the ledger");
+        }
+      }
+      queryArtifacts.push(queryArtifact);
+    }
+    return queryArtifacts;
+  }
+
+  async function executeWithVerifiedSource({ sourceId, sourceFingerprint, ...input }) {
+    const verificationInput = {
+      dataDir: marketDataDir,
+      sourceId,
+      expectedFingerprint: sourceFingerprint
+    };
+    await verifySourceFingerprint(verificationInput);
+    const execution = await executeExperimentBatch({
+      dataDir: marketDataDir,
+      sourceId,
+      sourceFingerprint,
+      ...input
+    });
+    await verifySourceFingerprint(verificationInput);
+    return execution;
+  }
+
+  async function requireExperiment(researchRunId, experimentId) {
+    const experiment = await useExperiments((experiments) => experiments.getExperiment(
+      researchRunId,
+      experimentId
+    ));
+    if (!experiment) throw new Error("Experiment was not found in this Research Run");
+    return experiment;
+  }
+
+  async function reconstructDevelopmentExperiment(researchRunId, experimentId) {
+    const experiment = await requireExperiment(researchRunId, experimentId);
+    if (experiment.phase !== "DEVELOPMENT") {
+      throw new Error("Detailed Experiment reconstruction is available only for DEVELOPMENT experiments");
+    }
+    const queryArtifacts = await loadQueryArtifacts(researchRunId, experiment.request.queryArtifacts);
+    const schedule = experiment.request.schedule;
+    const execution = await executeWithVerifiedSource({
+      objectiveVersionId: experiment.objectiveVersionId,
+      evidencePartitionId: experiment.partitionId,
+      phase: experiment.phase,
+      sourceId: experiment.request.source.sourceId,
+      sourceFingerprint: experiment.request.source.sourceFingerprint,
+      queryArtifacts,
+      fromAtMs: schedule.fromAtMs,
+      toAtMs: schedule.toAtMs,
+      intervalValue: schedule.intervalValue,
+      intervalUnit: schedule.intervalUnit,
+      topX: schedule.topX,
+      horizonsMs: schedule.horizonsMs
+    });
+    if (
+      !sameJson(execution.durableRequest, experiment.request)
+      || !sameJson(execution.metrics, experiment.metrics)
+    ) {
+      throw new Error("Reconstructed Experiment no longer matches its durable authoritative record");
+    }
+    return {
+      experiment,
+      diagnostics: createAuthoritativeExperimentDiagnostics({
+        experimentId: experiment.experimentId,
+        metricSetId: experiment.metricSetId,
+        execution
+      })
+    };
   }
 
   return Object.freeze({
@@ -311,21 +422,9 @@ export async function openResearchDomain(options = {}) {
         throw new Error("Development partition evidence inventory was not found");
       }
       const source = authorizedPartitionSource(partition, inventory, request.sourceId);
+      const queryArtifacts = await loadQueryArtifacts(request.researchRunId, request.queryArtifactIds);
 
-      const queryArtifacts = [];
-      for (const queryArtifactId of request.queryArtifactIds) {
-        const queryArtifact = await useLedger((ledger) => ledger.getQueryArtifact(
-          request.researchRunId,
-          queryArtifactId
-        ));
-        if (!queryArtifact) {
-          throw new Error("Query Artifact was not found in this Research Run");
-        }
-        queryArtifacts.push(queryArtifact);
-      }
-
-      const execution = await executeExperimentBatch({
-        dataDir: marketDataDir,
+      const execution = await executeWithVerifiedSource({
         objectiveVersionId: request.objectiveVersionId,
         evidencePartitionId: request.partitionId,
         phase: "DEVELOPMENT",
@@ -339,6 +438,10 @@ export async function openResearchDomain(options = {}) {
         topX: request.topX,
         horizonsMs: request.horizonsMs
       });
+      assertPublicSafeValue({
+        request: execution.durableRequest,
+        metrics: execution.metrics
+      }, "completed experiment");
 
       return await useExperiments((experiments) => experiments.recordCompletedExperiment({
         researchRunId: request.researchRunId,
@@ -347,17 +450,52 @@ export async function openResearchDomain(options = {}) {
       }));
     },
 
-    async recordCompletedExperiment(input) {
-      assertPublicSafeValue(input, "completed experiment");
-      return await useExperiments((experiments) => experiments.recordCompletedExperiment(input));
-    },
-
     async getExperiment(researchRunId, experimentId) {
       return await useExperiments((experiments) => experiments.getExperiment(researchRunId, experimentId));
     },
 
     async listExperiments(researchRunId, listOptions) {
       return await useExperiments((experiments) => experiments.listExperiments(researchRunId, listOptions));
+    },
+
+    async getExperimentSummary(researchRunId, experimentId) {
+      const experiment = await requireExperiment(researchRunId, experimentId);
+      return Object.freeze({
+        contractVersion: RESEARCH_EXPERIMENT_DIAGNOSTICS_VERSION,
+        experimentId: experiment.experimentId,
+        metricSetId: experiment.metricSetId,
+        researchRunId: experiment.researchRunId,
+        objectiveVersionId: experiment.objectiveVersionId,
+        partitionId: experiment.partitionId,
+        phase: experiment.phase,
+        requestFingerprint: experiment.requestFingerprint,
+        source: experiment.request.source,
+        queryArtifacts: experiment.request.queryArtifacts,
+        schedule: experiment.request.schedule,
+        denominators: experiment.metrics.denominators,
+        exclusions: experiment.metrics.exclusions,
+        warnings: Object.freeze(warningCodes(experiment.metrics))
+      });
+    },
+
+    async getExperimentPoints(researchRunId, experimentId, page) {
+      const { diagnostics } = await reconstructDevelopmentExperiment(researchRunId, experimentId);
+      return diagnostics.getPoints(page);
+    },
+
+    async getExperimentCandidates(researchRunId, experimentId, request) {
+      const { diagnostics } = await reconstructDevelopmentExperiment(researchRunId, experimentId);
+      return diagnostics.getCandidates(request);
+    },
+
+    async diagnoseReturnedCandidate(researchRunId, experimentId, request) {
+      const { diagnostics } = await reconstructDevelopmentExperiment(researchRunId, experimentId);
+      return diagnostics.diagnoseReturnedCandidate(request);
+    },
+
+    async diagnoseMissingCandidate(researchRunId, experimentId, request) {
+      const { diagnostics } = await reconstructDevelopmentExperiment(researchRunId, experimentId);
+      return diagnostics.diagnoseMissingCandidate(request);
     },
 
     async recordResearchNote(input) {
