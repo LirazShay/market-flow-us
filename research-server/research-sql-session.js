@@ -1,4 +1,8 @@
 import { createResearchRawDataDiscovery } from "./raw-data-discovery.js";
+import {
+  createResearchSqlExecute,
+  verifyResearchSqlSandboxHardening
+} from "./research-sql-admission.js";
 import { openDevelopmentResearchSqlSandbox } from "./research-sql.js";
 
 const RUN_ID = /^run_[0-9a-f-]{36}$/u;
@@ -336,7 +340,17 @@ export async function openDevelopmentResearchSqlSession({
     now,
     verifySourceFingerprint
   });
-  const rawData = createResearchRawDataDiscovery({ execute: sandbox.execute });
+
+  let execute;
+  try {
+    await verifyResearchSqlSandboxHardening({ execute: sandbox.execute });
+    execute = createResearchSqlExecute({ execute: sandbox.execute });
+  } catch (error) {
+    await sandbox.close();
+    throw error;
+  }
+
+  const rawData = createResearchRawDataDiscovery({ execute });
   let closed = false;
 
   return Object.freeze({
@@ -346,7 +360,7 @@ export async function openDevelopmentResearchSqlSession({
     partitionId: boundedPartitionId,
     experimentIds: boundedExperimentIds,
     describeSchema: sandbox.describeSchema,
-    execute: sandbox.execute,
+    execute,
     listRawDataKeys: rawData.listRawDataKeys,
     profileRawDataKey: rawData.profileRawDataKey,
     async close() {
