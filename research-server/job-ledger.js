@@ -9,7 +9,7 @@ import {
   RESEARCH_LEDGER_SCHEMA_VERSION
 } from "./ledger.js";
 
-export const RESEARCH_JOB_SCHEMA_VERSION = 1;
+export const RESEARCH_JOB_SCHEMA_VERSION = 2;
 
 const BASE_TABLES = Object.freeze([
   "objective_versions",
@@ -17,9 +17,13 @@ const BASE_TABLES = Object.freeze([
   "research_ledger_info",
   "research_runs"
 ]);
-const JOB_TABLES = Object.freeze([
+const JOB_CORE_TABLES = Object.freeze([
   "research_job_info",
   "research_jobs"
+]);
+const JOB_TABLES = Object.freeze([
+  ...JOB_CORE_TABLES,
+  "research_budget_usage"
 ]);
 const JOB_STATUSES = new Set([
   "QUEUED",
@@ -28,6 +32,8 @@ const JOB_STATUSES = new Set([
   "FAILED",
   "CANCELLED"
 ]);
+const BASE_BUDGET_SCOPES = Object.freeze(["SERVER", "RUN", "JOB"]);
+const SERVER_BUDGET_SCOPE_ID = "server";
 const MAX_INTENT_CHARS = 65_536;
 const MAX_PROGRESS_CHARS = 65_536;
 
@@ -53,6 +59,16 @@ CREATE TABLE research_jobs (
   finished_at_ms BIGINT,
   updated_at_ms BIGINT NOT NULL,
   UNIQUE (research_run_id, operation, client_request_id)
+)`;
+
+const CREATE_RESEARCH_BUDGET_USAGE = `
+CREATE TABLE research_budget_usage (
+  scope_kind VARCHAR NOT NULL,
+  scope_id VARCHAR NOT NULL,
+  dimension VARCHAR NOT NULL,
+  consumed BIGINT NOT NULL,
+  updated_at_ms BIGINT NOT NULL,
+  PRIMARY KEY (scope_kind, scope_id, dimension)
 )`;
 
 const JOB_COLUMNS = `
@@ -300,6 +316,251 @@ function idempotencyConflict() {
   return error;
 }
 
+function assertBudgetDimension(value) {
+  if (typeof value !== "string" || !/^[a-z][A-Za-z0-9]*$/u.test(value)) {
+    throw new Error("research job budget dimension persistence is invalid");
+  }
+  return value;
+}
+
+function normalizeBudgetView(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} persistence is invalid`);
+  }
+  const scope = String(value.scope ?? "");
+  if (!/^[A-Z][A-Z_]*$/u.test(scope)) {
+    throw new Error(`${label} scope persistence is invalid`);
+  }
+  if (!value.dimensions || typeof value.dimensions !== "object" || Array.isArray(value.dimensions)) {
+    throw new Error(`${label} dimensions persistence is invalid`);
+  }
+  const dimensions = {};
+  for (const [dimension, state] of Object.entries(value.dimensions)) {
+    assertBudgetDimension(dimension);
+    if (!state || typeof state !== "object" || Array.isArray(state)) {
+      throw new Error(`${label}.${dimension} persistence is invalid`);
+    }
+    const limit = Number(state.limit);
+    const consumed = Number(state.consumed);
+    const remaining = Number(state.remaining);
+    if (!Number.isSafeInteger(limit) || limit < 1
+      || !Number.isSafeInteger(consumed) || consumed < 0
+      || !Number.isSafeInteger(remaining) || remaining < 0
+      || consumed + remaining !== limit) {
+      throw new Error(`${label}.${dimension} persistence is invalid`);
+    }
+    dimensions[dimension] = { limit, consumed, remaining };
+  }
+  if (Object.keys(dimensions).length === 0) {
+    throw new Error(`${label} must contain at least one dimension`);
+  }
+  return { scope, dimensions };
+}
+
+function normalizeBudgetProgress(progress) {
+  if (!Object.hasOwn(progress, "budget")) return null;
+  if (!Array.isArray(progress.budget)) {
+    throw new Error("research job budget progress persistence is invalid");
+  }
+  if (progress.budget.length === 0) return null;
+  const views = progress.budget.map((view, index) => normalizeBudgetView(view, `job budget[${index}]`));
+  const byScope = new Map();
+  for (const view of views) {
+    if (byScope.has(view.scope)) throw new Error("research job budget scope persistence is duplicated");
+    byScope.set(view.scope, view);
+  }
+  for (const scope of BASE_BUDGET_SCOPES) {
+    if (!byScope.has(scope)) throw new Error(`research job budget is missing ${scope} scope`);
+  }
+  const baseDimensions = Object.keys(byScope.get("JOB").dimensions).sort();
+  for (const scope of BASE_BUDGET_SCOPES) {
+    const dimensions = Object.keys(byScope.get(scope).dimensions).sort();
+    if (JSON.stringify(dimensions) !== JSON.stringify(baseDimensions)) {
+      throw new Error("research job base budget scopes must contain identical dimensions");
+    }
+  }
+  return { views, byScope, dimensions: baseDimensions };
+}
+
+function scopeId(scope, researchRunId, jobId) {
+  if (scope === "SERVER") return SERVER_BUDGET_SCOPE_ID;
+  if (scope === "RUN") return researchRunId;
+  if (scope === "JOB") return jobId;
+  throw new Error(`unsupported durable budget scope ${scope}`);
+}
+
+async function readBudgetUsage(connection, scopeKind, scopeIdValue, dimension) {
+  const rows = await queryRows(
+    connection,
+    `SELECT consumed
+     FROM research_budget_usage
+     WHERE scope_kind = $scopeKind
+       AND scope_id = $scopeId
+       AND dimension = $dimension
+     LIMIT 2`,
+    { scopeKind, scopeId: scopeIdValue, dimension }
+  );
+  if (rows.length === 0) return 0;
+  if (rows.length !== 1) throw new Error("research_budget_usage violated scope identity uniqueness");
+  const consumed = Number(rows[0].consumed);
+  if (!Number.isSafeInteger(consumed) || consumed < 0) {
+    throw new Error("research budget usage persistence is invalid");
+  }
+  return consumed;
+}
+
+async function writeBudgetUsage(connection, scopeKind, scopeIdValue, dimension, consumed, timestamp) {
+  const existing = await queryRows(
+    connection,
+    `SELECT consumed
+     FROM research_budget_usage
+     WHERE scope_kind = $scopeKind
+       AND scope_id = $scopeId
+       AND dimension = $dimension
+     LIMIT 2`,
+    { scopeKind, scopeId: scopeIdValue, dimension }
+  );
+  if (existing.length > 1) throw new Error("research_budget_usage violated scope identity uniqueness");
+  if (existing.length === 0) {
+    await connection.run(
+      `INSERT INTO research_budget_usage (
+         scope_kind, scope_id, dimension, consumed, updated_at_ms
+       ) VALUES ($scopeKind, $scopeId, $dimension, $consumed, $timestamp)`,
+      { scopeKind, scopeId: scopeIdValue, dimension, consumed, timestamp }
+    );
+    return;
+  }
+  await connection.run(
+    `UPDATE research_budget_usage
+     SET consumed = $consumed,
+         updated_at_ms = $timestamp
+     WHERE scope_kind = $scopeKind
+       AND scope_id = $scopeId
+       AND dimension = $dimension`,
+    { scopeKind, scopeId: scopeIdValue, dimension, consumed, timestamp }
+  );
+}
+
+function budgetError({ dimension, exhaustedScope, budgets }) {
+  const error = new Error(`Research budget exceeded for ${dimension} at ${exhaustedScope} scope`);
+  error.code = "RESEARCH_BUDGET_EXCEEDED";
+  error.dimension = dimension;
+  error.exhaustedScope = exhaustedScope;
+  error.budgets = budgets;
+  return error;
+}
+
+function rewriteBudgetView(view, consumedByDimension) {
+  return {
+    scope: view.scope,
+    dimensions: Object.fromEntries(Object.entries(view.dimensions).map(([dimension, state]) => {
+      const consumed = consumedByDimension[dimension] ?? state.consumed;
+      return [dimension, {
+        limit: state.limit,
+        consumed,
+        remaining: Math.max(0, state.limit - consumed)
+      }];
+    }))
+  };
+}
+
+function budgetErrorViews(parsed, durable) {
+  return parsed.views.map((view) => {
+    if (!BASE_BUDGET_SCOPES.includes(view.scope)) return view;
+    return rewriteBudgetView(view, durable[view.scope]);
+  });
+}
+
+async function reconcileDurableBudgetProgress(connection, researchRunId, jobId, progress, timestamp) {
+  const parsed = normalizeBudgetProgress(progress);
+  if (!parsed) return progress;
+
+  const durable = { SERVER: {}, RUN: {}, JOB: {} };
+  const jobView = parsed.byScope.get("JOB");
+  const runView = parsed.byScope.get("RUN");
+  const serverView = parsed.byScope.get("SERVER");
+
+  for (const dimension of parsed.dimensions) {
+    const durableJob = await readBudgetUsage(connection, "JOB", jobId, dimension);
+    const durableRun = await readBudgetUsage(connection, "RUN", researchRunId, dimension);
+    const durableServer = await readBudgetUsage(connection, "SERVER", SERVER_BUDGET_SCOPE_ID, dimension);
+    const proposedJob = jobView.dimensions[dimension].consumed;
+    if (proposedJob < durableJob) {
+      throw new Error(`research job budget ${dimension} cannot decrease`);
+    }
+    const delta = proposedJob - durableJob;
+    const nextRun = durableRun + delta;
+    const nextServer = durableServer + delta;
+    durable.JOB[dimension] = durableJob;
+    durable.RUN[dimension] = durableRun;
+    durable.SERVER[dimension] = durableServer;
+
+    if (proposedJob > jobView.dimensions[dimension].limit) {
+      throw budgetError({ dimension, exhaustedScope: "JOB", budgets: budgetErrorViews(parsed, durable) });
+    }
+    if (nextRun > runView.dimensions[dimension].limit) {
+      throw budgetError({ dimension, exhaustedScope: "RUN", budgets: budgetErrorViews(parsed, durable) });
+    }
+    if (nextServer > serverView.dimensions[dimension].limit) {
+      throw budgetError({ dimension, exhaustedScope: "SERVER", budgets: budgetErrorViews(parsed, durable) });
+    }
+
+    durable.JOB[dimension] = proposedJob;
+    durable.RUN[dimension] = nextRun;
+    durable.SERVER[dimension] = nextServer;
+    if (delta > 0) {
+      await writeBudgetUsage(connection, "JOB", jobId, dimension, proposedJob, timestamp);
+      await writeBudgetUsage(connection, "RUN", researchRunId, dimension, nextRun, timestamp);
+      await writeBudgetUsage(connection, "SERVER", SERVER_BUDGET_SCOPE_ID, dimension, nextServer, timestamp);
+    }
+  }
+
+  const normalized = normalizeJsonValue(progress, "progress", new Set());
+  normalized.budget = parsed.views.map((view) => {
+    if (!BASE_BUDGET_SCOPES.includes(view.scope)) return view;
+    return rewriteBudgetView(view, durable[view.scope]);
+  });
+  return normalized;
+}
+
+async function seedDurableBudgetUsage(connection, timestamp) {
+  const rows = await queryRows(
+    connection,
+    `SELECT job_id, research_run_id, progress_json
+     FROM research_jobs
+     ORDER BY created_at_ms ASC, job_id ASC`
+  );
+  const runTotals = new Map();
+  const serverTotals = new Map();
+
+  for (const row of rows) {
+    const jobId = assertJobId(String(row.job_id));
+    const researchRunId = assertResearchRunId(String(row.research_run_id));
+    const progress = parseJsonObject(row.progress_json, "job progress");
+    const parsed = normalizeBudgetProgress(progress);
+    if (!parsed) continue;
+    const jobView = parsed.byScope.get("JOB");
+    for (const dimension of parsed.dimensions) {
+      const consumed = jobView.dimensions[dimension].consumed;
+      if (consumed === 0) continue;
+      await writeBudgetUsage(connection, "JOB", jobId, dimension, consumed, timestamp);
+      const runKey = `${researchRunId}\u0000${dimension}`;
+      runTotals.set(runKey, (runTotals.get(runKey) ?? 0) + consumed);
+      serverTotals.set(dimension, (serverTotals.get(dimension) ?? 0) + consumed);
+    }
+  }
+
+  for (const [key, consumed] of runTotals) {
+    const separator = key.indexOf("\u0000");
+    const researchRunId = key.slice(0, separator);
+    const dimension = key.slice(separator + 1);
+    await writeBudgetUsage(connection, "RUN", researchRunId, dimension, consumed, timestamp);
+  }
+  for (const [dimension, consumed] of serverTotals) {
+    await writeBudgetUsage(connection, "SERVER", SERVER_BUDGET_SCOPE_ID, dimension, consumed, timestamp);
+  }
+}
+
 async function validateBaseLedger(connection) {
   const present = new Set(await tableNames(connection));
   const missingBase = BASE_TABLES.filter((table) => !present.has(table));
@@ -317,12 +578,13 @@ async function validateBaseLedger(connection) {
 
 async function bootstrapOrValidate(connection, createdAtMs) {
   const present = await validateBaseLedger(connection);
-  const presentJobTables = JOB_TABLES.filter((table) => present.has(table));
+  const presentCoreTables = JOB_CORE_TABLES.filter((table) => present.has(table));
 
-  if (presentJobTables.length === 0) {
+  if (presentCoreTables.length === 0 && !present.has("research_budget_usage")) {
     await inTransaction(connection, async () => {
       await connection.run(CREATE_RESEARCH_JOB_INFO);
       await connection.run(CREATE_RESEARCH_JOBS);
+      await connection.run(CREATE_RESEARCH_BUDGET_USAGE);
       await connection.run(
         `INSERT INTO research_job_info (schema_version, created_at_ms)
          VALUES ($schemaVersion, $createdAtMs)`,
@@ -332,9 +594,9 @@ async function bootstrapOrValidate(connection, createdAtMs) {
     return;
   }
 
-  const missing = JOB_TABLES.filter((table) => !present.has(table));
-  if (missing.length > 0) {
-    throw new Error(`Research job ledger is missing required tables: ${missing.join(", ")}`);
+  const missingCore = JOB_CORE_TABLES.filter((table) => !present.has(table));
+  if (missingCore.length > 0) {
+    throw new Error(`Research job ledger is missing required tables: ${missingCore.join(", ")}`);
   }
 
   const info = await queryRows(connection, "SELECT schema_version FROM research_job_info");
@@ -342,10 +604,29 @@ async function bootstrapOrValidate(connection, createdAtMs) {
     throw new Error("Research job ledger must contain exactly one schema version row");
   }
   const schemaVersion = Number(info[0].schema_version);
+  if (schemaVersion === 1) {
+    if (present.has("research_budget_usage")) {
+      throw new Error("Research job schema v1 unexpectedly contains durable budget usage");
+    }
+    await inTransaction(connection, async () => {
+      await connection.run(CREATE_RESEARCH_BUDGET_USAGE);
+      await seedDurableBudgetUsage(connection, createdAtMs);
+      await connection.run(
+        `UPDATE research_job_info
+         SET schema_version = $schemaVersion`,
+        { schemaVersion: RESEARCH_JOB_SCHEMA_VERSION }
+      );
+    });
+    return;
+  }
   if (schemaVersion !== RESEARCH_JOB_SCHEMA_VERSION) {
     throw new Error(
       `Unsupported research job schema version ${schemaVersion}; expected ${RESEARCH_JOB_SCHEMA_VERSION}`
     );
+  }
+  const missing = JOB_TABLES.filter((table) => !present.has(table));
+  if (missing.length > 0) {
+    throw new Error(`Research job ledger is missing required tables: ${missing.join(", ")}`);
   }
 }
 
@@ -605,7 +886,10 @@ export async function openResearchJobLedger({
     async updateJobProgress(researchRunId, jobId, progress) {
       const runId = await requireRun(researchRunId);
       const durableJobId = assertJobId(jobId);
-      const progressJson = serializeCanonicalJsonObject(progress, "progress", MAX_PROGRESS_CHARS);
+      const validatedProgress = parseJsonObject(
+        serializeCanonicalJsonObject(progress, "progress", MAX_PROGRESS_CHARS),
+        "progress"
+      );
       let result;
 
       await inTransaction(connection, async () => {
@@ -614,6 +898,14 @@ export async function openResearchJobLedger({
           throw new Error(`Research Job progress cannot change after ${current.status}`);
         }
         const timestamp = assertSafeTimestamp(now(), "now()");
+        const durableProgress = await reconcileDurableBudgetProgress(
+          connection,
+          runId,
+          durableJobId,
+          validatedProgress,
+          timestamp
+        );
+        const progressJson = serializeCanonicalJsonObject(durableProgress, "progress", MAX_PROGRESS_CHARS);
         await connection.run(
           `UPDATE research_jobs
            SET progress_json = $progressJson,
