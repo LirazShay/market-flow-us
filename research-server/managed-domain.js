@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 import { openResearchDomain } from "./domain.js";
 import { createResearchJobController } from "./job-control.js";
@@ -39,6 +39,15 @@ const MAX_SQL_BYTES = 1024 * 1024;
 
 function jobKey(researchRunId, jobId) {
   return `${researchRunId}\u0000${jobId}`;
+}
+
+async function withComponent(opener, options, operation) {
+  const component = await opener(options);
+  try {
+    return await operation(component);
+  } finally {
+    await component.close();
+  }
 }
 
 function assertExactKeys(input, allowed, label) {
@@ -96,7 +105,19 @@ function experimentIntent(input) {
   });
 }
 
-function sqlIntent(input, analysisId) {
+function deterministicAnalysisId(researchRunId, clientRequestId) {
+  const hex = createHash("sha256")
+    .update(`research-sql\u0000${researchRunId}\u0000${clientRequestId}`, "utf8")
+    .digest("hex")
+    .slice(0, 32)
+    .split("");
+  hex[12] = "4";
+  hex[16] = ((Number.parseInt(hex[16], 16) & 0x3) | 0x8).toString(16);
+  const value = hex.join("");
+  return `analysis_${value.slice(0, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}-${value.slice(16, 20)}-${value.slice(20)}`;
+}
+
+function sqlIntent(input) {
   const request = assertExactKeys(input, MANAGED_SQL_KEYS, "managed development research SQL request");
   const sql = assertPublicSafeText(request.sql, "research SQL");
   if (sql.trim().length === 0 || Buffer.byteLength(sql, "utf8") > MAX_SQL_BYTES) {
@@ -105,7 +126,6 @@ function sqlIntent(input, analysisId) {
   if (!SQL_PURPOSES.has(request.purpose)) throw new TypeError("research SQL purpose is invalid");
   if (!SQL_OUTPUT_MODES.has(request.outputMode)) throw new TypeError("research SQL outputMode is invalid");
   return Object.freeze({
-    analysisId,
     researchRunId: request.researchRunId,
     partitionId: request.partitionId,
     experimentIds: request.experimentIds ?? [],
@@ -116,9 +136,7 @@ function sqlIntent(input, analysisId) {
 }
 
 function estimatedT0Count(input) {
-  if (!Number.isSafeInteger(input.fromAtMs) || !Number.isSafeInteger(input.toAtMs) || input.toAtMs < input.fromAtMs) {
-    return 0;
-  }
+  if (!Number.isSafeInteger(input.fromAtMs) || !Number.isSafeInteger(input.toAtMs) || input.toAtMs < input.fromAtMs) return 0;
   const unitMs = input.intervalUnit === "seconds" ? 1000 : input.intervalUnit === "minutes" ? 60_000 : null;
   if (unitMs === null || !Number.isSafeInteger(input.intervalValue) || input.intervalValue < 1) return 0;
   const intervalMs = input.intervalValue * unitMs;
@@ -136,18 +154,19 @@ function rowsFromSqlResult(result) {
     throw new Error("Research SQL returned an invalid bounded result");
   }
   const names = result.columns.map((column) => String(column.name));
-  const columns = result.columns.map((column) => Object.freeze({
-    name: String(column.name),
-    type: String(column.type ?? "UNKNOWN"),
-    nullable: true
-  }));
-  const rows = result.rows.map((row) => {
-    if (!Array.isArray(row) || row.length !== names.length) {
-      throw new Error("Research SQL row shape does not match its columns");
-    }
-    return Object.fromEntries(names.map((name, index) => [name, row[index]]));
-  });
-  return { columns, rows };
+  return {
+    columns: result.columns.map((column) => Object.freeze({
+      name: String(column.name),
+      type: String(column.type ?? "UNKNOWN"),
+      nullable: true
+    })),
+    rows: result.rows.map((row) => {
+      if (!Array.isArray(row) || row.length !== names.length) {
+        throw new Error("Research SQL row shape does not match its columns");
+      }
+      return Object.fromEntries(names.map((name, index) => [name, row[index]]));
+    })
+  };
 }
 
 function resultReference(result) {
@@ -166,9 +185,16 @@ function cancellationPossible(job) {
 export async function openManagedResearchDomain(options = {}) {
   const resourcePolicy = assertResourcePolicy(options.resourcePolicy);
   const base = await openResearchDomain(options);
-  const jobLedger = await openResearchJobLedger(options);
-  const resultLedger = await openResearchResultLedger(options);
-  const progressStore = await openResearchJobProgressStore(options);
+  const jobSchemaVersion = await withComponent(
+    openResearchJobLedger,
+    options,
+    async (jobs) => jobs.schemaVersion
+  );
+  const resultSchemaVersion = await withComponent(
+    openResearchResultLedger,
+    options,
+    async (results) => results.schemaVersion
+  );
   const governor = createResearchResourceGovernor({
     concurrency: resourcePolicy.concurrency,
     budgets: {
@@ -181,31 +207,50 @@ export async function openManagedResearchDomain(options = {}) {
   const queueWaits = new Map();
   const background = new Map();
   let accepting = true;
+  let activeJobLedger = null;
+
+  async function jobs() {
+    if (!activeJobLedger) activeJobLedger = await openResearchJobLedger(options);
+    return activeJobLedger;
+  }
+
+  async function useResults(operation) {
+    return await withComponent(openResearchResultLedger, options, operation);
+  }
+
+  async function useProgress(operation) {
+    return await withComponent(openResearchJobProgressStore, options, operation);
+  }
 
   const controllerLedger = Object.freeze({
-    getJob: (researchRunId, jobId) => jobLedger.getJob(researchRunId, jobId),
-    markJobRunning: (researchRunId, jobId) => jobLedger.markJobRunning(researchRunId, jobId),
-    markJobSucceeded: (researchRunId, jobId) => jobLedger.markJobSucceeded(researchRunId, jobId),
-    markJobFailed: (researchRunId, jobId, fallbackCode) => jobLedger.markJobFailed(
-      researchRunId,
-      jobId,
-      failureCodes.get(jobKey(researchRunId, jobId)) ?? fallbackCode
-    ),
-    finalizeJobCancelled: (researchRunId, jobId) => jobLedger.finalizeJobCancelled(researchRunId, jobId)
+    async getJob(researchRunId, jobId) {
+      return await (await jobs()).getJob(researchRunId, jobId);
+    },
+    async markJobRunning(researchRunId, jobId) {
+      return await (await jobs()).markJobRunning(researchRunId, jobId);
+    },
+    async markJobSucceeded(researchRunId, jobId) {
+      return await (await jobs()).markJobSucceeded(researchRunId, jobId);
+    },
+    async markJobFailed(researchRunId, jobId, fallbackCode) {
+      return await (await jobs()).markJobFailed(
+        researchRunId,
+        jobId,
+        failureCodes.get(jobKey(researchRunId, jobId)) ?? fallbackCode
+      );
+    },
+    async finalizeJobCancelled(researchRunId, jobId) {
+      return await (await jobs()).finalizeJobCancelled(researchRunId, jobId);
+    }
   });
   const controller = createResearchJobController({ jobLedger: controllerLedger });
-  const analysisIdFactory = options.analysisIdFactory ?? (() => `analysis_${randomUUID()}`);
-  if (typeof analysisIdFactory !== "function") throw new TypeError("analysisIdFactory must be a function");
 
   function requestScope(jobBudget) {
-    return jobBudget.createScope({
-      kind: "REQUEST",
-      limits: resourcePolicy.budgets.request
-    });
+    return jobBudget.createScope({ kind: "REQUEST", limits: resourcePolicy.budgets.request });
   }
 
   async function persistProgress(researchRunId, jobId, progress) {
-    return await progressStore.updateProgress(researchRunId, jobId, progress);
+    return await useProgress((store) => store.updateProgress(researchRunId, jobId, progress));
   }
 
   async function safeFailureProgress(researchRunId, jobId, error, budget) {
@@ -215,9 +260,7 @@ export async function openManagedResearchDomain(options = {}) {
         totalUnits: 1,
         resultHandles: [],
         budget: budget?.snapshot() ?? [],
-        failure: {
-          code: typeof error?.code === "string" ? error.code : "RESEARCH_JOB_FAILED"
-        }
+        failure: { code: typeof error?.code === "string" ? error.code : "RESEARCH_JOB_FAILED" }
       });
     } catch {
       // Preserve the original execution failure; the durable Job state remains authoritative.
@@ -248,7 +291,7 @@ export async function openManagedResearchDomain(options = {}) {
         work: async () => { throw error; }
       });
     } catch {
-      // The requested durable FAILED state is the observable result.
+      // Durable FAILED is the observable outcome.
     } finally {
       failureCodes.delete(key);
     }
@@ -257,7 +300,6 @@ export async function openManagedResearchDomain(options = {}) {
   function launch(job, work) {
     const key = jobKey(job.researchRunId, job.jobId);
     if (job.status !== "QUEUED" || background.has(key)) return;
-
     const queueAbort = new AbortController();
     queueWaits.set(key, queueAbort);
     const task = (async () => {
@@ -271,14 +313,10 @@ export async function openManagedResearchDomain(options = {}) {
         queueWaits.delete(key);
         if (queueAbort.signal.aborted) return;
         await runWithFailureCode(job.researchRunId, job.jobId, async () => {
-          await controller.runJob({
-            researchRunId: job.researchRunId,
-            jobId: job.jobId,
-            work
-          });
+          await controller.runJob({ researchRunId: job.researchRunId, jobId: job.jobId, work });
         });
       } catch (error) {
-        const current = await jobLedger.getJob(job.researchRunId, job.jobId);
+        const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
         if (current?.status === "CANCELLED" || error?.code === "RESEARCH_JOB_CANCELLED") return;
         if (current?.status === "QUEUED") await failQueuedAdmission(current, error);
       } finally {
@@ -293,10 +331,7 @@ export async function openManagedResearchDomain(options = {}) {
 
   function launchExperiment(job, intent) {
     launch(job, async (control) => {
-      const budget = governor.createJobBudget({
-        researchRunId: job.researchRunId,
-        jobId: job.jobId
-      });
+      const budget = governor.createJobBudget({ researchRunId: job.researchRunId, jobId: job.jobId });
       const requestBudget = requestScope(budget);
       try {
         requestBudget.consume("workUnits", 1);
@@ -320,7 +355,7 @@ export async function openManagedResearchDomain(options = {}) {
         }];
         requestBudget.consume("resultRows", rows.length);
         requestBudget.consume("resultBytes", resultBytes(rows));
-        const result = await resultLedger.createResult({
+        const result = await useResults((results) => results.createResult({
           researchRunId: job.researchRunId,
           sourceJobId: job.jobId,
           resultKind: "EXPERIMENT_SUMMARY",
@@ -337,7 +372,7 @@ export async function openManagedResearchDomain(options = {}) {
             partitionId: experiment.partitionId,
             sourceFingerprint: experiment.request.source.sourceFingerprint
           }
-        });
+        }));
         await persistProgress(job.researchRunId, job.jobId, {
           completedUnits: 1,
           totalUnits: 1,
@@ -354,12 +389,9 @@ export async function openManagedResearchDomain(options = {}) {
     });
   }
 
-  function launchResearchSql(job, intent) {
+  function launchResearchSql(job, intent, analysisId) {
     launch(job, async (control) => {
-      const budget = governor.createJobBudget({
-        researchRunId: job.researchRunId,
-        jobId: job.jobId
-      });
+      const budget = governor.createJobBudget({ researchRunId: job.researchRunId, jobId: job.jobId });
       const requestBudget = requestScope(budget);
       const sqlBudget = requestBudget.createScope({
         kind: "SQL_ANALYSIS",
@@ -373,15 +405,12 @@ export async function openManagedResearchDomain(options = {}) {
         await persistProgress(job.researchRunId, job.jobId, {
           completedUnits: 0,
           totalUnits: 1,
-          analysisId: intent.analysisId,
+          analysisId,
           resultHandles: [],
           budget: sqlBudget.snapshot()
         });
         control.checkpoint();
-        readerLease = governor.acquireAnalyticalReader({
-          researchRunId: job.researchRunId,
-          jobId: job.jobId
-        });
+        readerLease = governor.acquireAnalyticalReader({ researchRunId: job.researchRunId, jobId: job.jobId });
         session = await base.openDevelopmentResearchSql({
           researchRunId: intent.researchRunId,
           partitionId: intent.partitionId,
@@ -394,24 +423,24 @@ export async function openManagedResearchDomain(options = {}) {
         const bounded = rowsFromSqlResult(sqlResult);
         sqlBudget.consume("resultRows", bounded.rows.length);
         sqlBudget.consume("resultBytes", resultBytes(bounded.rows));
-        const result = await resultLedger.createResult({
+        const result = await useResults((results) => results.createResult({
           researchRunId: job.researchRunId,
           sourceJobId: job.jobId,
           resultKind: "RESEARCH_SQL_RESULT",
           columns: bounded.columns,
           rows: bounded.rows,
           provenance: {
-            analysisId: intent.analysisId,
+            analysisId,
             partitionId: intent.partitionId,
             experimentIds: intent.experimentIds,
             purpose: intent.purpose,
             outputMode: intent.outputMode
           }
-        });
+        }));
         await persistProgress(job.researchRunId, job.jobId, {
           completedUnits: 1,
           totalUnits: 1,
-          analysisId: intent.analysisId,
+          analysisId,
           resultHandles: [resultReference(result)],
           budget: sqlBudget.snapshot()
         });
@@ -442,56 +471,51 @@ export async function openManagedResearchDomain(options = {}) {
     ...base,
     schemaVersions: Object.freeze({
       ...base.schemaVersions,
-      jobs: jobLedger.schemaVersion,
-      results: resultLedger.schemaVersion
+      jobs: jobSchemaVersion,
+      results: resultSchemaVersion
     }),
     resourceLimits: governor.limits,
 
     async submitDevelopmentExperiment(input) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
       const intent = experimentIntent(input);
-      const job = await jobLedger.createJob({
+      const job = await (await jobs()).createJob({
         researchRunId: intent.researchRunId,
         operation: "execute_development_experiment",
         clientRequestId: input.clientRequestId,
         intent
       });
       await initializeQueuedProgress(job);
-      const current = await jobLedger.getJob(job.researchRunId, job.jobId);
+      const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
       if (current.status === "QUEUED") launchExperiment(current, intent);
       return Object.freeze({ researchRunId: current.researchRunId, jobId: current.jobId });
     },
 
     async submitDevelopmentResearchSql(input) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
-      const analysisId = `analysis_${randomUUID()}`;
-      const provisional = sqlIntent(input, analysisId);
-      const job = await jobLedger.createJob({
-        researchRunId: provisional.researchRunId,
+      const intent = sqlIntent(input);
+      const analysisId = deterministicAnalysisId(intent.researchRunId, input.clientRequestId);
+      const job = await (await jobs()).createJob({
+        researchRunId: intent.researchRunId,
         operation: "execute_development_research_sql",
         clientRequestId: input.clientRequestId,
-        intent: provisional
+        intent
       });
-      const intent = job.intent;
-      await initializeQueuedProgress(job, { analysisId: intent.analysisId });
-      const current = await jobLedger.getJob(job.researchRunId, job.jobId);
-      if (current.status === "QUEUED") launchResearchSql(current, intent);
-      return Object.freeze({
-        researchRunId: current.researchRunId,
-        analysisId: intent.analysisId,
-        jobId: current.jobId
-      });
+      await initializeQueuedProgress(job, { analysisId });
+      const current = await (await jobs()).getJob(job.researchRunId, job.jobId);
+      if (current.status === "QUEUED") launchResearchSql(current, intent, analysisId);
+      return Object.freeze({ researchRunId: current.researchRunId, analysisId, jobId: current.jobId });
     },
 
     async getJob(researchRunId, jobId) {
-      const job = await jobLedger.getJob(researchRunId, jobId);
+      const job = await (await jobs()).getJob(researchRunId, jobId);
       if (!job) return null;
       return Object.freeze({ ...job, cancellationPossible: cancellationPossible(job) });
     },
 
     async listJobs(researchRunId, listOptions) {
-      const jobs = await jobLedger.listJobs(researchRunId, listOptions);
-      return Object.freeze(jobs.map((job) => Object.freeze({
+      const values = await (await jobs()).listJobs(researchRunId, listOptions);
+      return Object.freeze(values.map((job) => Object.freeze({
         ...job,
         cancellationPossible: cancellationPossible(job)
       })));
@@ -504,11 +528,11 @@ export async function openManagedResearchDomain(options = {}) {
     },
 
     async getResult(researchRunId, resultHandle) {
-      return await resultLedger.getResult(researchRunId, resultHandle);
+      return await useResults((results) => results.getResult(researchRunId, resultHandle));
     },
 
     async getResultPage(researchRunId, resultHandle, pageOptions) {
-      return await resultLedger.getResultPage(researchRunId, resultHandle, pageOptions);
+      return await useResults((results) => results.getResultPage(researchRunId, resultHandle, pageOptions));
     },
 
     async close() {
@@ -520,13 +544,12 @@ export async function openManagedResearchDomain(options = {}) {
         try {
           await controller.cancelJob(researchRunId, jobId);
         } catch {
-          // Close remains best-effort; restart reconciliation handles interrupted work.
+          // Restart reconciliation remains the final crash boundary.
         }
         await task;
       }));
-      await progressStore.close();
-      await resultLedger.close();
-      await jobLedger.close();
+      await activeJobLedger?.close();
+      activeJobLedger = null;
       await base.close();
     }
   });
