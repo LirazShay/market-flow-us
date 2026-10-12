@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with cancellation propagation. Durable job lifecycle/idempotency/restart plus frozen durable result handles with run-scoped ownership, stable ordering, bounded row/byte paging and handle-scoped cursors are already implemented and green in PR #102."
+  action: "Continue Chat 38 / 11.4 with hierarchical budgets and bounded concurrency. Durable jobs/idempotency/restart, frozen run-scoped result handles with bounded paging, and cooperative cancellation with deterministic cancel/success race handling are already implemented and green in PR #102. Actual DuckDB interrupt wiring remains for the later 11.2/11.3 composition checkpoint."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
