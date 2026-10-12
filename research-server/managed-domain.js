@@ -3,7 +3,6 @@ import { createHash } from "node:crypto";
 import { openResearchDomain } from "./domain.js";
 import { createResearchJobController } from "./job-control.js";
 import { openResearchJobLedger } from "./job-ledger.js";
-import { openResearchJobProgressStore } from "./job-progress.js";
 import { createResearchResourceGovernor } from "./resource-governor.js";
 import { openResearchResultLedger } from "./result-ledger.js";
 
@@ -188,7 +187,7 @@ export async function openManagedResearchDomain(options = {}) {
   const jobSchemaVersion = await withComponent(
     openResearchJobLedger,
     options,
-    async (jobs) => jobs.schemaVersion
+    async (jobLedger) => jobLedger.schemaVersion
   );
   const resultSchemaVersion = await withComponent(
     openResearchResultLedger,
@@ -216,10 +215,6 @@ export async function openManagedResearchDomain(options = {}) {
 
   async function useResults(operation) {
     return await withComponent(openResearchResultLedger, options, operation);
-  }
-
-  async function useProgress(operation) {
-    return await withComponent(openResearchJobProgressStore, options, operation);
   }
 
   const controllerLedger = Object.freeze({
@@ -250,7 +245,7 @@ export async function openManagedResearchDomain(options = {}) {
   }
 
   async function persistProgress(researchRunId, jobId, progress) {
-    return await useProgress((store) => store.updateProgress(researchRunId, jobId, progress));
+    return await (await jobs()).updateJobProgress(researchRunId, jobId, progress);
   }
 
   async function safeFailureProgress(researchRunId, jobId, error, budget) {
