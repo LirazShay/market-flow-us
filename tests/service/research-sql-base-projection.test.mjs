@@ -179,8 +179,8 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
       ORDER BY source_id, security_id
     `);
     assert.deepEqual(history.rows, [
-      [ARCHIVE_ID, "2001", "ARC", 202.5, "2000", "archive-extra"],
-      ["active", "1001", "ACT", 101.5, "2000", "active-extra"]
+      ["active", "1001", "ACT", 101.5, "2000", "active-extra"],
+      [ARCHIVE_ID, "2001", "ARC", 202.5, "2000", "archive-extra"]
     ]);
 
     const cycles = await sandbox.execute("SELECT * FROM research_cycles ORDER BY source_id, cycle_id");
@@ -209,8 +209,8 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
       ORDER BY source_id, security_id
     `);
     assert.deepEqual(universe.rows, [
-      [ARCHIVE_ID, "2001", true, "1995", "1995"],
-      ["active", "1001", true, "1995", "1995"]
+      ["active", "1001", true, "1995", "1995"],
+      [ARCHIVE_ID, "2001", true, "1995", "1995"]
     ]);
 
     const sources = await sandbox.execute(`
@@ -219,8 +219,8 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
       ORDER BY source_id
     `);
     assert.deepEqual(sources.rows, [
-      [ARCHIVE_ID, "ARCHIVE", "1", "2000", "2000"],
-      ["active", "ACTIVE", "1", "2000", "2000"]
+      ["active", "ACTIVE", "1", "2000", "2000"],
+      [ARCHIVE_ID, "ARCHIVE", "1", "2000", "2000"]
     ]);
 
     const partition = await sandbox.execute(`
@@ -230,8 +230,8 @@ test("TREE 11.3 base research projection isolates two authorized sources and exp
       ORDER BY source_id
     `);
     assert.deepEqual(partition.rows, [
-      [PARTITION_ID, "DEVELOPMENT", PLAN_ID, ARCHIVE_ID, "1500", "2500", "120000"],
-      [PARTITION_ID, "DEVELOPMENT", PLAN_ID, "active", "1500", "2500", "120000"]
+      [PARTITION_ID, "DEVELOPMENT", PLAN_ID, "active", "1500", "2500", "120000"],
+      [PARTITION_ID, "DEVELOPMENT", PLAN_ID, ARCHIVE_ID, "1500", "2500", "120000"]
     ]);
 
     await assert.rejects(() => sandbox.execute("SELECT * FROM history"));
