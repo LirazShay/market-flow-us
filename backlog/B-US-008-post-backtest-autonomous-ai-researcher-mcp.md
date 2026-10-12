@@ -30,6 +30,7 @@ Active discovery truth is recorded in:
 - `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
 - `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; still pre-implementation.
 - `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; still pre-implementation.
+- `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected research projection / SQL sandbox / raw-field / phase-access data-surface direction; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -87,6 +88,12 @@ Correctness-critical research state lives in the local Research Server / Researc
 
 MCP is a thin adapter over this durable domain contract. Large results use bounded result handles/pages; expensive work uses durable jobs with progress/cancellation rather than one giant synchronous model call.
 
+### Research SQL sees a curated evidence projection, not the source catalog
+
+General AI analytics run against isolated relations such as `research_history`, `research_cycles` and explicit experiment/outcome inputs. The projection carries all documented typed market fields plus bounded provider `raw_data` for discovery, while excluding operational/session/config/source-metadata state and arbitrary source paths.
+
+Research relation names deliberately differ from Scanner `latest/history`; future-dependent labels live in explicit outcome relations. A deployable idea must be translated back into legal Scanner SQL and proven again through the Strategy Sandbox. Development has broad research SQL access; Validation is closed by default unless explicitly exposed and recorded; sealed Holdout has no research SQL surface until post-final audit.
+
 ## Hard boundaries
 
 Research autonomy does not grant unrelated machine authority. The design must preserve source DB immutability, no broker/order authority, no provider/browser credentials/session data, no arbitrary source-path mutation, no automatic live Scanner activation/trading, bounded/cancellable expensive work, public-safe diagnostics and reproducible authority separation.
@@ -100,7 +107,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, and the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, and the selected isolated research projection with raw-field discovery and explicit strategy/research data separation.
 
 ## Completion boundary
 
