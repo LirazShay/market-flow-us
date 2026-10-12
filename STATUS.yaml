@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with workload/resource/cancellation-latency tuning and restart reclosure. Direct Research SQL and active Development experiment/Backtest cancellation now reach native DuckDB interruption; managed experiment cancellation is proven CANCELLED without durable Experiment/result success and with source fingerprints preserved. Fast #826 + Planning/Contract #1016 + Workload #412 are green on implementation head e3c05588. After reclosure, perform final 11.4 success-evidence review and PR readiness."
+  action: "Continue Chat 38 / 11.4 with final success-evidence review and PR readiness. Durable jobs/results/idempotency/restart, native SQL/experiment cancellation, durable hierarchical budget accounting including pre-result reservation, and bounded workload/cancellation-latency evidence are green. Fast #837 + Planning/Contract #1027 + Workload #423 are green on workload head 1a34652d. Review the full PR diff against 11.4 success evidence, resolve any remaining blocker, then ready/squash-merge only after the evidence is complete."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
