@@ -1,3 +1,7 @@
+import {
+  resolveResearchDuckDbResourceLimits
+} from "../backtest-lab/duckdb-resource-limits.js";
+import { openDevelopmentResearchSqlSandbox } from "./research-sql.js";
 import { openDevelopmentResearchSqlSession as openCoreDevelopmentResearchSqlSession } from "./research-sql-session-core.js";
 
 export const DEFAULT_RESEARCH_SQL_TIMEOUT_MS = 60_000;
@@ -37,12 +41,26 @@ function timeoutError(timeoutMs) {
 
 export async function openDevelopmentResearchSqlSession(options = {}) {
   const timeoutMs = resolveResearchSqlTimeoutMs(options.sqlTimeoutMs);
-  const { sqlTimeoutMs: _sqlTimeoutMs, ...coreOptions } = options;
-  const session = await openCoreDevelopmentResearchSqlSession(coreOptions);
+  const duckdbResourceLimits = resolveResearchDuckDbResourceLimits(options.duckdbResourceLimits);
+  const callerOpenSandbox = options.openSandbox ?? openDevelopmentResearchSqlSandbox;
+  const {
+    sqlTimeoutMs: _sqlTimeoutMs,
+    duckdbResourceLimits: _duckdbResourceLimits,
+    openSandbox: _openSandbox,
+    ...coreOptions
+  } = options;
+  const session = await openCoreDevelopmentResearchSqlSession({
+    ...coreOptions,
+    openSandbox: (sandboxOptions) => callerOpenSandbox({
+      ...sandboxOptions,
+      duckdbResourceLimits
+    })
+  });
 
   return Object.freeze({
     ...session,
     sqlTimeoutMs: timeoutMs,
+    duckdbResourceLimits,
     async execute(sql) {
       let timedOut = false;
       const error = timeoutError(timeoutMs);
