@@ -22,27 +22,27 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 35
-  node: "11.1"
-  title: "Research Server domain foundation and durable ledger"
-  status: in_progress
+  chat: null
+  node: null
+  title: null
+  status: pending
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 49
+  done: 50
   pending: 7
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 35
-  current_node: "11.1"
+  current_chat: null
+  current_node: null
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.1"
-  owner: "Chat 35"
-  status: in_progress
-  action: "Continue the active Research Server durable-ledger foundation through the remaining evidence identity/plan/partition, research notes, Resume Capsule and transaction-fault success evidence; do not start 11.2 or 11.3 before 11.1 is done and merged."
+  task: "11.2"
+  owner: "Chat 36"
+  status: pending
+  action: "11.1 is complete and merged. Start Chat 36 / 11.2 only through explicit numbered-chat activation. Chat 37 / 11.3 is also independently dependency-unblocked after 11.1; generic continuation must not activate either owner."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
