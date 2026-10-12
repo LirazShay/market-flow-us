@@ -22,27 +22,27 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: null
-  node: null
-  title: null
-  status: pending
+  chat: 36
+  node: "11.2"
+  title: "Authoritative experiment engine and research diagnostics"
+  status: in_progress
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 50
-  pending: 7
-  in_progress: 0
+  pending: 6
+  in_progress: 1
   blocked: 0
-  current_chat: null
-  current_node: null
+  current_chat: 36
+  current_node: "11.2"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "11.2"
   owner: "Chat 36"
-  status: pending
-  action: "11.1 is complete and merged. Start Chat 36 / 11.2 only through explicit numbered-chat activation. Chat 37 / 11.3 is also independently dependency-unblocked after 11.1; generic continuation must not activate either owner."
+  status: in_progress
+  action: "Continue Chat 36 / 11.2 from the active experiment-authority implementation. Chat 37 / 11.3 remains independently dependency-unblocked after 11.1 but generic continuation must not switch numbered executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
