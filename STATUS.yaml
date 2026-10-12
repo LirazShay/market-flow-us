@@ -25,15 +25,15 @@ current:
   chat: 37
   node: "11.3"
   title: "Phase-aware research SQL data surface"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 51
-  pending: 6
-  in_progress: 0
+  pending: 5
+  in_progress: 1
   blocked: 0
   current_chat: 37
   current_node: "11.3"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.3"
   owner: "Chat 37"
-  status: pending
-  action: "Chat 36 / 11.2 is complete after green success-evidence reclosure. Start Chat 37 / 11.3 only through explicit numbered-chat activation; generic continuation in the completed Chat 36 conversation must not switch executor identity."
+  status: in_progress
+  action: "Continue Chat 37 / 11.3 from the current feature branch and complete the remaining research SQL data-surface success evidence before advancing to Chat 38."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
