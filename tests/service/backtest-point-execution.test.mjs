@@ -195,7 +195,7 @@ test("TREE 11.2 experiment point is exactly Backtest authority with immutable Qu
   }
 });
 
-test("TREE 11.2 batch freezes comparable experiment provenance and reproduces Backtest Sweep authority", async () => {
+test("TREE 11.2 batch freezes provenance, reproduces Sweep authority and exposes denominator-safe metrics", async () => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-experiment-batch-"));
   const dbPath = path.join(dataDir, "market-flow-us.duckdb");
   const researchRunId = "run_11111111-1111-4111-8111-111111111111";
@@ -259,6 +259,8 @@ test("TREE 11.2 batch freezes comparable experiment provenance and reproduces Ba
     });
 
     assert.equal(experiment.request.requestFingerprint, frozenA.requestFingerprint);
+    assert.equal(JSON.stringify(experiment.durableRequest).includes("SELECT "), false);
+    assert.equal(experiment.durableRequest.requestFingerprint, frozenA.requestFingerprint);
     assert.deepEqual(experiment.sweep.request, direct.request);
     assert.deepEqual(experiment.sweep.metrics, direct.metrics);
     assert.deepEqual(experiment.sweep.overview, direct.overview);
@@ -273,6 +275,52 @@ test("TREE 11.2 batch freezes comparable experiment provenance and reproduces Ba
       distinctBaselineCount: 1,
       queryExecutionCount: 2
     });
+    assert.deepEqual(experiment.metrics.denominators, {
+      requestedPointCount: 3,
+      availablePointCount: 2,
+      unavailablePointCount: 1,
+      pointAvailabilityRate: 2 / 3,
+      distinctBaselineCount: 1,
+      repeatedBaselineRequestedPointCount: 1,
+      queryExecutionCount: 2
+    });
+    assert.deepEqual(experiment.metrics.exclusions, {
+      unavailablePointReasonBreakdown: { NO_BASELINE: 1 }
+    });
+    assert.equal(experiment.metrics.queries.length, 2);
+    for (const queryMetrics of experiment.metrics.queries) {
+      assert.equal(queryMetrics.pointDenominator, 2);
+      assert.equal(queryMetrics.zeroResultPointCount, 0);
+      assert.equal(queryMetrics.zeroResultRate, 0);
+      assert.equal(queryMetrics.sourceRowCount, 4);
+      assert.equal(queryMetrics.selectedSourceRowCount, 4);
+      assert.equal(queryMetrics.evaluatedUniqueCount, 4);
+      assert.equal(queryMetrics.duplicateRowCount, 0);
+      assert.deepEqual(queryMetrics.horizons, [{
+        horizonMs: 10_000,
+        selectedObservationCount: 4,
+        availableOutcomeCount: 2,
+        unavailableOutcomeCount: 2,
+        coverageRate: 0.5,
+        upCount: 1,
+        flatCount: 0,
+        downCount: 1,
+        positiveRate: 0.5,
+        flatRate: 0,
+        negativeRate: 0.5,
+        averagePercent: 0,
+        medianPercent: 0,
+        p10Percent: -8,
+        p25Percent: -5,
+        p75Percent: 5,
+        p90Percent: 8,
+        bestPercent: 10.000000000000009,
+        worstPercent: -9.999999999999998,
+        unavailableReasonBreakdown: { NO_FUTURE_OBSERVATION: 2 }
+      }]);
+    }
+    assert.equal(Object.isFrozen(experiment.metrics), true);
+    assert.equal(Object.isFrozen(experiment.metrics.queries), true);
     assert.deepEqual(await readFile(dbPath), before);
   } finally {
     await rm(dataDir, { recursive: true, force: true });
