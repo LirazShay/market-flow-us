@@ -95,6 +95,14 @@ async function waitForTerminal(domain, researchRunId, jobId) {
   throw new Error(`Job ${jobId} did not reach a terminal state`);
 }
 
+function terminalDiagnostic(job) {
+  return JSON.stringify({
+    status: job.status,
+    errorCode: job.errorCode,
+    progress: job.progress
+  });
+}
+
 function jobResultHandle(job) {
   assert.equal(job.progress.completedUnits, 1);
   assert.equal(job.progress.totalUnits, 1);
@@ -191,7 +199,7 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
     assert.equal(submittedExperiment.jobId, JOB_EXPERIMENT);
 
     const experimentJob = await waitForTerminal(domain, RUN_ID, JOB_EXPERIMENT);
-    assert.equal(experimentJob.status, "SUCCEEDED");
+    assert.equal(experimentJob.status, "SUCCEEDED", terminalDiagnostic(experimentJob));
     assert.equal(experimentJob.errorCode, null);
     assert.equal(experimentJob.cancellationPossible, false);
     assert.equal(experimentJob.progress.experimentId, EXPERIMENT_ID);
@@ -202,7 +210,7 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
     assert.equal(experimentPage.rows.length, 1);
     assert.equal(experimentPage.rows[0].experimentId, EXPERIMENT_ID);
 
-    const submittedSql = await domain.submitDevelopmentResearchSql({
+    const sqlRequest = {
       clientRequestId: "managed-sql-1",
       researchRunId: RUN_ID,
       partitionId: PART_DEV,
@@ -210,12 +218,13 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       sql: "SELECT security_id, Price FROM research_history ORDER BY cycle_id",
       purpose: "DEBUG",
       outputMode: "PAGED_RESULT"
-    });
+    };
+    const submittedSql = await domain.submitDevelopmentResearchSql(sqlRequest);
     assert.equal(submittedSql.jobId, JOB_SQL);
     assert.match(submittedSql.analysisId, /^analysis_/u);
 
     const sqlJob = await waitForTerminal(domain, RUN_ID, JOB_SQL);
-    assert.equal(sqlJob.status, "SUCCEEDED");
+    assert.equal(sqlJob.status, "SUCCEEDED", terminalDiagnostic(sqlJob));
     assert.equal(sqlJob.progress.analysisId, submittedSql.analysisId);
     assert.ok(sqlJob.progress.budget.some((scope) => scope.scope === "SQL_ANALYSIS"));
     const sqlResultHandle = jobResultHandle(sqlJob);
@@ -225,6 +234,10 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       { Price: 100, security_id: "1001" },
       { Price: 101, security_id: "1001" }
     ]);
+
+    const retrySql = await domain.submitDevelopmentResearchSql(sqlRequest);
+    assert.deepEqual(retrySql, submittedSql);
+    assert.deepEqual(await domain.getResultPage(RUN_ID, RESULT_SQL, { pageSize: 10 }), sqlPage);
 
     const jobs = await domain.listJobs(RUN_ID);
     assert.deepEqual(jobs.map(({ jobId, status }) => ({ jobId, status })), [
