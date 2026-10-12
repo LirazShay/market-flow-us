@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with durable ledger-growth/submission governance. Durable Run budget-policy reconciliation and run-level used/remaining plus experiment/analysis/job counts are now green across restart; legacy empty policies reconcile once and mismatched active policy fails closed before expensive submission. Fast #862 + Planning/Contract #1052 + Workload #448 are green on implementation head a70c03bf. Next bound retained Job/result growth and total run experiment/analysis submissions without changing completed 11.2/11.3 semantics."
+  action: "Continue Chat 38 / 11.4 with Research SQL result provenance. Durable ledger-growth governance now bounds retained Job rows, per-run experiment/analysis submissions and Result Handle count; managed limits are server-owned, derived from durable run workUnits, exposed as resourceLimits.growth, exact retries remain idempotent at the ceiling, and reopen/restart preserves enforcement. Fast #875 + Planning/Contract #1065 + Workload #461 are green on implementation head 97db2585. Next freeze authorized source/evidence fingerprints into Research SQL result provenance for reproducibility without changing completed 11.3 SQL semantics."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
