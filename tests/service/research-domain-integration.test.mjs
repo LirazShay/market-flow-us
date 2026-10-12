@@ -194,12 +194,16 @@ test("TREE 11.1 composed Research Domain is restart-safe and rejects non-public-
       { type: "EVIDENCE_PLAN", id: PLAN_ID }
     ]);
 
+    const runBeforeRestart = await domain.getResearchRun(RUN_ID);
+    assert.equal(runBeforeRestart.createdAtMs, run.createdAtMs);
+    assert.ok(runBeforeRestart.updatedAtMs > run.updatedAtMs);
+
     await domain.close();
     domain = null;
 
     domain = await openResearchDomain({ dbPath, now: () => NOW + 10_000 });
 
-    assert.deepEqual(await domain.getResearchRun(RUN_ID), run);
+    assert.deepEqual(await domain.getResearchRun(RUN_ID), runBeforeRestart);
     assert.deepEqual(await domain.getCurrentObjectiveVersion(RUN_ID), objective);
     assert.deepEqual(await domain.getQueryArtifact(RUN_ID, QUERY_ID), query);
     assert.deepEqual(await domain.getEvidenceInventory(RUN_ID, INVENTORY_ID), inventory);
