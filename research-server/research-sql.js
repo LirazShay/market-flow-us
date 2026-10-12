@@ -1,5 +1,8 @@
 import { DuckDBInstance } from "@duckdb/node-api";
 
+import {
+  resolveResearchDuckDbResourceLimits
+} from "../backtest-lab/duckdb-resource-limits.js";
 import { openBacktestEvidenceSource } from "../backtest-lab/evidence-source.js";
 import {
   describeBacktestEvidenceSource,
@@ -83,7 +86,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "max_authorized_horizon_ms", type: "BIGINT", nullable: true, origin: "provenance", meaning: "Maximum horizon authorized by the partition when supplied.", known_unit: "milliseconds" }
     ]),
     manifestRelation("research_cycles", "Complete authoritative cycle timing and coverage facts inside the authorized partition.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local authoritative cycle identity.", identity_role: "source_cycle" },
       { column: "universe_revision", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted source universe revision." },
       { column: "started_at_ms", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Local cycle start time.", known_unit: "milliseconds" },
@@ -98,7 +101,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "unexpected", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted unexpected-row diagnostic count." }
     ]),
     manifestRelation("research_history", "Authorized successful market observations across one or more logical sources.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local cycle identity.", identity_role: "source_cycle", scanner_equivalent: "history.cycle_id / latest.cycle_id", decision_time_eligible: true, research_only: false },
       { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source universe revision.", scanner_equivalent: "history.universe_revision / latest.universe_revision", decision_time_eligible: true, research_only: false },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security", scanner_equivalent: "history.security_id / latest.security_id", decision_time_eligible: true, research_only: false },
@@ -133,7 +136,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "raw_data", type: "JSON", nullable: false, origin: "source_raw", meaning: "Persisted provider market-row JSON for discovery of fields not yet promoted to the typed projection.", scanner_equivalent: "history.raw_data / latest.raw_data", decision_time_eligible: true, research_only: false, caveats: ["Provider-shaped JSON; key meanings and units may be unverified.", "Missing, null, empty-string and numeric-zero source facts may differ and must not be conflated."] }
     ]),
     manifestRelation("research_universe", "Source-persisted universe lifecycle/display context for securities present in the authorized research partition; not exact historical T0 membership.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security" },
       { column: "is_current", type: "BOOLEAN", nullable: false, origin: "source_typed", meaning: "Persisted source-universe current-lifecycle flag.", future_dependent: true, caveats: ["Source lifecycle state is not exact historical membership at an arbitrary decision T0; use authoritative baseline history for that question."] },
       { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source-universe lifecycle revision.", future_dependent: true, caveats: ["May reflect source lifecycle state after a historical decision T0."] },
@@ -519,12 +522,35 @@ async function insertSourceSummary(connection, source, schemaVersion, sourceClas
   );
 }
 
-async function applySandboxHardening(connection) {
+async function applySandboxHardening(connection, resourceLimits) {
+  await connection.run(`SET threads = ${resourceLimits.threads}`);
+  await connection.run(`SET memory_limit = ${sqlStringLiteral(resourceLimits.memoryLimit)}`);
+  await connection.run(
+    `SET max_temp_directory_size = ${sqlStringLiteral(resourceLimits.maxTempDirectorySize)}`
+  );
   for (const [name, value] of Object.entries(DUCKDB_HARDENING)) {
     await connection.run(`SET ${name} = ${value}`);
   }
   await connection.run("SET allowed_configs = []");
   await connection.run("SET lock_configuration = true");
+}
+
+async function readAppliedResourceLimits(connection) {
+  const reader = await connection.runAndReadAll(`
+    SELECT
+      current_setting('threads') AS threads,
+      current_setting('memory_limit') AS memory_limit,
+      current_setting('max_temp_directory_size') AS max_temp_directory_size
+  `);
+  const rows = reader.getRowObjects();
+  if (rows.length !== 1) {
+    throw new Error("Research SQL DuckDB resource settings returned invalid cardinality");
+  }
+  return Object.freeze({
+    threads: Number(rows[0].threads),
+    memoryLimit: String(rows[0].memory_limit),
+    maxTempDirectorySize: String(rows[0].max_temp_directory_size)
+  });
 }
 
 function closeQuietly(value) {
@@ -546,6 +572,7 @@ export async function openDevelopmentResearchSqlSandbox({
   partition,
   inventory,
   controlledInputs,
+  duckdbResourceLimits,
   now = () => Date.now(),
   verifySourceFingerprint = verifyResearchEvidenceSourceFingerprint
 } = {}) {
@@ -559,6 +586,7 @@ export async function openDevelopmentResearchSqlSandbox({
     throw new TypeError("verifySourceFingerprint must be a function");
   }
 
+  const resourceLimits = resolveResearchDuckDbResourceLimits(duckdbResourceLimits);
   const normalizedPartition = normalizePartition(partition);
   const sources = boundInventorySources(inventory, normalizedPartition.sourceIds);
   const includeControlledInputs = controlledInputs !== undefined;
@@ -579,7 +607,11 @@ export async function openDevelopmentResearchSqlSandbox({
       };
       await verifySourceFingerprint(verificationInput);
 
-      const evidence = await openBacktestEvidenceSource({ dataDir, sourceId: source.sourceId });
+      const evidence = await openBacktestEvidenceSource({
+        dataDir,
+        sourceId: source.sourceId,
+        duckdbResourceLimits: resourceLimits
+      });
       let attached = false;
       try {
         if (source.schemaVersion !== null && source.schemaVersion !== evidence.schemaVersion) {
@@ -615,7 +647,8 @@ export async function openDevelopmentResearchSqlSandbox({
     if (includeControlledInputs) {
       await materializeControlledResearchInputs({ connection, inputs: controlledInputs });
     }
-    await applySandboxHardening(connection);
+    await applySandboxHardening(connection, resourceLimits);
+    const appliedResourceLimits = await readAppliedResourceLimits(connection);
 
     const authority = await createScannerAuthority({ connection, now });
     const schemaManifest = describeResearchSqlSchema({ includeControlledInputs });
@@ -624,6 +657,8 @@ export async function openDevelopmentResearchSqlSandbox({
     return Object.freeze({
       dataSurfaceVersion: RESEARCH_DATA_SURFACE_VERSION,
       phase: "DEVELOPMENT",
+      resourceLimits,
+      appliedResourceLimits,
       describeSchema() {
         return schemaManifest;
       },
