@@ -28,6 +28,7 @@ Active discovery truth is recorded in:
 
 - `.planning/AI_RESEARCHER_DISCOVERY.md`
 - `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
+- `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -73,6 +74,12 @@ Research begins with the historical evidence that already exists. If collection 
 
 Future denser collection such as approximately 5s or 3s may later be evaluated if evidence shows a material resolution limitation. That possibility does not block this project and should not force a redesign: the research environment must be cadence-agnostic and able to rerun comparable research when denser evidence becomes available.
 
+### Research validity is enforced by the server, not prompt discipline alone
+
+Development, Validation and Sealed Holdout evidence are distinct server-enforced roles. Development is open for broad exploration; Validation exposures are frozen/comparable and counted; Holdout outcome/detail access remains sealed until a bounded Finalist Set and Objective Version are frozen for final evaluation.
+
+If SQL is changed in response to holdout results, that holdout is no longer independent proof for the revised lineage. Final reporting must expose search breadth, validation exposure, exact denominators and insufficient-evidence conditions rather than always declaring a winner.
+
 ## Hard boundaries
 
 Research autonomy does not grant unrelated machine authority. The design must preserve source DB immutability, no broker/order authority, no provider/browser credentials/session data, no arbitrary source-path mutation, no automatic live Scanner activation/trading, bounded/cancellable expensive work, public-safe diagnostics and reproducible authority separation.
@@ -86,7 +93,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, and the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, and the selected Development/Validation/Sealed-Holdout research-validity model.
 
 ## Completion boundary
 
