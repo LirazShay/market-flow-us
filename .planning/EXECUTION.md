@@ -14,9 +14,9 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed foundation task `11.1`, authoritative experiment task `11.2` and phase-aware research SQL task `11.3`. No numbered executor is currently active after Chat 37 completion.
+Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed foundation task `11.1`, authoritative experiment task `11.2` and phase-aware research SQL task `11.3`. `Chat 38 / 11.4` is explicitly activated and `in_progress`.
 
-`11.3` / `Chat 37` has completed its full success-evidence reclosure in PR #101: isolated multi-source Development projection, bounded raw-data discovery, source-persisted universe lifecycle with explicit future-dependence caveats, controlled 11.2 decision/outcome/Experiment relations, Research Domain composition, run/partition-bound phase isolation, broad analytical SELECT support, Research-specific adversarial SQL admission and source-byte/fingerprint immutability are green. The final pre-completion head `6c9499ff` passed Fast CI #776 and Planning/Contract CI #966; PR readiness/merge and green-main verification are the remaining repository workflow for this completed leaf, and no later executor is active before that merge closes.
+`11.3` / `Chat 37` completed its full success-evidence reclosure in PR #101 and is squash-merged on the current main baseline `a36e9b2c508a9c49ed528199c70aa63b247478fb`: isolated multi-source Development projection, bounded raw-data discovery, source-persisted universe lifecycle with explicit future-dependence caveats, controlled 11.2 decision/outcome/Experiment relations, Research Domain composition, run/partition-bound phase isolation, broad analytical SELECT support, Research-specific adversarial SQL admission and source-byte/fingerprint immutability are green. Main Fast and Planning/Contract CI are green on that baseline and no PR was open when Chat 38 activated.
 
 Allocation follows natural feature/context boundaries, not a target number of chats. `11.2` and `11.3` are intentionally independent after `11.1`; `11.4` joins both expensive execution families; later work depends only on real prerequisites.
 
@@ -80,7 +80,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `11.1` | Chat 35 | `done` | `10.6` | PR #98 squash-merged as `49be2f619871a7cbe049ed0970c970738850f013`; hardened separate Research Ledger, run/objective/query/evidence/note/resume authority, cross-run fail-closed IDs, immutable hashes, logical evidence fingerprints, transaction rollback proof, public-safe persistence and composed restart proof all reclosed with green Fast/Planning CI on branch and main. |
 | `11.2` | Chat 36 | `done` | `11.1` | PR #100 final success-evidence reclosure is green: exact Backtest point/Sweep authority reuse; immutable Query Artifact/frozen schedule/source provenance; denominator-safe + robustness metrics; source-row-first Top-X duplicate semantics; typed returned/non-return diagnostics; bounded stable-ID drill-down surviving Domain restart through deterministic reconstruction; actual source SHA-256 verification before/after execution; no public fabricated-completion path; Fast CI #726 + Planning CI #916 green on pre-completion head `9dfc18d8`. |
 | `11.3` | Chat 37 | `done` | `11.1` | PR #101 final success-evidence reclosure is green: isolated Development projection across explicit `source_id` sources; typed/history/raw evidence and source-persisted universe lifecycle with future-dependence metadata; bounded raw key/type/coverage discovery; controlled 11.2 decision/outcome/Experiment relations and Domain composition; run/partition-bound Development-only SQL with no automatic strategy authority; joins/windows/aggregates/correlation/cross-security proof; Research-specific hardening/adversarial rejection for external/file/network/catalog/config/extension/secret/side-effect/dynamic-query attempts; source DB fingerprints/bytes unchanged. Fast CI #776 + Planning CI #966 are green on pre-completion head `6c9499ff`. |
-| `11.4` | Chat 38 | `pending` | `11.2`, `11.3` | — |
+| `11.4` | Chat 38 | `in_progress` | `11.2`, `11.3` | Activated from green main `a36e9b2c508a9c49ed528199c70aa63b247478fb`; durable job lifecycle/idempotency/restart foundation is the first implementation checkpoint. |
 | `11.5` | Chat 39 | `pending` | `11.4` | — |
 | `11.6` | Chat 40 | `pending` | `11.5` | — |
 | `11.7` | Chat 41 | `pending` | `11.2`, `11.3`, `11.4`, `11.5`, `11.6` | — |
@@ -106,13 +106,13 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - New Branch-11 implementation rows: **8**.
 - Current execution rows: **57**.
 - Done: **52**.
-- Pending: **5**.
-- In progress: **0**.
+- Pending: **4**.
+- In progress: **1**.
 - Blocked: **0**.
-- Active owner: **none**; Chat 37 is complete.
-- Current normal sequence pointer: `Chat 38`, task `11.4`, status `pending`; explicit numbered-chat activation is required before implementation begins.
+- Active owner: **Chat 38** on task `11.4`.
+- Current normal sequence pointer: `Chat 38`, task `11.4`, status `in_progress`; explicit numbered-chat activation occurred in this conversation.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
 
-Chat 37 / `11.3` is complete. A generic continuation in this completed conversation must not activate Chat 38 or any later owner; start `Chat 38 / 11.4` only through explicit numbered-chat activation.
+Chat 38 / `11.4` is the active executor boundary. Generic continuation remains within this task until its success evidence is closed and repository workflow is complete.
