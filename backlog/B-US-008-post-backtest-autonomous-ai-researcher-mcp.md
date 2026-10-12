@@ -27,6 +27,7 @@ The Branch-10 activation gate is satisfied on fresh `main`: tasks `10.1`–`10.6
 Active discovery truth is recorded in:
 
 - `.planning/AI_RESEARCHER_DISCOVERY.md`
+- `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -85,7 +86,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery document further clarifies the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling and permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, and the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction.
 
 ## Completion boundary
 
