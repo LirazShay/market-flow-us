@@ -8,7 +8,7 @@ Authority:
 - `.planning/EXECUTION.md` owns task, owner, status, real execution dependency and result/evidence truth.
 - root `STATUS.yaml` is a non-authoritative projection/navigation compatibility file only.
 - Numbered executor identity changes only through explicit activation such as `אני צאט 35 תתחיל`; a generic `continue` must never silently switch owners.
-- `backlog/` is future work only. `B-US-008` has been promoted out of backlog-only status into Branch-11 PLAN/EXECUTION truth; `B-US-000` remains non-blocking future work.
+- `backlog/` is future work only. `B-US-008` has been promoted out of backlog-only status into Branch-11 PLAN/EXECUTION truth; `B-US-000` remains non-blocking future work at `backlog/B-US-000-final-target-machine-provider-acceptance.md`.
 
 Status vocabulary: `pending | in_progress | done | blocked`.
 
@@ -112,6 +112,6 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - First runnable owner: `Chat 35`, task `11.1`.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
-- Former `7.4` target-machine/provider acceptance remains backlog `B-US-000` and is not invented as done.
+- Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
 
 There is no active `in_progress` row. Branch 11 implementation begins only when the user explicitly activates an assigned executor such as `אני צאט 35 תתחיל`.
