@@ -306,10 +306,7 @@ async function validateBaseLedger(connection) {
     throw new Error(`Research job ledger requires base research tables: ${missingBase.join(", ")}`);
   }
 
-  const baseInfo = await queryRows(
-    connection,
-    "SELECT schema_version FROM research_ledger_info"
-  );
+  const baseInfo = await queryRows(connection, "SELECT schema_version FROM research_ledger_info");
   if (baseInfo.length !== 1 || Number(baseInfo[0].schema_version) !== RESEARCH_LEDGER_SCHEMA_VERSION) {
     throw new Error("Research job ledger requires the supported base research ledger schema");
   }
@@ -328,10 +325,7 @@ async function bootstrapOrValidate(connection, createdAtMs) {
       await connection.run(
         `INSERT INTO research_job_info (schema_version, created_at_ms)
          VALUES ($schemaVersion, $createdAtMs)`,
-        {
-          schemaVersion: RESEARCH_JOB_SCHEMA_VERSION,
-          createdAtMs
-        }
+        { schemaVersion: RESEARCH_JOB_SCHEMA_VERSION, createdAtMs }
       );
     });
     return;
@@ -342,10 +336,7 @@ async function bootstrapOrValidate(connection, createdAtMs) {
     throw new Error(`Research job ledger is missing required tables: ${missing.join(", ")}`);
   }
 
-  const info = await queryRows(
-    connection,
-    "SELECT schema_version FROM research_job_info"
-  );
+  const info = await queryRows(connection, "SELECT schema_version FROM research_job_info");
   if (info.length !== 1) {
     throw new Error("Research job ledger must contain exactly one schema version row");
   }
@@ -427,16 +418,19 @@ export async function openResearchJobLedger({
        WHERE research_run_id = $researchRunId
          AND job_id = $jobId
        LIMIT 2`,
-      {
-        researchRunId: runId,
-        jobId: durableJobId
-      }
+      { researchRunId: runId, jobId: durableJobId }
     );
     if (rows.length === 0) return null;
     if (rows.length !== 1) {
       throw new Error("research_jobs violated scoped job identity uniqueness");
     }
     return normalizeJob(rows[0]);
+  }
+
+  async function requireJob(researchRunId, jobId) {
+    const current = await getJob(researchRunId, jobId);
+    if (!current) throw new Error("Research Job was not found in this Research Run");
+    return current;
   }
 
   async function getJobByRequest(researchRunId, operation, clientRequestId) {
@@ -448,11 +442,7 @@ export async function openResearchJobLedger({
          AND operation = $operation
          AND client_request_id = $clientRequestId
        LIMIT 2`,
-      {
-        researchRunId,
-        operation,
-        clientRequestId
-      }
+      { researchRunId, operation, clientRequestId }
     );
     if (rows.length === 0) return null;
     if (rows.length !== 1) {
@@ -461,15 +451,64 @@ export async function openResearchJobLedger({
     return normalizeJob(rows[0]);
   }
 
+  async function transitionTerminal(researchRunId, jobId, {
+    targetStatus,
+    errorCode,
+    idempotentErrorCode = undefined
+  }) {
+    const runId = await requireRun(researchRunId);
+    const durableJobId = assertJobId(jobId);
+    let result;
+
+    await inTransaction(connection, async () => {
+      const current = await requireJob(runId, durableJobId);
+      if (current.status === targetStatus) {
+        if (idempotentErrorCode !== undefined && current.errorCode !== idempotentErrorCode) {
+          throw new Error(`Research Job ${targetStatus} error code does not match the existing terminal state`);
+        }
+        result = current;
+        return;
+      }
+      if (targetStatus === "CANCELLED") {
+        if (current.status !== "QUEUED" && current.status !== "RUNNING") {
+          throw new Error(`Research Job cannot cancel from ${current.status}`);
+        }
+      } else if (current.status !== "RUNNING") {
+        throw new Error(`Research Job cannot transition to ${targetStatus} from ${current.status}`);
+      }
+
+      const timestamp = assertSafeTimestamp(now(), "now()");
+      await connection.run(
+        `UPDATE research_jobs
+         SET status = $targetStatus,
+             error_code = $errorCode,
+             finished_at_ms = $timestamp,
+             updated_at_ms = $timestamp
+         WHERE research_run_id = $researchRunId
+           AND job_id = $jobId
+           AND status = $currentStatus`,
+        {
+          researchRunId: runId,
+          jobId: durableJobId,
+          currentStatus: current.status,
+          targetStatus,
+          errorCode,
+          timestamp
+        }
+      );
+      result = await requireJob(runId, durableJobId);
+      if (result.status !== targetStatus || result.errorCode !== errorCode) {
+        throw new Error(`Research Job ${targetStatus} transition did not persist atomically`);
+      }
+    });
+
+    return result;
+  }
+
   return Object.freeze({
     schemaVersion: RESEARCH_JOB_SCHEMA_VERSION,
 
-    async createJob({
-      researchRunId,
-      operation,
-      clientRequestId,
-      intent
-    }) {
+    async createJob({ researchRunId, operation, clientRequestId, intent }) {
       const runId = assertResearchRunId(researchRunId);
       const operationId = assertOperation(operation);
       const requestId = assertClientRequestId(clientRequestId);
@@ -531,7 +570,7 @@ export async function openResearchJobLedger({
             timestamp
           }
         );
-        createdOrExisting = await getJob(runId, jobId);
+        createdOrExisting = await requireJob(runId, jobId);
       });
 
       return createdOrExisting;
@@ -562,8 +601,7 @@ export async function openResearchJobLedger({
       let result;
 
       await inTransaction(connection, async () => {
-        const current = await getJob(runId, durableJobId);
-        if (!current) throw new Error("Research Job was not found in this Research Run");
+        const current = await requireJob(runId, durableJobId);
         if (current.status === "RUNNING") {
           result = current;
           return;
@@ -580,19 +618,41 @@ export async function openResearchJobLedger({
            WHERE research_run_id = $researchRunId
              AND job_id = $jobId
              AND status = 'QUEUED'`,
-          {
-            researchRunId: runId,
-            jobId: durableJobId,
-            timestamp
-          }
+          { researchRunId: runId, jobId: durableJobId, timestamp }
         );
-        result = await getJob(runId, durableJobId);
-        if (!result || result.status !== "RUNNING") {
+        result = await requireJob(runId, durableJobId);
+        if (result.status !== "RUNNING") {
           throw new Error("Research Job start transition did not persist atomically");
         }
       });
 
       return result;
+    },
+
+    async markJobSucceeded(researchRunId, jobId) {
+      return transitionTerminal(researchRunId, jobId, {
+        targetStatus: "SUCCEEDED",
+        errorCode: null
+      });
+    },
+
+    async markJobFailed(researchRunId, jobId, errorCode = "RESEARCH_JOB_FAILED") {
+      const stableErrorCode = assertErrorCode(errorCode);
+      if (stableErrorCode === null) {
+        throw new TypeError("errorCode is required for FAILED jobs");
+      }
+      return transitionTerminal(researchRunId, jobId, {
+        targetStatus: "FAILED",
+        errorCode: stableErrorCode,
+        idempotentErrorCode: stableErrorCode
+      });
+    },
+
+    async finalizeJobCancelled(researchRunId, jobId) {
+      return transitionTerminal(researchRunId, jobId, {
+        targetStatus: "CANCELLED",
+        errorCode: null
+      });
     },
 
     async close() {
