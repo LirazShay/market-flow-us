@@ -1,5 +1,6 @@
 import { assertResearchResultCapacity } from "./growth-governance.js";
 import { openResearchJobLedger } from "./job-ledger.js";
+import { freezeResearchSqlResultProvenance } from "./research-sql-result-provenance.js";
 import {
   DEFAULT_RESEARCH_RESULT_LIMITS,
   RESEARCH_RESULT_SCHEMA_VERSION,
@@ -141,17 +142,19 @@ export async function openResearchResultLedger(options = {}) {
         requireOpen();
         await storage.close();
         storage = null;
+        let durableInput = input;
         try {
           await assertResearchResultCapacity({
             dbPath: options.dbPath,
             growthLimits: options.growthLimits,
             researchRunId: input?.researchRunId
           });
-          await reserveManagedResultBudget(options, input);
+          durableInput = await freezeResearchSqlResultProvenance(options, input);
+          await reserveManagedResultBudget(options, durableInput);
         } finally {
           await reopenStorage();
         }
-        return await storage.createResult(input);
+        return await storage.createResult(durableInput);
       });
     },
 
