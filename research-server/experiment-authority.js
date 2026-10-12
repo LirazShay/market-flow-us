@@ -1,4 +1,8 @@
+import { createHash } from "node:crypto";
+
 import { executeBacktestPoint } from "../backtest-lab/point-execution.js";
+
+const MAX_QUERY_SQL_BYTES = 1024 * 1024;
 
 function invalid(message) {
   throw new TypeError(message);
@@ -12,6 +16,10 @@ function freezeCopy(value) {
     ));
   }
   return value;
+}
+
+function sha256(value) {
+  return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
 function assertArtifactId(value) {
@@ -42,6 +50,17 @@ function assertBoundedText(value, label, maxChars) {
   return value;
 }
 
+function assertExactSqlText(value) {
+  if (
+    typeof value !== "string"
+    || value.trim().length === 0
+    || Buffer.byteLength(value, "utf8") > MAX_QUERY_SQL_BYTES
+  ) {
+    invalid(`query artifact SQL must be non-empty UTF-8 text of at most ${MAX_QUERY_SQL_BYTES} bytes`);
+  }
+  return value;
+}
+
 function freezeQueryBindings(queryArtifacts) {
   if (!Array.isArray(queryArtifacts) || queryArtifacts.length < 1 || queryArtifacts.length > 3) {
     invalid("Choose one to three immutable Query Artifacts.");
@@ -64,8 +83,11 @@ function freezeQueryBindings(queryArtifacts) {
       invalid("All Query Artifacts must belong to the same Research Run.");
     }
 
-    const sqlText = assertBoundedText(artifact.sqlText, "query artifact SQL", 1024 * 1024);
+    const sqlText = assertExactSqlText(artifact.sqlText);
     const sqlHash = assertSha256(artifact.sqlHash);
+    if (sha256(sqlText) !== sqlHash) {
+      invalid("query artifact sqlHash does not match SQL text");
+    }
     const scannerContractVersion = assertBoundedText(
       artifact.scannerContractVersion,
       "scannerContractVersion",
