@@ -20,6 +20,8 @@ const PART_VALIDATION = "part_22222222-2222-4222-8222-222222222222";
 const EXPERIMENT_ID = "exp_11111111-1111-4111-8111-111111111111";
 const METRIC_SET_ID = "metrics_11111111-1111-4111-8111-111111111111";
 const NOTE_ID = "note_11111111-1111-4111-8111-111111111111";
+const SOURCE_ID = "source_day_2026_10_01";
+const SOURCE_FINGERPRINT = "a".repeat(64);
 const NOW = 1_860_000_000_000;
 
 function sequence(values) {
@@ -43,6 +45,31 @@ async function expectPublicSafeRejection(promise, forbiddenValue) {
   });
 }
 
+function completedExperimentExecution(input) {
+  const request = freezeAuthoritativeExperimentBatchRequest(input);
+  const durableRequest = durableAuthoritativeExperimentRequest(request);
+  return Object.freeze({
+    durableRequest,
+    metrics: Object.freeze({
+      contractVersion: "research-experiment-metrics-v1",
+      requestFingerprint: durableRequest.requestFingerprint,
+      denominators: Object.freeze({
+        requestedPointCount: 2,
+        availablePointCount: 1,
+        unavailablePointCount: 1,
+        pointAvailabilityRate: 0.5,
+        distinctBaselineCount: 1,
+        repeatedBaselineRequestedPointCount: 0,
+        queryExecutionCount: 1
+      }),
+      exclusions: Object.freeze({
+        unavailablePointReasonBreakdown: Object.freeze({ NO_BASELINE: 1 })
+      }),
+      queries: Object.freeze([])
+    })
+  });
+}
+
 test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-public-safe persistence", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-domain-composed-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
@@ -51,6 +78,7 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
   try {
     domain = await openResearchDomain({
       dbPath,
+      marketDataDir: "server-owned-market-data",
       now: advancingClock(),
       idFactory: () => RUN_ID,
       objectiveVersionIdFactory: () => OBJECTIVE_ID,
@@ -60,10 +88,18 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
       partitionIdFactory: sequence([PART_DEV, PART_VALIDATION]),
       experimentIdFactory: () => EXPERIMENT_ID,
       metricSetIdFactory: () => METRIC_SET_ID,
-      noteIdFactory: () => NOTE_ID
+      noteIdFactory: () => NOTE_ID,
+      executeExperimentBatch: async (input) => completedExperimentExecution(input),
+      verifySourceFingerprint: async ({ dataDir, sourceId, expectedFingerprint }) => {
+        assert.equal(dataDir, "server-owned-market-data");
+        assert.equal(sourceId, SOURCE_ID);
+        assert.equal(expectedFingerprint, SOURCE_FINGERPRINT);
+        return expectedFingerprint;
+      }
     });
 
     assert.deepEqual(domain.schemaVersions, { ledger: 1, evidence: 1, experiments: 1, memory: 1 });
+    assert.equal(domain.recordCompletedExperiment, undefined);
 
     const browserSecret = "browser-session-secret-value";
     await expectPublicSafeRejection(
@@ -125,8 +161,8 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
         researchRunId: RUN_ID,
         inventory: {
           sources: [{
-            sourceId: "source_day_2026_10_01",
-            sourceFingerprint: "a".repeat(64),
+            sourceId: SOURCE_ID,
+            sourceFingerprint: SOURCE_FINGERPRINT,
             accountId: accountSecret
           }]
         }
@@ -139,8 +175,8 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
       researchRunId: RUN_ID,
       inventory: {
         sources: [{
-          sourceId: "source_day_2026_10_01",
-          sourceFingerprint: "a".repeat(64),
+          sourceId: SOURCE_ID,
+          sourceFingerprint: SOURCE_FINGERPRINT,
           classification: "ARCHIVE",
           schemaVersion: 3
         }]
@@ -159,23 +195,22 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
       partitions: [
         {
           role: "DEVELOPMENT",
-          partition: { sourceIds: ["source_day_2026_10_01"], block: "early" }
+          partition: { sourceIds: [SOURCE_ID], block: "early" }
         },
         {
           role: "VALIDATION",
-          partition: { sourceIds: ["source_day_2026_10_01"], block: "late" }
+          partition: { sourceIds: [SOURCE_ID], block: "late" }
         }
       ]
     });
     assert.equal(plan.evidencePlanId, PLAN_ID);
 
-    const frozenExperimentRequest = freezeAuthoritativeExperimentBatchRequest({
+    const experiment = await domain.executeDevelopmentExperiment({
+      researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
-      evidencePartitionId: PART_DEV,
-      phase: "DEVELOPMENT",
-      sourceId: "active",
-      sourceFingerprint: "a".repeat(64),
-      queryArtifacts: [query],
+      partitionId: PART_DEV,
+      sourceId: SOURCE_ID,
+      queryArtifactIds: [QUERY_ID],
       fromAtMs: 1_000,
       toAtMs: 2_000,
       intervalValue: 1,
@@ -183,47 +218,10 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
       topX: 1,
       horizonsMs: [10_000]
     });
-    const durableRequest = durableAuthoritativeExperimentRequest(frozenExperimentRequest);
-    const metricSet = {
-      contractVersion: "research-experiment-metrics-v1",
-      requestFingerprint: durableRequest.requestFingerprint,
-      denominators: {
-        requestedPointCount: 2,
-        availablePointCount: 1,
-        unavailablePointCount: 1,
-        pointAvailabilityRate: 0.5,
-        distinctBaselineCount: 1,
-        repeatedBaselineRequestedPointCount: 0,
-        queryExecutionCount: 1
-      },
-      exclusions: {
-        unavailablePointReasonBreakdown: { NO_BASELINE: 1 }
-      },
-      queries: []
-    };
-    const experiment = await domain.recordCompletedExperiment({
-      researchRunId: RUN_ID,
-      request: durableRequest,
-      metrics: metricSet
-    });
     assert.equal(experiment.experimentId, EXPERIMENT_ID);
     assert.equal(experiment.metricSetId, METRIC_SET_ID);
-    assert.deepEqual(experiment.request, durableRequest);
-    assert.deepEqual(experiment.metrics, metricSet);
-    assert.equal(await domain.getExperiment("run_99999999-9999-4999-8999-999999999999", EXPERIMENT_ID), null);
-
-    const experimentSecret = "accountId=experiment-secret-value";
-    await expectPublicSafeRejection(
-      domain.recordCompletedExperiment({
-        researchRunId: RUN_ID,
-        request: durableRequest,
-        metrics: {
-          ...metricSet,
-          diagnostics: { accountIdentifier: experimentSecret }
-        }
-      }),
-      experimentSecret
-    );
+    assert.equal(experiment.request.researchRunId, RUN_ID);
+    assert.equal(experiment.request.source.sourceFingerprint, SOURCE_FINGERPRINT);
     assert.deepEqual(await domain.listExperiments(RUN_ID), [experiment]);
 
     const authSecret = "Authorization: Bearer secret-token-value";
@@ -268,6 +266,7 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
 
     domain = await openResearchDomain({ dbPath, now: () => NOW + 10_000 });
 
+    assert.equal(domain.recordCompletedExperiment, undefined);
     assert.deepEqual(await domain.getResearchRun(RUN_ID), runBeforeRestart);
     assert.deepEqual(await domain.getCurrentObjectiveVersion(RUN_ID), objective);
     assert.deepEqual(await domain.getQueryArtifact(RUN_ID, QUERY_ID), query);
@@ -291,7 +290,6 @@ test("TREE 11.1/11.2 composed Research Domain is restart-safe and rejects non-pu
     assert.equal(publicState.includes(browserSecret), false);
     assert.equal(publicState.includes(hiddenReasoning), false);
     assert.equal(publicState.includes(accountSecret), false);
-    assert.equal(publicState.includes(experimentSecret), false);
     assert.equal(publicState.includes(authSecret), false);
   } finally {
     if (domain) await domain.close();
