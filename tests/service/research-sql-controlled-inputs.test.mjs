@@ -12,6 +12,7 @@ import {
 const EXPERIMENT_ID = "exp_11111111-1111-4111-8111-111111111111";
 const QUERY_ID = "qry_11111111-1111-4111-8111-111111111111";
 const METRIC_SET_ID = "metrics_11111111-1111-4111-8111-111111111111";
+const ONE_PERCENT = ((101 / 100) - 1) * 100;
 
 async function openMemory() {
   const instance = await DuckDBInstance.create(":memory:");
@@ -83,7 +84,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
             futureCycleId: 8,
             futureCollectedAtMs: 12_000,
             futurePrice: 101,
-            changePercent: 1,
+            changePercent: ONE_PERCENT,
             outcome: "UP",
             unavailableReason: null
           },
@@ -150,7 +151,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
             futureCycleId: 8,
             futureCollectedAtMs: 12_000,
             futurePrice: 101,
-            changePercent: 1,
+            changePercent: ONE_PERCENT,
             outcome: "UP",
             unavailableReason: null
           }
@@ -214,7 +215,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
       FROM research_authoritative_outcomes
       ORDER BY horizon_ms
     `), [
-      ["10000", "8", 101, 1, "UP", null],
+      ["10000", "8", 101, ONE_PERCENT, "UP", null],
       ["20000", null, null, null, "UNAVAILABLE", "NO_FUTURE_OBSERVATION"]
     ]);
 
@@ -236,7 +237,7 @@ test("TREE 11.3 controlled authority inputs materialize explicit Development-onl
       SELECT security_id, returned_position, horizon_ms, future_cycle_id, future_price,
              change_percent, outcome
       FROM experiment_outcomes
-    `), [["1001", "1", "10000", "8", 101, 1, "UP"]]);
+    `), [["1001", "1", "10000", "8", 101, ONE_PERCENT, "UP"]]);
 
     assert.deepEqual(await rows(memory.connection, `
       SELECT query_artifact_id, metric_name, horizon_ms, numerator, denominator, excluded_count, value
@@ -293,7 +294,7 @@ test("TREE 11.3 controlled input admission rejects authority mismatch before cre
         futureCycleId: 8,
         futureCollectedAtMs: 12_000,
         futurePrice: 101,
-        changePercent: 1,
+        changePercent: ONE_PERCENT,
         outcome: "UP",
         unavailableReason: null
       }]
