@@ -159,15 +159,45 @@ export function resolveManagedResearchGrowthLimits(resourcePolicy) {
   });
 }
 
-export async function assertResearchSubmissionCapacity({
+export function assertResearchGrowthCapacity({ growthLimits, operation, counts }) {
+  const limits = normalizeResearchGrowthLimits(growthLimits);
+  if (limits === null) return;
+  const operationId = assertOperation(operation);
+  const jobCount = assertCount(counts?.jobs, "Job count");
+  const experimentCount = assertCount(counts?.experimentSubmissions, "Experiment submission count");
+  const analysisCount = assertCount(counts?.analysisSubmissions, "Analysis submission count");
+
+  if (
+    operationId === RESEARCH_EXPERIMENT_OPERATION
+    && experimentCount >= limits.maxExperimentSubmissionsPerRun
+  ) {
+    throw growthError({
+      dimension: "experimentSubmissions",
+      consumed: experimentCount,
+      limit: limits.maxExperimentSubmissionsPerRun
+    });
+  }
+  if (
+    operationId === RESEARCH_ANALYSIS_OPERATION
+    && analysisCount >= limits.maxAnalysisSubmissionsPerRun
+  ) {
+    throw growthError({
+      dimension: "analysisSubmissions",
+      consumed: analysisCount,
+      limit: limits.maxAnalysisSubmissionsPerRun
+    });
+  }
+  if (jobCount >= limits.maxJobsPerRun) {
+    throw growthError({ dimension: "jobRecords", consumed: jobCount, limit: limits.maxJobsPerRun });
+  }
+}
+
+export async function readResearchSubmissionGrowthState({
   dbPath = DEFAULT_RESEARCH_LEDGER_PATH,
-  growthLimits,
   researchRunId,
   operation,
   clientRequestId
 } = {}) {
-  const limits = normalizeResearchGrowthLimits(growthLimits);
-  if (limits === null) return Object.freeze({ existingRequest: false });
   const runId = assertRunId(researchRunId);
   const operationId = assertOperation(operation);
   const requestId = assertClientRequestId(clientRequestId);
@@ -198,9 +228,6 @@ export async function assertResearchSubmissionCapacity({
         { researchRunId: runId, operation: operationId, clientRequestId: requestId }
       );
       if (existing.length > 1) throw new Error("research_jobs violated request idempotency uniqueness");
-      if (existing.length === 1) {
-        return Object.freeze({ existingRequest: true });
-      }
 
       const counts = await queryRows(
         connection,
@@ -220,36 +247,35 @@ export async function assertResearchSubmissionCapacity({
         throw new Error("Research Job growth count query returned invalid cardinality");
       }
 
-      const jobCount = assertCount(counts[0].job_count, "Job count");
-      const experimentCount = assertCount(counts[0].experiment_count ?? 0, "Experiment submission count");
-      const analysisCount = assertCount(counts[0].analysis_count ?? 0, "Analysis submission count");
-
-      if (
-        operationId === RESEARCH_EXPERIMENT_OPERATION
-        && experimentCount >= limits.maxExperimentSubmissionsPerRun
-      ) {
-        throw growthError({
-          dimension: "experimentSubmissions",
-          consumed: experimentCount,
-          limit: limits.maxExperimentSubmissionsPerRun
-        });
-      }
-      if (
-        operationId === RESEARCH_ANALYSIS_OPERATION
-        && analysisCount >= limits.maxAnalysisSubmissionsPerRun
-      ) {
-        throw growthError({
-          dimension: "analysisSubmissions",
-          consumed: analysisCount,
-          limit: limits.maxAnalysisSubmissionsPerRun
-        });
-      }
-      if (jobCount >= limits.maxJobsPerRun) {
-        throw growthError({ dimension: "jobRecords", consumed: jobCount, limit: limits.maxJobsPerRun });
-      }
-      return Object.freeze({ existingRequest: false });
+      return Object.freeze({
+        existingRequest: existing.length === 1,
+        counts: Object.freeze({
+          jobs: assertCount(counts[0].job_count, "Job count"),
+          experimentSubmissions: assertCount(
+            counts[0].experiment_count ?? 0,
+            "Experiment submission count"
+          ),
+          analysisSubmissions: assertCount(
+            counts[0].analysis_count ?? 0,
+            "Analysis submission count"
+          )
+        })
+      });
     }
   );
+}
+
+export async function assertResearchSubmissionCapacity(input = {}) {
+  const limits = normalizeResearchGrowthLimits(input.growthLimits);
+  if (limits === null) return Object.freeze({ existingRequest: false });
+  const state = await readResearchSubmissionGrowthState(input);
+  if (state.existingRequest) return state;
+  assertResearchGrowthCapacity({
+    growthLimits: limits,
+    operation: input.operation,
+    counts: state.counts
+  });
+  return state;
 }
 
 export async function assertResearchResultCapacity({
