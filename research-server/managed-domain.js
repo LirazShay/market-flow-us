@@ -7,6 +7,10 @@ import { createResearchJobController } from "./job-control.js";
 import { openResearchJobLedger } from "./job-ledger.js";
 import { createResearchResourceGovernor } from "./resource-governor.js";
 import { openResearchResultLedger } from "./result-ledger.js";
+import {
+  createManagedRunBudgetPolicy,
+  openResearchRunObservability
+} from "./run-observability.js";
 
 const MANAGED_EXPERIMENT_KEYS = new Set([
   "clientRequestId",
@@ -185,6 +189,7 @@ function cancellationPossible(job) {
 
 export async function openManagedResearchDomain(options = {}) {
   const resourcePolicy = assertResourcePolicy(options.resourcePolicy);
+  const managedBudgetPolicy = createManagedRunBudgetPolicy(resourcePolicy);
   const experimentExecutionContext = new AsyncLocalStorage();
   const defaultExecuteExperimentBatch = async (input) => {
     const context = experimentExecutionContext.getStore();
@@ -248,6 +253,24 @@ export async function openManagedResearchDomain(options = {}) {
   async function useResults(operation) {
     return await serializeStorage(
       () => withComponent(openResearchResultLedger, options, operation)
+    );
+  }
+
+  async function useRunObservability(operation) {
+    return await serializeStorage(
+      () => withComponent(openResearchRunObservability, options, operation)
+    );
+  }
+
+  async function ensureRunBudgetPolicy(researchRunId) {
+    return await useRunObservability(
+      (observability) => observability.reconcileBudgetPolicy(researchRunId, managedBudgetPolicy)
+    );
+  }
+
+  async function getRunAccounting(researchRunId) {
+    return await useRunObservability(
+      (observability) => observability.getRunAccounting(researchRunId, managedBudgetPolicy)
     );
   }
 
@@ -508,9 +531,48 @@ export async function openManagedResearchDomain(options = {}) {
     }),
     resourceLimits: governor.limits,
 
+    async createResearchRun(input) {
+      const providedPolicy = input?.budgetPolicy;
+      if (providedPolicy !== undefined) {
+        if (!providedPolicy || typeof providedPolicy !== "object" || Array.isArray(providedPolicy)) {
+          throw new TypeError("budgetPolicy must be an object when provided");
+        }
+        if (Object.keys(providedPolicy).length > 0) {
+          throw new TypeError("budgetPolicy is server-owned by managed research resource policy");
+        }
+      }
+      return await base.createResearchRun({
+        ...input,
+        budgetPolicy: managedBudgetPolicy
+      });
+    },
+
+    async getResearchRun(researchRunId) {
+      const run = await base.getResearchRun(researchRunId);
+      if (!run) return null;
+      const accounting = await getRunAccounting(researchRunId);
+      return Object.freeze({
+        ...run,
+        budgetPolicy: accounting.budget.policy,
+        budget: accounting.budget,
+        counts: accounting.counts
+      });
+    },
+
+    async resumeResearchRun(researchRunId, resumeOptions) {
+      const accounting = await getRunAccounting(researchRunId);
+      const resumed = await base.resumeResearchRun(researchRunId, resumeOptions);
+      return Object.freeze({
+        ...resumed,
+        budget: accounting.budget,
+        counts: accounting.counts
+      });
+    },
+
     async submitDevelopmentExperiment(input) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
       const intent = experimentIntent(input);
+      await ensureRunBudgetPolicy(intent.researchRunId);
       const job = await useJobs((jobs) => jobs.createJob({
         researchRunId: intent.researchRunId,
         operation: "execute_development_experiment",
@@ -526,6 +588,7 @@ export async function openManagedResearchDomain(options = {}) {
     async submitDevelopmentResearchSql(input) {
       if (!accepting) throw new Error("Managed Research Domain is closed");
       const intent = sqlIntent(input);
+      await ensureRunBudgetPolicy(intent.researchRunId);
       const analysisId = deterministicAnalysisId(intent.researchRunId, input.clientRequestId);
       const job = await useJobs((jobs) => jobs.createJob({
         researchRunId: intent.researchRunId,
