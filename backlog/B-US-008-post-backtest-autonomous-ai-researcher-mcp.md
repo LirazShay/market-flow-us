@@ -30,7 +30,8 @@ Active discovery truth is recorded in:
 - `.planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md` — selected architecture direction and rejected alternatives; still pre-implementation.
 - `.planning/AI_RESEARCHER_EXPERIMENT_MODEL.md` — selected Research Run / evidence-partition / validation / sealed-holdout methodology direction; still pre-implementation.
 - `.planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md` — selected machine API, jobs/results, resume, immutable query-artifact and research-ledger contract direction; still pre-implementation.
-- `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected research projection / SQL sandbox / raw-field / phase-access data-surface direction; still pre-implementation.
+- `.planning/AI_RESEARCHER_DATA_SURFACE.md` — selected phase-aware research projection, SQL sandbox, raw/typed evidence and multi-day data-surface direction; still pre-implementation.
+- `.planning/AI_RESEARCHER_OPERATING_CONTRACT.md` — selected Plugin/Skill + MCP bootstrap, progressive-disclosure, autonomy, resume and final-output operating contract; still pre-implementation.
 
 Do not begin implementation or allocate implementation execution until discovery is mature enough to promote the selected architecture and complete S&T into the normal authoritative planning/contracts.
 
@@ -51,8 +52,9 @@ The project must plan the complete usable path, including:
 - restart-safe research state/ledger and reproducibility;
 - anti-overfitting/holdout methodology and an objective interpretation contract that works across future momentum-run goals;
 - enough research freedom for the AI to choose its own investigation approach rather than following a rigid hard-coded reasoning workflow;
+- plugin/Skill bootstrap and progressive disclosure so a fresh AI conversation can operate correctly without a giant static prompt or prior chat history;
 - final copy/paste-ready Scanner SQL plus a reproducible evidence report;
-- target-machine desktop ChatGPT → MCP → local research server → Backtest/evidence → recommendation acceptance.
+- target-machine desktop ChatGPT → Plugin/Skill + MCP → local research server → Backtest/evidence → recommendation acceptance.
 
 ## Critical design principles
 
@@ -88,11 +90,11 @@ Correctness-critical research state lives in the local Research Server / Researc
 
 MCP is a thin adapter over this durable domain contract. Large results use bounded result handles/pages; expensive work uses durable jobs with progress/cancellation rather than one giant synchronous model call.
 
-### Research SQL sees a curated evidence projection, not the source catalog
+### AI autonomy is constraint-based, not workflow-scripted
 
-General AI analytics run against isolated relations such as `research_history`, `research_cycles` and explicit experiment/outcome inputs. The projection carries all documented typed market fields plus bounded provider `raw_data` for discovery, while excluding operational/session/config/source-metadata state and arbitrary source paths.
+The AI may choose its own hypotheses, experiment order, research SQL, ablations, candidate branching and stopping behavior inside the user's objective and server-enforced evidence/resource boundaries. The reusable Skill teaches a small set of invariants and final-output requirements rather than a fixed momentum formula or mandatory search sequence.
 
-Research relation names deliberately differ from Scanner `latest/history`; future-dependent labels live in explicit outcome relations. A deployable idea must be translated back into legal Scanner SQL and proven again through the Strategy Sandbox. Development has broad research SQL access; Validation is closed by default unless explicitly exposed and recorded; sealed Holdout has no research SQL surface until post-final audit.
+Bootstrap is progressive: small Skill instructions + live `describe_research_environment`/resume state first, then schema/evidence/results on demand. Context is not used as a warehouse; summaries and stable result handles precede raw-row drill-down.
 
 ## Hard boundaries
 
@@ -107,7 +109,7 @@ The detailed user-intent/design questions captured during Branch 10 remain suppo
 
 The amendment is the later correction where it conflicts with earlier restrictive wording: the planner must **evaluate** general read-only SQL / direct read-only research access rather than assuming a typed-tools-only architecture, and must not unnecessarily prescribe ChatGPT's exact search algorithm or reasoning sequence.
 
-The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, and the selected isolated research projection with raw-field discovery and explicit strategy/research data separation.
+The newer active discovery documents further clarify the short-horizon momentum/stock-selection domain, runtime objective semantics, cadence handling, permission to evolve Market Flow US itself when evidence proves a necessary AI-research capability gap, the selected hybrid `typed authority + bounded research SQL` / two-sandbox architecture direction, the selected Development/Validation/Sealed-Holdout research-validity model, the durable machine API / jobs / result-handle / research-ledger model required for autonomous resumable work, the research projection/data-surface design and the Plugin/Skill + MCP operating contract for fresh/resumed AI sessions.
 
 ## Completion boundary
 
