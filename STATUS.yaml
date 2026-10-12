@@ -43,7 +43,7 @@ next_pointer:
   task: "11.4"
   owner: "Chat 38"
   status: in_progress
-  action: "Continue Chat 38 / 11.4 with active Development experiment/Backtest cancellation propagation. Direct Research SQL cancellation now reaches native DuckDB interrupt() through the existing managed session-close hook, drains the active query before close, and is green with real long-SQL/source-fingerprint proof. Preserve 11.2 semantics while propagating cancellation into active experiment work without false success; workload/restart reclosure remains after that."
+  action: "Continue Chat 38 / 11.4 with workload/resource/cancellation-latency tuning and restart reclosure. Direct Research SQL and active Development experiment/Backtest cancellation now reach native DuckDB interruption; managed experiment cancellation is proven CANCELLED without durable Experiment/result success and with source fingerprints preserved. Fast #826 + Planning/Contract #1016 + Workload #412 are green on implementation head e3c05588. After reclosure, perform final 11.4 success-evidence review and PR readiness."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
