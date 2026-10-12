@@ -140,7 +140,7 @@ test("TREE 11.4 managed Research Domain composes jobs, budgets, durable progress
       evidence: 1,
       experiments: 1,
       memory: 1,
-      jobs: 1,
+      jobs: 2,
       results: 1
     });
 
