@@ -1,5 +1,9 @@
 import { deriveDemoBuyHorizonOutcome } from "../shared/demo-buy/outcome-evidence.js";
 
+// This module materializes only server-supplied authoritative rows. It does not
+// derive baselines, future observations, experiment selection or strategy truth.
+// Domain composition owns those references; research SQL receives only this
+// validated detached projection.
 const MAX_CONTROLLED_ROWS = 20_000;
 const EXPERIMENT_ID = /^exp_[0-9a-f-]{36}$/u;
 const QUERY_ARTIFACT_ID = /^qry_[0-9a-f-]{36}$/u;
@@ -196,44 +200,35 @@ const CREATE_STATEMENTS = Object.freeze([
   )`
 ]);
 
-function invalid(message) {
-  throw new TypeError(message);
-}
-
+function invalid(message) { throw new TypeError(message); }
 function object(value, label) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) invalid(`${label} must be an object`);
   return value;
 }
-
 function boundedText(value, label, max = 256) {
   if (typeof value !== "string" || value.length < 1 || value.length > max || value.includes("\0")) invalid(`${label} is invalid`);
   return value;
 }
-
 function id(value, label, pattern = null) {
   boundedText(value, label);
   if (pattern && !pattern.test(value)) invalid(`${label} is invalid`);
   return value;
 }
-
 function safeInteger(value, label, { nullable = false, min = 0 } = {}) {
   if (nullable && (value === null || value === undefined)) return null;
   if (!Number.isSafeInteger(value) || value < min) invalid(`${label} must be a safe integer >= ${min}`);
   return value;
 }
-
 function finite(value, label, { nullable = false } = {}) {
   if (nullable && (value === null || value === undefined)) return null;
   if (typeof value !== "number" || !Number.isFinite(value)) invalid(`${label} must be finite${nullable ? " or null" : ""}`);
   return value;
 }
-
 function rows(value, label) {
   if (value === undefined) return [];
   if (!Array.isArray(value) || value.length > MAX_CONTROLLED_ROWS) invalid(`${label} must contain at most ${MAX_CONTROLLED_ROWS} rows`);
   return value;
 }
-
 function assertSourceId(value, label) {
   if (typeof value !== "string" || !SOURCE_ID.test(value)) invalid(`${label} is invalid`);
   return value;
@@ -243,9 +238,7 @@ function authoritativeOutcomeFields(row, label, baselinePrice) {
   const futureCycleId = safeInteger(row.futureCycleId, `${label}.futureCycleId`, { nullable: true, min: 1 });
   const futureCollectedAtMs = safeInteger(row.futureCollectedAtMs, `${label}.futureCollectedAtMs`, { nullable: true });
   const futurePrice = finite(row.futurePrice, `${label}.futurePrice`, { nullable: true });
-  if ((futureCycleId === null) !== (futureCollectedAtMs === null)) {
-    invalid(`${label} future cycle/time authority is inconsistent`);
-  }
+  if ((futureCycleId === null) !== (futureCollectedAtMs === null)) invalid(`${label} future cycle/time authority is inconsistent`);
 
   const derived = deriveDemoBuyHorizonOutcome({ baselinePrice, futureCycleId, futurePrice });
   const changePercent = finite(row.changePercent, `${label}.changePercent`, { nullable: true });
@@ -306,9 +299,8 @@ function normalizeAuthoritativeOutcomes(input, pointMap) {
   });
 }
 
-function experimentKey(row) {
-  return `${row.experimentId}\u0000${row.queryArtifactId}\u0000${row.pointRef}`;
-}
+function experimentKey(row) { return `${row.experimentId}\u0000${row.queryArtifactId}\u0000${row.pointRef}`; }
+function candidateKey(row) { return `${experimentKey(row)}\u0000${row.returnedPosition}`; }
 
 function normalizeExperimentPoints(input) {
   return rows(input, "experimentPoints").map((entry, index) => {
@@ -349,10 +341,6 @@ function normalizeExperimentCandidates(input, pointMap) {
     if (!point || point.availability !== "AVAILABLE") invalid(`${label} must reference an available experiment point`);
     return normalized;
   });
-}
-
-function candidateKey(row) {
-  return `${experimentKey(row)}\u0000${row.returnedPosition}`;
 }
 
 function normalizeExperimentOutcomes(input, candidateMap) {
