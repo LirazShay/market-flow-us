@@ -19,19 +19,19 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: implementation
-overall_status: backtest_lab_reclosed
+overall_status: ai_researcher_planned
 
 current:
   chat: null
   node: null
   title: null
-  status: done
+  status: pending
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
-  active_execution_rows: 49
+  active_execution_rows: 57
   done: 49
-  pending: 0
+  pending: 8
   in_progress: 0
   blocked: 0
   current_chat: null
@@ -39,39 +39,38 @@ execution_projection:
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: null
-  owner: null
-  status: done
-  action: "Backtest Branch 10 / task 10.6 is deterministically complete. PR #94 final head d23db7d6ccd927199ebf1a4bf9af2a4dd175233d passed Fast #672, Browser #580 including full Chromium plus bounded Local Fake, Planning #852 and Workload #408. PR #95 reconciled the durable product/technical/test contracts and passed Planning #855 plus main #856. Final cumulative security/public-safe review found no blocking defect. No execution task is active. B-US-000 remains non-blocking backlog; B-US-008 is now eligible only for explicit future activation and is not activated by this projection."
+  task: "11.1"
+  owner: "Chat 35"
+  status: pending
+  action: "Branch 11 Autonomous AI Researcher is planned and allocated. Start implementation only through explicit executor activation such as 'אני צאט 35 תתחיל'. Chat 35 owns Research Server domain + durable ledger/run-resume foundation. Generic continuation does not activate Chat 35."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
   backlog: "backlog/README.md"
-  post_backtest_ai_mcp_backlog: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
-  post_backtest_ai_mcp_supporting_mandate: ".planning/POST_BACKTEST_AI_MCP_MANDATE.md"
-  post_backtest_ai_mcp_supporting_autonomy_amendment: ".planning/POST_BACKTEST_AI_MCP_AUTONOMY_AMENDMENT.md"
-  backtest_contract: "docs/BACKTEST_LAB.md"
+  autonomous_ai_researcher_plan: ".planning/PLAN.md#branch-11--autonomous-ai-researcher"
+  autonomous_ai_researcher_discovery: ".planning/AI_RESEARCHER_DISCOVERY.md"
+  autonomous_ai_researcher_architecture: ".planning/AI_RESEARCHER_ARCHITECTURE_DISCOVERY.md"
+  autonomous_ai_researcher_experiment_model: ".planning/AI_RESEARCHER_EXPERIMENT_MODEL.md"
+  autonomous_ai_researcher_api_ledger: ".planning/AI_RESEARCHER_API_LEDGER_CONTRACT.md"
+  autonomous_ai_researcher_data_surface: ".planning/AI_RESEARCHER_DATA_SURFACE.md"
+  autonomous_ai_researcher_operating_contract: ".planning/AI_RESEARCHER_OPERATING_CONTRACT.md"
+  autonomous_ai_researcher_security_resource: ".planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md"
+  autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
-  pre_acceptance_code_audit: ".planning/PRE_ACCEPTANCE_CODE_AUDIT.md"
-  pre_acceptance_code_audit_report: ".planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md"
-  first_run_acceptance_plan: ".planning/FIRST_RUN_ACCEPTANCE_PLAN.md"
+  backtest_contract: "docs/BACKTEST_LAB.md"
+  scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
+  data_contract: "docs/DATA_CONTRACT.md"
+  post_backtest_ai_mcp_backlog_record: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
+  final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
-  ibkr_order_mini_project: ".planning/IBKR_ORDER_MINI_PROJECT.md"
-  ibkr_order_contract: "docs/IBKR_ORDER_SERVICE.md"
-  ibkr_order_security_contract: "docs/IBKR_ORDER_SERVICE_SECURITY.md"
-  basic_buy_contract: "docs/BASIC_BUY_INTEGRATION.md"
-  market_replay_mini_project: ".planning/MARKET_REPLAY_MINI_PROJECT.md"
-  market_replay_contract: "docs/MARKET_REPLAY.md"
-  replay_hardening_contract: "docs/REPLAY_HARDENING.md"
-  replay_buy_extension_review: ".planning/REPLAY_BUY_EXTENSION_REVIEW.md"
 
 acceptance_projection:
   task: "B-US-000"
   status: backlog_non_blocking
   candidate_policy: "Select the latest intended runtime candidate from fresh main when the backlog item is explicitly activated."
   historical_candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
-  checkpoint_summary: "Historical FR-0 and FR-1 evidence is preserved; candidate-bound acceptance is deferred and must be reconciled when B-US-000 is activated."
+  checkpoint_summary: "Historical FR-0/FR-1 evidence remains preserved; B-US-000 stays separate and does not block Branch 11."
   authority:
     backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
     runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
