@@ -15,6 +15,7 @@ const QUERY_ID = "qry_33333333-3333-4333-8333-333333333333";
 const INVENTORY_ID = "inv_33333333-3333-4333-8333-333333333333";
 const PLAN_ID = "plan_33333333-3333-4333-8333-333333333333";
 const PART_DEV = "part_33333333-3333-4333-8333-333333333333";
+const PART_VALIDATION = "part_44444444-4444-4444-8444-444444444444";
 const JOB_ID = "job_33333333-3333-4333-8333-333333333333";
 const LONG_QUERY = `
   SELECT latest.security_id
@@ -24,6 +25,14 @@ const LONG_QUERY = `
   ORDER BY SUM(SIN(i::DOUBLE)) DESC
   LIMIT 1
 `;
+
+function sequence(values) {
+  const remaining = [...values];
+  return () => {
+    if (remaining.length === 0) throw new Error("test sequence exhausted");
+    return remaining.shift();
+  };
+}
 
 const RESOURCE_POLICY = Object.freeze({
   concurrency: Object.freeze({
@@ -161,7 +170,7 @@ test("TREE 11.4 managed active Development experiment cancellation never commits
       queryArtifactIdFactory: () => QUERY_ID,
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
-      partitionIdFactory: () => PART_DEV,
+      partitionIdFactory: sequence([PART_DEV, PART_VALIDATION]),
       jobIdFactory: () => JOB_ID
     });
 
@@ -197,7 +206,10 @@ test("TREE 11.4 managed active Development experiment cancellation never commits
       objectiveVersionId: OBJECTIVE_ID,
       evidenceInventoryId: INVENTORY_ID,
       plan: { algorithmVersion: "experiment-cancellation-proof-v1" },
-      partitions: [{ role: "DEVELOPMENT", partition: { sourceIds: ["active"] } }]
+      partitions: [
+        { role: "DEVELOPMENT", partition: { sourceIds: ["active"] } },
+        { role: "VALIDATION", partition: { sourceIds: ["active"] } }
+      ]
     });
 
     const submitted = await domain.submitDevelopmentExperiment({
