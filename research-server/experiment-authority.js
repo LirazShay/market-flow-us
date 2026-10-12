@@ -1,8 +1,14 @@
 import { createHash } from "node:crypto";
 
 import { executeBacktestPoint } from "../backtest-lab/point-execution.js";
+import {
+  executeBacktestSweep,
+  freezeBacktestSweepRequest
+} from "../backtest-lab/sweep-execution.js";
 
 const MAX_QUERY_SQL_BYTES = 1024 * 1024;
+const EXPERIMENT_BATCH_CONTRACT_VERSION = "research-experiment-batch-v1";
+const EXPERIMENT_PHASES = new Set(["DEVELOPMENT", "VALIDATION"]);
 
 function invalid(message) {
   throw new TypeError(message);
@@ -36,9 +42,23 @@ function assertResearchRunId(value) {
   return value;
 }
 
-function assertSha256(value) {
+function assertObjectiveVersionId(value) {
+  if (typeof value !== "string" || !/^obj_[0-9a-f-]{36}$/u.test(value)) {
+    invalid("objectiveVersionId must be an obj_ prefixed UUID");
+  }
+  return value;
+}
+
+function assertEvidencePartitionId(value) {
+  if (typeof value !== "string" || !/^part_[0-9a-f-]{36}$/u.test(value)) {
+    invalid("evidencePartitionId must be a part_ prefixed UUID");
+  }
+  return value;
+}
+
+function assertSha256(value, label) {
   if (typeof value !== "string" || !/^[0-9a-f]{64}$/u.test(value)) {
-    invalid("query artifact sqlHash must be a SHA-256 value");
+    invalid(`${label} must be a SHA-256 value`);
   }
   return value;
 }
@@ -84,7 +104,7 @@ function freezeQueryBindings(queryArtifacts) {
     }
 
     const sqlText = assertExactSqlText(artifact.sqlText);
-    const sqlHash = assertSha256(artifact.sqlHash);
+    const sqlHash = assertSha256(artifact.sqlHash, "query artifact sqlHash");
     if (sha256(sqlText) !== sqlHash) {
       invalid("query artifact sqlHash does not match SQL text");
     }
@@ -109,6 +129,86 @@ function freezeQueryBindings(queryArtifacts) {
   return freezeCopy({ researchRunId, bindings });
 }
 
+function queryProvenance(bindings) {
+  return bindings.map((binding) => ({
+    queryArtifactId: binding.queryArtifactId,
+    sqlHash: binding.sqlHash,
+    scannerContractVersion: binding.scannerContractVersion
+  }));
+}
+
+function scannerQueries(bindings) {
+  return bindings.map((binding) => ({
+    id: binding.queryArtifactId,
+    name: binding.label,
+    sql: binding.sqlText
+  }));
+}
+
+export function freezeAuthoritativeExperimentBatchRequest({
+  objectiveVersionId,
+  evidencePartitionId,
+  phase,
+  sourceId,
+  sourceFingerprint,
+  queryArtifacts,
+  fromAtMs,
+  toAtMs,
+  intervalValue,
+  intervalUnit,
+  topX = 10,
+  horizonsMs
+} = {}) {
+  const frozenQueries = freezeQueryBindings(queryArtifacts);
+  const frozenObjectiveVersionId = assertObjectiveVersionId(objectiveVersionId);
+  const frozenEvidencePartitionId = assertEvidencePartitionId(evidencePartitionId);
+  if (!EXPERIMENT_PHASES.has(phase)) {
+    invalid("experiment phase must be DEVELOPMENT or VALIDATION");
+  }
+  const frozenSourceFingerprint = assertSha256(sourceFingerprint, "sourceFingerprint");
+
+  const backtestRequest = freezeBacktestSweepRequest({
+    sourceId,
+    fromAtMs,
+    toAtMs,
+    intervalValue,
+    intervalUnit,
+    queries: scannerQueries(frozenQueries.bindings),
+    topX,
+    horizonsMs
+  });
+  const queryArtifactsProvenance = freezeCopy(queryProvenance(frozenQueries.bindings));
+  const schedule = freezeCopy({
+    fromAtMs: backtestRequest.fromAtMs,
+    toAtMs: backtestRequest.toAtMs,
+    intervalValue: backtestRequest.intervalValue,
+    intervalUnit: backtestRequest.intervalUnit,
+    intervalMs: backtestRequest.intervalMs,
+    requestedAtMsList: backtestRequest.requestedAtMsList,
+    topX: backtestRequest.topX,
+    horizonsMs: backtestRequest.horizonsMs
+  });
+  const fingerprintPayload = {
+    contractVersion: EXPERIMENT_BATCH_CONTRACT_VERSION,
+    researchRunId: frozenQueries.researchRunId,
+    objectiveVersionId: frozenObjectiveVersionId,
+    evidencePartitionId: frozenEvidencePartitionId,
+    phase,
+    source: {
+      sourceId: backtestRequest.sourceId,
+      sourceFingerprint: frozenSourceFingerprint
+    },
+    queryArtifacts: queryArtifactsProvenance,
+    schedule
+  };
+
+  return freezeCopy({
+    ...fingerprintPayload,
+    requestFingerprint: sha256(JSON.stringify(fingerprintPayload)),
+    backtestRequest
+  });
+}
+
 export async function executeAuthoritativeExperimentPoint({
   dataDir,
   sourceId,
@@ -124,17 +224,11 @@ export async function executeAuthoritativeExperimentPoint({
   }
 
   const frozen = freezeQueryBindings(queryArtifacts);
-  const queries = frozen.bindings.map((binding) => ({
-    id: binding.queryArtifactId,
-    name: binding.label,
-    sql: binding.sqlText
-  }));
-
   const point = await executePoint({
     dataDir,
     sourceId,
     requestedAtMs,
-    queries,
+    queries: scannerQueries(frozen.bindings),
     topX,
     horizonsMs,
     now
@@ -142,11 +236,58 @@ export async function executeAuthoritativeExperimentPoint({
 
   return freezeCopy({
     researchRunId: frozen.researchRunId,
-    queryArtifacts: frozen.bindings.map((binding) => ({
-      queryArtifactId: binding.queryArtifactId,
-      sqlHash: binding.sqlHash,
-      scannerContractVersion: binding.scannerContractVersion
-    })),
+    queryArtifacts: queryProvenance(frozen.bindings),
     point
   });
+}
+
+export async function executeAuthoritativeExperimentBatch({
+  dataDir,
+  objectiveVersionId,
+  evidencePartitionId,
+  phase,
+  sourceId,
+  sourceFingerprint,
+  queryArtifacts,
+  fromAtMs,
+  toAtMs,
+  intervalValue,
+  intervalUnit,
+  topX = 10,
+  horizonsMs,
+  now,
+  executeSweep = executeBacktestSweep
+} = {}) {
+  if (typeof executeSweep !== "function") {
+    invalid("executeSweep must be a function.");
+  }
+
+  const request = freezeAuthoritativeExperimentBatchRequest({
+    objectiveVersionId,
+    evidencePartitionId,
+    phase,
+    sourceId,
+    sourceFingerprint,
+    queryArtifacts,
+    fromAtMs,
+    toAtMs,
+    intervalValue,
+    intervalUnit,
+    topX,
+    horizonsMs
+  });
+  const sweep = await executeSweep({
+    dataDir,
+    sourceId: request.backtestRequest.sourceId,
+    fromAtMs: request.backtestRequest.fromAtMs,
+    toAtMs: request.backtestRequest.toAtMs,
+    intervalValue: request.backtestRequest.intervalValue,
+    intervalUnit: request.backtestRequest.intervalUnit,
+    queries: request.backtestRequest.queries,
+    topX: request.backtestRequest.topX,
+    horizonsMs: request.backtestRequest.horizonsMs,
+    now
+  });
+
+  return Object.freeze({ request, sweep });
 }
