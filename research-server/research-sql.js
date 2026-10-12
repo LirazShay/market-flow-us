@@ -83,7 +83,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "max_authorized_horizon_ms", type: "BIGINT", nullable: true, origin: "provenance", meaning: "Maximum horizon authorized by the partition when supplied.", known_unit: "milliseconds" }
     ]),
     manifestRelation("research_cycles", "Complete authoritative cycle timing and coverage facts inside the authorized partition.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local authoritative cycle identity.", identity_role: "source_cycle" },
       { column: "universe_revision", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted source universe revision." },
       { column: "started_at_ms", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Local cycle start time.", known_unit: "milliseconds" },
@@ -98,7 +98,7 @@ const RESEARCH_SCHEMA_MANIFEST = Object.freeze({
       { column: "unexpected", type: "BIGINT", nullable: true, origin: "source_typed", meaning: "Persisted unexpected-row diagnostic count." }
     ]),
     manifestRelation("research_history", "Authorized successful market observations across one or more logical sources.", [
-      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical evidence source identity.", identity_role: "source" },
+      { column: "source_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Logical immutable evidence source identity.", identity_role: "source" },
       { column: "cycle_id", type: "BIGINT", nullable: false, origin: "provenance", meaning: "Source-local cycle identity.", identity_role: "source_cycle", scanner_equivalent: "history.cycle_id / latest.cycle_id", decision_time_eligible: true, research_only: false },
       { column: "universe_revision", type: "BIGINT", nullable: false, origin: "source_typed", meaning: "Persisted source universe revision.", scanner_equivalent: "history.universe_revision / latest.universe_revision", decision_time_eligible: true, research_only: false },
       { column: "security_id", type: "VARCHAR", nullable: false, origin: "provenance", meaning: "Canonical Market Flow US security identity.", identity_role: "canonical_security", scanner_equivalent: "history.security_id / latest.security_id", decision_time_eligible: true, research_only: false },
@@ -630,6 +630,10 @@ export async function openDevelopmentResearchSqlSandbox({
       async execute(sql) {
         if (closed) throw new Error("Research SQL sandbox is closed");
         return await authority.execute(sql);
+      },
+      interrupt() {
+        if (closed) return;
+        connection.interrupt();
       },
       async close() {
         if (closed) return;
