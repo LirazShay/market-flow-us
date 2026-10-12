@@ -9,18 +9,24 @@ This document captures product/architecture discovery for the post-Backtest auto
 
 ## Product outcome
 
-Build the local infrastructure that lets an AI researcher connected from the user's desktop ChatGPT client investigate Market Flow US evidence autonomously and return the strongest evidence-backed Scanner SQL it can justify for the research objective supplied by the user at run time.
+Build the local infrastructure that lets an AI researcher connected from the user's desktop ChatGPT client autonomously research **short-horizon U.S.-equity momentum candidate selection for a potential buy** using Market Flow US evidence, and return the strongest evidence-backed Scanner SQL it can justify for the precise objective supplied by the user at run time.
 
-The project does **not** hard-code one trading objective, one momentum definition, one target percentage or one horizon as the permanent research mission.
+The permanent product is not a general-purpose finance/quant research platform and is not a hard-coded optimizer for one exact threshold/horizon. Its domain is deliberately narrower:
 
-A Research Run receives its objective at run time. Examples may include short-horizon momentum continuation, a 30-second target, a 60/120-second objective, a threshold-return target, false-positive reduction, robustness investigation or another future Scanner-research goal. The infrastructure must expose enough trustworthy capability that the AI can choose an appropriate research method for the supplied objective without requiring a new product implementation for each objective.
+```text
+Market Flow US universe
+→ detect/rank the stocks showing the strongest actionable short-horizon upward momentum/continuation evidence
+→ produce Scanner SQL suitable for selecting the best current buy candidate(s)
+```
+
+Within that domain, the exact Research Run objective is supplied at run time. Examples may include maximizing continuation probability over 30 seconds, emphasizing 60/120-second continuation, seeking a particular positive move threshold, reducing false positives/drawdown, increasing selectivity, or balancing several momentum-quality dimensions. The infrastructure must let the AI choose an appropriate research method for the supplied momentum/selection objective without requiring a new product implementation for each variation.
 
 The intended operator experience is approximately:
 
 ```text
 user starts local AI research environment
 → desktop ChatGPT connects through the approved MCP boundary
-→ user supplies a research objective in natural language
+→ user supplies a momentum/stock-selection research objective in natural language
 → AI inspects environment/data/coverage/contracts
 → AI conducts bounded autonomous research
 → AI persists explicit experiments/evidence so the run can resume
@@ -29,6 +35,45 @@ user starts local AI research environment
 ```
 
 The AI is the researcher. The product supplies the research environment, authoritative evidence, safe capabilities, memory and governance.
+
+## Domain boundary
+
+This project's research freedom is broad **inside short-horizon momentum candidate selection**, not across arbitrary financial questions.
+
+The AI should be able to investigate, when supported by available fields/evidence:
+
+- recent price-change shape and acceleration/deceleration;
+- consistency of upward movement across multiple recent windows;
+- relative momentum versus the rest of the current universe;
+- activity/volume and other available provider fields as filters or explanatory variables;
+- spread/bid/ask-shaped fields only to the extent their documented semantics support mechanical use;
+- persistence versus reversal/false-positive patterns;
+- ranking/selectivity/top-N behavior;
+- different prediction horizons and positive-move thresholds;
+- robustness across times/days/securities and nearby parameter changes;
+- why apparently hot stocks did or did not continue upward after selection.
+
+The platform does not need to support unrelated portfolio construction, valuation, long-horizon investing, fundamentals research, brokerage execution or arbitrary external-data research unless a future separately planned scope explicitly adds them.
+
+## Evidence cadence is an observed research property, not a fixed assumption
+
+The AI must research against the evidence that actually exists now and extract the strongest defensible result from it.
+
+Current historical collection may be approximately 10-second cadence, but the research platform must inspect actual per-source/per-day timing rather than assume a constant interval. It must expose cadence distributions, gaps and horizon feasibility so the AI knows what temporal resolution the evidence really supports.
+
+A denser future collection cadence such as approximately 5 seconds or 3 seconds may later provide additional predictive information for very short-horizon momentum. That is **not** a prerequisite for this project and must not block the AI from optimizing against today's evidence.
+
+The intended behavior is:
+
+```text
+use current evidence fully
+→ quantify what can and cannot be learned at its actual cadence
+→ produce the best validated Scanner SQL supported by that evidence
+→ if research reveals a material information-resolution limitation, report it explicitly
+→ later, after denser evidence exists, rerun/reopen research rather than redesigning the research platform
+```
+
+The infrastructure should therefore remain cadence-agnostic within the existing market-data contract: experiments use actual collected timestamps/cycles, not a hard-coded 10s/5s/3s assumption.
 
 ## Critical design correction: human Backtest is not the AI interface blueprint
 
@@ -47,9 +92,9 @@ Reuse what is authoritative and already proven:
 
 Redesign freely for machine research where that improves AI capability. The AI research surface may introduce new purpose-built APIs, batch operations, profiling, analytical access, experiment abstractions, provenance/debug primitives, persistence and resource controls. It need not mirror Inspect / Compare / Sweep or the browser UI.
 
-## Fixed principle: run-time objective, fixed research capabilities
+## Fixed principle: run-time objective within a fixed momentum-research domain
 
-The infrastructure owns capabilities and constraints; the user owns the research objective for each run.
+The infrastructure owns the momentum-research domain, capabilities and constraints; the user owns the precise objective for each run.
 
 The system must therefore separate:
 
@@ -57,23 +102,23 @@ The system must therefore separate:
 
 Supplied when the user starts or redirects a Research Run. It may define, for example:
 
-- target horizon(s);
-- target move/threshold or directional objective;
+- target prediction horizon(s), especially short horizons such as 30/60/120 seconds;
+- target positive move/threshold or directional continuation objective;
 - selectivity expectations;
-- acceptable negative-outcome trade-offs;
+- acceptable negative-outcome/drawdown trade-offs;
 - preferred result count / top-N behavior;
 - validation emphasis;
 - search/resource budget;
-- other constraints relevant to the current research question.
+- other constraints relevant to identifying the best near-term momentum buy candidate.
 
 The AI may operationalize the objective into explicit metrics/validation criteria, but it must record the exact interpretation used and must not silently replace a genuinely multi-objective request with an arbitrary scalar score.
 
 ### Stable research capabilities
 
-The platform must be rich enough to support objectives we did not predesign. The capability set is expected to include, subject to architecture validation:
+The platform must be rich enough to support momentum/stock-selection objectives we did not predesign. The capability set is expected to include, subject to architecture validation:
 
 - authoritative machine-readable schema/field semantics;
-- evidence-source/day discovery and coverage profiling;
+- evidence-source/day discovery and exact cadence/coverage profiling;
 - field completeness/null/missing/value-distribution profiling;
 - authoritative Scanner SQL validation and execution at historical decision points;
 - efficient batch/historical evaluation over many T0 values;
@@ -166,7 +211,7 @@ Diagnostics must never be confused with authoritative Scanner execution.
 
 ### 6. Research methodology / overfitting control
 
-Determine how arbitrary run-time objectives map to exploration, validation and holdout protocols. The infrastructure must support time/day-based splits, walk-forward or another justified protocol, minimum evidence rules, parameter stability, multiple-hypothesis/search-bias awareness and out-of-sample evidence without hard-coding one universal scoring function.
+Determine how momentum-domain run-time objectives map to exploration, validation and holdout protocols. The infrastructure must support time/day-based splits, walk-forward or another justified protocol, minimum evidence rules, parameter stability, multiple-hypothesis/search-bias awareness and out-of-sample evidence without hard-coding one universal scoring function.
 
 ### 7. Persistence and resume
 
@@ -180,6 +225,12 @@ Define query/runtime bounds, experiment budgets, concurrency, cancellation, payl
 
 Define the final artifact contract so the user receives at least copy/paste-ready Scanner SQL, the exact run-time objective used, evidence partitions, metrics with denominators, validation/holdout results, comparison against strong alternatives, robustness evidence, material failures/unknowns and stable reproduction references.
 
+### 10. Cadence adequacy / future evidence improvement
+
+Define how the AI distinguishes a weak strategy idea from an information-resolution limitation. The platform should be able to report when current cadence/gaps materially limit a requested very-short-horizon objective and preserve enough experiment detail that later 5s/3s evidence can test the same hypotheses/query family comparably.
+
+This is an evidence-quality output, not permission for the researcher to modify the live Collector cadence itself.
+
 ## Hard boundaries already fixed
 
 - source market DuckDB files remain immutable evidence;
@@ -187,6 +238,7 @@ Define the final artifact contract so the user receives at least copy/paste-read
 - no provider/browser credentials, cookies or session/auth material;
 - no arbitrary filesystem mutation or arbitrary source paths;
 - no automatic Scanner activation or trading;
+- no authority for the researcher to change live collection cadence/configuration automatically;
 - expensive work is bounded and cancellable;
 - diagnostics/research artifacts remain public-safe;
 - meaningful experiments are reproducible;
@@ -197,12 +249,13 @@ Define the final artifact contract so the user receives at least copy/paste-read
 
 Discovery is ready to become a full ST Planner implementation cycle only when:
 
-1. the AI-first product behavior is unambiguous;
+1. the AI-first momentum/stock-selection product behavior is unambiguous;
 2. the architecture/data-access alternatives above have been investigated deeply enough to select and justify a tactic;
-3. the run-time objective contract is defined without hard-coding one strategy mission;
-4. the experiment/ledger/resume and validation model is sufficiently specified;
-5. MCP/desktop integration assumptions have been checked against current capabilities;
-6. security/resource/reproducibility boundaries are contract-ready;
-7. final target-machine acceptance can be stated end-to-end from desktop ChatGPT through MCP/research server to reproducible final SQL/report.
+3. the run-time objective contract is defined within the momentum candidate-selection domain without hard-coding one query mission;
+4. actual evidence cadence/coverage is first-class research metadata and does not become a hidden fixed assumption;
+5. the experiment/ledger/resume and validation model is sufficiently specified;
+6. MCP/desktop integration assumptions have been checked against current capabilities;
+7. security/resource/reproducibility boundaries are contract-ready;
+8. final target-machine acceptance can be stated end-to-end from desktop ChatGPT through MCP/research server to reproducible final SQL/report.
 
 Until then, do not allocate implementation tasks and do not write implementation code.
