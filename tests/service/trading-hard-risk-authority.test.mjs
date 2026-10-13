@@ -326,7 +326,7 @@ test("TREE 12.5 rejection reason is actually durable in the Trading Ledger", asy
       mode: "DRY_RUN",
       lifecycleState: "ACTIVE",
       environmentSnapshot: { source: "synthetic" },
-      riskEnvelope: HARD_LIMITS
+      riskEnvelope: { source: "synthetic-hard-risk-test" }
     });
     const episode = await ledger.createTradeEpisode({
       tradingRunId: run.tradingRunId,
