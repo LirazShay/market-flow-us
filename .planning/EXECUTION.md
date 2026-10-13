@@ -16,7 +16,7 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — completed all eight implementation leaves `11.1`–`11.8` and repository reclosure in PR #110. Its separate target-machine/Desktop acceptance task `B-US-009` remains `blocked` at W2T because the required evidence can only be produced on the user's target machine; W2T/W3 remain NOT PASS.
 
-That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — has nine implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` is complete: PR #116 was squash-merged as `fb0b6230`, with post-merge `main` Planning, Fast, Chromium E2E and bounded Local Fake verification green. `12.2 / Chat 44` is complete: PR #118 was squash-merged as `b3821170`, and post-merge `main` Planning #1328 and Fast #1116 are green. `12.3 / Chat 45` is complete: PR #120 was squash-merged as `aeab832a`, with post-merge `main` Planning #1343, Workload #689 and Fast #1129 green. `12.5 / Chat 46` is complete: PR #122 was squash-merged as `b9f722ab`, with post-merge `main` Planning #1347 and Fast #1131 green. The next normal sequence pointer is pending `12.6 / Chat 46`; the already activated Chat 46 may continue it only after the current checkpoint.
+That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — has nine implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` is complete: PR #116 was squash-merged as `fb0b6230`, with post-merge `main` Planning, Fast, Chromium E2E and bounded Local Fake verification green. `12.2 / Chat 44` is complete: PR #118 was squash-merged as `b3821170`, and post-merge `main` Planning #1328 and Fast #1116 are green. `12.3 / Chat 45` is complete: PR #120 was squash-merged as `aeab832a`, with post-merge `main` Planning #1343, Workload #689 and Fast #1129 green. `12.5 / Chat 46` is complete: PR #122 was squash-merged as `b9f722ab`, with post-merge `main` Planning #1347 and Fast #1131 green. The next normal sequence pointer is pending `12.6 / Chat 46` and no execution work on that leaf has started at this checkpoint.
 
 Allocation follows natural feature/context boundaries and real prerequisites only. Waiting for user/target-machine/provider acceptance elsewhere does not freeze unrelated work unless this table records a real dependency.
 
@@ -119,7 +119,7 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - Pending: **5**.
 - In progress: **0**.
 - Blocked: **1** (`B-US-009`, external target-machine evidence).
-- Current normal sequence pointer: `12.6 / Chat 46` is the next pending leaf after completed `12.5`; the current Chat 46 activation remains authoritative.
+- Current normal sequence pointer: `12.6 / Chat 46` is the next pending leaf after completed `12.5`; no execution work on `12.6` has started at this checkpoint.
 - `B-US-009 / W2T` remains separately blocked on target-machine evidence. It is not a dependency of `12.1`–`12.9`.
 - `12.2`, `12.3` and `12.5` are parallel siblings after `12.1`; chat numbering is not dependency truth.
 - `12.6` requires the risk boundary plus the already-completed order-service authority; `12.4` composes the candidate/quote/risk/order seams; later dependencies reflect actual composed prerequisites.
