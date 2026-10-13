@@ -13,6 +13,14 @@ function scannerError(code) {
   return new ProtocolValidationError(code);
 }
 
+function researchResultLimitError(dimension, limit) {
+  const error = new Error(`Research SQL result exceeded ${dimension} ceiling`);
+  error.code = "RESEARCH_BUDGET_EXCEEDED";
+  error.dimension = dimension;
+  error.limit = limit;
+  return error;
+}
+
 function isIdentifierStart(char) {
   return /[A-Za-z_]/.test(char);
 }
@@ -215,6 +223,12 @@ function readClock(now) {
 
 function mapScannerFailure(error) {
   if (error instanceof ProtocolValidationError) return error;
+  if (
+    error?.code === "RESEARCH_BUDGET_EXCEEDED"
+    && (error?.dimension === "resultRows" || error?.dimension === "resultBytes")
+  ) {
+    return error;
+  }
   return scannerError(ERROR_CODES.SCANNER_EXECUTION_ERROR);
 }
 
@@ -272,21 +286,13 @@ async function readBoundedResult(prepared, limits) {
       processed += 1;
 
       if (rows.length >= limits.maxRows) {
-        return {
-          columns,
-          rows,
-          limitExceeded: Object.freeze({ dimension: "resultRows", limit: limits.maxRows })
-        };
+        throw researchResultLimitError("resultRows", limits.maxRows);
       }
 
       const objectBytes = Buffer.byteLength(JSON.stringify(rowObject(columns, row)), "utf8");
       const nextSerializedBytes = serializedBytes + objectBytes + (rows.length === 0 ? 0 : 1);
       if (nextSerializedBytes > limits.maxBytes) {
-        return {
-          columns,
-          rows,
-          limitExceeded: Object.freeze({ dimension: "resultBytes", limit: limits.maxBytes })
-        };
+        throw researchResultLimitError("resultBytes", limits.maxBytes);
       }
 
       rows.push(row);
@@ -296,7 +302,7 @@ async function readBoundedResult(prepared, limits) {
     if (reader.done) break;
   }
 
-  return { columns, rows, limitExceeded: null };
+  return { columns, rows };
 }
 
 export async function createScannerAuthority({
@@ -355,12 +361,8 @@ export async function createScannerAuthority({
 
       let columns;
       let rows;
-      let limitExceeded = null;
       if (boundedResultLimits) {
-        const bounded = await readBoundedResult(prepared, boundedResultLimits);
-        columns = bounded.columns;
-        rows = bounded.rows;
-        limitExceeded = bounded.limitExceeded;
+        ({ columns, rows } = await readBoundedResult(prepared, boundedResultLimits));
       } else {
         const reader = await prepared.runAndReadAll();
         columns = resultColumns(reader);
@@ -374,8 +376,7 @@ export async function createScannerAuthority({
         rowCount: rows.length,
         startedAtMs,
         completedAtMs,
-        durationMs: Math.max(0, completedAtMs - startedAtMs),
-        ...(limitExceeded ? { limitExceeded } : {})
+        durationMs: Math.max(0, completedAtMs - startedAtMs)
       };
     } catch (error) {
       throw mapScannerFailure(error);
