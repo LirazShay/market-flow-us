@@ -31,7 +31,11 @@ test("TREE 12.7 marketplace resolves the separate local Trading plugin and execu
   const server = mcp.mcpServers.market_flow_us_trading;
   assert.deepEqual(server, {
     type: "stdio",
-    command: "market-flow-us-trading-mcp"
+    command: "market-flow-us-trading-mcp",
+    env_vars: [
+      "MARKET_FLOW_US_TRADING_DOMAIN_URL",
+      "MARKET_FLOW_US_TRADING_DOMAIN_TOKEN"
+    ]
   });
   assert.equal(packageJson.bin[server.command], "trading-server/mcp-stdio.js");
   assert.equal(Object.hasOwn(server, "url"), false, "Desktop-local Trading plugin must not expose a remote MCP URL");
