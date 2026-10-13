@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { openBacktestEvidenceSource } from "../backtest-lab/evidence-source.js";
 import {
@@ -14,7 +14,7 @@ import { openManagedResearchDomain } from "../research-server/managed-domain.js"
 import { DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY } from "../research-server/runtime-policy.js";
 import { fingerprintResearchEvidenceSource } from "../research-server/source-fingerprint.js";
 
-const PROJECT_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_REPORT_PATH = path.join(
   PROJECT_ROOT,
   "test-results",
