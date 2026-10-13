@@ -5,6 +5,7 @@ import {
 } from "./experiment-diagnostics.js";
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
+import { openResearchHoldoutLedger } from "./holdout-ledger.js";
 import { openResearchLedger } from "./ledger.js";
 import { openResearchMemory } from "./research-memory.js";
 import { openDevelopmentResearchSqlSession } from "./research-sql-session.js";
@@ -56,6 +57,10 @@ const RESEARCH_SQL_REQUEST_KEYS = new Set([
   "researchRunId",
   "partitionId",
   "experimentIds"
+]);
+const HOLDOUT_EVALUATION_REQUEST_KEYS = new Set([
+  "researchRunId",
+  "finalistSetId"
 ]);
 
 function normalizedKey(value) {
@@ -145,6 +150,24 @@ function assertDevelopmentResearchSqlInput(input) {
   return input;
 }
 
+function assertHoldoutEvaluationInput(input) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("holdout evaluation request must be an object");
+  }
+  for (const key of Object.keys(input)) {
+    if (!HOLDOUT_EVALUATION_REQUEST_KEYS.has(key)) {
+      throw new TypeError(`${key} is server-owned Holdout authority`);
+    }
+  }
+  if (typeof input.researchRunId !== "string" || !/^run_[0-9a-f-]{36}$/u.test(input.researchRunId)) {
+    throw new TypeError("researchRunId must be a run_ prefixed UUID");
+  }
+  if (typeof input.finalistSetId !== "string" || !/^finalist_[0-9a-f-]{36}$/u.test(input.finalistSetId)) {
+    throw new TypeError("finalistSetId must be a finalist_ prefixed UUID");
+  }
+  return input;
+}
+
 function phaseLabel(role) {
   return role === "DEVELOPMENT" ? "Development" : "Validation";
 }
@@ -194,6 +217,7 @@ export async function openResearchDomain(options = {}) {
     memory: await bootstrapComponent(openResearchMemory, options)
   });
   await bootstrapComponent(openResearchValidationLedger, options);
+  await bootstrapComponent(openResearchHoldoutLedger, options);
 
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
   const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
@@ -243,6 +267,10 @@ export async function openResearchDomain(options = {}) {
 
   function useValidation(operation) {
     return enqueue(() => withComponent(openResearchValidationLedger, options, operation));
+  }
+
+  function useHoldout(operation) {
+    return enqueue(() => withComponent(openResearchHoldoutLedger, options, operation));
   }
 
   async function loadQueryArtifacts(researchRunId, references) {
@@ -516,7 +544,14 @@ export async function openResearchDomain(options = {}) {
 
     async createQueryArtifact(input) {
       assertPublicSafeValue(input, "query artifact");
-      return await useLedger((ledger) => ledger.createQueryArtifact(input));
+      const artifact = await useLedger((ledger) => ledger.createQueryArtifact(input));
+      if (artifact.parentQueryArtifactId !== null) {
+        await useHoldout((holdout) => holdout.recordPostHoldoutQueryArtifact({
+          researchRunId: artifact.researchRunId,
+          queryArtifactId: artifact.queryArtifactId
+        }));
+      }
+      return artifact;
     },
 
     async getQueryArtifact(researchRunId, queryArtifactId) {
@@ -646,6 +681,78 @@ export async function openResearchDomain(options = {}) {
 
     async listFinalistSets(researchRunId, listOptions) {
       return await useValidation((validation) => validation.listFinalistSets(researchRunId, listOptions));
+    },
+
+    async executeHoldoutEvaluation(input) {
+      assertPublicSafeValue(input, "holdout evaluation");
+      const request = assertHoldoutEvaluationInput(input);
+      const existing = await useHoldout((holdout) => holdout.getHoldoutEvaluationByFinalist(
+        request.researchRunId,
+        request.finalistSetId
+      ));
+      if (existing) {
+        return existing.exposedAtMs === null
+          ? await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
+              researchRunId: request.researchRunId,
+              holdoutEvaluationId: existing.holdoutEvaluationId
+            }))
+          : existing;
+      }
+
+      const authority = await useHoldout((holdout) => holdout.prepareHoldoutEvaluation(request));
+      const queryArtifacts = await loadQueryArtifacts(request.researchRunId, authority.queryArtifacts);
+      const sourceResults = [];
+      for (const source of authority.sourceSchedules) {
+        const execution = await executeWithVerifiedSource({
+          objectiveVersionId: authority.objectiveVersionId,
+          evidencePartitionId: authority.partitionId,
+          phase: "VALIDATION",
+          sourceId: source.sourceId,
+          sourceFingerprint: source.sourceFingerprint,
+          queryArtifacts,
+          fromAtMs: source.schedule.fromAtMs,
+          toAtMs: source.schedule.toAtMs,
+          intervalValue: source.schedule.intervalValue,
+          intervalUnit: source.schedule.intervalUnit,
+          topX: authority.evaluationProfile.topX,
+          horizonsMs: authority.evaluationProfile.horizonsMs
+        });
+        if (
+          execution?.durableRequest?.evidencePartitionId !== authority.partitionId
+          || execution?.durableRequest?.source?.sourceId !== source.sourceId
+          || execution?.durableRequest?.source?.sourceFingerprint !== source.sourceFingerprint
+        ) {
+          throw new Error("Holdout strategy execution did not preserve frozen partition/source authority");
+        }
+        assertPublicSafeValue({ metrics: execution.metrics }, "completed holdout evaluation");
+        sourceResults.push(Object.freeze({
+          sourceId: source.sourceId,
+          sourceFingerprint: source.sourceFingerprint,
+          schedule: source.schedule,
+          engineRequestFingerprint: execution.durableRequest.requestFingerprint,
+          metrics: execution.metrics
+        }));
+      }
+
+      const recorded = await useHoldout((holdout) => holdout.recordCompletedHoldoutEvaluation({
+        authority,
+        sourceResults
+      }));
+      return await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
+        researchRunId: request.researchRunId,
+        holdoutEvaluationId: recorded.holdoutEvaluationId
+      }));
+    },
+
+    async getHoldoutEvaluation(researchRunId, holdoutEvaluationId) {
+      const evaluation = await useHoldout((holdout) => holdout.getHoldoutEvaluation(
+        researchRunId,
+        holdoutEvaluationId
+      ));
+      if (evaluation?.exposedAtMs === null) {
+        throw new Error("Holdout Evaluation remains sealed until authorized result exposure");
+      }
+      return evaluation;
     },
 
     async openDevelopmentResearchSql(input) {
