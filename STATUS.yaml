@@ -22,28 +22,28 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: null
-  node: "12.5"
-  title: "Independent Hard Risk Authority"
+  chat: 46
+  node: "12.6"
+  title: "Protected Order Bridge"
   status: pending
-  activation_required: true
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 60
-  pending: 6
+  done: 61
+  pending: 5
   in_progress: 0
   blocked: 1
-  current_chat: null
-  current_node: "12.5"
+  current_chat: 46
+  current_node: "12.6"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.5"
+  task: "12.6"
   owner: "Chat 46"
   status: pending
-  action: "Activate Chat 46 only on an explicit numbered-chat request. TREE 12.3 / Chat 45 is squash-merged and post-merge main Planning #1343, Workload #689 and Fast #1129 are green. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Continue the already activated Chat 46 with TREE 12.6 only after the current 12.5 checkpoint. TREE 12.5 is squash-merged as b9f722ab and post-merge main Planning #1347 and Fast #1131 are green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
