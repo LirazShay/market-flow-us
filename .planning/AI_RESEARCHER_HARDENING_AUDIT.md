@@ -45,14 +45,14 @@ The audit starts from these already-selected boundaries and attempts to break th
 | Source selection / attachment | Can caller-controlled IDs, paths, aliases, attachment syntax or projection failure reach/mutate original evidence? | Logical `sourceId`, Backtest read-only opener, source fingerprint verification before/after projection, in-memory sandbox, source detach before AI SQL. | Attack malformed/cross-run source lineage, projection failures, attachment/catalog escapes and verify exact source bytes/fingerprints. | OPEN |
 | SQL statement admission | Can multi-statement, DDL/DML, `ATTACH`, `COPY`, config, extension or secret operations pass as analytical SQL? | Shared Scanner authority enforces exactly one prepared `SELECT`; Research admission adds explicit dangerous function deny rules. Existing adversarial service corpus covers direct forms. | Expand obfuscation/equivalent catalog/function cases and prove fail-closed after dependency/runtime composition. | OPEN |
 | SQL host access | Can file/network readers, dynamic SQL, environment/config/secret/catalog helpers or side-effecting functions access the host? | External access/extensions/secrets disabled, configuration locked, `query/query_table` denied, side-effecting functions discovered from `duckdb_functions()`. | Attack qualified/quoted/comment/dollar-quoted forms, path-bearing catalog surfaces and equivalent readers/helpers; prove sandbox remains usable afterward. | OPEN |
-| Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL session and physically constructed Development projection; typed Validation/Holdout authority. | Cross-phase object substitution, phase-confused requests, error/provenance/schema/result side channels. | OPEN |
-| Run/object ownership | Can IDs from another Research Run or Evidence Plan be replayed against reads/mutations? | Branch-11 domain/ledger ownership checks and fail-closed cross-run behavior. | Systematic cross-run matrix for run/objective/query/evidence/experiment/job/result/finalist/holdout/recommendation identities. | OPEN |
+| Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL session and physically constructed Development projection; typed Validation/Holdout authority. Cross-phase SQL/diagnostic/Holdout capability checks are green, and MCP cannot inject a phase override. | Complete error/provenance/schema/result side-channel and fault/restart attacks across phase transitions. | REVIEWED |
+| Run/object ownership | Can IDs from another Research Run or Evidence Plan be replayed against reads/mutations? | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped and fail closed; MCP preserves supplied IDs rather than rewriting them. | Complete composed job/experiment/recommendation substitution and restart-state attacks; no cross-run escape found in this slice. | REVIEWED |
 | Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | `getResult` scopes by `research_run_id + result_handle`; creation requires the source Job in the same Research Run; cursor encodes and validates its Result Handle; row paging occurs only after the scoped Result Handle is resolved. Existing restart paging test is green baseline. | Complete phase/result substitution and incompatible-state attacks; current static ownership pass found no cross-run Result Handle escape. | REVIEWED |
 | Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, normalized request fingerprints, `clientRequestId`, bounded queue/readers. | Continue duplicate/conflict races across expensive SQL/experiment/validation operations and restart boundaries. Holdout duplicate execution finding `H-11.7-001` is fixed and green. | REVIEWED |
 | Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Native DuckDB interrupt, idempotent cancellation, finite SQL/queue/experiment ceilings. | Fault/race matrix around queue→run, run→finalize, cancel/timeout→restart and late completion callbacks. | OPEN |
 | Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Transaction-fault coverage, result-before-success ordering, transactional ledgers from `11.1`–`11.5`. | Inject failures at composed state transitions and verify rollback/reconciliation plus analogous transitions. | OPEN |
-| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Frozen Validation schedule, exposure accounting, immutable Finalist Set, one-shot durable Holdout row, contamination rules, sealed public view. Concurrent same-Finalist execution is now single-flight under `H-11.7-001`. | Continue cross-run/finalist/objective substitution, restart/fault, contamination and side-channel attacks. | REVIEWED |
-| MCP tool boundary | Can tool name/schema/arguments bypass Domain validation or expose non-public internals? | Strict 46-tool registry and thin mapping to managed Research Domain from `11.6`. | Fuzz unknown/malformed/oversized arguments, ID substitution, error mapping and authority parity against direct Domain calls. | OPEN |
+| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Frozen Validation schedule, exposure accounting, immutable Finalist Set, one-shot durable Holdout row, contamination rules, sealed public view. Concurrent same-Finalist execution is now single-flight under `H-11.7-001`. | Continue restart/fault, contamination and side-channel attacks. Cross-run/cross-partition and arbitrary phase-override substitution are green. | REVIEWED |
+| MCP tool boundary | Can tool name/schema/arguments bypass Domain validation or expose non-public internals? | Strict 46-tool registry, real `McpServer` registration through `fromJsonSchema`, and thin mapping to managed Research Domain. | Continue oversized/error-mapping/lifecycle fuzz. Missing/extra/wrong-type authority fields and ID-preservation parity are now green at the actual MCP transport boundary. | REVIEWED |
 | Local transport / process | Can transport accept unapproved network/origin/body/path exposure or leak lifecycle state? | Pinned MCP v2 stdio path and sanitized/idempotent lifecycle from `11.6`; no research semantics depend on transport. | Verify actual stdio process boundary plus any local HTTP/browser diagnostics surface is absent or loopback/strict where applicable. | OPEN |
 | Public-safe diagnostics | Can SQL, provider values, paths, secrets/config, stack traces or unbounded rows leak via errors/logs/artifacts? | Stable logical IDs, bounded public errors/observability and public-view contracts. | Trigger representative invalid/security/internal failures and inspect every returned/persisted diagnostic surface. | OPEN |
 | Source immutability | Can any hostile sequence mutate, repair, migrate or replace evidence? | Existing Research SQL source-byte/fingerprint test and Backtest workload proof style. | Hash before/after the composed hostile corpus, including failures/cancellation/restart. | OPEN |
@@ -79,7 +79,7 @@ verify expected source fingerprint
 
 The existing adversarial service proof already exercises broad analytical SELECTs plus direct file/network readers, `query/query_table`, environment/settings/catalog helpers, multi-statement input, DDL/DML, `ATTACH/DETACH`, `COPY`, `PRAGMA/SET/RESET`, extension and secret attempts, a discovered side-effecting function, hidden source/holdout relation names, and exact source-byte/fingerprint equality afterward.
 
-This is baseline evidence only. TREE `11.7` still requires composed cross-run/phase/result/fault/restart/transport attacks and analogous-area review before the audit can pass.
+This is baseline evidence only. TREE `11.7` still requires composed fault/restart/transport/resource attacks and analogous-area review before the audit can pass.
 
 ### Result Handle / cursor ownership
 
@@ -91,7 +91,34 @@ The first composed ownership pass found no Result Handle cross-run escape in the
 - Cursor payloads bind to the exact Result Handle and reject cross-handle substitution and out-of-range offsets.
 - Existing proof already resumes a cursor after reopening the ledger and rejects cross-run/cross-handle use.
 
-This row is only `REVIEWED`, not closed, because phase/result substitution and composed managed-domain/MCP attacks remain in later slices.
+This row is only `REVIEWED`, not closed, because phase/result substitution and incompatible restart-state attacks remain in later slices.
+
+### Cross-run / phase / MCP authority parity
+
+The composed boundary is intentionally layered rather than duplicated:
+
+```text
+actual MCP transport JSON schema
+→ thin MCP registry translation
+→ exact caller-supplied logical IDs
+→ Research Domain / ledger run + phase authorization
+```
+
+The registry's direct `callTool()` helper is not itself the transport validator. Production `createResearchMcpServer()` registers every descriptor through `fromJsonSchema(definition.inputSchema)`, so the actual MCP SDK boundary enforces required fields, primitive types, nested shapes and `additionalProperties: false` before the registry callback reaches Domain authority.
+
+`tests/service/research-mcp-adversarial-authority-boundary.test.mjs` makes that composition executable. Through a real `McpServer` transport it proves:
+
+- an extra filesystem/path-like authority field is rejected before any Domain call;
+- a missing required logical ID is rejected before Domain;
+- caller attempts to add `phase` or a foreign `partitionId` to the Holdout tool are rejected before Domain;
+- caller attempts to add a phase override to Validation are rejected before Domain;
+- a wrong nested Result page type is rejected before Domain;
+- invalid schema responses do not echo the attacker canary value;
+- valid cross-run-shaped IDs are forwarded exactly, not rewritten or silently rebound by MCP. Authorization remains the Domain's responsibility.
+
+Direct Domain/ledger evidence then supplies the authorization half of the parity check: Objective Versions, Query Artifacts, evidence inventories/plans/partitions and Result Handles are scoped by Research Run; cross-run parent/evidence/result references fail closed; Result cursors are handle-bound; Development projection and candidate diagnostics fail closed outside Development; Holdout requires the dedicated final capability and exact immutable Finalist Set, with cross-run/cross-partition reuse rejected.
+
+No material MCP/Domain authority-bypass defect was found in this slice. The notable architectural conclusion is that strict MCP schemas are an input-shape boundary, not object authorization: the adapter deliberately preserves IDs exactly and the Research Domain remains the sole run/phase authority.
 
 ## Fixed finding H-11.7-001 — concurrent Holdout calls could execute sealed authority twice
 
@@ -132,13 +159,18 @@ The durable Holdout ledger correctly prevented two rows for the same Research Ru
 | `cee44fddd3e974a8b901475b00aff7415e29d772` | Fast CI `#965` / `38342962058` | GREEN — unit `301/301`, service `301/301`, Holdout single-flight regression explicitly PASS, order acceptance PASS |
 | `cee44fddd3e974a8b901475b00aff7415e29d772` | Planning/Contract CI `#1161` / `38342962022` | GREEN |
 | `cee44fddd3e974a8b901475b00aff7415e29d772` | Workload CI `#551` / `38342962074` | GREEN — all four jobs, including Research cancellation/restart resource probe |
+| `bbed659218c4b485c6c2d2918e77ea1789f494fc` | Fast CI `#967` / `38343422166` | GREEN — unit `301/301`, service `302/302`, real MCP authority-boundary regression explicitly PASS, Holdout regression still PASS, order acceptance PASS |
+| `bbed659218c4b485c6c2d2918e77ea1789f494fc` | Planning/Contract CI `#1163` / `38343422185` | GREEN |
+| `bbed659218c4b485c6c2d2918e77ea1789f494fc` | Workload CI `#553` / `38343422234` | GREEN |
 | PR `#108` | Audit integration PR | DRAFT; opened only to obtain executable CI while TREE `11.7` remains in progress; do not merge yet |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
 - Blocking defect `H-11.7-001`: fixed with smallest single-flight boundary and deterministic green regression.
-- Result Handle/cursor first-pass ownership review: no material cross-run defect found; broader phase/composition attacks remain.
-- Exact analogous at-most-once Holdout bypass review: no second bypass found; managed-domain and MCP paths inherit the fixed Research Domain boundary.
-- Closure claim: none. The remaining cross-run/phase/SQL-host/fault/restart/MCP/diagnostic/source-immutability/resource matrix must still be attacked before TREE `11.7` can be marked done.
-- Next audit slice: resume the remaining composed adversarial matrix, starting with systematic cross-run/phase object substitution and MCP/domain authority parity; any new material finding stays with Chat 41 through RCA, fix, regression and green verification.
+- Cross-run / phase / MCP parity slice: no material bypass found. Real MCP schema enforcement rejects authority-shaping drift before Domain, MCP preserves valid IDs exactly, and existing Domain/ledger proofs fail closed on run/phase misuse.
+- Result Handle/cursor first-pass ownership review: no material cross-run defect found; incompatible restart/phase-state attacks remain.
+- MCP tool boundary is `REVIEWED`, not closed: oversized/error-mapping/lifecycle fuzz remains.
+- Run/object and phase isolation are `REVIEWED`, not closed: composed job/experiment/recommendation substitution, fault/restart and side-channel cases remain.
+- Closure claim: none. The remaining SQL-host/source, fault/restart/transactionality, cancellation, diagnostics, transport, source-immutability and resource matrix must still be attacked before TREE `11.7` can be marked done.
+- Next audit slice: composed fault/restart and ledger-transactionality attacks across jobs, Validation/Holdout/final recommendation and cancellation boundaries; any material finding stays with Chat 41 through RCA, fix, regression and green verification.
