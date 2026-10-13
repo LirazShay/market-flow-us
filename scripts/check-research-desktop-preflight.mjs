@@ -19,6 +19,7 @@ const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
 const MCP_COMMAND = "market-flow-us-research-mcp";
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
+const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
 const REQUIRED_TOOLS = Object.freeze([
   "describe_research_environment",
   "bootstrap_research",
@@ -102,7 +103,11 @@ function timeoutPromise(ms, code) {
 
 export async function terminateProcessTree(
   child,
-  { platform = process.platform, spawnProcess = spawn } = {}
+  {
+    platform = process.platform,
+    spawnProcess = spawn,
+    timeoutMs = PROCESS_TREE_TERMINATION_TIMEOUT_MS
+  } = {}
 ) {
   if (!child || child.exitCode !== null || child.signalCode !== null) return;
 
@@ -113,9 +118,12 @@ export async function terminateProcessTree(
 
   await new Promise((resolve) => {
     let settled = false;
+    let timer = null;
+    let killer = null;
     const finish = () => {
       if (settled) return;
       settled = true;
+      if (timer !== null) clearTimeout(timer);
       resolve();
     };
     const fallbackKill = () => {
@@ -125,8 +133,14 @@ export async function terminateProcessTree(
         // Best-effort cleanup must not hide the original preflight result.
       }
     };
+    const stopKiller = () => {
+      try {
+        if (killer && killer.exitCode === null && killer.signalCode === null) killer.kill();
+      } catch {
+        // The cleanup deadline is authoritative; do not replace the original failure.
+      }
+    };
 
-    let killer;
     try {
       killer = spawnProcess(
         "taskkill",
@@ -147,6 +161,12 @@ export async function terminateProcessTree(
       if (code !== 0) fallbackKill();
       finish();
     });
+    timer = setTimeout(() => {
+      stopKiller();
+      fallbackKill();
+      finish();
+    }, timeoutMs);
+    timer.unref?.();
   });
 }
 
