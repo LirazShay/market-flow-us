@@ -119,7 +119,7 @@ The binding does not create new domain operations, state, IDs, phase rules or pe
 
 Tool failures are intentionally sanitized. The MCP response exposes a bounded stable error code and the data-boundary metadata, but not arbitrary exception messages, filesystem paths or stack traces.
 
-`research-server/mcp-stdio.js` is lifecycle/transport composition only. It opens one managed Research Domain, lets SDK-created MCP server instances share that durable authority for the stdio connection, and closes the transport/domain on explicit shutdown or stdio EOF.
+`research-server/mcp-stdio.js` is lifecycle/transport composition only. It opens one managed Research Domain, lets SDK-created MCP server instances share that durable authority for the stdio connection, and closes the transport/domain on explicit shutdown or stdio EOF. Runtime close is idempotent across repeated or concurrent shutdown paths so transport/domain ownership is released exactly once.
 
 ## Data/instruction boundary
 
@@ -145,22 +145,34 @@ Schema details, evidence coverage, experiment diagnostics, result pages, exact q
 
 ## Verification state
 
-Authored focused proofs now cover:
+Executable repository proof is green on PR #106 head `ebb89c5818f4ce332ba2036103aa7f0dcc686fb4`:
+
+- Fast CI #951 — green, including the complete unit/service suite and standalone order acceptance;
+- Planning/Contract CI #1145 — green;
+- Workload CI #537 — green;
+- Replay CI #121 — green;
+- Browser CI #583 — green.
+
+Focused TREE `11.6` coverage proves:
 
 - bootstrap/resume behavior and the data/instruction boundary;
 - thin registry delegation and absence of unmanaged shortcuts;
 - MCP SDK `initialize` → `tools/list` registration shape for all 45 tools;
 - MCP `tools/call` structured output and sanitized stable-code errors;
 - project-owned runtime path resolution and rejection of relative path overrides;
-- stdio launcher lifecycle ownership and idempotent close behavior.
+- idempotent stdio launcher lifecycle ownership;
+- a real first `stdio` MCP process creating durable Research state, server-proposed evidence partitions, a managed Development Research SQL job and a durable Result Handle;
+- clean process shutdown followed by a second fresh MCP process over the same ledger/data;
+- exact `researchRunId` resume from the durable Resume Capsule with no hidden chat/process state;
+- on-demand environment/schema metadata, fingerprinted Evidence Inventory, durable Analysis and paged Result Handle retrieval after restart.
+
+The first executable Fast run (#950) found one lifecycle regression: repeated `runtime.close()` called `transport.close()` twice even though Domain close was already guarded. RCA identified the transport handle as outside the idempotency boundary. The launcher now memoizes the complete transport+domain close promise; the unchanged lifecycle regression proof and the real two-process restart proof both pass in Fast #951.
 
 The MCP v2 dependency graph is pinned in `package-lock.json` (`@modelcontextprotocol/server@2.3.1`, matching `@modelcontextprotocol/core@2.3.1`, plus its pinned resolved `zod` dependency).
 
-These newly authored transport tests have not yet been executed in the current connector-only implementation environment. Their executable proof must come from the normal repository CI/runtime path before TREE `11.6` can be closed.
-
 ## Current checkpoint
 
-Implemented through this checkpoint:
+Implemented and executable through this checkpoint:
 
 - portable plugin identity and compact Research Skill;
 - machine-readable environment bootstrap;
@@ -172,13 +184,14 @@ Implemented through this checkpoint:
 - MCP v2 `McpServer` binding over the same registry;
 - local `stdio` launcher with project-owned runtime paths and managed resource policy;
 - portable Plugin `mcp.json` using the installed `market-flow-us-research-mcp` executable;
-- authored focused MCP protocol/binding/lifecycle tests.
+- real-process durable resume and progressive on-demand schema/evidence/result proof;
+- lifecycle RCA/fix/regression reclosure;
+- green Fast/Planning/Workload/Replay/Browser CI on the current PR head.
 
 Still pending in TREE `11.6`:
 
-- execute the new MCP binding tests through the normal runtime/CI path and repair any discovered defect;
-- add and execute a true fresh-process `stdio` proof that creates a durable Research Run, restarts the MCP process and resumes the exact `researchRunId` from the same ledger;
-- prove required on-demand evidence/schema/result access through the real transport and close any smallest concrete capability gap revealed by that proof;
-- complete final Plugin/MCP success-evidence reclosure and repository workflow for `11.6`.
+- final success-evidence/diff/security review of the composed Plugin/Skill/MCP change;
+- reconcile any smallest defect found by that review;
+- update completion truth, mark PR #106 ready, squash-merge it, verify merged-main CI and open-PR state, then advance only to TREE `11.7`.
 
 Actual Desktop ChatGPT + approved tunnel/registration end-to-end acceptance remains TREE `11.8`, after the adversarial TREE `11.7` audit, as defined by the Branch-11 execution plan.
