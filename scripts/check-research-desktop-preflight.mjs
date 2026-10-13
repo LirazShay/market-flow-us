@@ -5,7 +5,6 @@ import {
   readFile,
   readdir,
   rm,
-  stat,
   writeFile
 } from "node:fs/promises";
 import os from "node:os";
@@ -14,10 +13,6 @@ import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const MARKETPLACE_PATH = path.join(PROJECT_ROOT, ".agents", "plugins", "marketplace.json");
-const PLUGIN_PATH = path.join(PROJECT_ROOT, "plugins", "market-flow-us-researcher", "plugin.json");
-const MCP_PATH = path.join(PROJECT_ROOT, "plugins", "market-flow-us-researcher", "mcp.json");
-const PACKAGE_PATH = path.join(PROJECT_ROOT, "package.json");
 const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
   ?? path.join(PROJECT_ROOT, "test-results", "acceptance", "research-desktop-preflight.json");
 const MCP_COMMAND = "market-flow-us-research-mcp";
@@ -68,8 +63,11 @@ export async function validateDesktopPluginRepositoryContract(projectRoot = PROJ
   const marketplacePlugins = Array.isArray(marketplace.plugins) ? marketplace.plugins : [];
   const entry = marketplacePlugins.find((candidate) => candidate?.name === "market-flow-us-researcher");
   if (!entry) fail("RESEARCH_DESKTOP_PREFLIGHT_MARKETPLACE_ENTRY_MISSING");
-  if (entry.source !== "../../../plugins/market-flow-us-researcher") {
+  if (entry.source?.source !== "local" || entry.source?.path !== "./plugins/market-flow-us-researcher") {
     fail("RESEARCH_DESKTOP_PREFLIGHT_MARKETPLACE_SOURCE_MISMATCH");
+  }
+  if (entry.policy?.installation !== "AVAILABLE") {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MARKETPLACE_POLICY_MISMATCH");
   }
   if (plugin.name !== "market-flow-us-researcher") {
     fail("RESEARCH_DESKTOP_PREFLIGHT_PLUGIN_NAME_MISMATCH");
@@ -78,6 +76,9 @@ export async function validateDesktopPluginRepositoryContract(projectRoot = PROJ
   const server = mcp?.mcpServers?.market_flow_us_research;
   if (server?.type !== "stdio" || server?.command !== MCP_COMMAND) {
     fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_COMMAND_MISMATCH");
+  }
+  if (Object.hasOwn(server, "url")) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_NETWORK_ENDPOINT_UNEXPECTED");
   }
   if (packageJson?.bin?.[MCP_COMMAND] !== "research-server/mcp-stdio.js") {
     fail("RESEARCH_DESKTOP_PREFLIGHT_PACKAGE_BIN_MISMATCH");
@@ -151,9 +152,11 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
 
   let stdoutBuffer = "";
   let stderrSeen = false;
+  let spawnFailure = null;
   let nextId = 1;
   const pending = new Map();
 
+  child.stdin.on("error", () => {});
   child.stderr.on("data", (chunk) => {
     if (String(chunk).trim().length > 0) stderrSeen = true;
   });
@@ -188,20 +191,23 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   });
 
   child.on("error", () => {
+    spawnFailure = Object.assign(new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"), {
+      code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"
+    });
     for (const waiter of pending.values()) {
       clearTimeout(waiter.timer);
-      waiter.reject(Object.assign(new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"), {
-        code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"
-      }));
+      waiter.reject(spawnFailure);
     }
     pending.clear();
   });
 
   function write(message) {
+    if (spawnFailure) throw spawnFailure;
     child.stdin.write(`${JSON.stringify(message)}\n`);
   }
 
   function request(method, params = {}) {
+    if (spawnFailure) return Promise.reject(spawnFailure);
     const id = nextId;
     nextId += 1;
     return new Promise((resolve, reject) => {
@@ -213,7 +219,13 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
       }, REQUEST_TIMEOUT_MS);
       timer.unref?.();
       pending.set(id, { resolve, reject, timer });
-      write({ jsonrpc: "2.0", id, method, params });
+      try {
+        write({ jsonrpc: "2.0", id, method, params });
+      } catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        reject(error);
+      }
     });
   }
 
