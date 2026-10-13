@@ -50,9 +50,9 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 | Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Remaining responsiveness belongs to resource review. | REVIEWED |
 | Ledger transactionality | `H-11.7-002` Holdout claim, `H-11.7-003` Finalist current-plan recheck, `H-11.7-004` success-commit boundary and `H-11.7-005` restart reconciliation cover representative composed publication/fault splits. | REVIEWED |
 | Validation / Holdout | Concurrent/restart duplicate consumption and superseded-plan Finalist support are fail-closed. Contamination/error-side-channel cases remain with diagnostics review. | REVIEWED |
-| MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments and preserves exact logical IDs for Domain authorization. Oversized/error/lifecycle fuzz remains with transport review. | REVIEWED |
-| Local transport / process | Pinned MCP v2 stdio lifecycle is baseline; actual process/transport adversarial closure remains. | OPEN |
-| Public-safe diagnostics | Stable bounded public errors are baseline; representative invalid/security/internal failure surfaces remain. | OPEN |
+| MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments and preserves exact logical IDs for Domain authorization. `H-11.7-007` adds transport-side SQL and Experiment-reference ceilings before Domain execution; arbitrary tool exception text/invalid codes are sanitized. Actual stdio process fuzz remains. | REVIEWED |
+| Local transport / process | Pinned MCP v2 stdio lifecycle/restart/close ownership is baseline; malformed-input/process-lifecycle adversarial closure remains. | OPEN |
+| Public-safe diagnostics | MCP tool failures now have explicit arbitrary-message/path/invalid-code non-leak proof. Durable Job progress and remaining process failure surfaces still require composed review. | REVIEWED |
 | Source immutability | TREE 11.7 composed SQL-host corpus proves exact before/after source bytes + fingerprint and no export artifact. | REVIEWED |
 | Resource bounds | CPU/RAM/temp/result/run budgets, paging and bounded queue/readers are baseline; adversarial growth/duplicate/cancellation responsiveness remains. | OPEN |
 
@@ -93,7 +93,7 @@ actual MCP transport JSON schema
 → Research Domain / ledger run + phase authorization
 ```
 
-`tests/service/research-mcp-adversarial-authority-boundary.test.mjs` proves real MCP rejects missing/extra/wrong-type authority fields before Domain and forwards valid IDs unchanged. No MCP/Domain authority bypass was found in that slice.
+`tests/service/research-mcp-adversarial-authority-boundary.test.mjs` proves real MCP rejects missing/extra/wrong-type authority fields before Domain and forwards valid IDs unchanged. `tests/service/research-mcp-transport-hardening.test.mjs` additionally proves transport ceilings reject oversized Research SQL / Query Artifact SQL and over-wide Experiment references before Domain, while arbitrary exception message/path/code material does not cross the MCP result boundary.
 
 ## Fixed finding H-11.7-001 — concurrent Holdout calls could execute sealed authority twice
 
@@ -189,6 +189,22 @@ actual MCP transport JSON schema
 
 **Status:** FIXED / deterministic RED→GREEN / Browser+Replay affected verification GREEN.
 
+## Fixed finding H-11.7-007 — MCP accepted oversized bounded Research inputs before Domain authority
+
+**Severity:** blocking transport/resource-boundary defect — fixed.
+
+**Root cause:** the actual MCP server correctly validated each registered tool through `fromJsonSchema(...)`, but the registered schemas for Query Artifact `sqlText`, managed Research SQL `sql`, and `experimentIds` omitted transport ceilings. The Domain/session already enforced exact 1 MiB UTF-8 SQL limits and at most 20 explicit Experiment references, so oversized requests eventually failed, but only after the MCP transport had accepted and forwarded them into Domain authority.
+
+**RED:** `d02b5e38766055bf25c31b8042d89957e0c63c38` adds `tests/service/research-mcp-transport-hardening.test.mjs` using the real MCP protocol path. Fast `#995` / `38349560063` passed unit `302/302`, failed service `309/310` only because oversized Query Artifact SQL reached the instrumented Domain (`1 !== 0`). Planning `#1191`, Workload `#581`, Replay `#143`, Browser `#605` stayed green. The companion failure-surface proof already passed and showed arbitrary exception message/path/invalid-code material was replaced by `RESEARCH_MCP_TOOL_FAILED`.
+
+**Fix:** `059880be0c5e18de31b293cfac679891f46122d2` adds a narrow actual-transport schema hardening seam in `research-server/mcp-server.js`: Query Artifact `sqlText` and managed Research SQL `sql` are capped at 1 MiB characters before Domain invocation, and managed `experimentIds` is capped at 20 entries. The Domain remains the exact UTF-8 byte/semantic authority, so multi-byte SQL can still be rejected by its stricter 1 MiB byte limit and no server authority moved into MCP.
+
+**Green:** Fast `#996` / `38349903239` passed unit `302/302`, service `310/310`, both TREE 11.7 MCP transport tests, all prior MCP authority/lifecycle tests and order acceptance. Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606` are green.
+
+**Analogous review:** existing bounded `userIntent`, interpretation, cursors, list/page limits and note/limitation fields continue to reject at schema level. Error mapping remains public-safe. The registry remains a thin invocation adapter; the new ceiling belongs specifically to the actual MCP transport registration layer. Real stdio malformed-input/process-lifecycle fuzz and durable Job-progress public-safety remain for the next diagnostic/transport slice.
+
+**Status:** FIXED / deterministic RED→GREEN / Browser+Replay affected verification GREEN.
+
 ## Verification ledger
 
 | Candidate | Verification | Result |
@@ -209,16 +225,19 @@ actual MCP transport JSON schema
 | `43616e0a3ba677d2b506cab9fbf82e62244b4a91` | Fast `#986` / `38348341605` | RED-by-design — unit `301/301`, service `307/308`, only H-006 failed; Planning `#1182`, Workload `#572` green |
 | `4a8132506900266506bd049bddb467c65720cc7a` | Fast `#989` / `38348633907` | GREEN — unit `302/302`, service `308/308`, H-006 + source immutability + order acceptance PASS |
 | `4a8132506900266506bd049bddb467c65720cc7a` | Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599` | GREEN — affected shared-lexer verification |
+| `d02b5e38766055bf25c31b8042d89957e0c63c38` | Fast `#995` / `38349560063` | RED-by-design — unit `302/302`, service `309/310`; only H-007 oversized MCP transport proof failed; Planning `#1191`, Workload `#581`, Replay `#143`, Browser `#605` green |
+| `059880be0c5e18de31b293cfac679891f46122d2` | Fast `#996`, Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606` | GREEN — unit `302/302`, service `310/310`, H-007 + public-safe MCP error proof + affected gates PASS |
 | PR `#108` | integration PR | DRAFT; do not merge while TREE `11.7` remains in progress |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
-- `H-11.7-001` through `H-11.7-006`: fixed with deterministic proof and affected green verification.
+- `H-11.7-001` through `H-11.7-007`: fixed with deterministic proof and affected green verification.
 - SQL statement admission, SQL host access, source selection/attachment and source immutability are `REVIEWED` on a real Domain-composed hostile corpus with exact before/after source proof.
-- Cross-run / phase / MCP parity: no material bypass found in reviewed slices.
+- Cross-run / phase / MCP authority parity: no material bypass found in reviewed slices.
 - Result Handle/cursor, cancellation/timeout and ledger transactionality are `REVIEWED` with the H-004/H-005 restart/publication proofs green.
-- MCP boundary remains `REVIEWED`, not closed: oversized/error/lifecycle fuzz is grouped with the remaining transport/diagnostic slice.
+- MCP boundary is `REVIEWED`: authority-shape and oversized input rejection plus public-safe tool error mapping are green; real stdio malformed-input/process-lifecycle fuzz remains.
+- Public-safe diagnostics is `REVIEWED`, not closed: MCP wrapper arbitrary message/path/code leakage is green; durable Job progress and remaining process failure surfaces still require composed proof.
 - Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/error-side-channel cases remain for diagnostics review.
-- Closure claim: none. Local transport/process, public-safe diagnostics and resource-bound attacks remain before TREE `11.7` can be marked done.
-- Next audit slice: composed diagnostics + local transport/process adversarial review, including MCP oversized/error/lifecycle behavior and public-safe failure surfaces; after that, resource-bound/growth/cancellation responsiveness attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
+- Closure claim: none. Local transport/process, remaining public-safe diagnostics and resource-bound attacks remain before TREE `11.7` can be marked done.
+- Next audit slice: real stdio/process lifecycle + durable Job-progress public-safe failure proof; after that, resource-bound/growth/cancellation responsiveness attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
