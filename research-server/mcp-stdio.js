@@ -98,6 +98,7 @@ async function main() {
 
   process.once("SIGINT", () => { void shutdown(); });
   process.once("SIGTERM", () => { void shutdown(); });
+  process.stdin.once("end", () => { void shutdown(); });
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : null;
