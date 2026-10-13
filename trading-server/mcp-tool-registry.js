@@ -14,6 +14,7 @@ function objectSchema(properties = {}, required = []) {
 
 const EMPTY_SCHEMA = objectSchema();
 const STRING = Object.freeze({ type: "string", minLength: 1, maxLength: 128 });
+const CANDIDATE_KEY = Object.freeze({ type: "string", minLength: 1, maxLength: 512 });
 const BOOLEAN = Object.freeze({ type: "boolean" });
 const NON_NEGATIVE_INTEGER = Object.freeze({ type: "integer", minimum: 0 });
 const DECISION_TYPE = Object.freeze({
@@ -31,7 +32,8 @@ const DECISION_PROPOSAL_SCHEMA = objectSchema({
   tradingRunId: STRING,
   tradeEpisodeId: STRING,
   policyVersionId: STRING,
-  observedStateVersion: NON_NEGATIVE_INTEGER
+  observedStateVersion: NON_NEGATIVE_INTEGER,
+  targetCandidateKey: CANDIDATE_KEY
 }, [
   "decisionType",
   "tradingRunId",
