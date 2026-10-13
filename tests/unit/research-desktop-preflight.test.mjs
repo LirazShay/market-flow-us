@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import test from "node:test";
 
 import {
+  buildMcpProbeEnvironment,
   finalizeResearchDesktopPreflightReport,
   parseMcpStdoutMessage,
   researchDesktopPreflightErrorCode,
@@ -42,11 +43,39 @@ test("TREE 11.8 Desktop preflight exports only owned stable public error codes",
   );
 });
 
-test("TREE 11.8 Desktop preflight requires the exact MCP protocol version", () => {
+test("TREE 11.8 Desktop preflight limits inherited MCP subprocess environment", () => {
+  const sanitized = buildMcpProbeEnvironment(
+    {
+      Path: "C:\\tools",
+      COMSPEC: "C:\\Windows\\System32\\cmd.exe",
+      SYSTEMROOT: "C:\\Windows",
+      USERPROFILE: "C:\\Users\\Tester",
+      NODE_OPTIONS: "--require C:\\private\\inject.js",
+      API_TOKEN: "synthetic-secret",
+      MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR: "C:\\attacker-data",
+      MARKET_FLOW_US_RESEARCH_LEDGER_PATH: "C:\\attacker-ledger.duckdb"
+    },
+    {
+      marketDataDir: "C:\\safe\\data",
+      ledgerPath: "C:\\safe\\research-ledger.duckdb"
+    }
+  );
+
+  assert.equal(sanitized.PATH, "C:\\tools");
+  assert.equal(sanitized.ComSpec, "C:\\Windows\\System32\\cmd.exe");
+  assert.equal(sanitized.SystemRoot, "C:\\Windows");
+  assert.equal(sanitized.USERPROFILE, "C:\\Users\\Tester");
+  assert.equal(sanitized.MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR, "C:\\safe\\data");
+  assert.equal(sanitized.MARKET_FLOW_US_RESEARCH_LEDGER_PATH, "C:\\safe\\research-ledger.duckdb");
+  assert.equal(Object.hasOwn(sanitized, "NODE_OPTIONS"), false);
+  assert.equal(Object.hasOwn(sanitized, "API_TOKEN"), false);
+});
+
+test("TREE 11.8 Desktop preflight requires the exact MCP protocol and server identity", () => {
   assert.equal(
     validateMcpInitializeResult({
       protocolVersion: "2025-06-18",
-      serverInfo: { name: "market-flow-us-research" }
+      serverInfo: { name: "market-flow-us-research", version: "0.1.0" }
     }).protocolVersion,
     "2025-06-18"
   );
@@ -54,9 +83,16 @@ test("TREE 11.8 Desktop preflight requires the exact MCP protocol version", () =
   assert.throws(
     () => validateMcpInitializeResult({
       protocolVersion: "2025-03-26",
-      serverInfo: { name: "market-flow-us-research" }
+      serverInfo: { name: "market-flow-us-research", version: "0.1.0" }
     }),
     (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MISMATCH"
+  );
+  assert.throws(
+    () => validateMcpInitializeResult({
+      protocolVersion: "2025-06-18",
+      serverInfo: { name: "market-flow-us-research", version: "9.9.9" }
+    }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_SERVER_VERSION_MISMATCH"
   );
 });
 
