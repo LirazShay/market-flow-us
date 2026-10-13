@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { admitScannerCandidate } from "../../trading-server/scanner-candidate-admission.js";
+import { TRADING_CANDIDATE_PROVENANCE_MAX_CHARS } from "../../trading-server/scanner-candidate-handoff.js";
 import { openTradingLedger } from "../../trading-server/ledger.js";
 
 const POLICY_ID = "pol_11111111-1111-4111-8111-111111111111";
@@ -160,6 +161,36 @@ test("TREE 12.2 Scanner admission fails before ledger mutation when canonical id
         admittedAtMs: ADMITTED_AT_MS
       }),
       /identity|recognized/iu
+    );
+
+    assert.deepEqual(await ledger.listTradeEpisodes(RUN_ID), []);
+  } finally {
+    if (ledger) await ledger.close();
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("TREE 12.2 non-persistable provenance fails before ledger mutation", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-scanner-admission-bound-"));
+  const dbPath = path.join(tempDir, "trading-ledger.duckdb");
+  let ledger = null;
+
+  try {
+    ledger = await bootstrapLedger(dbPath);
+    const source = scannerSource({
+      sql: "x".repeat(TRADING_CANDIDATE_PROVENANCE_MAX_CHARS)
+    });
+
+    await assert.rejects(
+      admitScannerCandidate({
+        ledger,
+        tradingRunId: RUN_ID,
+        policyVersionId: POLICY_ID,
+        ...source,
+        resultRank: 1,
+        admittedAtMs: ADMITTED_AT_MS
+      }),
+      /durable Trading ledger bound/iu
     );
 
     assert.deepEqual(await ledger.listTradeEpisodes(RUN_ID), []);
