@@ -121,14 +121,15 @@ function skipTrivia(sql, start) {
   return index;
 }
 
-export function extractScannerFunctionCalls(sql) {
+function scanScannerIdentifiers(sql, visitor) {
   if (typeof sql !== "string") {
     throw new TypeError("sql must be a string.");
   }
+  if (typeof visitor !== "function") {
+    throw new TypeError("identifier visitor must be a function.");
+  }
 
-  const calls = [];
   let index = 0;
-
   while (index < sql.length) {
     if (sql[index] === "-" && sql[index + 1] === "-") {
       index = skipLineComment(sql, index);
@@ -155,9 +156,8 @@ export function extractScannerFunctionCalls(sql) {
 
     if (sql[index] === '"') {
       const quoted = readQuotedIdentifier(sql, index);
-      const next = skipTrivia(sql, quoted.end);
-      if (quoted.value.length > 0 && sql[next] === "(") {
-        calls.push(quoted.value.toLowerCase());
+      if (quoted.value.length > 0) {
+        visitor(quoted.value.toLowerCase(), quoted.end);
       }
       index = quoted.end;
       continue;
@@ -166,19 +166,27 @@ export function extractScannerFunctionCalls(sql) {
     if (isIdentifierStart(sql[index])) {
       let end = index + 1;
       while (end < sql.length && isIdentifierPart(sql[end])) end += 1;
-
-      const identifier = sql.slice(index, end).toLowerCase();
-      const next = skipTrivia(sql, end);
-      if (sql[next] === "(") {
-        calls.push(identifier);
-      }
+      visitor(sql.slice(index, end).toLowerCase(), end);
       index = end;
       continue;
     }
 
     index += 1;
   }
+}
 
+export function extractScannerIdentifiers(sql) {
+  const identifiers = [];
+  scanScannerIdentifiers(sql, (identifier) => identifiers.push(identifier));
+  return identifiers;
+}
+
+export function extractScannerFunctionCalls(sql) {
+  const calls = [];
+  scanScannerIdentifiers(sql, (identifier, end) => {
+    const next = skipTrivia(sql, end);
+    if (sql[next] === "(") calls.push(identifier);
+  });
   return calls;
 }
 
