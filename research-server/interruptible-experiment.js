@@ -10,6 +10,41 @@ import {
 import { executeBacktestSweep } from "../backtest-lab/sweep-execution.js";
 import { executeAuthoritativeExperimentBatch } from "./experiment-authority.js";
 
+export const DEFAULT_RESEARCH_EXPERIMENT_TIMEOUT_MS = 60_000;
+export const RESEARCH_EXPERIMENT_TIMEOUT_ENV = "MARKET_FLOW_US_RESEARCH_EXPERIMENT_TIMEOUT_MS";
+
+function assertPositiveTimeoutMs(value, label) {
+  const number = typeof value === "string" && value.trim().length > 0
+    ? Number(value)
+    : value;
+  if (!Number.isSafeInteger(number) || number < 1) {
+    throw new TypeError(`${label} must be a positive safe integer`);
+  }
+  return number;
+}
+
+export function resolveResearchExperimentTimeoutMs(
+  explicitTimeoutMs,
+  environment = process.env
+) {
+  if (explicitTimeoutMs !== undefined) {
+    return assertPositiveTimeoutMs(explicitTimeoutMs, "experimentTimeoutMs");
+  }
+  if (environment?.[RESEARCH_EXPERIMENT_TIMEOUT_ENV] !== undefined) {
+    return assertPositiveTimeoutMs(
+      environment[RESEARCH_EXPERIMENT_TIMEOUT_ENV],
+      RESEARCH_EXPERIMENT_TIMEOUT_ENV
+    );
+  }
+  return DEFAULT_RESEARCH_EXPERIMENT_TIMEOUT_MS;
+}
+
+function experimentTimeoutError(timeoutMs) {
+  const error = new Error(`Research Experiment exceeded the ${timeoutMs}ms execution ceiling`);
+  error.code = "RESEARCH_EXPERIMENT_TIMEOUT";
+  return error;
+}
+
 function assertAbortSignal(signal) {
   if (signal === undefined || signal === null) return null;
   if (
@@ -58,62 +93,87 @@ async function openInterruptibleEvidenceSource(input, signal, duckdbResourceLimi
 }
 
 export async function executeInterruptibleAuthoritativeExperimentBatch(input = {}) {
-  const signal = assertAbortSignal(input.signal);
-  if (signal === null) {
-    return await executeAuthoritativeExperimentBatch(input);
-  }
+  const callerSignal = assertAbortSignal(input.signal);
+  const timeoutMs = resolveResearchExperimentTimeoutMs(input.experimentTimeoutMs);
+  const deadline = new AbortController();
+  let abortReason = null;
+  const callerAbort = () => {
+    if (abortReason !== null) return;
+    abortReason = "CALLER";
+    deadline.abort();
+  };
+  if (callerSignal?.aborted) callerAbort();
+  else callerSignal?.addEventListener("abort", callerAbort, { once: true });
 
+  const timer = setTimeout(() => {
+    if (abortReason !== null) return;
+    abortReason = "TIMEOUT";
+    deadline.abort();
+  }, timeoutMs);
+  timer.unref?.();
+
+  const signal = deadline.signal;
   const duckdbResourceLimits = resolveResearchDuckDbResourceLimits(input.duckdbResourceLimits);
   const {
     signal: _signal,
+    experimentTimeoutMs: _experimentTimeoutMs,
     duckdbResourceLimits: _duckdbResourceLimits,
     ...request
   } = input;
-  throwIfAborted(signal);
 
-  const execution = await executeAuthoritativeExperimentBatch({
-    ...request,
-    executeSweep: async (sweepInput) => {
-      throwIfAborted(signal);
-      const sweep = await executeBacktestSweep({
-        ...sweepInput,
-        resolveBaselines: async (baselineInput) => {
-          throwIfAborted(signal);
-          const resolved = await resolveBacktestBaselineSeries({
-            ...baselineInput,
-            signal,
-            duckdbResourceLimits
-          });
-          throwIfAborted(signal);
-          return resolved;
-        },
-        openHistoricalScanner: async (scannerInput) => {
-          throwIfAborted(signal);
-          return await openBacktestHistoricalScanner({
-            ...scannerInput,
-            signal,
-            duckdbResourceLimits
-          });
-        },
-        openEvidenceSource: async (evidenceInput) => {
-          return await openInterruptibleEvidenceSource(
-            evidenceInput,
-            signal,
-            duckdbResourceLimits
-          );
-        },
-        evaluateOutcomes: async (outcomeInput) => {
-          throwIfAborted(signal);
-          const result = await evaluateBacktestOutcomes(outcomeInput);
-          throwIfAborted(signal);
-          return result;
-        }
-      });
-      throwIfAborted(signal);
-      return sweep;
-    }
-  });
+  try {
+    throwIfAborted(signal);
 
-  throwIfAborted(signal);
-  return execution;
+    const execution = await executeAuthoritativeExperimentBatch({
+      ...request,
+      executeSweep: async (sweepInput) => {
+        throwIfAborted(signal);
+        const sweep = await executeBacktestSweep({
+          ...sweepInput,
+          resolveBaselines: async (baselineInput) => {
+            throwIfAborted(signal);
+            const resolved = await resolveBacktestBaselineSeries({
+              ...baselineInput,
+              signal,
+              duckdbResourceLimits
+            });
+            throwIfAborted(signal);
+            return resolved;
+          },
+          openHistoricalScanner: async (scannerInput) => {
+            throwIfAborted(signal);
+            return await openBacktestHistoricalScanner({
+              ...scannerInput,
+              signal,
+              duckdbResourceLimits
+            });
+          },
+          openEvidenceSource: async (evidenceInput) => {
+            return await openInterruptibleEvidenceSource(
+              evidenceInput,
+              signal,
+              duckdbResourceLimits
+            );
+          },
+          evaluateOutcomes: async (outcomeInput) => {
+            throwIfAborted(signal);
+            const result = await evaluateBacktestOutcomes(outcomeInput);
+            throwIfAborted(signal);
+            return result;
+          }
+        });
+        throwIfAborted(signal);
+        return sweep;
+      }
+    });
+
+    throwIfAborted(signal);
+    return execution;
+  } catch (error) {
+    if (abortReason === "TIMEOUT") throw experimentTimeoutError(timeoutMs);
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    callerSignal?.removeEventListener("abort", callerAbort);
+  }
 }
