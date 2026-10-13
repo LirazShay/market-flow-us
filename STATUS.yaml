@@ -18,32 +18,32 @@ source_of_truth:
   decisions: ".planning/DECISIONS.md"
   backlog: "backlog/README.md"
 
-phase: backlog
-overall_status: ai_researcher_implementation_complete
+phase: acceptance
+overall_status: ai_researcher_target_acceptance_in_progress
 
 current:
   chat: null
-  node: null
-  title: "Branch 11 Autonomous AI Researcher implementation complete"
-  status: done
-  activation_required: true
+  node: "B-US-009"
+  title: "AI Researcher target-machine + Desktop acceptance"
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
-  active_execution_rows: 57
+  active_execution_rows: 58
   done: 57
   pending: 0
-  in_progress: 0
+  in_progress: 1
   blocked: 0
   current_chat: null
-  current_node: null
+  current_node: "B-US-009"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "B-US-009"
-  owner: "future explicitly activated executor"
-  status: backlog_non_blocking
-  action: "No active implementation leaf remains. When the user wants to perform AI Researcher acceptance, activate B-US-009 against fresh intended main and run the preserved W2T target-machine actual-evidence workload, Desktop/MCP preflight, real ChatGPT Desktop mission and full restart/resume proof. W2T/W3 remain pending until actually executed; their post-merge deferral is not PASS. B-US-000 remains a separate non-blocking provider-acceptance backlog item."
+  task: "B-US-009 / W2T"
+  owner: "Target-machine acceptance executor"
+  status: in_progress
+  action: "On the user's target machine, fetch fresh intended main, install dependencies and run npm run research-target:workload against actual Market Flow US historical evidence. Review the public-safe report and source immutability/resource measurements. Only after W2T PASS run npm link plus npm run research-desktop:preflight; only after that PASS proceed to the real Desktop mission and full restart/resume proof. Any failure stays with B-US-009 through RCA, fix, regression and affected verification."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -66,19 +66,20 @@ navigation:
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
   post_backtest_ai_mcp_backlog_record: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
-  ai_researcher_target_acceptance_backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+  ai_researcher_target_acceptance_record: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
   final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
 acceptance_projection:
   task: "B-US-009"
-  status: backlog_non_blocking
-  candidate_policy: "When explicitly activated, fetch fresh main and accept the latest intended AI Researcher candidate; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "Branch 11 implementation/repository reclosure is complete. W2T/W3 remain PENDING_POST_MERGE by explicit user decision; their criteria are preserved in B-US-009 and the Desktop acceptance runbook, and deferral is not PASS."
+  status: in_progress
+  candidate_policy: "Use fresh intended main at each machine-local acceptance attempt; never substitute historical PR #110 acceptance evidence."
+  checkpoint_summary: "B-US-009 is explicitly activated in EXECUTION. W2T is the current gate and W3 remains pending. Activation is not PASS: actual target-machine/Desktop evidence is still required."
   authority:
-    backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+    execution: ".planning/EXECUTION.md"
     runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
     evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
+    provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
 
 blockers_projection: []
