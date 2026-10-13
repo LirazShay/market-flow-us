@@ -43,7 +43,7 @@ next_pointer:
   task: "11.8"
   owner: "Chat 42"
   status: in_progress
-  action: "Continue Chat 42 / TREE 11.8 only. W1 and W2 are green. Desktop packaging drift is repaired and the repository now owns `npm run research-desktop:preflight`, which must pass on the target machine after `npm ci` + `npm link`. Then execute the real ChatGPT Desktop W3 mission through the installed repo-local plugin, fully restart Desktop/MCP, and resume the exact durable Research Run from a second fresh conversation. This GitHub/web executor cannot fabricate those local Desktop actions; exact public-safe evidence and the boundary are recorded in .planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md. After W3, finish durable-contract/user-doc synchronization and deterministic full reclosure."
+  action: "Continue Chat 42 / TREE 11.8 only. W1 and W2 are green. On the target machine run `npm ci` + `npm link` + `npm run research-desktop:preflight` and require PASS. Then fully restart ChatGPT Desktop, open the trusted Market Flow US repository in Work mode or Codex (the current documented repo/local-marketplace discovery surfaces), install `Market Flow US Local` -> `market-flow-us-researcher`, and execute the real Desktop W3 mission through the installed plugin. Fully restart Desktop/MCP and resume the exact durable Research Run from a second fresh Desktop conversation. ChatGPT web is not an equivalent local-MCP client and this GitHub/web executor cannot fabricate those actions. After W3, finish durable-contract/user-doc synchronization and deterministic full reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
