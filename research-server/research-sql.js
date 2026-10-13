@@ -1,5 +1,8 @@
 import { DuckDBInstance } from "@duckdb/node-api";
 
+import {
+  resolveResearchDuckDbResourceLimits
+} from "../backtest-lab/duckdb-resource-limits.js";
 import { openBacktestEvidenceSource } from "../backtest-lab/evidence-source.js";
 import {
   describeBacktestEvidenceSource,
@@ -519,12 +522,35 @@ async function insertSourceSummary(connection, source, schemaVersion, sourceClas
   );
 }
 
-async function applySandboxHardening(connection) {
+async function applySandboxHardening(connection, resourceLimits) {
+  await connection.run(`SET threads = ${resourceLimits.threads}`);
+  await connection.run(`SET memory_limit = ${sqlStringLiteral(resourceLimits.memoryLimit)}`);
+  await connection.run(
+    `SET max_temp_directory_size = ${sqlStringLiteral(resourceLimits.maxTempDirectorySize)}`
+  );
   for (const [name, value] of Object.entries(DUCKDB_HARDENING)) {
     await connection.run(`SET ${name} = ${value}`);
   }
   await connection.run("SET allowed_configs = []");
   await connection.run("SET lock_configuration = true");
+}
+
+async function readAppliedResourceLimits(connection) {
+  const reader = await connection.runAndReadAll(`
+    SELECT
+      current_setting('threads') AS threads,
+      current_setting('memory_limit') AS memory_limit,
+      current_setting('max_temp_directory_size') AS max_temp_directory_size
+  `);
+  const rows = reader.getRowObjects();
+  if (rows.length !== 1) {
+    throw new Error("Research SQL DuckDB resource settings returned invalid cardinality");
+  }
+  return Object.freeze({
+    threads: Number(rows[0].threads),
+    memoryLimit: String(rows[0].memory_limit),
+    maxTempDirectorySize: String(rows[0].max_temp_directory_size)
+  });
 }
 
 function closeQuietly(value) {
@@ -546,6 +572,7 @@ export async function openDevelopmentResearchSqlSandbox({
   partition,
   inventory,
   controlledInputs,
+  duckdbResourceLimits,
   now = () => Date.now(),
   verifySourceFingerprint = verifyResearchEvidenceSourceFingerprint
 } = {}) {
@@ -559,6 +586,7 @@ export async function openDevelopmentResearchSqlSandbox({
     throw new TypeError("verifySourceFingerprint must be a function");
   }
 
+  const resourceLimits = resolveResearchDuckDbResourceLimits(duckdbResourceLimits);
   const normalizedPartition = normalizePartition(partition);
   const sources = boundInventorySources(inventory, normalizedPartition.sourceIds);
   const includeControlledInputs = controlledInputs !== undefined;
@@ -579,7 +607,11 @@ export async function openDevelopmentResearchSqlSandbox({
       };
       await verifySourceFingerprint(verificationInput);
 
-      const evidence = await openBacktestEvidenceSource({ dataDir, sourceId: source.sourceId });
+      const evidence = await openBacktestEvidenceSource({
+        dataDir,
+        sourceId: source.sourceId,
+        duckdbResourceLimits: resourceLimits
+      });
       let attached = false;
       try {
         if (source.schemaVersion !== null && source.schemaVersion !== evidence.schemaVersion) {
@@ -615,7 +647,8 @@ export async function openDevelopmentResearchSqlSandbox({
     if (includeControlledInputs) {
       await materializeControlledResearchInputs({ connection, inputs: controlledInputs });
     }
-    await applySandboxHardening(connection);
+    await applySandboxHardening(connection, resourceLimits);
+    const appliedResourceLimits = await readAppliedResourceLimits(connection);
 
     const authority = await createScannerAuthority({ connection, now });
     const schemaManifest = describeResearchSqlSchema({ includeControlledInputs });
@@ -624,12 +657,18 @@ export async function openDevelopmentResearchSqlSandbox({
     return Object.freeze({
       dataSurfaceVersion: RESEARCH_DATA_SURFACE_VERSION,
       phase: "DEVELOPMENT",
+      resourceLimits,
+      appliedResourceLimits,
       describeSchema() {
         return schemaManifest;
       },
       async execute(sql) {
         if (closed) throw new Error("Research SQL sandbox is closed");
         return await authority.execute(sql);
+      },
+      interrupt() {
+        if (closed) return;
+        connection.interrupt();
       },
       async close() {
         if (closed) return;

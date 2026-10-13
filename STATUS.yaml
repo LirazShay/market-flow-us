@@ -23,27 +23,30 @@ overall_status: ai_researcher_in_progress
 
 current:
   chat: 38
+  chat_part: 2
   node: "11.4"
   title: "Durable jobs, result handles and resource governance"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 52
-  pending: 5
-  in_progress: 0
+  pending: 4
+  in_progress: 1
   blocked: 0
   current_chat: 38
+  current_chat_part: 2
   current_node: "11.4"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "11.4"
   owner: "Chat 38"
-  status: pending
-  action: "Chat 37 / 11.3 is complete after green success-evidence reclosure. Start Chat 38 / 11.4 only through explicit numbered-chat activation; generic continuation in the completed Chat 37 conversation must not switch executor identity."
+  current_chat_part: 2
+  status: in_progress
+  action: "Final 11.4 success-evidence/diff review is green on current branch truth: Blockers #1-#8 are closed, no unresolved review threads remain, and Fast #908 + Planning/Contract #1100 + Workload #494 are green on reviewed head 03b469ac. Fresh main 702f65ae adds only AGENTS.md chat-parts governance, which PR #102 does not modify. PR #102 remains draft. Next mark PR #102 ready, perform final PR review/squash merge, verify main CI and open-PR state, then mark 11.4 done and advance to Chat 39."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
