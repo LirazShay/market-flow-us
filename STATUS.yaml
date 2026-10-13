@@ -43,7 +43,7 @@ next_pointer:
   task: "12.3"
   owner: "Chat 45"
   status: pending
-  action: "Do not activate Chat 45 until Chat 44 finishes PR #118 squash merge and post-merge main reclosure. TREE 12.2 implementation/success evidence is done with immutable Scanner candidate provenance, durable admission/reopen, fail-closed identity/persistence bounds, Planning #1325 green and Fast #1113 attempt 2 green. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Activate Chat 45 only on an explicit numbered-chat request. TREE 12.2 / Chat 44 is complete: PR #118 squash-merged as b3821170 and post-merge main Planning #1328 plus Fast #1116 are green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
