@@ -23,27 +23,27 @@ overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
   chat: null
-  node: "12.2"
-  title: "Scanner candidate handoff + immutable selection provenance"
+  node: "12.3"
+  title: "Targeted live quote watch"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 58
-  pending: 8
+  done: 59
+  pending: 7
   in_progress: 0
   blocked: 1
   current_chat: null
-  current_node: "12.2"
+  current_node: "12.3"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.2"
-  owner: "Chat 44"
+  task: "12.3"
+  owner: "Chat 45"
   status: pending
-  action: "Activate Chat 44 / PLAN leaf 12.2 explicitly. Leaf 12.1 completed in PR #116, squash commit fb0b6230, with post-merge main Planning, Fast, Chromium E2E and bounded Local Fake verification green and no open PR remaining from Chat 43. Implement Scanner candidate handoff + immutable selection provenance according to PLAN and docs/AUTONOMOUS_AI_TRADING.md. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Do not activate Chat 45 until Chat 44 finishes PR #118 squash merge and post-merge main reclosure. TREE 12.2 implementation/success evidence is done with immutable Scanner candidate provenance, durable admission/reopen, fail-closed identity/persistence bounds, Planning #1325 green and Fast #1113 attempt 2 green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
