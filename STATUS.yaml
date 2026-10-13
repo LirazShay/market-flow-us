@@ -43,7 +43,7 @@ next_pointer:
   task: "12.3"
   owner: "Chat 45"
   status: in_progress
-  action: "Controlled CPGW-seam workload is green and supports keeping bounded polling; do not add streaming. Next prove restart/no-fabricated-continuity semantics, then perform final affected verification and reclosure for 12.3. Real provider latency remains for later live-shadow/target-machine acceptance and is not inferred from CI."
+  action: "Restart/no-fabricated-continuity proof is green. Perform final affected verification and PR/repository reclosure for 12.3; keep bounded polling and do not add streaming. Real provider latency remains for later live-shadow/target-machine acceptance and is not inferred from CI."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
