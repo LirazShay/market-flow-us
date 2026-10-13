@@ -24,7 +24,7 @@ const TRADING_MODES = new Set(["SHADOW", "SYNTHETIC", "DRY_RUN", "LIVE"]);
 const RUN_STATES = new Set(["ACTIVE", "PAUSED", "COMPLETED", "FAILED"]);
 const EPISODE_STATES = new Set(["ACTIVE", "COMPLETED", "FAILED"]);
 const MAX_JSON_CHARS = 262_144;
-const SENSITIVE_KEY = /(account|authorization|cookie|credential|password|secret|session|token|chain.?of.?thought|reasoning)/iu;
+const SENSITIVE_KEY = /(account|authorization|cookie|credential|password|secret|session|token|chain.?of.?thought|reasoning|raw.?authenticated|authenticated.?dump|authenticated.?provider.?dump|raw.?provider.?dump)/iu;
 
 const CREATE_TRADING_LEDGER_INFO = `
 CREATE TABLE trading_ledger_info (
@@ -262,6 +262,13 @@ function assertSafeTimestamp(value, label) {
     throw new TypeError(`${label} must be a non-negative safe integer`);
   }
   return timestamp;
+}
+
+function assertLimit(value) {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 200) {
+    throw new TypeError("limit must be an integer between 1 and 200");
+  }
+  return value;
 }
 
 function assertBoundedString(value, { label, maxChars = 512 }) {
@@ -653,6 +660,18 @@ export async function openTradingLedger({
 
     async getTradingRun(tradingRunId) {
       return getRun(tradingRunId);
+    },
+
+    async listTradingRuns({ limit = 50 } = {}) {
+      const boundedLimit = assertLimit(limit);
+      const rows = await queryRows(
+        connection,
+        `SELECT ${RUN_COLUMNS}
+         FROM trading_runs
+         ORDER BY updated_at_ms DESC, trading_run_id ASC
+         LIMIT ${boundedLimit}`
+      );
+      return Object.freeze(rows.map(normalizeRun));
     },
 
     async createTradeEpisode({ tradingRunId, policyVersionId, candidateKey, candidateProvenance }) {
