@@ -175,6 +175,23 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
     pending.clear();
   });
 
+  let exitOutcome = null;
+  const exitPromise = new Promise((resolve) => {
+    child.once("exit", (code, signal) => {
+      exitOutcome = { code, signal };
+      const prematureExit = Object.assign(
+        new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE"),
+        { code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE" }
+      );
+      for (const waiter of pending.values()) {
+        clearTimeout(waiter.timer);
+        waiter.reject(prematureExit);
+      }
+      pending.clear();
+      resolve(exitOutcome);
+    });
+  });
+
   function write(message) {
     if (spawnFailure) throw spawnFailure;
     child.stdin.write(`${JSON.stringify(message)}\n`);
@@ -182,6 +199,12 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
 
   function request(method, params = {}) {
     if (spawnFailure) return Promise.reject(spawnFailure);
+    if (exitOutcome) {
+      return Promise.reject(Object.assign(
+        new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE"),
+        { code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE" }
+      ));
+    }
     const id = nextId;
     nextId += 1;
     return new Promise((resolve, reject) => {
@@ -202,14 +225,6 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
       }
     });
   }
-
-  let exitOutcome = null;
-  const exitPromise = new Promise((resolve) => {
-    child.once("exit", (code, signal) => {
-      exitOutcome = { code, signal };
-      resolve(exitOutcome);
-    });
-  });
 
   try {
     const initialized = await request("initialize", {
