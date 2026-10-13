@@ -10,7 +10,7 @@ It records only synthetic/public-safe measurements and GitHub verification ident
 |---|---|---|
 | `W1` deterministic reduced CI workload | `PASS` | Workload CI run `38358501031`, job `115166877682`, `ci-256` Research resource probe. |
 | `W2` representative 4,096-security synthetic workload | `PASS` | One-time PR verification run `38358501349`, job `115166878192`, artifact `11793616887`, `target-4096` Research resource probe. |
-| `W3` current target-machine/Desktop acceptance | `PENDING` | Must be executed or an exact external-product blocker recorded in the next TREE `11.8` slice. |
+| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. The repo now ships the marketplace and exact Desktop runbook; the real target-machine mission/restart proof still must be executed in ChatGPT Desktop. |
 
 ## W1 — reduced deterministic CI
 
@@ -68,6 +68,28 @@ The representative path completed inside the existing conservative serial heavy-
 
 The measured disk growth is the bounded Research Ledger created by the synthetic run; the authoritative market source fingerprint remains unchanged after cancellation, successful Research SQL, successful Strategy Sandbox execution, restart and result reads.
 
+## W3 — current Desktop surface re-verification
+
+TREE `11.6` recorded an earlier assumption that ChatGPT access to the local `stdio` MCP required a public HTTPS endpoint or Secure MCP Tunnel. Current official OpenAI Plugin documentation now explicitly supports local/repo plugin marketplaces in ChatGPT Desktop and local MCP apps that run on the user's computer.
+
+RCA disposition:
+
+- Research Domain/API authority remains correct.
+- The 46-tool thin MCP registry remains correct.
+- The shipped `stdio` server remains the correct same-machine transport.
+- The stale assumption was in target-client installation/discovery guidance, not research semantics.
+- Do **not** add a public listener or tunnel merely to satisfy Desktop acceptance.
+
+Repository repair on PR `#110`:
+
+- added `.agents/plugins/marketplace.json` exposing `market-flow-us-researcher` as an explicitly installable repo-local plugin;
+- preserved portable `plugin.json` + `mcp.json` Agent Plugins packaging;
+- preserved the `market-flow-us-research-mcp` `stdio` executable and server-owned resource/security policy;
+- added `tests/unit/research-plugin-packaging.test.mjs` to lock marketplace -> plugin -> MCP command -> `package.json.bin` coherence and reject accidental network-endpoint substitution;
+- added `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` with the exact current target-machine preflight, fresh-chat mission, Desktop/server restart proof and public-safe evidence rules.
+
+The real W3 acceptance is intentionally **not** marked passed from this web/GitHub executor surface. `W3 = PASS` requires the target-machine ChatGPT Desktop app to install the local plugin, run the complete mission through the shipped plugin/MCP path, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
+
 ## Remaining acceptance
 
-`W3` remains intentionally open. The next slice must verify the supported current ChatGPT Desktop/plugin/MCP bootstrap + fresh-context resume path on the target machine if the product surface permits it. If the external product surface does not expose a supported install/connect path, record the exact blocker without weakening the already-green local adapter, W1 or W2 proofs.
+Next, execute `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` on the target machine. If the documented local marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account despite the repository preflight being satisfied, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
