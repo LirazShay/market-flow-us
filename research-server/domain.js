@@ -7,6 +7,10 @@ import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchHoldoutLedger } from "./holdout-ledger.js";
 import { openResearchLedger } from "./ledger.js";
+import {
+  normalizeRecommendationRequest,
+  openResearchRecommendationLedger
+} from "./recommendation-ledger.js";
 import { openResearchMemory } from "./research-memory.js";
 import { openDevelopmentResearchSqlSession } from "./research-sql-session.js";
 import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
@@ -218,6 +222,7 @@ export async function openResearchDomain(options = {}) {
   });
   await bootstrapComponent(openResearchValidationLedger, options);
   await bootstrapComponent(openResearchHoldoutLedger, options);
+  await bootstrapComponent(openResearchRecommendationLedger, options);
 
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
   const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
@@ -271,6 +276,10 @@ export async function openResearchDomain(options = {}) {
 
   function useHoldout(operation) {
     return enqueue(() => withComponent(openResearchHoldoutLedger, options, operation));
+  }
+
+  function useRecommendation(operation) {
+    return enqueue(() => withComponent(openResearchRecommendationLedger, options, operation));
   }
 
   async function loadQueryArtifacts(researchRunId, references) {
@@ -762,6 +771,26 @@ export async function openResearchDomain(options = {}) {
         throw new Error("Holdout Evaluation remains sealed until authorized result exposure");
       }
       return evaluation;
+    },
+
+    async buildRecommendationArtifact(input) {
+      assertPublicSafeValue(input, "final recommendation");
+      const request = normalizeRecommendationRequest(input);
+      const holdoutEvaluation = await useHoldout((holdout) => holdout.getHoldoutEvaluation(
+        request.researchRunId,
+        request.holdoutEvaluationId
+      ));
+      if (!holdoutEvaluation || holdoutEvaluation.exposedAtMs === null) {
+        throw new Error("Final recommendation requires an exposed Holdout Evaluation");
+      }
+      return await useRecommendation((recommendation) => recommendation.buildRecommendationArtifact({
+        request,
+        holdoutEvaluation
+      }));
+    },
+
+    async getRecommendationArtifact(researchRunId) {
+      return await useRecommendation((recommendation) => recommendation.getRecommendationArtifact(researchRunId));
     },
 
     async openDevelopmentResearchSql(input) {
