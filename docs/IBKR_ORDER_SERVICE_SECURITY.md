@@ -168,12 +168,15 @@ The bridge order is fixed:
 
 ```text
 normalized order intent
-→ Hard Risk Authority
+→ initial Hard Risk Authority gate
 → explicit operator confirmation for LIVE only
+→ final Hard Risk Authority recheck for LIVE
 → authenticated local POST /orders
 → existing IBKR Order Service state machine
 ```
 
-`DRY_RUN` may proceed after hard-risk authorization. `LIVE` must fail closed unless a trusted composition-time operator-confirmation authority explicitly confirms that exact normalized intent after risk authorization. Confirmation is not a field accepted from an AI proposal, MCP payload or order request. The bridge itself exposes no provider-reply confirmation or cancel shortcut; those lifecycles remain owned by the existing order-service/operator boundary.
+`DRY_RUN` may proceed after one hard-risk authorization. `LIVE` must fail closed unless a trusted composition-time operator-confirmation authority explicitly confirms that exact normalized intent after the initial risk gate. Because human review may outlive quote freshness or other mutable risk/operator state, the same independent Hard Risk Authority is evaluated again immediately after confirmation and before mutation. A stale quote, newly enabled kill switch or other newly violated hard gate blocks submission even after the operator clicked confirm.
+
+Confirmation is not a field accepted from an AI proposal, MCP payload or order request. The bridge itself exposes no provider-reply confirmation or cancel shortcut; those lifecycles remain owned by the existing order-service/operator boundary.
 
 The shared local client preserves the existing one bounded same-request retry after a lost local response. A second response loss becomes `ACKNOWLEDGEMENT_UNKNOWN`; the protected bridge must propagate that state unchanged and must not generate another request ID or perform an additional retry.
