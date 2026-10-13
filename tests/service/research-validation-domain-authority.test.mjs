@@ -63,6 +63,8 @@ function evaluationProfile() {
     selectionPolicy: "TOP_N",
     topX: 3,
     horizonsMs: [10_000, 60_000],
+    intervalValue: 1,
+    intervalUnit: "seconds",
     metricProfile: {
       contractVersion: "research-experiment-metrics-v1",
       primaryMetric: "positiveRate"
@@ -70,7 +72,7 @@ function evaluationProfile() {
   };
 }
 
-test("TREE 11.5 Research Domain makes Validation exposure unavoidable and finalists Validation-supported", async () => {
+test("TREE 11.5 Research Domain makes Validation exposure unavoidable and finalists Validation-supported on the frozen deterministic plan", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-validation-domain-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   const executions = [];
@@ -131,33 +133,57 @@ test("TREE 11.5 Research Domain makes Validation exposure unavoidable and finali
           sourceId: SOURCE_ID,
           sourceFingerprint: SOURCE_FINGERPRINT,
           classification: "ARCHIVE",
-          schemaVersion: 4
+          schemaVersion: 4,
+          firstCompleteAtMs: 0,
+          lastCompleteAtMs: 1_000_000
         }]
       }
     });
-    await domain.createEvidencePlan({
+    const proposal = await domain.proposeEvidencePlan({
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
       evidenceInventoryId: INVENTORY_ID,
-      plan: { algorithmVersion: "chronological-purged-v1", horizonAwarePurgeMs: 60_000 },
-      partitions: [
-        { role: "DEVELOPMENT", partition: { sourceIds: [SOURCE_ID], range: { fromMs: 1_000, toMs: 9_000 } } },
-        { role: "VALIDATION", partition: { sourceIds: [SOURCE_ID], range: { fromMs: 20_000, toMs: 29_000 } } },
-        { role: "SEALED_HOLDOUT", partition: { sourceIds: [SOURCE_ID], range: { fromMs: 40_000, toMs: 49_000 } } }
-      ]
+      evaluationProfile: evaluationProfile()
     });
+    assert.equal(proposal.partitionMode, "CHRONOLOGICAL_BLOCKS");
+    const plan = await domain.commitEvidencePlan({
+      researchRunId: RUN_ID,
+      objectiveVersionId: OBJECTIVE_ID,
+      evidenceInventoryId: INVENTORY_ID,
+      proposal
+    });
+    assert.equal(plan.evidencePlanId, PLAN_ID);
+    const validationSchedule = proposal.partitions[1].partition.validationSchedule.sources[0];
 
     assert.equal(await domain.getValidationExposureCount(RUN_ID), 0);
+    await assert.rejects(
+      domain.executeValidationExperiment({
+        researchRunId: RUN_ID,
+        objectiveVersionId: OBJECTIVE_ID,
+        partitionId: PART_VALIDATION,
+        sourceId: SOURCE_ID,
+        queryArtifactIds: [QUERY_VALIDATED],
+        fromAtMs: validationSchedule.fromAtMs + 1,
+        toAtMs: validationSchedule.toAtMs,
+        intervalValue: validationSchedule.intervalValue,
+        intervalUnit: validationSchedule.intervalUnit,
+        topX: 3,
+        horizonsMs: [10_000, 60_000]
+      }),
+      /fromAtMs must match the frozen validationSchedule/u
+    );
+    assert.equal(executions.length, 0, "invalid Validation schedule must fail before evidence execution");
+
     const experiment = await domain.executeValidationExperiment({
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
       partitionId: PART_VALIDATION,
       sourceId: SOURCE_ID,
       queryArtifactIds: [QUERY_VALIDATED],
-      fromAtMs: 20_000,
-      toAtMs: 20_000,
-      intervalValue: 1,
-      intervalUnit: "seconds",
+      fromAtMs: validationSchedule.fromAtMs,
+      toAtMs: validationSchedule.toAtMs,
+      intervalValue: validationSchedule.intervalValue,
+      intervalUnit: validationSchedule.intervalUnit,
       topX: 3,
       horizonsMs: [10_000, 60_000]
     });
@@ -179,6 +205,17 @@ test("TREE 11.5 Research Domain makes Validation exposure unavoidable and finali
       await domain.getValidationExposureCount(RUN_ID),
       1,
       "re-reading the same durable Validation Experiment must remain one counted exposure"
+    );
+
+    await assert.rejects(
+      domain.createFinalistSet({
+        researchRunId: RUN_ID,
+        objectiveVersionId: OBJECTIVE_ID,
+        queryArtifactIds: [QUERY_VALIDATED],
+        evaluationProfile: { ...evaluationProfile(), topX: 2 },
+        justification: "A caller must not change the frozen comparable Validation profile."
+      }),
+      /evaluationProfile must match the frozen Evidence Plan/u
     );
 
     await assert.rejects(
