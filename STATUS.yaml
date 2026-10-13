@@ -43,7 +43,7 @@ next_pointer:
   task: "11.8"
   owner: "Chat 42"
   status: in_progress
-  action: "Continue Chat 42 / TREE 11.8 only. W1 reduced CI and W2 representative 4,096-security synthetic Research workload are green on PR #110 and recorded in .planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md without widening concurrency, budgets or timeouts. Next: execute current target-machine/Desktop W3 plugin/MCP bootstrap + fresh-context resume acceptance if the supported product surface permits it; otherwise record the exact external-product blocker, then finish user-doc synchronization and deterministic full reclosure."
+  action: "Continue Chat 42 / TREE 11.8 only. W1 and W2 are green. Desktop packaging drift is repaired and the repository now owns `npm run research-desktop:preflight`, which must pass on the target machine after `npm ci` + `npm link`. Then execute the real ChatGPT Desktop W3 mission through the installed repo-local plugin, fully restart Desktop/MCP, and resume the exact durable Research Run from a second fresh conversation. This GitHub/web executor cannot fabricate those local Desktop actions; exact public-safe evidence and the boundary are recorded in .planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md. After W3, finish durable-contract/user-doc synchronization and deterministic full reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -61,6 +61,7 @@ navigation:
   autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   chatgpt_research_plugin: "docs/CHATGPT_RESEARCH_PLUGIN.md"
+  chatgpt_research_desktop_acceptance: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
   backtest_contract: "docs/BACKTEST_LAB.md"
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
