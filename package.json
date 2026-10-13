@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "bin": {
-    "market-flow-us-research-mcp": "research-server/mcp-stdio.js"
+    "market-flow-us-research-mcp": "research-server/mcp-stdio.js",
+    "market-flow-us-trading-mcp": "trading-server/mcp-stdio.js"
   },
   "engines": {
     "node": "24.x"
@@ -41,6 +42,7 @@
     "replay-host": "node replay-host/index.js",
     "order-service": "node ibkr-order-service/index.js",
     "research-mcp": "node research-server/mcp-stdio.js",
+    "trading-mcp": "node trading-server/mcp-stdio.js",
     "research-desktop:preflight": "node scripts/check-research-desktop-preflight.mjs",
     "order-service:session-check": "node scripts/check-ibkr-cpgw-session.mjs",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
