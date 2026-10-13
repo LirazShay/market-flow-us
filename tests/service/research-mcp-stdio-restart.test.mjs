@@ -229,8 +229,7 @@ test("TREE 11.6 real stdio MCP process resumes durable research and loads schema
 
     const run = await first.callTool("create_research_run", {
       userIntent: "Prove durable MCP restart and on-demand research access.",
-      environmentSnapshot: { productVersion: "0.1.0", proof: "stdio-restart" },
-      budgetPolicy: {}
+      environmentSnapshot: { productVersion: "0.1.0", proof: "stdio-restart" }
     });
     const researchRunId = run.researchRunId;
     assert.match(researchRunId, /^run_[0-9a-f-]{36}$/u);
@@ -304,6 +303,14 @@ test("TREE 11.6 real stdio MCP process resumes durable research and loads schema
 
     const secondEnvironment = await second.callTool("describe_research_environment");
     assert.deepEqual(secondEnvironment.data.domainSchemaVersions, firstEnvironment.data.domainSchemaVersions);
+
+    const schema = await second.callTool("describe_research_schema");
+    assert.equal(schema.contract_version, "research-schema-manifest-v1");
+    const history = schema.relations.find((relation) => relation.relation === "research_history");
+    assert.ok(history);
+    const price = history.fields.find((field) => field.column === "Price");
+    assert.equal(price.decision_time_eligible, true);
+    assert.equal(price.future_dependent, false);
 
     const resumed = await second.callTool("bootstrap_research", { researchRunId });
     assert.equal(resumed.data.action, "RESUMED");
