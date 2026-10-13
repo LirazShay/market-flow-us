@@ -3,13 +3,22 @@ import { once } from "node:events";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { createOrderServiceClient } from "./order-service-client.js";
+
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DEFAULT_SIDECAR_ENTRY = path.join(REPO_ROOT, "ibkr-order-service", "index.js");
 const EXPECTED_BASE_URL = "http://127.0.0.1:8770";
 const READY_TIMEOUT_MS = 10_000;
 const STOP_TIMEOUT_MS = 5_000;
 const ORDER_REQUEST_TIMEOUT_MS = 10_000;
-const MAX_REMOTE_CODE_LENGTH = 128;
+
+const BASIC_BUY_CLIENT_CODES = Object.freeze({
+  invalidIntent: "BASIC_BUY_INTENT_INVALID",
+  invalidLocalOrderId: "BASIC_BUY_LOCAL_ORDER_ID_INVALID",
+  responseUnknown: "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN",
+  rejected: "BASIC_BUY_ORDER_SERVICE_REJECTED",
+  acknowledgementUnknown: "ACKNOWLEDGEMENT_UNKNOWN"
+});
 
 export class BasicBuySidecarError extends Error {
   constructor(code, { orderServiceCode = null, httpStatus = null } = {}) {
@@ -27,40 +36,6 @@ function delay(ms) {
 
 function validCallerToken(value) {
   return typeof value === "string" && value.length >= 32 && value.length <= 256;
-}
-
-function boundedRemoteCode(value) {
-  return typeof value === "string"
-    && value.length > 0
-    && value.length <= MAX_REMOTE_CODE_LENGTH
-    && /^[A-Z0-9_]+$/u.test(value)
-    ? value
-    : null;
-}
-
-function boundedLocalOrderId(value) {
-  if (typeof value !== "string" || value.length === 0 || value.length > 256) {
-    throw new BasicBuySidecarError("BASIC_BUY_LOCAL_ORDER_ID_INVALID");
-  }
-  return value;
-}
-
-function stableIntentBody(intent) {
-  if (
-    !intent
-    || typeof intent !== "object"
-    || Array.isArray(intent)
-    || typeof intent.requestId !== "string"
-    || intent.requestId.length === 0
-    || intent.requestId.length > 256
-  ) {
-    throw new BasicBuySidecarError("BASIC_BUY_INTENT_INVALID");
-  }
-  try {
-    return JSON.stringify(intent);
-  } catch {
-    throw new BasicBuySidecarError("BASIC_BUY_INTENT_INVALID");
-  }
 }
 
 async function waitForReady(child, expectedMode, timeoutMs) {
@@ -201,97 +176,24 @@ export async function startBasicBuySidecar({
     }
   }
 
-  async function requestOnce(pathname, { method, bodyJson }) {
-    assertReady();
-    const token = callerToken;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), orderRequestTimeoutMs);
-    let response;
-    try {
-      response = await fetchImpl(`${EXPECTED_BASE_URL}${pathname}`, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(bodyJson === undefined ? {} : { "Content-Type": "application/json" })
-        },
-        ...(bodyJson === undefined ? {} : { body: bodyJson }),
-        redirect: "error",
-        signal: controller.signal
-      });
-    } catch {
-      throw new BasicBuySidecarError("BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN");
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    let payload;
-    try {
-      const contentType = response?.headers?.get?.("content-type") ?? "";
-      if (!contentType.toLowerCase().startsWith("application/json")) {
-        throw new Error("unexpected content type");
-      }
-      payload = await response.json();
-    } catch {
-      throw new BasicBuySidecarError("BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN");
-    }
-
-    if (!response.ok) {
-      throw new BasicBuySidecarError("BASIC_BUY_ORDER_SERVICE_REJECTED", {
-        orderServiceCode: boundedRemoteCode(payload?.code),
-        httpStatus: Number.isInteger(response.status) ? response.status : null
-      });
-    }
-    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-      throw new BasicBuySidecarError("BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN");
-    }
-    return payload;
-  }
-
-  async function createOrder(intent) {
-    const bodyJson = stableIntentBody(intent);
-    try {
-      return await requestOnce("/orders", { method: "POST", bodyJson });
-    } catch (error) {
-      if (!(error instanceof BasicBuySidecarError)
-        || error.code !== "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN") {
-        throw error;
-      }
-    }
-
-    // One bounded retry is safe because it reuses the exact requestId + normalized intent.
-    // The order service owns idempotency/reconciliation and never blind-resubmits by key.
-    try {
-      return await requestOnce("/orders", { method: "POST", bodyJson });
-    } catch (error) {
-      if (error instanceof BasicBuySidecarError
-        && error.code === "BASIC_BUY_ORDER_SERVICE_RESPONSE_UNKNOWN") {
-        throw new BasicBuySidecarError("ACKNOWLEDGEMENT_UNKNOWN");
-      }
-      throw error;
-    }
-  }
-
-  async function confirmReply(localOrderId) {
-    const id = encodeURIComponent(boundedLocalOrderId(localOrderId));
-    return await requestOnce(`/orders/${id}/confirm`, {
-      method: "POST",
-      bodyJson: JSON.stringify({ confirmed: true })
-    });
-  }
-
-  async function getOrder(localOrderId) {
-    const id = encodeURIComponent(boundedLocalOrderId(localOrderId));
-    return await requestOnce(`/orders/${id}`, { method: "GET" });
-  }
+  const orderServiceClient = createOrderServiceClient({
+    baseUrl: EXPECTED_BASE_URL,
+    callerToken,
+    fetchImpl,
+    requestTimeoutMs: orderRequestTimeoutMs,
+    codes: BASIC_BUY_CLIENT_CODES,
+    errorFactory: (code, details) => new BasicBuySidecarError(code, details),
+    assertAvailable: assertReady
+  });
 
   return Object.freeze({
     isReady,
     getState() {
       return Object.freeze({ state, mode: buyConfig.mode });
     },
-    createOrder,
-    confirmReply,
-    getOrder,
+    createOrder: orderServiceClient.createOrder,
+    confirmReply: orderServiceClient.confirmReply,
+    getOrder: orderServiceClient.getOrder,
     async close() {
       if (state === "stopped") return;
       state = "stopping";
