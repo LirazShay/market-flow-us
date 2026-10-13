@@ -22,7 +22,7 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: 48
+  chat: "Chat 48"
   node: "12.7"
   title: "Separate Trading Skill + Trading MCP"
   status: in_progress
@@ -35,7 +35,7 @@ execution_projection:
   pending: 2
   in_progress: 1
   blocked: 1
-  current_chat: 48
+  current_chat: "Chat 48"
   current_node: "12.7"
   projected_from: ".planning/EXECUTION.md"
 
