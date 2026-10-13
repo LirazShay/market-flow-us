@@ -22,28 +22,28 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: "Chat 43"
-  node: "12.1"
-  title: "Trading domain + durable Run / Policy / Episode authority"
-  status: in_progress
-  activation_required: false
+  chat: null
+  node: "12.2"
+  title: "Scanner candidate handoff + immutable selection provenance"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 57
+  done: 58
   pending: 8
-  in_progress: 1
+  in_progress: 0
   blocked: 1
-  current_chat: "Chat 43"
-  current_node: "12.1"
+  current_chat: null
+  current_node: "12.2"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.1"
-  owner: "Chat 43"
-  status: in_progress
-  action: "Reclosure is green on PR #116: the durable Trading Run / Policy / Episode ledger now includes bounded restart run discovery, explicit raw authenticated/provider dump rejection, seven focused authority proofs and Fast-CI trading-server path coverage; Fast, Planning, Chromium E2E and bounded Local Fake acceptance are green. Complete PR #116 merge, verify post-merge main CI and clean open-PR state, then mark 12.1 done before activating any dependent Branch-12 leaf. B-US-009 remains independently blocked on target-machine evidence."
+  task: "12.2"
+  owner: "Chat 44"
+  status: pending
+  action: "Activate Chat 44 / PLAN leaf 12.2 explicitly. Leaf 12.1 completed in PR #116, squash commit fb0b6230, with post-merge main Planning, Fast, Chromium E2E and bounded Local Fake verification green and no open PR remaining from Chat 43. Implement Scanner candidate handoff + immutable selection provenance according to PLAN and docs/AUTONOMOUS_AI_TRADING.md. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
