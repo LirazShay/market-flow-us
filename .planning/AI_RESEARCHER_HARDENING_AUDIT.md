@@ -45,10 +45,10 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 | SQL host access | External access/extensions/secrets are disabled; dangerous functions are denied; replacement scans/readers fail closed. `H-11.7-006` blocks `pg_settings` in plain/qualified/quoted forms without blocking inert text or safe schema discovery. | REVIEWED |
 | Phase isolation | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection, post-Holdout contamination checks and public-safe error surfaces are green. No material phase/error side-channel bypass was found in the reviewed corpus. | REVIEWED |
 | Run/object ownership | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. `H-11.7-003` additionally binds Finalist support to the exact current-plan Validation partition. | REVIEWED |
-| Result handles / cursors | Run+handle scoping, handle-bound cursors and restart paging are green. `H-11.7-005` removes provisional Results/handles from interrupted Jobs while preserving `SUCCEEDED` authority. | REVIEWED |
-| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005` closes interrupted Result publication; `H-11.7-008` closes unstable durable failure diagnostics. Composed queue-pressure proof shows 32 concurrent exact retries reuse one queued Job and one queue slot. | REVIEWED |
-| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Composed duplicate-pressure proof cancels queued work before start and proves it never executes after capacity is released. | REVIEWED |
-| Ledger transactionality | `H-11.7-002` Holdout claim, `H-11.7-003` Finalist current-plan recheck, `H-11.7-004` success-commit boundary and `H-11.7-005` restart reconciliation cover representative composed publication/fault splits. | REVIEWED |
+| Result handles / cursors | Run+handle scoping, handle-bound cursors and restart paging are green. `H-11.7-005` removes provisional Results/handles from interrupted Jobs; `H-11.7-010` extends that invariant so `FAILED`/`CANCELLED` Jobs cannot retain readable Results while `SUCCEEDED` authority is preserved. | REVIEWED |
+| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005`/`H-11.7-010` close provisional/non-success Result publication; `H-11.7-008` closes unstable durable failure diagnostics. Composed queue-pressure proof shows 32 concurrent exact retries reuse one queued Job and one queue slot. | REVIEWED |
+| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication; `H-11.7-010` defensively purges any Result before `CANCELLED` terminal truth. Composed duplicate-pressure proof cancels queued work before start and proves it never executes after capacity is released. | REVIEWED |
+| Ledger transactionality | `H-11.7-002` Holdout claim, `H-11.7-003` Finalist current-plan recheck, `H-11.7-004` success-commit boundary, `H-11.7-005` restart reconciliation and `H-11.7-010` non-success Result cleanup cover representative composed publication/fault splits. | REVIEWED |
 | Validation / Holdout | Concurrent/restart duplicate consumption, superseded-plan Finalist support, post-Holdout contamination and finalization restart/source-drift paths are fail-closed. Public error surfaces are covered by the diagnostics slice. | REVIEWED |
 | MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments, preserves exact logical IDs for Domain authorization, and applies transport-side SQL/Experiment-reference ceilings via `H-11.7-007`. Arbitrary tool exception text/invalid codes are sanitized. | REVIEWED |
 | Local transport / process | Real stdio restart is baseline. TREE 11.7 additionally proves malformed framing does not kill or poison the process, valid requests remain usable, EOF shuts down cleanly, SIGTERM is product-owned, and stdout/stderr do not echo private canaries/paths. | REVIEWED |
@@ -83,6 +83,7 @@ The TREE 11.7 Domain-composed corpus covers namespaced/quoted/commented reader e
 - Cursors bind the exact Result Handle and reject cross-handle/out-of-range use.
 - Restart paging and cross-run/cross-handle rejection are green.
 - `H-11.7-005` treats Results owned by still-`RUNNING` Jobs as provisional during restart.
+- `H-11.7-010` makes non-success terminal truth authoritative too: `FAILED`/`CANCELLED` terminalization removes owned Results and clears durable handles before the terminal transition, startup reconciliation repairs legacy non-success orphans, and `SUCCEEDED` Results remain untouched.
 
 ### MCP / local-process boundary
 
@@ -220,6 +221,22 @@ Normal Scanner/Backtest execution keeps its existing `runAndReadAll()` behavior 
 
 **Analogous review:** managed hierarchical budgets and Result Ledger validation remain independent durable/publication backstops; existing SQL timeout, direct DuckDB interrupt and `session.close()` interrupt+drain proofs remain green with streaming enabled. No generic result subsystem was added.
 
+### H-11.7-010 — non-success terminal Job could retain a readable provisional Result
+
+**Severity:** blocking correctness/failure-hardening defect — fixed.
+
+**Root cause:** `H-11.7-004` made Result publication non-cancellable and `H-11.7-005` repaired a crash while the owning Job remained `RUNNING`, but a later durable step could still fail after `createResult()` committed. The controller would then terminalize the Job as `FAILED`; restart reconciliation originally inspected only `RUNNING`, so the already-`FAILED` Job could retain a readable Result. The analogous defensive `CANCELLED` family needed the same invariant.
+
+**RED:** `0f2480638dcf323985a94d89a0b5c188ecc6208e` adds `tests/service/research-job-result-failure-hardening.test.mjs`. Fast `#1012` passed unit `302/302`, failed service `316/317` only because a Result remained readable after its source Job terminalized `FAILED`; Planning `#1208`, Workload `#598`, Replay `#160` stayed green.
+
+**First fix candidate / RCA refinement:** `50799bd58a933800270127f35f99dd371122acf1` attempted wrapper-side cleanup while the core Job Ledger connection remained open. Fast `#1013` still failed only H-010; Planning `#1209`, Workload `#599`, Replay `#161`, Browser `#623` were green. This proved the cleanup policy was correct but the connection lifecycle was wrong: the same raw cleanup path already proven by H-005 is reliable when the core connection is closed.
+
+**Fix:** `6ac38db1220058c1fb3274d4547c0b9fd5a7d48d` serializes wrapper Job-ledger operations and, before `FAILED`/`CANCELLED` terminalization, closes the core ledger, removes owned provisional Result rows/metadata and clears durable result handles, reopens the core, then commits the non-success terminal transition. Startup reconciliation now also removes legacy Results/handles owned by `FAILED`/`CANCELLED` Jobs while preserving `SUCCEEDED` Result authority. No schema change or generic subsystem was introduced.
+
+**Green:** Fast `#1015` passed unit `302/302`, service `319/319`, order acceptance PASS, the three H-010 family proofs, H-004 late-cancel proof and H-005 restart proof. Planning `#1211`, Workload `#601`, Replay `#163`, Browser `#625` are green, including full Chromium and Local Fake acceptance.
+
+**Analogous review:** the proof family covers direct `FAILED` terminalization after publication, defensive `CANCELLED` terminalization after publication, and restart repair of a legacy `FAILED`+Result orphan. Existing H-005 continues to prove `RUNNING` crash cleanup and preservation of valid `SUCCEEDED` Result authority.
+
 ## Composed duplicate / queue-pressure / cancellation proof
 
 `tests/service/research-managed-duplicate-pressure-hardening.test.mjs` saturates one active Job and a queue capacity of exactly one, then races 32 identical `clientRequestId` submissions for the queued request. The proof requires one durable duplicate Job identity, one queued slot, no additional execution, successful queued cancellation, no delayed execution after capacity is released, and exact retry reuse after terminal cancellation.
@@ -270,16 +287,20 @@ No additional production defect was found by the stdio process fuzz.
 | `852812f42793a54362b672aa9bbf74b1942b177d` | Fast `#1007`, Planning `#1203`, Workload `#593`, Replay `#155`, Browser `#617` | GREEN — unit `302/302`, service `315/315`, H-009 + existing SQL resource/cancel proofs + order acceptance PASS |
 | `770380c6e98ed4c2f88a9691290e8f6e14de6782` | Fast `#1008` | INVALID RED fixture — Job `RUNNING` transition preceded execution-seam entry; no product finding |
 | `b90aba9e4ad2b8903b9b8a197486182c1b505942` | Fast `#1009`, Planning `#1205`, Workload `#595`, Replay `#157`, Browser `#619` | GREEN — unit `302/302`, service `316/316`, 32-way duplicate queue-pressure/cancellation proof + order acceptance PASS |
+| `0f2480638dcf323985a94d89a0b5c188ecc6208e` | Fast `#1012` | RED-by-design — unit `302/302`, service `316/317`, only H-010 failed; Planning `#1208`, Workload `#598`, Replay `#160` green |
+| `50799bd58a933800270127f35f99dd371122acf1` | Fast `#1013` | FAILED fix candidate — H-010 still failed; Planning `#1209`, Workload `#599`, Replay `#161`, Browser `#623` green |
+| `6ac38db1220058c1fb3274d4547c0b9fd5a7d48d` | Fast `#1015`, Planning `#1211`, Workload `#601`, Replay `#163`, Browser `#625` | GREEN — unit `302/302`, service `319/319`, FAILED/CANCELLED/legacy-restart H-010 family + H-004/H-005 compatibility + order acceptance PASS |
 | PR `#108` | integration PR | DRAFT; do not merge while TREE `11.7` remains in progress |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
-- `H-11.7-001` through `H-11.7-009`: fixed with deterministic proof and affected green verification.
-- Every adversarial matrix area is now `REVIEWED`; no matrix row remains `OPEN`.
+- `H-11.7-001` through `H-11.7-010`: fixed with deterministic proof and affected green verification.
+- Every adversarial matrix area is `REVIEWED`; no matrix row remains `OPEN`.
 - SQL/source/host admission and source immutability are reclosed on composed hostile execution with exact before/after source proof.
 - Cross-run/phase/MCP authority, Result Handle/cursor, transactionality, Validation/Holdout and local stdio lifecycle are reclosed with the dedicated TREE 11.7 proofs.
+- Result terminal truth is reclosed across `RUNNING` crash reconciliation and direct/restart `FAILED`/`CANCELLED` cleanup; only `SUCCEEDED` Jobs retain authoritative Results.
 - Public-safe diagnostics are reclosed across MCP, stdio and durable Job progress.
 - Resource bounds are `REVIEWED`: pre-materialization Research SQL output is hard-bounded, durable hierarchical budgets/growth limits remain green across restart, queue/readers remain bounded, exact retries are idempotent under 32-way concurrent queue pressure, queued cancellation remains responsive, and streaming preserves interrupt/drain behavior.
-- Closure claim: none yet. The next step is the final TREE `11.7` success-evidence / diff reclosure against `.planning/PLAN.md`, including final PR review and required green verification before any `done`/merge transition.
-- Next audit slice: none. Next work unit is final TREE `11.7` reclosure; do not advance to Chat 42 / `11.8` until that reclosure is green and merged according to execution truth.
+- Final reclosure discovered `H-11.7-010`; that blocker is now closed and green. Closure claim remains intentionally withheld until the complete TREE `11.7` diff/success-evidence reclosure is resumed and completed from this new head.
+- Next audit slice: none. Next work unit is to resume final TREE `11.7` reclosure against `.planning/PLAN.md`, then perform the required final PR/verification transition. Do not advance to Chat 42 / `11.8` until that reclosure is green and merged according to execution truth.
