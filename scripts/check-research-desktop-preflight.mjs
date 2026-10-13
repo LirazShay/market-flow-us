@@ -19,12 +19,26 @@ const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
   ?? path.join(PROJECT_ROOT, "test-results", "acceptance", "research-desktop-preflight.json");
 const MCP_COMMAND = "market-flow-us-research-mcp";
 const MCP_PROTOCOL_VERSION = "2025-06-18";
+const EXPECTED_MCP_SERVER_NAME = "market-flow-us-research";
+const EXPECTED_MCP_SERVER_VERSION = "0.1.0";
 const EXPECTED_MCP_TOOL_COUNT = 46;
 const MAX_MCP_STDOUT_FRAME_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
 const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
 const STABLE_ERROR_CODE = /^RESEARCH_DESKTOP_PREFLIGHT_[A-Z0-9_]{1,96}$/u;
+const MCP_PROBE_INHERITED_ENV_KEYS = Object.freeze([
+  "PATH",
+  "ComSpec",
+  "SystemRoot",
+  "WINDIR",
+  "PATHEXT",
+  "TEMP",
+  "TMP",
+  "TMPDIR",
+  "HOME",
+  "USERPROFILE"
+]);
 const REQUIRED_TOOLS = Object.freeze([
   "describe_research_environment",
   "bootstrap_research",
@@ -129,12 +143,37 @@ async function assertUsableMarketEvidence({ dataDir, evidenceSources }) {
   fail("RESEARCH_DESKTOP_PREFLIGHT_MARKET_EVIDENCE_UNUSABLE");
 }
 
+function environmentValue(environment, key) {
+  if (typeof environment?.[key] === "string") return environment[key];
+  const actualKey = Object.keys(environment ?? {}).find(
+    (candidate) => candidate.toLowerCase() === key.toLowerCase()
+  );
+  return actualKey === undefined ? undefined : environment[actualKey];
+}
+
+export function buildMcpProbeEnvironment(
+  environment,
+  { marketDataDir, ledgerPath }
+) {
+  const sanitized = {};
+  for (const key of MCP_PROBE_INHERITED_ENV_KEYS) {
+    const value = environmentValue(environment, key);
+    if (typeof value === "string" && value.length > 0) sanitized[key] = value;
+  }
+  sanitized.MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR = marketDataDir;
+  sanitized.MARKET_FLOW_US_RESEARCH_LEDGER_PATH = ledgerPath;
+  return Object.freeze(sanitized);
+}
+
 export function validateMcpInitializeResult(initialized) {
   if (initialized?.protocolVersion !== MCP_PROTOCOL_VERSION) {
     fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MISMATCH");
   }
-  if (initialized?.serverInfo?.name !== "market-flow-us-research") {
+  if (initialized?.serverInfo?.name !== EXPECTED_MCP_SERVER_NAME) {
     fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_SERVER_MISMATCH");
+  }
+  if (initialized?.serverInfo?.version !== EXPECTED_MCP_SERVER_VERSION) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_SERVER_VERSION_MISMATCH");
   }
   return initialized;
 }
@@ -305,11 +344,10 @@ function spawnPathVisibleMcp(environment) {
 
 async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   const started = performance.now();
-  const child = spawnPathVisibleMcp({
-    ...process.env,
-    MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR: marketDataDir,
-    MARKET_FLOW_US_RESEARCH_LEDGER_PATH: ledgerPath
-  });
+  const child = spawnPathVisibleMcp(buildMcpProbeEnvironment(process.env, {
+    marketDataDir,
+    ledgerPath
+  }));
   const closePromise = waitForMcpProcessClose(child);
 
   child.stdin.setDefaultEncoding("utf8");
