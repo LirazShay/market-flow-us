@@ -25,15 +25,15 @@ current:
   chat: 39
   node: "11.5"
   title: "Validation, sealed holdout and final recommendation authority"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 53
-  pending: 4
-  in_progress: 0
+  pending: 3
+  in_progress: 1
   blocked: 0
   current_chat: 39
   current_node: "11.5"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.5"
   owner: "Chat 39"
-  status: pending
-  action: "Chat 38 / 11.4 is complete: PR #102 squash-merged as d3c62afe90d1b9656ee7e47ca1d6fabcadde08ce; merged-main Fast #912, Planning/Contract #1104 and Workload #498 are green; the post-merge open-PR audit was empty. Start Chat 39 / 11.5 only through explicit numbered-chat activation; generic continuation in the completed Chat 38 conversation must not switch executor identity."
+  status: in_progress
+  action: "Implement and verify server-enforced Validation exposure accounting, immutable Finalist Sets, sealed Holdout evaluation/contamination authority and deterministic final recommendation artifacts according to PLAN success evidence before advancing execution truth."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
