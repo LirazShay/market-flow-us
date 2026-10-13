@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "market-flow-us-research-mcp": "research-server/mcp-stdio.js"
+  },
   "engines": {
     "node": "24.x"
   },
@@ -36,6 +39,7 @@
     "backtest-lab": "node backtest-lab/index.js",
     "replay-host": "node replay-host/index.js",
     "order-service": "node ibkr-order-service/index.js",
+    "research-mcp": "node research-server/mcp-stdio.js",
     "order-service:session-check": "node scripts/check-ibkr-cpgw-session.mjs",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
     "demo:reset": "node scripts/demo-reset.mjs",
@@ -44,6 +48,7 @@
   },
   "dependencies": {
     "@duckdb/node-api": "1.5.5-r.5",
+    "@modelcontextprotocol/server": "2.3.1",
     "ws": "8.21.3"
   },
   "devDependencies": {
