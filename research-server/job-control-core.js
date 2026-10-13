@@ -74,6 +74,21 @@ export function createResearchJobController({ jobLedger } = {}) {
     }
   }
 
+  async function beginSuccessCommit(entry) {
+    return await serialize(entry.key, async () => {
+      if (entry.abortController.signal.aborted) {
+        throw new ResearchJobCancelledError();
+      }
+      if (entry.finishing === null) {
+        entry.finishing = "SUCCEEDED";
+        return;
+      }
+      if (entry.finishing !== "SUCCEEDED") {
+        throw new Error(`Research Job cannot enter success commit while finishing as ${entry.finishing}`);
+      }
+    });
+  }
+
   function contextFor(entry) {
     return Object.freeze({
       signal: entry.abortController.signal,
@@ -81,6 +96,9 @@ export function createResearchJobController({ jobLedger } = {}) {
         if (entry.abortController.signal.aborted) {
           throw new ResearchJobCancelledError();
         }
+      },
+      async beginSuccessCommit() {
+        return await beginSuccessCommit(entry);
       },
       setCancelHandler(handler) {
         if (handler !== null && typeof handler !== "function") {
@@ -151,6 +169,7 @@ export function createResearchJobController({ jobLedger } = {}) {
       try {
         const workValue = await work(context);
         context.checkpoint();
+        if (commitSuccess !== null) await beginSuccessCommit(entry);
         const committedValue = commitSuccess === null
           ? workValue
           : await commitSuccess(workValue, context);
@@ -161,7 +180,10 @@ export function createResearchJobController({ jobLedger } = {}) {
           if (entry.abortController.signal.aborted) {
             throw new ResearchJobCancelledError();
           }
-          entry.finishing = "SUCCEEDED";
+          if (entry.finishing === null) entry.finishing = "SUCCEEDED";
+          if (entry.finishing !== "SUCCEEDED") {
+            throw new Error(`Research Job cannot succeed while finishing as ${entry.finishing}`);
+          }
           terminalJob = await durableJobs.markJobSucceeded(runId, durableJobId);
         });
         return Object.freeze({ value: committedValue, job: terminalJob });
