@@ -23,27 +23,27 @@ overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
   chat: null
-  node: "12.6"
-  title: "Protected Order Bridge"
+  node: "12.4"
+  title: "Continuous Trading Supervisor + AI Decision Proposal model"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 61
-  pending: 5
+  done: 62
+  pending: 4
   in_progress: 0
   blocked: 1
   current_chat: null
-  current_node: "12.6"
+  current_node: "12.4"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.6"
-  owner: "Chat 46"
+  task: "12.4"
+  owner: "Chat 47"
   status: pending
-  action: "TREE 12.5 is squash-merged as b9f722ab and post-merge main Planning #1347 and Fast #1131 are green. The next pending leaf is 12.6 / Chat 46; do not start it before the next executor activation/continuation checkpoint. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Activate Chat 47 only on an explicit numbered-chat request. TREE 12.6 / Chat 46 is squash-merged as be462b7a and post-merge main Planning #1356, Fast #1136, Browser #721, Replay #235 and Workload #694 are green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
