@@ -19,7 +19,7 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: backlog
-noverall_status: ai_researcher_implementation_complete
+overall_status: ai_researcher_implementation_complete
 
 current:
   chat: null
