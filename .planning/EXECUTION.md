@@ -16,7 +16,7 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed all eight implementation leaves `11.1`–`11.8` and its repository merge/reclosure transition. PR #110 squash-merged to `main` as `f64b191b68e24bccbdcb83bad9c2f9fc70524183`. Merged-main verification is green: Planning/Contract #1290, Fast #1092, Workload #678, Replay #230 and Browser #702 all passed. The immediate post-merge open-PR audit was empty.
 
-On 2026-10-13 the user continued the deferred AI Researcher acceptance work, so `B-US-009` is now promoted from backlog into this active execution map. The existing PLAN already defines it as the explicit post-merge target-machine/Desktop acceptance task; no new numbered Chat identity or duplicate planning branch is invented. `B-US-009` is owned by `Target-machine acceptance executor`, is `in_progress`, and currently stops at the real target-machine `W2T` gate. `W2T` and `W3` remain unpassed until actual target-machine/Desktop evidence exists.
+On 2026-10-13 the user continued the deferred AI Researcher acceptance work, so `B-US-009` is now promoted from backlog into this execution map. The existing PLAN already defines it as the explicit post-merge target-machine/Desktop acceptance task; no new numbered Chat identity or duplicate planning branch is invented. `B-US-009` is owned by `Target-machine acceptance executor` and is now `blocked` at the real target-machine `W2T` gate because this GitHub/chat execution environment cannot run commands on the user's target machine or access its historical evidence. This is an execution-environment blocker, not W2T failure evidence. Resume the task when the user/operator provides the actual public-safe W2T report. `W2T` and `W3` remain unpassed until actual target-machine/Desktop evidence exists.
 
 `11.3` / `Chat 37` completed its full success-evidence reclosure in PR #101 and is squash-merged on the current main baseline `a36e9b2c508a9c49ed528199c70aa63b247478fb`: isolated multi-source Development projection, bounded raw-data discovery, source-persisted universe lifecycle with explicit future-dependence caveats, controlled 11.2 decision/outcome/Experiment relations, Research Domain composition, run/partition-bound phase isolation, broad analytical SELECT support, Research-specific adversarial SQL admission and source-byte/fingerprint immutability are green. Main Fast and Planning/Contract CI are green on that baseline and no PR was open when Chat 38 activated.
 
@@ -87,7 +87,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `11.6` | Chat 40 | `done` | `11.5` | PR #106 squash-merged as `5c0475bb438a6b26f2efbac273d7c972523c6216`. Portable Plugin/Skill packaging, deterministic fresh-chat bootstrap/resume, explicit data/instruction boundary, strict thin 46-tool MCP integration, reuse of the TREE 11.3 machine-readable field manifest, managed Research Domain authority mappings, pinned MCP v2 stdio runtime, sanitized/idempotent lifecycle handling and real two-process durable resume/on-demand schema/evidence/Analysis/Result proof satisfy the `11.6` contract. Final branch Fast #963 + Planning/Contract #1157 + Workload #549 + Replay #133 + Browser #595 and merged-main Fast #964 + Planning/Contract #1158 + Workload #550 + Replay #134 + Browser #596 are green. |
 | `11.7` | Chat 41 | `done` | `11.2`, `11.3`, `11.4`, `11.5`, `11.6` | PR #108 squash-merged as `e5e04a1a72f3b5cf5c34a4512a46f7fdbe9867c9`. Dedicated adversarial audit reclosed source immutability, SQL/MCP/phase/transport/resource boundaries and durable failure truth; H-11.7-001 through H-11.7-010 are fixed with deterministic regressions and analogous-area review, and the complete diff/success-evidence review found no remaining blocker or scope drift. Final branch Fast #1018 + Planning/Contract #1214 + Workload #604 + Replay #166 + Browser #628 and merged-main Fast #1019 + Planning/Contract #1215 + Workload #605 + Replay #167 + Browser #629 are green; post-merge open-PR audit is empty. |
 | `11.8` | Chat 42 | `done` | `11.7` | PR #110 squash-merged as `f64b191b68e24bccbdcb83bad9c2f9fc70524183`. Final pre-merge completion head `a710f2295a2a1d59fa36b6e7a8d5a7bf22a39b85` was green: Planning/Contract #1289, Fast #1091, Workload #677, Replay #229 and Browser #701 all PASS with no review threads. Merged-main verification is also green: Planning/Contract #1290, Fast #1092, Workload #678, Replay #230 and Browser #702 PASS, and the immediate post-merge open-PR audit was empty. W1/W2 are PASS; user-approved PLAN change defers real W2T/W3 to non-blocking `B-US-009`, where both remain pending and are not counted as PASS. |
-| `B-US-009` | Target-machine acceptance executor | `in_progress` | `11.8` | Activated 2026-10-13 against fresh intended `main`. Current gate: run `npm run research-target:workload` on the user's target machine against actual historical evidence and review the public-safe W2T report. Only after W2T PASS run `npm link` + `npm run research-desktop:preflight`, then the real Desktop mission/restart proof. W2T/W3 are not PASS yet. |
+| `B-US-009` | Target-machine acceptance executor | `blocked` | `11.8` | Activated 2026-10-13 against fresh intended `main`. Current gate is W2T, but the connected executor cannot run commands on the user's target machine or inspect its local historical evidence. Resume when the user/operator runs `npm run research-target:workload` against actual evidence and provides the public-safe report. This blocker is not W2T failure evidence; W2T/W3 remain NOT PASS. |
 
 ## Branch-11 ownership and context boundaries
 
@@ -99,7 +99,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 - `Chat 40 / 11.6` — Plugin/Skill + MCP operating integration over the stable Research Domain API.
 - `Chat 41 / 11.7` — adversarial security/failure audit over the composed system; blocking defects stay with this audit through RCA/fix/regression/green.
 - `Chat 42 / 11.8` — representative workload, acceptance readiness, durable-contract reconciliation and deterministic reclosure completed and merged.
-- `B-US-009 / Target-machine acceptance executor` — active post-merge AI Researcher target-machine/Desktop acceptance. It is intentionally not a numbered Chat identity; the user/operator runs machine-local steps while the executor reviews evidence and owns any discovered RCA/fix/reverification through closure.
+- `B-US-009 / Target-machine acceptance executor` — blocked post-merge AI Researcher target-machine/Desktop acceptance. It is intentionally not a numbered Chat identity. The next required evidence can only be produced on the user's target machine; after that evidence is supplied, this executor resumes review/RCA and subsequent acceptance gates.
 
 A chat may split its own assigned leaf at safe implementation checkpoints when the work is large, but it does not invent a new owner/task merely to shorten a conversation. Conversely, a new chat is appropriate when the feature/context boundary materially changes. Repository state remains sufficient for every fresh start.
 
@@ -108,17 +108,17 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - Pre-Branch11 authoritative execution snapshot: `market-flow-us@b37a6c4a9e8491d359bb3c7879255a42a8491fcf`.
 - Completed execution rows from Branches 1–10: **49**.
 - Branch-11 implementation rows: **8**.
-- Active post-merge acceptance rows: **1** (`B-US-009`).
+- Post-merge acceptance rows: **1** (`B-US-009`).
 - Current execution rows: **58**.
 - Done: **57**.
 - Pending: **0**.
-- In progress: **1**.
-- Blocked: **0**.
-- Active execution owner: **Target-machine acceptance executor**.
-- Current normal sequence pointer: `B-US-009` / `W2T`. Fetch fresh intended `main` on the user's target machine, install dependencies, run `npm run research-target:workload`, and review the public-safe report. Do not continue to Desktop/MCP preflight unless W2T passes. If W2T fails, RCA/fix/regression/affected verification remains owned by this active acceptance task.
+- In progress: **0**.
+- Blocked: **1**.
+- Blocked execution owner: **Target-machine acceptance executor**.
+- Current normal sequence pointer: `B-US-009` / `W2T` is blocked on target-machine execution evidence. On the user's target machine, fetch fresh intended `main`, install dependencies, run `npm run research-target:workload` against actual Market Flow US historical evidence, and provide the public-safe report. Do not continue to Desktop/MCP preflight unless W2T passes. A W2T failure remains owned by this task through RCA/fix/regression/affected verification.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
-- `B-US-009` acceptance criteria remain preserved in `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` and `.planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md`; activation changes execution status only and does not weaken or fabricate W2T/W3 evidence.
+- `B-US-009` acceptance criteria remain preserved in `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` and `.planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md`; activation/blocker state changes execution status only and do not weaken or fabricate W2T/W3 evidence.
 
-Branch 11 implementation/repository reclosure remains complete. The only active execution work is `B-US-009` target-machine/Desktop acceptance.
+Branch 11 implementation/repository reclosure remains complete. The only remaining execution work is `B-US-009`, currently blocked on real target-machine W2T evidence.
