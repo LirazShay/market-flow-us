@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "market-flow-us-researcher",
+  "version": "0.1.0",
+  "description": "Operate and resume Market Flow US autonomous research through a compact Skill and thin MCP adapter."
+}
