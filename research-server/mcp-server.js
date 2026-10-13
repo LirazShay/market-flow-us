@@ -9,6 +9,8 @@ import {
 export const RESEARCH_MCP_SERVER_VERSION = "market-flow-us-research-mcp-server-v1";
 
 const STABLE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,127}$/u;
+const MCP_MAX_SQL_TEXT_CHARS = 1024 * 1024;
+const MCP_MAX_EXPERIMENT_REFERENCES = 20;
 
 function safeFailure(error) {
   const code = typeof error?.code === "string" && STABLE_ERROR_CODE.test(error.code)
@@ -39,6 +41,39 @@ function toolFailure(error) {
   });
 }
 
+function boundedTransportSchema(definition) {
+  const schema = definition.inputSchema;
+  if (definition.name === "create_query_artifact") {
+    return Object.freeze({
+      ...schema,
+      properties: Object.freeze({
+        ...schema.properties,
+        sqlText: Object.freeze({
+          ...schema.properties.sqlText,
+          maxLength: MCP_MAX_SQL_TEXT_CHARS
+        })
+      })
+    });
+  }
+  if (definition.name === "submit_development_research_sql") {
+    return Object.freeze({
+      ...schema,
+      properties: Object.freeze({
+        ...schema.properties,
+        experimentIds: Object.freeze({
+          ...schema.properties.experimentIds,
+          maxItems: MCP_MAX_EXPERIMENT_REFERENCES
+        }),
+        sql: Object.freeze({
+          ...schema.properties.sql,
+          maxLength: MCP_MAX_SQL_TEXT_CHARS
+        })
+      })
+    });
+  }
+  return schema;
+}
+
 export function createResearchMcpServer({
   domain,
   name = "market-flow-us-research",
@@ -62,7 +97,7 @@ export function createResearchMcpServer({
       definition.name,
       {
         description: definition.description,
-        inputSchema: fromJsonSchema(definition.inputSchema)
+        inputSchema: fromJsonSchema(boundedTransportSchema(definition))
       },
       async (input) => {
         try {
