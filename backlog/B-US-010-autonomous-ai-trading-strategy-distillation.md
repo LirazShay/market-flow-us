@@ -2,7 +2,7 @@
 
 ## Status
 
-Backlog strategic future goal. This record does not authorize implementation by itself.
+Promoted to active **Branch 12 — Autonomous AI Trading & Strategy Distillation**. Current planning/execution authority is `.planning/PLAN.md` + `.planning/EXECUTION.md`; this backlog file is provenance/supporting context only.
 
 ## Desired outcome
 
@@ -16,6 +16,7 @@ Scanner shortlist
 → AI exploratory decisions + deterministic supervisor
 → independent hard-risk authority
 → existing IBKR Order Service
+→ human-confirmed LIVE boundary
 → IBKR
 
 Trade Episode evidence
@@ -35,37 +36,35 @@ Trade Episode evidence
 - Start with bounded targeted snapshot polling; add streaming only if measured evidence proves polling insufficient.
 - Preserve Trade Episode evidence that can distinguish Scanner-selection quality from entry, fill/execution, position-management and exit quality.
 - AI exploration may generate Policy Candidates, but promotion to normal deterministic behavior is explicit and evidence-backed. Do not introduce self-modifying production code or a speculative universal strategy DSL.
+- Shadow/synthetic/DRY_RUN behavior may be automated end to end; real-money LIVE submission remains explicit operator confirmation through the protected order boundary.
 - Treat the repository as public-safe; never persist or expose credentials, session material, account identifiers or raw authenticated provider dumps.
 
-## Initial implementation-ready planning shape
+## Promoted Branch-12 shape
 
-When promoted into active planning, the expected Branch 12 scope is:
+The authoritative PLAN now defines:
 
 1. `12.1` Trading domain + durable Run / Policy / Episode authority.
 2. `12.2` Scanner candidate handoff + immutable selection provenance.
 3. `12.3` Targeted live quote watch.
 4. `12.4` Continuous Trading Supervisor + state-aware AI Decision Proposal model.
 5. `12.5` Independent Hard Risk Authority + pause / kill-switch boundary.
-6. `12.6` Existing IBKR Order Service execution bridge.
+6. `12.6` Existing IBKR Order Service execution bridge with human-confirmed LIVE submission.
 7. `12.7` Separate Trading Skill + Trading MCP.
 8. `12.8` Episode attribution + policy learning + deterministic distillation.
-9. `12.9` Shadow / synthetic / DRY_RUN / controlled-LIVE acceptance and adversarial reclosure.
+9. `12.9` Shadow / synthetic / DRY_RUN / human-confirmed-LIVE acceptance and adversarial reclosure.
 
-The active PLAN must perform fresh-main review, Final Planning Review and explicit success-evidence definition before these leaves become execution authority.
+Implementation ownership, real dependencies and status live only in `.planning/EXECUTION.md`.
 
 ## Execution / acceptance independence
 
-`B-US-009` currently represents AI Researcher target-machine/Desktop acceptance that requires real user/target-machine evidence. This trading goal has no technical dependency on that user acceptance result.
+`B-US-009` represents AI Researcher target-machine/Desktop acceptance that requires real user/target-machine evidence. Branch 12 has no technical dependency on that user acceptance result.
 
 A task that is blocked only because it awaits user, target-machine, provider-window or other external acceptance evidence must not freeze unrelated planning or implementation. Independent work may continue when PLAN/EXECUTION shows no real dependency. If future evidence creates a genuine dependency, record that dependency explicitly in `.planning/EXECUTION.md` rather than inferring it from chronology, task numbering, or a blocked status elsewhere.
 
-## Promotion rule
+## Authority after promotion
 
-Before implementation:
-
-- review against fresh `main` and current IBKR/Scanner/Research contracts;
-- promote the selected S&T into `.planning/PLAN.md`;
-- record only material durable decisions in `.planning/DECISIONS.md`;
-- add explicit execution rows/dependencies/owners to `.planning/EXECUTION.md`;
-- add only the minimal durable product/technical/test contract changes required;
-- keep `B-US-009` acceptance state independent unless a real technical dependency is discovered.
+- `.planning/PLAN.md` owns Branch-12 Strategy/Tactic/leaves/success evidence.
+- `.planning/EXECUTION.md` owns Branch-12 owner/status/dependencies/results.
+- `docs/AUTONOMOUS_AI_TRADING.md` owns the durable trading architecture/security/acceptance contract.
+- `.planning/DECISIONS.md` will contain concise material supporting decisions after planning reconciliation.
+- `docs/EXECUTOR_ROUTING.md` will route numbered Branch-12 executors to the minimum required context.
