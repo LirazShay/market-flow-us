@@ -100,6 +100,56 @@ function timeoutPromise(ms, code) {
   });
 }
 
+export async function terminateProcessTree(
+  child,
+  { platform = process.platform, spawnProcess = spawn } = {}
+) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+
+  if (platform !== "win32" || !Number.isInteger(child.pid)) {
+    child.kill();
+    return;
+  }
+
+  await new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    };
+    const fallbackKill = () => {
+      try {
+        child.kill();
+      } catch {
+        // Best-effort cleanup must not hide the original preflight result.
+      }
+    };
+
+    let killer;
+    try {
+      killer = spawnProcess(
+        "taskkill",
+        ["/PID", String(child.pid), "/T", "/F"],
+        { stdio: "ignore", windowsHide: true }
+      );
+    } catch {
+      fallbackKill();
+      finish();
+      return;
+    }
+
+    killer.once("error", () => {
+      fallbackKill();
+      finish();
+    });
+    killer.once("exit", (code) => {
+      if (code !== 0) fallbackKill();
+      finish();
+    });
+  });
+}
+
 function spawnPathVisibleMcp(environment) {
   const options = {
     cwd: PROJECT_ROOT,
@@ -271,7 +321,7 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
       durationMs: Math.round((performance.now() - started) * 1000) / 1000
     });
   } finally {
-    if (child.exitCode === null && child.signalCode === null) child.kill();
+    await terminateProcessTree(child);
   }
 }
 
