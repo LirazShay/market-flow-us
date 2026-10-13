@@ -3,12 +3,12 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { DuckDBInstance } from "@duckdb/node-api";
+import { RESEARCH_EVIDENCE_SCHEMA_VERSION } from "./evidence-ledger.js";
 import {
   DEFAULT_RESEARCH_LEDGER_PATH,
   RESEARCH_LEDGER_DUCKDB_HARDENING,
   RESEARCH_LEDGER_SCHEMA_VERSION
 } from "./ledger.js";
-import { RESEARCH_EVIDENCE_SCHEMA_VERSION } from "./evidence-ledger.js";
 import { freezeFinalistSet } from "./validation-authority-core.js";
 import { RESEARCH_VALIDATION_SCHEMA_VERSION } from "./validation-ledger.js";
 
@@ -256,13 +256,9 @@ function normalizeSourceSchedules(partition, inventory) {
     if (matches.length !== 1) {
       throw new Error("Holdout source is not present exactly once in the bound evidence inventory");
     }
-    const sourceFingerprint = assertSha256(
-      matches[0].sourceFingerprint,
-      "holdout source fingerprint"
-    );
     return Object.freeze({
       sourceId,
-      sourceFingerprint,
+      sourceFingerprint: assertSha256(matches[0].sourceFingerprint, "holdout source fingerprint"),
       schedule: normalizeSchedule(entry)
     });
   }));
@@ -462,7 +458,7 @@ export async function openResearchHoldoutLedger({
     });
   }
 
-  async function contaminationIds(holdoutEvaluationId) {
+  async function explicitContaminationIds(holdoutEvaluationId) {
     const rows = await queryRows(
       connection,
       `SELECT query_artifact_id FROM holdout_contaminations
@@ -470,7 +466,40 @@ export async function openResearchHoldoutLedger({
        ORDER BY created_at_ms ASC, query_artifact_id ASC`,
       { holdoutEvaluationId }
     );
-    return Object.freeze(rows.map((row) => String(row.query_artifact_id)));
+    return rows.map((row) => String(row.query_artifact_id));
+  }
+
+  async function derivedContaminationIds(researchRunId, finalistSetId, exposedAtMs) {
+    if (exposedAtMs === null) return [];
+    const finalist = await finalistForRun(researchRunId, finalistSetId);
+    const rootHashes = new Map(finalist.queryArtifacts.map((artifact) => [
+      artifact.queryArtifactId,
+      artifact.sqlHash
+    ]));
+    const lineageRootHash = new Map(rootHashes);
+    const rows = await queryRows(
+      connection,
+      `SELECT query_artifact_id, parent_query_artifact_id, sql_hash, created_at_ms
+       FROM query_artifacts
+       WHERE research_run_id = $researchRunId
+       ORDER BY created_at_ms ASC, query_artifact_id ASC`,
+      { researchRunId }
+    );
+    const contaminated = [];
+    for (const row of rows) {
+      const queryArtifactId = assertQueryArtifactId(String(row.query_artifact_id));
+      const parentQueryArtifactId = row.parent_query_artifact_id === null
+        ? null
+        : assertQueryArtifactId(String(row.parent_query_artifact_id));
+      if (parentQueryArtifactId === null) continue;
+      const rootHash = lineageRootHash.get(parentQueryArtifactId);
+      if (rootHash === undefined) continue;
+      lineageRootHash.set(queryArtifactId, rootHash);
+      const createdAtMs = assertSafeTimestamp(row.created_at_ms, "query createdAtMs");
+      const sqlHash = assertSha256(String(row.sql_hash), "query artifact sqlHash");
+      if (createdAtMs >= exposedAtMs && sqlHash !== rootHash) contaminated.push(queryArtifactId);
+    }
+    return contaminated;
   }
 
   async function normalizeEvaluation(row) {
@@ -487,15 +516,28 @@ export async function openResearchHoldoutLedger({
     ) {
       throw new Error("Holdout evaluation persisted columns do not match content");
     }
-    const contaminationState = String(row.contamination_state);
-    if (!new Set(["CLEAN", "CONTAMINATED"]).has(contaminationState)) {
+    const persistedState = String(row.contamination_state);
+    if (!new Set(["CLEAN", "CONTAMINATED"]).has(persistedState)) {
       throw new Error("Holdout contamination state is invalid");
     }
+    const exposedAtMs = row.exposed_at_ms === null
+      ? null
+      : assertSafeTimestamp(row.exposed_at_ms, "exposedAtMs");
+    const explicit = await explicitContaminationIds(payload.holdoutEvaluationId);
+    const derived = await derivedContaminationIds(
+      payload.researchRunId,
+      payload.finalistSetId,
+      exposedAtMs
+    );
+    const contaminatedQueryArtifactIds = Object.freeze([...new Set([...explicit, ...derived])]);
+    const contaminationState = persistedState === "CONTAMINATED" || contaminatedQueryArtifactIds.length > 0
+      ? "CONTAMINATED"
+      : "CLEAN";
     return freezeCopy({
       ...payload,
-      exposedAtMs: row.exposed_at_ms === null ? null : assertSafeTimestamp(row.exposed_at_ms, "exposedAtMs"),
+      exposedAtMs,
       contaminationState,
-      contaminatedQueryArtifactIds: await contaminationIds(payload.holdoutEvaluationId)
+      contaminatedQueryArtifactIds
     });
   }
 
@@ -566,16 +608,15 @@ export async function openResearchHoldoutLedger({
         ) {
           throw new Error("Holdout result source provenance/schedule does not match frozen authority");
         }
-        const engineRequestFingerprint = assertSha256(
-          result.engineRequestFingerprint,
-          "Holdout engine request fingerprint"
-        );
         const metricsJson = boundedJson(result.metrics, "Holdout metrics");
         return Object.freeze({
           sourceId: source.sourceId,
           sourceFingerprint: source.sourceFingerprint,
           schedule: source.schedule,
-          engineRequestFingerprint,
+          engineRequestFingerprint: assertSha256(
+            result.engineRequestFingerprint,
+            "Holdout engine request fingerprint"
+          ),
           metrics: JSON.parse(metricsJson)
         });
       });
@@ -670,13 +711,7 @@ export async function openResearchHoldoutLedger({
         const exposedAtMs = assertSafeTimestamp(row.exposed_at_ms, "exposedAtMs");
         if (createdAtMs < exposedAtMs) continue;
         const evaluation = await normalizeEvaluation(row);
-        const finalistRows = await queryRows(
-          connection,
-          "SELECT finalist_json FROM finalist_sets WHERE finalist_set_id = $finalistSetId LIMIT 2",
-          { finalistSetId: evaluation.finalistSetId }
-        );
-        if (finalistRows.length !== 1) throw new Error("Holdout Finalist Set persistence is missing");
-        const finalist = freezeFinalistSet(parseJsonObject(String(finalistRows[0].finalist_json), "finalist set"));
+        const finalist = await finalistForRun(runId, evaluation.finalistSetId);
         const directlyDescends = finalist.queryArtifacts.some((artifact) => artifact.queryArtifactId === parentId);
         const descendantRows = await queryRows(
           connection,
