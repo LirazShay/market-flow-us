@@ -20,6 +20,7 @@ const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
 const MCP_COMMAND = "market-flow-us-research-mcp";
 const MCP_PROTOCOL_VERSION = "2025-06-18";
 const EXPECTED_MCP_TOOL_COUNT = 46;
+const MAX_MCP_STDOUT_FRAME_BYTES = 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
 const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
@@ -159,6 +160,55 @@ export function validateMcpToolList(tools) {
   return uniqueNames;
 }
 
+export function splitMcpStdoutFrames(
+  buffer,
+  chunk,
+  maxFrameBytes = MAX_MCP_STDOUT_FRAME_BYTES
+) {
+  let remaining = `${buffer}${String(chunk)}`;
+  const lines = [];
+  while (true) {
+    const newline = remaining.indexOf("\n");
+    if (newline < 0) break;
+    const line = remaining.slice(0, newline).replace(/\r$/u, "");
+    if (Buffer.byteLength(line, "utf8") > maxFrameBytes) {
+      fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_STDOUT_FRAME_TOO_LARGE");
+    }
+    lines.push(line);
+    remaining = remaining.slice(newline + 1);
+  }
+  if (Buffer.byteLength(remaining, "utf8") > maxFrameBytes) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_STDOUT_FRAME_TOO_LARGE");
+  }
+  return Object.freeze({ lines: Object.freeze(lines), remainder: remaining });
+}
+
+export function parseMcpStdoutMessage(line) {
+  let message;
+  try {
+    message = JSON.parse(line);
+  } catch {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED");
+  }
+  if (!message || typeof message !== "object" || Array.isArray(message)) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED");
+  }
+  return message;
+}
+
+export function validateMcpResponseEnvelope(message) {
+  const hasResult = Object.hasOwn(message, "result");
+  const hasError = Object.hasOwn(message, "error");
+  if (
+    message?.jsonrpc !== "2.0"
+    || message?.id === undefined
+    || hasResult === hasError
+  ) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED");
+  }
+  return message;
+}
+
 function timeoutPromise(ms, code) {
   return new Promise((_, reject) => {
     const timer = setTimeout(() => reject(Object.assign(new Error(code), { code })), ms);
@@ -269,8 +319,22 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   let stdoutBuffer = "";
   let stderrSeen = false;
   let spawnFailure = null;
+  let protocolFailure = null;
   let nextId = 1;
   const pending = new Map();
+
+  function rejectPending(error) {
+    for (const waiter of pending.values()) {
+      clearTimeout(waiter.timer);
+      waiter.reject(error);
+    }
+    pending.clear();
+  }
+
+  function recordProtocolFailure(error) {
+    if (protocolFailure === null) protocolFailure = error;
+    rejectPending(protocolFailure);
+  }
 
   child.stdin.on("error", () => {});
   child.stderr.on("data", (chunk) => {
@@ -278,31 +342,28 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   });
 
   child.stdout.on("data", (chunk) => {
-    stdoutBuffer += chunk;
-    while (true) {
-      const newline = stdoutBuffer.indexOf("\n");
-      if (newline < 0) break;
-      const line = stdoutBuffer.slice(0, newline).replace(/\r$/u, "");
-      stdoutBuffer = stdoutBuffer.slice(newline + 1);
-      if (line.trim().length === 0) continue;
-      let message;
-      try {
-        message = JSON.parse(line);
-      } catch {
-        continue;
+    try {
+      const framed = splitMcpStdoutFrames(stdoutBuffer, chunk);
+      stdoutBuffer = framed.remainder;
+      for (const line of framed.lines) {
+        if (line.trim().length === 0) continue;
+        const message = parseMcpStdoutMessage(line);
+        if (message.id === undefined) continue;
+        const waiter = pending.get(message.id);
+        if (!waiter) fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_UNEXPECTED_RESPONSE_ID");
+        validateMcpResponseEnvelope(message);
+        pending.delete(message.id);
+        clearTimeout(waiter.timer);
+        if (message.error) {
+          waiter.reject(Object.assign(new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_RPC_ERROR"), {
+            code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_RPC_ERROR"
+          }));
+        } else {
+          waiter.resolve(message.result);
+        }
       }
-      if (message.id === undefined) continue;
-      const waiter = pending.get(message.id);
-      if (!waiter) continue;
-      pending.delete(message.id);
-      clearTimeout(waiter.timer);
-      if (message.error) {
-        waiter.reject(Object.assign(new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_RPC_ERROR"), {
-          code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_RPC_ERROR"
-        }));
-      } else {
-        waiter.resolve(message.result);
-      }
+    } catch (error) {
+      recordProtocolFailure(error);
     }
   });
 
@@ -310,11 +371,7 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
     spawnFailure = Object.assign(new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"), {
       code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_NOT_ON_PATH"
     });
-    for (const waiter of pending.values()) {
-      clearTimeout(waiter.timer);
-      waiter.reject(spawnFailure);
-    }
-    pending.clear();
+    rejectPending(spawnFailure);
   });
 
   let exitOutcome = null;
@@ -324,19 +381,17 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
       new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE"),
       { code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE" }
     );
-    for (const waiter of pending.values()) {
-      clearTimeout(waiter.timer);
-      waiter.reject(prematureExit);
-    }
-    pending.clear();
+    rejectPending(prematureExit);
   });
 
   function write(message) {
+    if (protocolFailure) throw protocolFailure;
     if (spawnFailure) throw spawnFailure;
     child.stdin.write(`${JSON.stringify(message)}\n`);
   }
 
   function request(method, params = {}) {
+    if (protocolFailure) return Promise.reject(protocolFailure);
     if (spawnFailure) return Promise.reject(spawnFailure);
     if (exitOutcome) {
       return Promise.reject(Object.assign(
@@ -391,6 +446,10 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
     ]);
     if (outcome.code !== 0 || outcome.signal !== null) {
       fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_FAILED");
+    }
+    if (protocolFailure) throw protocolFailure;
+    if (stdoutBuffer.trim().length > 0) {
+      fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_TRUNCATED");
     }
     if (stderrSeen) fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_STDERR_NOT_EMPTY");
 
