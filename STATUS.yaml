@@ -43,7 +43,7 @@ next_pointer:
   task: "11.7"
   owner: "Chat 41"
   status: in_progress
-  action: "Continue TREE 11.7 from `.planning/AI_RESEARCHER_HARDENING_AUDIT.md`: next perform the composed diagnostics + local transport/process adversarial slice, including MCP oversized/error/lifecycle behavior and public-safe failure surfaces. Then continue to resource-bound/growth/cancellation-responsiveness attacks. Every material finding remains owned by Chat 41 through RCA, smallest sufficient fix, deterministic regression proof, analogous-area review and affected green verification. Do not advance to Chat 42 / 11.8 until TREE 11.7 success evidence is fully green."
+  action: "Continue TREE 11.7 from `.planning/AI_RESEARCHER_HARDENING_AUDIT.md`: SQL/source, composed failure/restart, MCP authority, local stdio transport/process and public-safe diagnostics are reviewed with green adversarial proof. Next perform resource-bound/growth/duplicate/cancellation-responsiveness adversarial attacks over composed managed Research workloads. Every material finding remains owned by Chat 41 through RCA, smallest sufficient fix, deterministic regression proof, analogous-area review and affected green verification. Do not advance to Chat 42 / 11.8 until TREE 11.7 success evidence is fully green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
