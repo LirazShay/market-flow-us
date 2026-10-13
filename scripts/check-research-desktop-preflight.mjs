@@ -20,6 +20,7 @@ const MCP_COMMAND = "market-flow-us-research-mcp";
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
 const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
+const STABLE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,127}$/u;
 const REQUIRED_TOOLS = Object.freeze([
   "describe_research_environment",
   "bootstrap_research",
@@ -34,6 +35,21 @@ function fail(code) {
   const error = new Error(code);
   error.code = code;
   throw error;
+}
+
+export function researchDesktopPreflightErrorCode(
+  error,
+  fallback = "RESEARCH_DESKTOP_PREFLIGHT_FAILED"
+) {
+  return typeof error?.code === "string" && STABLE_ERROR_CODE.test(error.code)
+    ? error.code
+    : fallback;
+}
+
+function setReportFailure(report, code) {
+  if (report.result === "fail" && typeof report.error?.code === "string") return;
+  report.result = "fail";
+  report.error = { code };
 }
 
 async function readJson(filePath, code) {
@@ -345,6 +361,36 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   }
 }
 
+export async function finalizeResearchDesktopPreflightReport(
+  report,
+  {
+    tempDir = null,
+    reportPath = REPORT_PATH,
+    removeDirectory = rm,
+    makeDirectory = mkdir,
+    writeReport = writeFile
+  } = {}
+) {
+  if (tempDir) {
+    try {
+      await removeDirectory(tempDir, { recursive: true, force: true });
+    } catch {
+      setReportFailure(report, "RESEARCH_DESKTOP_PREFLIGHT_TEMP_CLEANUP_FAILED");
+      process.exitCode = 1;
+    }
+  }
+
+  try {
+    await makeDirectory(path.dirname(reportPath), { recursive: true });
+    await writeReport(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  } catch {
+    setReportFailure(report, "RESEARCH_DESKTOP_PREFLIGHT_REPORT_PERSIST_FAILED");
+    process.exitCode = 1;
+  }
+
+  return report;
+}
+
 export async function runResearchDesktopPreflight() {
   const report = {
     schemaVersion: 1,
@@ -386,15 +432,11 @@ export async function runResearchDesktopPreflight() {
   } catch (error) {
     report.result = "fail";
     report.error = {
-      code: typeof error?.code === "string"
-        ? error.code
-        : "RESEARCH_DESKTOP_PREFLIGHT_FAILED"
+      code: researchDesktopPreflightErrorCode(error)
     };
     process.exitCode = 1;
   } finally {
-    if (tempDir) await rm(tempDir, { recursive: true, force: true });
-    await mkdir(path.dirname(REPORT_PATH), { recursive: true });
-    await writeFile(REPORT_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
+    await finalizeResearchDesktopPreflightReport(report, { tempDir });
   }
 
   return report;
