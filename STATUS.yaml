@@ -43,7 +43,7 @@ next_pointer:
   task: "12.5"
   owner: "Chat 46"
   status: pending
-  action: "Activate Chat 46 only on an explicit numbered-chat request after TREE 12.3 / Chat 45 PR #120 is merged and post-merge main verification is green. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Activate Chat 46 only on an explicit numbered-chat request. TREE 12.3 / Chat 45 is squash-merged and post-merge main Planning #1343, Workload #689 and Fast #1129 are green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
