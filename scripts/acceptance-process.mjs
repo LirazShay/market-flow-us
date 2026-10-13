@@ -87,6 +87,12 @@ export async function terminateChildTree(
       }, taskkillTimeoutMs);
     });
     await waitForExit(child, graceMs);
+    if (isRunning(child)) {
+      try {
+        child.kill();
+      } catch {}
+      await waitForExit(child, graceMs);
+    }
     return;
   }
 
