@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "market-flow-us-trader",
+  "version": "0.1.0",
+  "description": "Inspect and resume bounded Market Flow US trading work through a separate Trading Skill and thin local MCP client."
+}
