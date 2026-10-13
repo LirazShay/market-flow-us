@@ -15,9 +15,9 @@ backlog/README.md      = future non-blocking work only; never execution authorit
 
 Load only the row(s) relevant to the explicitly assigned task(s); do not preload the whole repository. A numbered executor activates only from an explicit request such as `אני צאט 35 תתחיל`; generic continuation or a projected current pointer never changes chat identity.
 
-Every fresh Branch-11 executor must be able to reconstruct its work entirely from GitHub. Previous-chat memory is optional context only and never authority.
+Every fresh Branch-11/Branch-12 executor must be able to reconstruct its work entirely from GitHub. Previous-chat memory is optional context only and never authority.
 
-Backlog item `B-US-000` has no executor routing until it is explicitly planned/allocated again. `B-US-008` is no longer backlog-only: it is promoted as Branch 11 in `.planning/PLAN.md` and `.planning/EXECUTION.md`.
+Backlog item `B-US-000` has no executor routing until it is explicitly planned/allocated again. `B-US-008` is historical provenance for completed Branch 11. `B-US-010` is promoted as Branch 12 in `.planning/PLAN.md` and `.planning/EXECUTION.md`. `B-US-009` remains a separate blocked target-machine acceptance row and is not a Branch-12 dependency unless `.planning/EXECUTION.md` explicitly says otherwise.
 
 | Task / PLAN leaf | Primary durable truth |
 |---|---|
@@ -64,7 +64,16 @@ Backlog item `B-US-000` has no executor routing until it is explicitly planned/a
 | `11.6` Plugin/Skill + MCP integration | PLAN 11.6; DECISION D-US-054; AI_RESEARCHER_OPERATING_CONTRACT; AI_RESEARCHER_API_LEDGER_CONTRACT; stable Research Domain API from 11.1–11.5; current official OpenAI Plugin/MCP docs reverified at execution time; focused adapter/bootstrap/resume tests |
 | `11.7` adversarial hardening | PLAN 11.7; DECISIONS D-US-049–055; AI_RESEARCHER_SECURITY_RESOURCE_MODEL; all Branch-11 domain contracts; changed production/runtime/tests from 11.1–11.6; hostile SQL/ID/phase/fault/restart matrix; source-fingerprint proof |
 | `11.8` workload/desktop acceptance/reclosure | PLAN 11.8; AI_RESEARCHER_SECURITY_RESOURCE_MODEL workload gates; AI_RESEARCHER_OPERATING_CONTRACT final-output/desktop path; all Branch-11 results; workload scripts; target-machine evidence; affected durable PRODUCT/DATA/TECHNICAL/TEST/user docs; Fast/Browser/Planning/Workload/PR/main/open-PR truth |
+| `12.1` Trading domain + durable authority | PLAN 12.1; AUTONOMOUS_AI_TRADING domain/ledger sections; IBKR_ORDER_SERVICE authority boundaries; current durable-ledger/ID patterns; focused persistence/restart/immutability tests |
+| `12.2` Scanner candidate handoff | PLAN 12.2; AUTONOMOUS_AI_TRADING candidate/provenance sections; SCANNER_SQL_GUIDE; Scanner generation/result provenance code/tests; focused exact-generation/identity tests |
+| `12.3` targeted live quote watch | PLAN 12.3; AUTONOMOUS_AI_TRADING quote/staleness sections; IBKR_ORDER_SERVICE market-data/resolve seams; current CPGW adapter; bounded polling/resource tests |
+| `12.4` continuous Trading Supervisor | PLAN 12.4; AUTONOMOUS_AI_TRADING supervisor/DecisionProposal/restart sections; stable 12.1–12.3/12.5–12.6 seams; deterministic state-transition/restart/stale-proposal tests |
+| `12.5` independent Hard Risk Authority | PLAN 12.5; AUTONOMOUS_AI_TRADING hard-risk section; IBKR_ORDER_SERVICE_SECURITY; order-service LIVE/position guards; focused non-bypass/pause/kill-switch tests |
+| `12.6` protected order-service bridge | PLAN 12.6; AUTONOMOUS_AI_TRADING execution bridge; IBKR_ORDER_SERVICE + SECURITY; existing idempotency/reconciliation/SELL guard tests/code; no direct CPGW path |
+| `12.7` Trading Skill + Trading MCP | PLAN 12.7; AUTONOMOUS_AI_TRADING MCP boundary; Branch-11 Plugin/MCP packaging patterns only; stable Branch-12 domain APIs; current official OpenAI Plugin/MCP docs reverified at execution time; focused capability/resume/authorization tests |
+| `12.8` episode attribution + strategy distillation | PLAN 12.8; AUTONOMOUS_AI_TRADING episode/attribution/distillation sections; TradeEpisode evidence from 12.1–12.7; BACKTEST_LAB/AI Researcher seams only where strategy-level validation is needed; deterministic attribution/policy-candidate tests |
+| `12.9` staged acceptance + adversarial reclosure | PLAN 12.9; AUTONOMOUS_AI_TRADING acceptance/security sections; all Branch-12 results; synthetic/shadow/DRY_RUN evidence; order-service security/restart/idempotency adversarial matrix; affected Fast/Browser/Planning/Workload/PR/main/open-PR truth; external LIVE/user acceptance remains explicit rather than fabricated |
 
 The corresponding `.planning/PLAN.md` leaf success evidence is the definition of done for allocated tasks. `.planning/EXECUTION.md` alone owns assignment, execution status, dependencies and result/evidence.
 
-For Branch 11 specifically, detailed `.planning/AI_RESEARCHER_*` files are routed implementation context, not competing planning authorities. If an implementation finding materially contradicts PLAN/DECISIONS, use the Planning Impact Test and repair the smallest affected authority before coding forward.
+For Branch 11 specifically, detailed `.planning/AI_RESEARCHER_*` files are routed implementation context, not competing planning authorities. For Branch 12, `docs/AUTONOMOUS_AI_TRADING.md` is the durable domain contract; implementation findings that materially contradict PLAN/contracts use the Planning Impact Test and repair only the smallest affected authority before coding forward.
