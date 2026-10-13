@@ -22,28 +22,28 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: null
+  chat: 45
   node: "12.3"
   title: "Targeted live quote watch"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
   done: 59
-  pending: 7
-  in_progress: 0
+  pending: 6
+  in_progress: 1
   blocked: 1
-  current_chat: null
+  current_chat: 45
   current_node: "12.3"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "12.3"
   owner: "Chat 45"
-  status: pending
-  action: "Activate Chat 45 only on an explicit numbered-chat request. TREE 12.2 / Chat 44 is complete: PR #118 squash-merged as b3821170 and post-merge main Planning #1328 plus Fast #1116 are green. B-US-009 remains independently blocked on target-machine evidence."
+  status: in_progress
+  action: "Continue proof-first targeted live quote authority on chat-45-targeted-quote-watch. Reuse the existing CPGW exact-resolution/snapshot seam; keep the watch bounded and polling-first; quantify cadence/cost before considering streaming."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
