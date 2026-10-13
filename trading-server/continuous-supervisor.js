@@ -7,6 +7,8 @@ import { applySupervisorBrokerEvent } from "./supervisor.js";
 const DECISION_READY_STATES = new Set(["WATCHING", "POSITION_OPEN"]);
 const RECONCILIATION_REQUIRED = "RECONCILIATION_REQUIRED";
 const MAX_INTERVAL_MS = 60_000;
+const MAX_PROPOSAL_TIMEOUT_MS = 60_000;
+const DEFAULT_PROPOSAL_TIMEOUT_MS = 1_000;
 
 function assertDependency(value, method, label) {
   if (!value || typeof value[method] !== "function") {
@@ -14,11 +16,19 @@ function assertDependency(value, method, label) {
   }
 }
 
-function assertIntervalMs(value) {
-  if (!Number.isSafeInteger(value) || value < 1 || value > MAX_INTERVAL_MS) {
-    throw new TypeError(`intervalMs must be an integer between 1 and ${MAX_INTERVAL_MS}`);
+function assertBoundedMilliseconds(value, label, maximum) {
+  if (!Number.isSafeInteger(value) || value < 1 || value > maximum) {
+    throw new TypeError(`${label} must be an integer between 1 and ${maximum}`);
   }
   return value;
+}
+
+function assertIntervalMs(value) {
+  return assertBoundedMilliseconds(value, "intervalMs", MAX_INTERVAL_MS);
+}
+
+function assertProposalTimeoutMs(value) {
+  return assertBoundedMilliseconds(value, "proposalTimeoutMs", MAX_PROPOSAL_TIMEOUT_MS);
 }
 
 function readNow(now) {
@@ -101,6 +111,7 @@ export function createContinuousTradingSupervisor({
   ledger,
   readDecisionProposal = async () => null,
   readReconciledOrder = async () => null,
+  proposalTimeoutMs = DEFAULT_PROPOSAL_TIMEOUT_MS,
   now = Date.now,
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout
@@ -120,12 +131,14 @@ export function createContinuousTradingSupervisor({
   if (typeof readReconciledOrder !== "function") {
     throw new TypeError("readReconciledOrder must be a function");
   }
+  const boundedProposalTimeoutMs = assertProposalTimeoutMs(proposalTimeoutMs);
   if (typeof now !== "function") throw new TypeError("now must be a function");
   if (typeof setTimeoutFn !== "function" || typeof clearTimeoutFn !== "function") {
     throw new TypeError("timer functions are required");
   }
 
   let active = null;
+  let pendingProposal = null;
 
   async function appendReconciledSnapshot({ tradingRunId, tradeEpisodeId, current, orderReference }) {
     const recovered = reconciliationSnapshot({ current, orderReference });
@@ -207,16 +220,42 @@ export function createContinuousTradingSupervisor({
   }
 
   async function proposalOrFallback(restored) {
+    if (pendingProposal !== null) return null;
+
+    const abortController = new AbortController();
+    const sourcePromise = Promise.resolve().then(() => readDecisionProposal(Object.freeze({
+      tradingRunId: restored.snapshot.supervisorState.tradingRunId,
+      tradeEpisodeId: restored.snapshot.supervisorState.tradeEpisodeId,
+      policyVersionId: restored.snapshot.supervisorState.policyVersionId,
+      state: restored.snapshot.supervisorState,
+      policyVersion: restored.policyVersion,
+      signal: abortController.signal
+    })));
+    const tracked = sourcePromise.finally(() => {
+      if (pendingProposal === tracked) pendingProposal = null;
+    });
+    void tracked.catch(() => {});
+    pendingProposal = tracked;
+
+    let timeoutHandle = null;
+    const timeoutPromise = new Promise((resolve) => {
+      timeoutHandle = setTimeoutFn(() => {
+        abortController.abort();
+        resolve({ status: "TIMEOUT" });
+      }, boundedProposalTimeoutMs);
+    });
+
     try {
-      return await readDecisionProposal(Object.freeze({
-        tradingRunId: restored.snapshot.supervisorState.tradingRunId,
-        tradeEpisodeId: restored.snapshot.supervisorState.tradeEpisodeId,
-        policyVersionId: restored.snapshot.supervisorState.policyVersionId,
-        state: restored.snapshot.supervisorState,
-        policyVersion: restored.policyVersion
-      }));
-    } catch {
-      return null;
+      const outcome = await Promise.race([
+        sourcePromise.then(
+          (value) => ({ status: "VALUE", value }),
+          () => ({ status: "FAILED" })
+        ),
+        timeoutPromise
+      ]);
+      return outcome.status === "VALUE" ? outcome.value : null;
+    } finally {
+      if (timeoutHandle !== null) clearTimeoutFn(timeoutHandle);
     }
   }
 
@@ -373,6 +412,7 @@ export function createContinuousTradingSupervisorRuntime(options) {
       ledger: options.ledger,
       readDecisionProposal: options.readDecisionProposal,
       readReconciledOrder: options.readReconciledOrder,
+      proposalTimeoutMs: options.proposalTimeoutMs,
       now: options.now,
       setTimeoutFn: options.setTimeoutFn,
       clearTimeoutFn: options.clearTimeoutFn
