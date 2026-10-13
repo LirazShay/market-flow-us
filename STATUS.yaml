@@ -22,7 +22,7 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: 45
+  chat: "Chat 45"
   node: "12.3"
   title: "Targeted live quote watch"
   status: in_progress
@@ -35,7 +35,7 @@ execution_projection:
   pending: 6
   in_progress: 1
   blocked: 1
-  current_chat: 45
+  current_chat: "Chat 45"
   current_node: "12.3"
   projected_from: ".planning/EXECUTION.md"
 
