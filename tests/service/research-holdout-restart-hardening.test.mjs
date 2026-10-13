@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { DuckDBInstance } from "@duckdb/node-api";
 import { openResearchDomain } from "../../research-server/domain.js";
 import {
   durableAuthoritativeExperimentRequest,
@@ -231,6 +232,59 @@ test("TREE 11.7 a crash after sealed Holdout compute cannot consume the same Fin
     );
     assert.equal(holdoutExecutionCount, 1, "restart must preserve the consumed/uncertain Holdout boundary");
   } finally {
+    if (domain) await domain.close();
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("TREE 11.7 Holdout schema v1 migrates to v2 without losing existing Research authority", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-holdout-migration-"));
+  const dbPath = path.join(tempDir, "research-ledger.duckdb");
+  let domain = null;
+  let instance = null;
+  let connection = null;
+
+  try {
+    domain = await openResearchDomain(commonOptions(dbPath));
+    await domain.createResearchRun({
+      userIntent: "Preserve durable authority across Holdout schema migration.",
+      budgetPolicy: { maxExperiments: 40 },
+      environmentSnapshot: { productVersion: "0.1.0" }
+    });
+    await domain.close();
+    domain = null;
+
+    instance = await DuckDBInstance.create(dbPath);
+    connection = await instance.connect();
+    await connection.run("DROP TABLE holdout_execution_claims");
+    await connection.run("UPDATE research_holdout_info SET schema_version = 1");
+    connection.closeSync();
+    connection = null;
+    instance.closeSync();
+    instance = null;
+
+    domain = await openResearchDomain(commonOptions(dbPath));
+    assert.equal((await domain.getResearchRun(RUN_ID)).researchRunId, RUN_ID);
+    await domain.close();
+    domain = null;
+
+    instance = await DuckDBInstance.create(dbPath);
+    connection = await instance.connect();
+    const versionReader = await connection.runAndReadAll(
+      "SELECT schema_version FROM research_holdout_info"
+    );
+    const versionRows = versionReader.getRowObjects();
+    assert.equal(versionRows.length, 1);
+    assert.equal(Number(versionRows[0].schema_version), 2);
+
+    const tableReader = await connection.runAndReadAll(
+      `SELECT table_name FROM information_schema.tables
+       WHERE table_schema = 'main' AND table_name = 'holdout_execution_claims'`
+    );
+    assert.equal(tableReader.getRowObjects().length, 1);
+  } finally {
+    if (connection) connection.closeSync();
+    if (instance) instance.closeSync();
     if (domain) await domain.close();
     await rm(tempDir, { recursive: true, force: true });
   }
