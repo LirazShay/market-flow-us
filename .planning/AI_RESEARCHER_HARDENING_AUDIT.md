@@ -45,10 +45,10 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 | SQL host access | Can file/network readers, dynamic SQL, environment/config/secret/catalog helpers or side-effecting functions access the host? | External access/extensions/secrets are disabled and dangerous helpers are denied. Qualified/quoted/comment/path-bearing equivalent attacks still required. | OPEN |
 | Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection and cross-phase diagnostics are green. Remaining side-channel/fault cases still required. | REVIEWED |
 | Run/object ownership | Can IDs from another Research Run or Evidence Plan be replayed against reads/mutations? | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. No cross-run escape found. `H-11.7-003` additionally binds Finalist support to the exact current Evidence Plan Validation partition. | REVIEWED |
-| Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | Result metadata is run+handle scoped; source Job must be same-run; cursor is handle-bound; restart paging is green. Remaining incompatible phase/state cases still required. | REVIEWED |
-| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, request fingerprints, `clientRequestId`, queue/readers are baseline. Holdout concurrent duplicate execution is closed by `H-11.7-001`; further expensive-operation conflict races remain. | REVIEWED |
-| Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Queue/running/compute cancellation and interrupt tests are green. `H-11.7-004` closes the late-cancel race once durable Result publication begins. Remaining crash-during-publication and late-callback/resource cases still require review. | REVIEWED |
-| Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Holdout pre-execution claim closes restart uncertainty (`H-11.7-002`); Finalist lock revalidates current-plan Validation support (`H-11.7-003`); Result publication cannot now be followed by a winning cancellation (`H-11.7-004`). Remaining representative publication-fault/restart composition still required. | OPEN |
+| Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | Result metadata is run+handle scoped; source Job must be same-run; cursor is handle-bound; restart paging is green. `H-11.7-005` now purges provisional Results owned by interrupted `RUNNING` Jobs and clears their published progress handles while preserving `SUCCEEDED` Result authority. | REVIEWED |
+| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, request fingerprints, `clientRequestId`, queue/readers are baseline. Holdout concurrent duplicate execution is closed by `H-11.7-001`; interrupted Job restart reconciliation now owns provisional Result cleanup via `H-11.7-005`. Further expensive-operation conflict races remain review work. | REVIEWED |
+| Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Queue/running/compute cancellation and interrupt tests are green. `H-11.7-004` closes the same-process late-cancel race once durable Result publication begins; `H-11.7-005` closes the crash/restart split after provisional Result publication. Remaining late-callback/resource responsiveness cases still require review. | REVIEWED |
+| Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Holdout pre-execution claim closes restart uncertainty (`H-11.7-002`); Finalist lock revalidates current-plan Validation support (`H-11.7-003`); late cancellation cannot split Result/Job truth (`H-11.7-004`); restart transactionally removes provisional Results/handles before failing interrupted Jobs (`H-11.7-005`). Representative managed publication/restart composition is now reviewed; SQL/source and other matrix areas remain separate. | REVIEWED |
 | Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Same-process duplicate consumption is closed by `H-11.7-001`; restart duplicate consumption by `H-11.7-002`; superseded-plan Validation support by `H-11.7-003`. Contamination/side-channel/publication-fault attacks remain. | REVIEWED |
 | MCP tool boundary | Can tool name/schema/arguments bypass Domain validation or expose non-public internals? | Real MCP schema rejects missing/extra/wrong-type authority fields and preserves valid IDs exactly for Domain authorization. Oversized/error-mapping/lifecycle fuzz remains. | REVIEWED |
 | Local transport / process | Can transport accept unapproved network/origin/body/path exposure or leak lifecycle state? | Pinned MCP v2 stdio lifecycle is baseline. Actual stdio/process and absence/strictness of unintended local HTTP/browser research surfaces still require closure. | OPEN |
@@ -86,6 +86,7 @@ The first composed ownership pass found no cross-run Result Handle escape:
 - Paging resolves the scoped Result Handle before immutable rows.
 - Cursor payloads bind to the exact Result Handle and reject cross-handle/out-of-range use.
 - Existing proof resumes a cursor after reopening and rejects cross-run/cross-handle substitution.
+- Restart reconciliation now treats Results owned by still-`RUNNING` Jobs as provisional: `H-11.7-005` removes those rows and their progress handles before terminalizing the interrupted Job as `FAILED`, while a `SUCCEEDED` control Result remains unchanged.
 
 ### Cross-run / phase / MCP authority parity
 
@@ -158,21 +159,13 @@ The Domain queue serializes each component call, not the entire outer `createFin
 
 **Deterministic RED proof:** commit `33e8c918ab30a854eea1a9431607355412a3f096` adds `tests/service/research-finalist-plan-race-hardening.test.mjs`. It creates Plan A, records an exact Validation exposure for Plan A, commits Plan B with different Validation/Holdout partitions, then asks the Validation ledger to create a Finalist. Fast `#973` / `38345191465` failed only this new test with `Missing expected rejection`: unit `301/301`, service `304/305`. Planning `#1169` and Workload `#559` were green.
 
-**Smallest sufficient fix:** commit `8f4eab236a244d0aeba66a7ac33491f978156ca4` adds one ledger-local guard in `research-server/validation-ledger.js`. After resolving the latest Evidence Plan and candidate Query Artifacts, `createFinalistSet` now requires, for each candidate Query, a durable Validation exposure with the exact:
-
-- current Objective Version;
-- current plan's Validation partition;
-- `queryArtifactId`;
-- `sqlHash`;
-- `scannerContractVersion`.
-
-If exact support is absent it fails before freezing/inserting the Finalist. The existing Domain precheck remains defense-in-depth. No schema, public API or new subsystem was introduced.
+**Smallest sufficient fix:** commit `8f4eab236a244d0aeba66a7ac33491f978156ca4` adds one ledger-local guard in `research-server/validation-ledger.js`. After resolving the latest Evidence Plan and candidate Query Artifacts, `createFinalistSet` now requires, for each candidate Query, a durable Validation exposure with the exact current Objective Version, current plan Validation partition, `queryArtifactId`, `sqlHash` and `scannerContractVersion`. If exact support is absent it fails before freezing/inserting the Finalist. The existing Domain precheck remains defense-in-depth. No schema, public API or new subsystem was introduced.
 
 **Why the fix closes the race:** the final Validation-ledger authority now derives the latest plan and proves support against that exact plan inside the same serialized ledger call that performs Finalist publication. A plan change can no longer occur between the correctness check and the durable lock through normal Domain composition.
 
-**GREEN proof:** Fast `#974` / `38345355839` passed unit `301/301`, service `305/305`, the new `TREE 11.7 Finalist Set cannot inherit Validation support from a superseded Evidence Plan` regression, all prior hardening regressions and order acceptance. Planning `#1170` / `38345355825` and Workload `#560` / `38345355802` are green, including the Research cancellation/restart resource probe.
+**GREEN proof:** Fast `#974` / `38345355839` passed unit `301/301`, service `305/305`, the new regression, all prior hardening regressions and order acceptance. Planning `#1170` / `38345355825` and Workload `#560` / `38345355802` are green.
 
-**Analogous-area review:** a completed Validation Experiment is not Finalist support until a durable Validation exposure exists, so a failure between experiment publication and exposure leaves no false support. Regular Final Recommendation writes the terminal recommendation artifact and Run `COMPLETED/FINALIZATION` transition in one transaction. Regular and insufficient-evidence terminal finalization are not legal simultaneously because their required authority states are mutually exclusive. Post-Holdout contamination is recomputed from immutable Query lineage and the durable Holdout baseline rather than relying only on a side-effect marker. No second exact stale-precheck→durable-lock defect was found in this slice.
+**Analogous-area review:** a completed Validation Experiment is not Finalist support until a durable Validation exposure exists. Final Recommendation writes its terminal recommendation artifact and Run terminal transition transactionally. Post-Holdout contamination is recomputed from immutable Query lineage and the durable Holdout baseline. No second exact stale-precheck→durable-lock defect was found in this slice.
 
 **Status:** FIXED / RED→GREEN regression.
 
@@ -180,25 +173,65 @@ If exact support is absent it fails before freezing/inserting the Finalist. The 
 
 **Severity:** blocking correctness/failure-hardening defect — fixed.
 
-**Vulnerable sequence:** a managed Development Experiment or Research SQL Job could finish compute, begin/complete `research_results` publication while the durable Job still remained `RUNNING`, and then accept `cancelJob`. Because the Job controller did not enter its success-finalization state until after `work` returned, cancellation could win after a durable Result already existed and leave `Job = CANCELLED` with a readable Result.
+**Vulnerable sequence:** a managed Development Experiment or Research SQL Job could finish compute, begin/complete `research_results` publication while the durable Job still remained `RUNNING`, and then accept `cancelJob`. Cancellation could win after a durable Result already existed and leave `Job = CANCELLED` with a readable Result.
 
-**Root cause:** the non-cancellable terminal boundary started too late. Durable Result creation occurred inside managed `work`, while `entry.finishing = "SUCCEEDED"` was set only near `markJobSucceeded`. Correctness-critical Result publication was therefore outside the Job controller's serialized terminal-race boundary.
+**Root cause:** the non-cancellable terminal boundary started too late. Durable Result creation occurred inside managed `work`, while the Job controller did not claim success-finalization until near `markJobSucceeded`.
 
-**Test-proof correction:** commit `34266ce85ade5308b7450f89e5f3e33ce29007a2` first added the regression, but Fast `#976` rejected an invalid fixture before exercising the race because the plan omitted the required Validation partition. That run is not product-defect evidence. Commit `2dd97516f147a01262967f06b935fd93631fba42` corrected the fixture.
+**Test-proof correction:** commit `34266ce85ade5308b7450f89e5f3e33ce29007a2` first added the regression, but Fast `#976` rejected an invalid fixture before exercising the race. Commit `2dd97516f147a01262967f06b935fd93631fba42` corrected the fixture.
 
-**Deterministic RED proof:** `tests/service/research-job-result-finalization-race-hardening.test.mjs` triggers `cancelJob` from `resultHandleFactory`, exactly after Result publication has entered its durable transaction rather than via timing sleeps. Fast `#977` / `38346210985` passed unit `301/301` and failed service `305/306` only on this regression: cancellation was accepted (`true`) when the proof required it to be unavailable. Planning `#1173` and Workload `#563` were green.
+**Deterministic RED proof:** `tests/service/research-job-result-finalization-race-hardening.test.mjs` triggers `cancelJob` from `resultHandleFactory`, exactly after Result publication enters its durable transaction. Fast `#977` / `38346210985` passed unit `301/301` and failed service `305/306` only on this regression. Planning `#1173` and Workload `#563` were green.
 
-**Smallest sufficient fix:** commit `45152a2da9841c14bec601bd19062a5134705d4e` adds a serialized `beginSuccessCommit` transition to the shared Job controller. It fails if cancellation already won; otherwise it sets the in-memory terminal owner to `SUCCEEDED`, making later cancellation unavailable. Generic non-null `commitSuccess` callbacks enter the same boundary automatically. Commit `2e5496c90b05da5e2115fbaa47fddf5057f44e20` makes both managed Result publishers — Development Experiment and Research SQL — call this boundary immediately before `createResult`. No schema or new subsystem was added.
+**Smallest sufficient fix:** commit `45152a2da9841c14bec601bd19062a5134705d4e` adds a serialized `beginSuccessCommit` transition to the shared Job controller. Commit `2e5496c90b05da5e2115fbaa47fddf5057f44e20` makes both managed Result publishers — Development Experiment and Research SQL — enter this boundary immediately before `createResult`. No schema or new subsystem was added.
 
-**Intermediate proof:** Fast `#978` on the controller-only commit still failed only the H-004 regression, proving that hardening the generic callback seam alone was insufficient while the concrete managed publishers still emitted Results inside ordinary cancellable `work`. Planning `#1174` and Workload `#564` were green. This drove the analogous concrete-path fix rather than treating the controller change as sufficient.
+**Intermediate proof:** Fast `#978` on the controller-only commit still failed only H-004, proving the generic seam alone was insufficient while concrete managed publishers still emitted Results inside ordinary cancellable `work`.
 
-**Why the fix closes the race:** `beginSuccessCommit` and `cancelJob` serialize on the same Job key. Exactly one can win before Result publication. If cancel wins first, publication never starts. If success commit wins first, cancel returns `CANCELLATION_NOT_AVAILABLE`; Result/progress publication then either succeeds and the Job becomes `SUCCEEDED`, or an actual publication failure transitions the Job to `FAILED` rather than `CANCELLED`.
+**GREEN proof:** Fast `#979` / `38346497780` passed unit `301/301`, service `306/306`, H-004, legacy cancellation proofs and order acceptance. Planning `#1175` / `38346497878` and Workload `#565` / `38346497862` are green.
 
-**GREEN proof:** Fast `#979` / `38346497780` passed unit `301/301`, service `306/306`, the H-004 regression, all prior TREE 11.7 hardening regressions, the existing queued/running/pre-success cancellation tests, managed timeout/cancellation tests and order acceptance. Planning `#1175` / `38346497878` and Workload `#565` / `38346497862` are green.
-
-**Analogous-area review:** the shared Job controller now protects generic `commitSuccess`; both concrete managed durable Result publishers (Experiment and Research SQL) explicitly enter the same boundary. Existing cancellation before durable success remains green, so the fix does not remove legitimate compute-time cancellation. Final Recommendation already publishes its terminal artifact and Run state transactionally and does not use this managed Result path. No second durable Result publisher bypass was found in this slice.
+**Analogous-area review:** generic `commitSuccess`, managed Experiment Result publication and managed Research SQL Result publication now share the protected terminal boundary. Legitimate queued/running/pre-publication cancellation remains green. Final Recommendation is outside this managed Result path and already publishes terminal artifact + Run state transactionally.
 
 **Status:** FIXED / deterministic RED→GREEN regression.
+
+## Fixed finding H-11.7-005 — crash after Result commit could leave a FAILED Job with a readable Result
+
+**Severity:** blocking correctness/failure-hardening defect — fixed.
+
+**Vulnerable sequence:**
+
+```text
+managed Job is RUNNING
+→ success-commit boundary is claimed in memory
+→ durable Result is committed
+→ optional Job progress publishes that Result handle
+→ process crashes before durable markJobSucceeded
+→ restart reconciliation marks RUNNING Job FAILED / RESEARCH_JOB_INTERRUPTED
+→ previously committed Result remains readable
+```
+
+The H-004 success-commit owner is intentionally process-local, so it cannot repair this crash boundary by itself.
+
+**Root cause:** Result publication and `Job = SUCCEEDED` are separate durable transactions, while startup reconciliation previously updated only stale `RUNNING` Job rows. The Result ledger correctly committed its own metadata/rows atomically, but there was no restart authority deciding whether a Result whose source Job never reached terminal success was provisional or authoritative. A crash could therefore create contradictory durable truth: `Job = FAILED` plus a readable Result, and if progress had already been persisted, a failed Job could also retain a stale published `resultHandle`.
+
+**Deterministic RED proof:** commit `245aa0b8edd05761b52df66d751ff17bed4a06cd` adds `tests/service/research-job-result-restart-hardening.test.mjs`. It creates an interrupted `RUNNING` Job and a `SUCCEEDED` negative-control Job, publishes one Result for each, restarts the Job ledger and requires the interrupted Result to disappear while the succeeded Result remains. Fast `#982` / `38347232239` passed unit `301/301`, failed service `306/307`, and the sole failure was the new H-005 assertion because the interrupted Result remained readable. Planning `#1178` and Workload `#568` were green.
+
+**Smallest sufficient fix:** commit `62152ccf835da6b00cc8d1f595527ab889d89e2a` moves default startup reconciliation into the composed Job-ledger wrapper where both Job and optional Result tables can be reconciled in one DuckDB transaction. For Jobs still `RUNNING`, restart reconciliation now:
+
+1. finds Results whose exact `(research_run_id, source_job_id)` belongs to an interrupted Job;
+2. deletes their Result rows and Result metadata when the Result schema exists;
+3. clears only `progress.resultHandles` for those interrupted Jobs while preserving the rest of progress/budget accounting;
+4. marks the same Jobs `FAILED` with `RESEARCH_JOB_INTERRUPTED`;
+5. commits the whole reconciliation atomically, or rolls it all back on failure.
+
+`reconcileInterrupted:false` remains the transient internal path during active managed work, so normal in-process Job access does not repeatedly run startup reconciliation. No schema or public API was added.
+
+**Expanded regression:** commit `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` strengthens the same test by persisting `progress.resultHandles` for both Jobs before the simulated crash. After restart it proves the interrupted Job is `FAILED` with an empty handle list and no readable Result, while the `SUCCEEDED` Job retains both its handle and Result.
+
+**Why fail-closed cleanup is correct:** Result existence alone cannot prove every correctness-critical terminal step completed, so restart must not promote an interrupted Job to `SUCCEEDED`. Conversely, deleting only Results owned by Jobs still `RUNNING` prevents provisional artifacts from becoming authority while preserving already-terminal successful Results. Durable resource/budget consumption is intentionally not refunded because the work was actually consumed; the cleanup changes publication authority, not accounting history.
+
+**GREEN proof:** Fast `#984` / `38347610524` passed unit `301/301`, service `307/307`, H-005, H-004, all legacy Job cancellation/restart/idempotency proofs and order acceptance. Planning `#1180` / `38347610422` and Workload `#570` / `38347610525` are green.
+
+**Analogous-area review:** managed Development Experiment and managed Research SQL share this Job/Result lifecycle and are both covered. H-004 owns same-process cancel-vs-publication; H-005 owns crash/restart after provisional publication. Succeeded Result authority is explicitly preserved by the regression control. Holdout uses its separate durable pre-execution claim/completion protocol (`H-11.7-002`), and Final Recommendation already publishes artifact + terminal Run state transactionally. No second managed Result restart bypass was found in this slice.
+
+**Status:** FIXED / deterministic RED→GREEN restart regression.
 
 ## Verification ledger
 
@@ -212,15 +245,15 @@ If exact support is absent it fails before freezing/inserting the Finalist. The 
 | `21213326a5330d19e8b9f302d728472472ee9777` | Fast `#969` / `38343971596` | RED-by-design — only new crash/restart Holdout regression failed; Planning `#1165` + Workload `#555` green |
 | `d5df2bc1e8d20c948d8bdc6d6e186ba638a8d840` | Fast `#970`, Planning `#1166`, Workload `#556` | GREEN — H-002 crash/restart regression PASS |
 | `acd4d8ea8448591b3073be099c9c310c506905ed` | Fast `#971`, Planning `#1167`, Workload `#557` | GREEN — unit `301/301`, service `304/304`, Holdout v1→v2 migration PASS |
-| `33e8c918ab30a854eea1a9431607355412a3f096` | Fast `#973` / `38345191465` | RED-by-design — unit `301/301`; service `304/305`; only H-003 Finalist-plan regression failed with missing expected rejection |
-| `33e8c918ab30a854eea1a9431607355412a3f096` | Planning `#1169` + Workload `#559` | GREEN — red candidate isolated to the new correctness proof |
-| `8f4eab236a244d0aeba66a7ac33491f978156ca4` | Fast `#974` / `38345355839` | GREEN — unit `301/301`, service `305/305`, H-003 regression PASS, prior hardening proofs PASS, order acceptance PASS |
-| `8f4eab236a244d0aeba66a7ac33491f978156ca4` | Planning `#1170` + Workload `#560` | GREEN |
-| `34266ce85ade5308b7450f89e5f3e33ce29007a2` | Fast `#976` | INVALID RED attempt — fixture failed Evidence Plan validation before the intended race; not product-defect evidence |
-| `2dd97516f147a01262967f06b935fd93631fba42` | Fast `#977` / `38346210985` | RED-by-design — unit `301/301`, service `305/306`; only H-004 late-cancel Result regression failed; Planning `#1173` + Workload `#563` green |
-| `45152a2da9841c14bec601bd19062a5134705d4e` | Fast `#978` | RED intermediate — shared controller boundary alone did not cover managed publishers; H-004 still the sole failure; Planning `#1174` + Workload `#564` green |
-| `2e5496c90b05da5e2115fbaa47fddf5057f44e20` | Fast `#979` / `38346497780` | GREEN — unit `301/301`, service `306/306`, H-004 + legacy cancellation proofs PASS, order acceptance PASS |
-| `2e5496c90b05da5e2115fbaa47fddf5057f44e20` | Planning `#1175` + Workload `#565` | GREEN |
+| `33e8c918ab30a854eea1a9431607355412a3f096` | Fast `#973` / `38345191465` | RED-by-design — unit `301/301`; service `304/305`; only H-003 Finalist-plan regression failed |
+| `8f4eab236a244d0aeba66a7ac33491f978156ca4` | Fast `#974`, Planning `#1170`, Workload `#560` | GREEN — H-003 regression and affected gates PASS |
+| `34266ce85ade5308b7450f89e5f3e33ce29007a2` | Fast `#976` | INVALID RED attempt — fixture failed before intended race; not product-defect evidence |
+| `2dd97516f147a01262967f06b935fd93631fba42` | Fast `#977` / `38346210985` | RED-by-design — unit `301/301`, service `305/306`; only H-004 failed; Planning `#1173` + Workload `#563` green |
+| `45152a2da9841c14bec601bd19062a5134705d4e` | Fast `#978` | RED intermediate — generic controller boundary alone did not cover managed publishers |
+| `2e5496c90b05da5e2115fbaa47fddf5057f44e20` | Fast `#979`, Planning `#1175`, Workload `#565` | GREEN — unit `301/301`, service `306/306`, H-004 + legacy cancellation PASS, order acceptance PASS |
+| `245aa0b8edd05761b52df66d751ff17bed4a06cd` | Fast `#982` / `38347232239` | RED-by-design — unit `301/301`, service `306/307`; only H-005 restart Result regression failed; Planning `#1178` + Workload `#568` green |
+| `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Fast `#984` / `38347610524` | GREEN — unit `301/301`, service `307/307`, H-005 + H-004 + legacy cancellation/restart/idempotency PASS, order acceptance PASS |
+| `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Planning `#1180` + Workload `#570` | GREEN |
 | PR `#108` | Audit integration PR | DRAFT; executable CI vehicle while TREE `11.7` remains in progress; do not merge yet |
 
 ## Current audit result
@@ -228,13 +261,14 @@ If exact support is absent it fails before freezing/inserting the Finalist. The 
 - Audit status: `IN PROGRESS`.
 - `H-11.7-001`: fixed — concurrent same-authority Holdout execution is single-flight.
 - `H-11.7-002`: fixed — crash/restart Holdout uncertainty is durably claimed and fails closed; migration proof is green.
-- `H-11.7-003`: fixed — Finalist lock cannot inherit Validation support from a superseded Evidence Plan; exact current-plan support is enforced by the final ledger authority.
-- `H-11.7-004`: fixed — once managed durable Result publication begins, late cancellation cannot leave a readable Result under a `CANCELLED` Job; Experiment and Research SQL share the same success-commit boundary.
+- `H-11.7-003`: fixed — Finalist lock cannot inherit Validation support from a superseded Evidence Plan.
+- `H-11.7-004`: fixed — once managed durable Result publication begins, late cancellation cannot leave a readable Result under a `CANCELLED` Job.
+- `H-11.7-005`: fixed — restart cannot leave provisional Results/handles from an interrupted `RUNNING` Job authoritative; a `SUCCEEDED` control retains its Result authority.
 - Cross-run / phase / MCP parity: no material bypass found in reviewed slices.
-- Result Handle/cursor first-pass ownership: no material cross-run defect found; incompatible restart/phase-state cases remain.
+- Result Handle/cursor ownership remains `REVIEWED`: cross-run/cross-handle/restart ownership is green, including interrupted-Result cleanup; broader phase/state fuzz can be revisited only if later attacks expose a new path.
+- Cancellation/timeout remains `REVIEWED`, not closed: queued/running/compute/late-publication and crash-after-publication splits are green; remaining responsiveness/resource attacks belong to the open resource matrix.
+- Ledger transactionality is now `REVIEWED`: representative Holdout, Finalist, late-cancel and managed Result crash/restart publication splits have deterministic proofs and fail-closed fixes. No closure claim is made for unrelated SQL/source/transport/resource areas.
 - MCP boundary remains `REVIEWED`, not closed: oversized/error-mapping/lifecycle fuzz remains.
-- Cancellation/timeout is now `REVIEWED`, not closed: queued/running/compute/late-publication races are green; representative crash-during-publication and remaining late-callback/resource cases still require closure.
-- Ledger transactionality remains `OPEN`: Holdout, Finalist and late-cancel Result defects are closed, while remaining representative composed publication-fault/restart attacks still require closure.
-- Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/side-channel/publication-fault cases remain.
-- Closure claim: none. SQL-host/source, remaining composed transaction faults, diagnostics, transport, source-immutability and resource attacks still remain before TREE `11.7` can be marked done.
-- Next audit slice: remaining composed publication-fault/restart cases, then the still-open SQL-host/source and diagnostic/resource matrix. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
+- Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/side-channel cases remain.
+- Closure claim: none. SQL-host/source, source immutability, diagnostics/transport and resource attacks still remain before TREE `11.7` can be marked done.
+- Next audit slice: systematic SQL-host/source adversarial corpus plus before/after source-immutability proof; after that, diagnostics/transport and resource-bound attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
