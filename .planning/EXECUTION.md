@@ -16,7 +16,7 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — completed all eight implementation leaves `11.1`–`11.8` and repository reclosure in PR #110. Its separate target-machine/Desktop acceptance task `B-US-009` remains `blocked` at W2T because the required evidence can only be produced on the user's target machine; W2T/W3 remain NOT PASS.
 
-That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — has nine implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` is complete: PR #116 was squash-merged as `fb0b6230`, with post-merge `main` Planning, Fast, Chromium E2E and bounded Local Fake verification green. `12.2 / Chat 44` is complete: PR #118 was squash-merged as `b3821170`, and post-merge `main` Planning #1328 and Fast #1116 are green. `12.3 / Chat 45` is explicitly activated and in progress on `chat-45-targeted-quote-watch`; bounded quote authority, controlled CPGW-seam cadence/resource measurement and restart/no-fabricated-continuity proof are green, while final affected verification and reclosure remain.
+That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — has nine implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` is complete: PR #116 was squash-merged as `fb0b6230`, with post-merge `main` Planning, Fast, Chromium E2E and bounded Local Fake verification green. `12.2 / Chat 44` is complete: PR #118 was squash-merged as `b3821170`, and post-merge `main` Planning #1328 and Fast #1116 are green. `12.3 / Chat 45` has completed its leaf success evidence on PR #120: bounded quote authority, controlled CPGW ready/retry cadence/resource measurement and restart/no-fabricated-continuity proof are green. The next normal sequence pointer is pending `12.5 / Chat 46`, subject to explicit activation after PR #120 is merged and `main` is reclosed green.
 
 Allocation follows natural feature/context boundaries and real prerequisites only. Waiting for user/target-machine/provider acceptance elsewhere does not freeze unrelated work unless this table records a real dependency.
 
@@ -33,7 +33,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `2.1` | Chat 2 | `done` | — | U.S. schema lifecycle completed; historical evidence preserved. |
 | `2.2` | Chat 2 | `done` | `2.1` | Transactional cycle persistence completed; historical evidence preserved. |
 | `2.3` | Chat 2 | `done` | `1.2`, `2.2` | End-to-end producer authority completed; historical evidence preserved. |
-| `3.1` | Chat 3 | `done` | `2.2` | Trusted U.S. reads completed; historical evidence preserved. |
+| `3.1` | Chat 3 | `done` | — | Trusted U.S. reads completed; historical evidence preserved. |
 | `3.2` | Chat 3 | `done` | `3.1` | Current surface completed; historical evidence preserved. |
 | `3.3` | Chat 3 | `done` | `3.1` | Detail/History completed; historical evidence preserved. |
 | `4.1` | Chat 4 | `done` | `2.2` | U.S. Scanner built-ins/query authoring completed; historical evidence preserved. |
@@ -88,7 +88,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `B-US-009` | Target-machine acceptance executor | `blocked` | `11.8` | Current gate W2T requires actual user target-machine historical evidence. This blocker is not W2T failure evidence and does not block Branch 12. |
 | `12.1` | Chat 43 | `done` | — | PR #116 squash-merged as `fb0b6230`; durable Trading ledger authority, bounded restart run discovery, explicit raw authenticated/provider dump rejection, seven focused authority proofs and Fast-CI `trading-server/**` coverage are green. Fast, Planning, Chromium E2E and bounded Local Fake verification are green both before merge and on post-merge `main`. |
 | `12.2` | Chat 44 | `done` | `12.1` | PR #118 squash-merged as `b3821170`; immutable Scanner generation/query/result-rank handoff, bounded row evidence, durable TradeEpisode admission/reopen and fail-closed identity/provenance-persistence bounds are complete. Pre-merge Planning #1327 and Fast #1115 were green; post-merge `main` Planning #1328 and Fast #1116 are green. |
-| `12.3` | Chat 45 | `in_progress` | `12.1` | Bounded one-shot quote authority reuses CPGW exact-resolution/snapshot seams and fails closed on stale/missing/ambiguous evidence. Workload #680 targeted job is green: shortlist 4, 12 provider requests/poll, zero-delay p95 0.82 ms, controlled 10 ms/request p95 122.12 ms vs 120 ms provider floor, 2.12 ms measured overhead and all 32 observations fresh. Decision: keep bounded polling; no streaming evidence. Restart proof commit `2b4056c8` is green on Planning #1337, Workload #683 and Fast #1123: a fresh watch instance preserves the explicit instrument identity, performs new resolution/snapshot work, consumes new provider timestamps/prices, and fails closed as `UNAVAILABLE` after restart when provider evidence disappears instead of recycling the prior quote. Real provider latency is not inferred here and remains for live-shadow/target-machine acceptance. Final affected verification and reclosure remain. |
+| `12.3` | Chat 45 | `done` | `12.1` | PR #120 implementation/evidence complete pre-merge. Bounded one-shot quote authority reuses CPGW exact-resolution/snapshot seams and fails closed on stale/missing/ambiguous evidence. Restart proof commit `2b4056c8` is green on Planning #1337, Workload #683 and Fast #1123: a fresh watch instance preserves explicit instrument identity, performs new resolution/snapshot work, consumes new provider timestamps/prices, and returns `UNAVAILABLE` after restart when provider evidence disappears instead of recycling the prior quote. Final review found the original workload covered only the ready-snapshot path; RCA commit `9268e137` added the real CPGW first-snapshot-unready retry path. Workload #686 is green on shortlist 4: ready path 12 requests/poll with controlled 10 ms/request p95 122.07 ms vs 120 ms floor; retry path 16 requests/poll plus four 200 ms adapter waits with p95 964.55 ms vs 960 ms floor, 4.55 ms overhead, and maximum provider evidence age 724 ms at poll return against the controlled 1000 ms freshness window. Planning #1340 and Fast #1126 are green on the same head. Decision: keep bounded polling; no streaming evidence. Real provider latency remains for later live-shadow/target-machine acceptance and is not inferred from controlled CI. |
 | `12.5` | Chat 46 | `pending` | `12.1` | Independent Hard Risk Authority + pause/kill-switch boundary. |
 | `12.6` | Chat 46 | `pending` | `12.5`, `8.4` | Protected bridge to existing IBKR Order Service; LIVE remains explicit operator confirmation. |
 | `12.4` | Chat 47 | `pending` | `12.2`, `12.3`, `12.5`, `12.6` | Continuous deterministic Supervisor + state-aware AI Decision Proposal model. |
@@ -113,16 +113,16 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 ## Migration / current-state reconciliation
 
 - Completed execution rows before Branch 12: **58** (`57 done`, `1 blocked`).
-- Branch-12 implementation rows: **9** (`2 done`, `6 pending`, `1 in_progress`).
+- Branch-12 implementation rows: **9** (`3 done`, `6 pending`).
 - Current execution rows: **67**.
-- Done: **59**.
+- Done: **60**.
 - Pending: **6**.
-- In progress: **1** (`12.3 / Chat 45`).
+- In progress: **0**.
 - Blocked: **1** (`B-US-009`, external target-machine evidence).
-- Current normal sequence pointer: `12.3 / Chat 45` is explicitly active and in progress on `chat-45-targeted-quote-watch`.
+- Current normal sequence pointer: `12.5 / Chat 46` is the next pending leaf after completed `12.3`; explicit activation may proceed only after PR #120 is merged and `main` is green.
 - `B-US-009 / W2T` remains separately blocked on target-machine evidence. It is not a dependency of `12.1`–`12.9`.
 - `12.2`, `12.3` and `12.5` are parallel siblings after `12.1`; chat numbering is not dependency truth.
 - `12.6` requires the risk boundary plus the already-completed order-service authority; `12.4` composes the candidate/quote/risk/order seams; later dependencies reflect actual composed prerequisites.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` and is not invented as done.
 
-Branch 11 implementation/repository reclosure remains complete. Branch 12 has completed `12.1` and `12.2`; `12.3 / Chat 45` is in progress while `B-US-009` remains independently blocked on user target-machine evidence.
+Branch 11 implementation/repository reclosure remains complete. Branch 12 has completed `12.1`, `12.2` and `12.3`; the normal sequence pointer is pending `12.5 / Chat 46` while `B-US-009` remains independently blocked on user target-machine evidence.
