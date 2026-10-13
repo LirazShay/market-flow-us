@@ -23,7 +23,7 @@ overall_status: ai_researcher_in_progress
 
 current:
   chat: 38
-  chat_part: 1
+  chat_part: 2
   node: "11.4"
   title: "Durable jobs, result handles and resource governance"
   status: in_progress
@@ -37,16 +37,16 @@ execution_projection:
   in_progress: 1
   blocked: 0
   current_chat: 38
-  current_chat_part: 1
+  current_chat_part: 2
   current_node: "11.4"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "11.4"
   owner: "Chat 38"
-  next_chat_part: 2
+  current_chat_part: 2
   status: in_progress
-  action: "Start Chat 38 Part 2 / 11.4 from repository truth. Blocker #6 is closed: submitDevelopmentExperiment returns a stable immediate experimentId that becomes the actual durable 11.2 Experiment identity only after successful execution, and getAnalysis retrieves compact durable query/provenance/status/result-handle truth across reopen. Fast #898 + Planning/Contract #1090 + Workload #484 are green on implementation head 8d5ee0f3; Fast #897 RCA was a stale hardcoded test Experiment ID and was corrected test-only. Next close only Blocker #7 diff hygiene by restoring completed row 11.1 exactly to main, then stop for the subsequent full 11.4 success-evidence/diff review. PR #102 remains draft."
+  action: "Chat 38 Part 2 is active. Blocker #7 diff hygiene is closed: completed row 11.1 now matches main exactly after restoration commit da16ed0e, and the authoritative 11.4 result records the checkpoint. Next run the full 11.4 success-evidence/diff review as the next segment; do not mark PR #102 ready before that review is green. PR #102 remains draft."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
