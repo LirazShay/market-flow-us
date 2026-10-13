@@ -218,9 +218,91 @@ function mapScannerFailure(error) {
   return scannerError(ERROR_CODES.SCANNER_EXECUTION_ERROR);
 }
 
+function normalizeResultLimits(resultLimits) {
+  if (resultLimits === undefined || resultLimits === null) return null;
+  if (typeof resultLimits !== "object" || Array.isArray(resultLimits)) {
+    throw new TypeError("resultLimits must be an object.");
+  }
+  const keys = Object.keys(resultLimits).sort();
+  if (keys.length !== 2 || keys[0] !== "maxBytes" || keys[1] !== "maxRows") {
+    throw new TypeError("resultLimits must contain exactly maxRows and maxBytes.");
+  }
+  const maxRows = Number(resultLimits.maxRows);
+  const maxBytes = Number(resultLimits.maxBytes);
+  if (!Number.isSafeInteger(maxRows) || maxRows < 1) {
+    throw new TypeError("resultLimits.maxRows must be a positive safe integer.");
+  }
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 2) {
+    throw new TypeError("resultLimits.maxBytes must be a safe integer of at least 2.");
+  }
+  return Object.freeze({ maxRows, maxBytes });
+}
+
+function resultColumns(reader) {
+  return Array.from({ length: reader.columnCount }, (_, columnIndex) => ({
+    name: reader.columnName(columnIndex),
+    type: reader.columnType(columnIndex).toString()
+  }));
+}
+
+function rowObject(columns, row) {
+  return Object.fromEntries(columns.map((column, index) => [column.name, row[index]]));
+}
+
+async function readBoundedResult(prepared, limits) {
+  if (typeof prepared.streamAndRead !== "function") {
+    throw new Error("Scanner bounded execution requires DuckDB streaming support");
+  }
+
+  const reader = await prepared.streamAndRead();
+  const columns = resultColumns(reader);
+  const rows = [];
+  let processed = 0;
+  let serializedBytes = 2;
+
+  while (true) {
+    if (reader.done && processed >= reader.currentRowCount) break;
+    if (processed >= reader.currentRowCount) {
+      await reader.readUntil(reader.currentRowCount + 1);
+    }
+
+    const available = reader.getRowsJson();
+    while (processed < available.length) {
+      const row = available[processed];
+      processed += 1;
+
+      if (rows.length >= limits.maxRows) {
+        return {
+          columns,
+          rows,
+          limitExceeded: Object.freeze({ dimension: "resultRows", limit: limits.maxRows })
+        };
+      }
+
+      const objectBytes = Buffer.byteLength(JSON.stringify(rowObject(columns, row)), "utf8");
+      const nextSerializedBytes = serializedBytes + objectBytes + (rows.length === 0 ? 0 : 1);
+      if (nextSerializedBytes > limits.maxBytes) {
+        return {
+          columns,
+          rows,
+          limitExceeded: Object.freeze({ dimension: "resultBytes", limit: limits.maxBytes })
+        };
+      }
+
+      rows.push(row);
+      serializedBytes = nextSerializedBytes;
+    }
+
+    if (reader.done) break;
+  }
+
+  return { columns, rows, limitExceeded: null };
+}
+
 export async function createScannerAuthority({
   connection,
-  now = () => Date.now()
+  now = () => Date.now(),
+  resultLimits
 } = {}) {
   if (
     !connection
@@ -232,6 +314,7 @@ export async function createScannerAuthority({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
+  const boundedResultLimits = normalizeResultLimits(resultLimits);
 
   const sideEffectFunctions = await loadSideEffectFunctions(connection);
   const forbiddenFunctions = new Set([
@@ -270,12 +353,19 @@ export async function createScannerAuthority({
         throw scannerError(ERROR_CODES.SCANNER_FORBIDDEN_FUNCTION);
       }
 
-      const reader = await prepared.runAndReadAll();
-      const columns = Array.from({ length: reader.columnCount }, (_, columnIndex) => ({
-        name: reader.columnName(columnIndex),
-        type: reader.columnType(columnIndex).toString()
-      }));
-      const rows = reader.getRowsJson();
+      let columns;
+      let rows;
+      let limitExceeded = null;
+      if (boundedResultLimits) {
+        const bounded = await readBoundedResult(prepared, boundedResultLimits);
+        columns = bounded.columns;
+        rows = bounded.rows;
+        limitExceeded = bounded.limitExceeded;
+      } else {
+        const reader = await prepared.runAndReadAll();
+        columns = resultColumns(reader);
+        rows = reader.getRowsJson();
+      }
       const completedAtMs = readClock(now);
 
       return {
@@ -284,7 +374,8 @@ export async function createScannerAuthority({
         rowCount: rows.length,
         startedAtMs,
         completedAtMs,
-        durationMs: Math.max(0, completedAtMs - startedAtMs)
+        durationMs: Math.max(0, completedAtMs - startedAtMs),
+        ...(limitExceeded ? { limitExceeded } : {})
       };
     } catch (error) {
       throw mapScannerFailure(error);
