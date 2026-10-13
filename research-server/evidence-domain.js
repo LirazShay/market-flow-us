@@ -109,6 +109,26 @@ function assertEvidencePlanPartitions(partitions) {
   return partitions;
 }
 
+function publicPartition(partition) {
+  if (!partition || partition.role !== "SEALED_HOLDOUT") return partition;
+  return Object.freeze({
+    partitionId: partition.partitionId,
+    researchRunId: partition.researchRunId,
+    evidencePlanId: partition.evidencePlanId,
+    role: partition.role,
+    partition: Object.freeze({ sealed: true }),
+    partitionHash: null
+  });
+}
+
+function publicEvidencePlan(plan) {
+  if (!plan) return null;
+  return Object.freeze({
+    ...plan,
+    partitions: Object.freeze(plan.partitions.map(publicPartition))
+  });
+}
+
 export async function openResearchEvidenceDomain(options = {}) {
   const ledger = await openResearchEvidenceLedger(options);
 
@@ -137,27 +157,29 @@ export async function openResearchEvidenceDomain(options = {}) {
       }
       assertLogicalEvidenceValue(input.plan, "plan");
       assertEvidencePlanPartitions(input.partitions);
-      return await ledger.createEvidencePlan(input);
+      return publicEvidencePlan(await ledger.createEvidencePlan(input));
     },
 
     async getEvidencePlan(researchRunId, evidencePlanId) {
-      return await ledger.getEvidencePlan(researchRunId, evidencePlanId);
+      return publicEvidencePlan(await ledger.getEvidencePlan(researchRunId, evidencePlanId));
     },
 
     async getCurrentEvidencePlan(researchRunId) {
-      return await ledger.getCurrentEvidencePlan(researchRunId);
+      return publicEvidencePlan(await ledger.getCurrentEvidencePlan(researchRunId));
     },
 
     async listEvidencePlans(researchRunId, options) {
-      return await ledger.listEvidencePlans(researchRunId, options);
+      const plans = await ledger.listEvidencePlans(researchRunId, options);
+      return Object.freeze(plans.map(publicEvidencePlan));
     },
 
     async getPartition(researchRunId, partitionId) {
-      return await ledger.getPartition(researchRunId, partitionId);
+      return publicPartition(await ledger.getPartition(researchRunId, partitionId));
     },
 
     async listPartitions(researchRunId, evidencePlanId) {
-      return await ledger.listPartitions(researchRunId, evidencePlanId);
+      const partitions = await ledger.listPartitions(researchRunId, evidencePlanId);
+      return Object.freeze(partitions.map(publicPartition));
     },
 
     async close() {
