@@ -7,6 +7,8 @@ import {
   researchDesktopPreflightErrorCode,
   terminateProcessTree,
   validateDesktopPluginRepositoryContract,
+  validateMcpInitializeResult,
+  validateMcpToolList,
   waitForMcpProcessClose
 } from "../../scripts/check-research-desktop-preflight.mjs";
 
@@ -34,6 +36,61 @@ test("TREE 11.8 Desktop preflight exports only owned stable public error codes",
   assert.equal(
     researchDesktopPreflightErrorCode({ code: "C:\\Users\\Private\\market-data.duckdb" }),
     "RESEARCH_DESKTOP_PREFLIGHT_FAILED"
+  );
+});
+
+test("TREE 11.8 Desktop preflight requires the exact MCP protocol version", () => {
+  assert.equal(
+    validateMcpInitializeResult({
+      protocolVersion: "2025-06-18",
+      serverInfo: { name: "market-flow-us-research" }
+    }).protocolVersion,
+    "2025-06-18"
+  );
+
+  assert.throws(
+    () => validateMcpInitializeResult({
+      protocolVersion: "2025-03-26",
+      serverInfo: { name: "market-flow-us-research" }
+    }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MISMATCH"
+  );
+});
+
+test("TREE 11.8 Desktop preflight rejects duplicate or malformed MCP tool entries", () => {
+  const required = [
+    "describe_research_environment",
+    "bootstrap_research",
+    "describe_research_schema",
+    "submit_development_experiment",
+    "submit_development_research_sql",
+    "get_result_page",
+    "execute_holdout_evaluation"
+  ];
+  const validNames = [
+    ...required,
+    ...Array.from({ length: 39 }, (_, index) => `tool_${index + 1}`)
+  ];
+  assert.equal(validateMcpToolList({ tools: validNames.map((name) => ({ name })) }).size, 46);
+
+  const duplicateDisguisedAsFortySixUnique = [
+    ...validNames,
+    { name: validNames[0] }
+  ];
+  assert.throws(
+    () => validateMcpToolList({
+      tools: duplicateDisguisedAsFortySixUnique.map((entry) => (
+        typeof entry === "string" ? { name: entry } : entry
+      ))
+    }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH"
+  );
+
+  assert.throws(
+    () => validateMcpToolList({
+      tools: validNames.map((name, index) => index === 45 ? { name: "" } : { name })
+    }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH"
   );
 });
 
