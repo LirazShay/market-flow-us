@@ -40,6 +40,20 @@ function resultInput(sourceJobId) {
   };
 }
 
+function completedProgress(resultHandle) {
+  return {
+    completedUnits: 1,
+    totalUnits: 1,
+    resultHandles: [{
+      resultHandle,
+      resultKind: "RESEARCH_SQL_RESULT",
+      rowCount: 1,
+      serializedBytes: 13
+    }],
+    budget: []
+  };
+}
+
 test("TREE 11.7 restart purges provisional Results from interrupted Jobs and preserves succeeded authority", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-result-restart-hardening-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
@@ -93,6 +107,8 @@ test("TREE 11.7 restart purges provisional Results from interrupted Jobs and pre
         throw new Error("terminalization must not allocate a Job ID");
       }
     });
+    await jobs.updateJobProgress(RUN_ID, INTERRUPTED_JOB_ID, completedProgress(INTERRUPTED_RESULT));
+    await jobs.updateJobProgress(RUN_ID, SUCCEEDED_JOB_ID, completedProgress(SUCCEEDED_RESULT));
     await jobs.markJobSucceeded(RUN_ID, SUCCEEDED_JOB_ID);
     await jobs.close();
     jobs = null;
@@ -109,7 +125,9 @@ test("TREE 11.7 restart purges provisional Results from interrupted Jobs and pre
     const succeeded = await jobs.getJob(RUN_ID, SUCCEEDED_JOB_ID);
     assert.equal(interrupted.status, "FAILED");
     assert.equal(interrupted.errorCode, "RESEARCH_JOB_INTERRUPTED");
+    assert.deepEqual(interrupted.progress.resultHandles, []);
     assert.equal(succeeded.status, "SUCCEEDED");
+    assert.equal(succeeded.progress.resultHandles[0].resultHandle, SUCCEEDED_RESULT);
     await jobs.close();
     jobs = null;
 
