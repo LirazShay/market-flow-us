@@ -25,15 +25,15 @@ current:
   chat: 42
   node: "11.8"
   title: "Representative workload, desktop acceptance and deterministic reclosure"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 56
-  pending: 1
-  in_progress: 0
+  pending: 0
+  in_progress: 1
   blocked: 0
   current_chat: 42
   current_node: "11.8"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.8"
   owner: "Chat 42"
-  status: pending
-  action: "Chat 41 / TREE 11.7 is complete. PR #108 squash-merged as e5e04a1a72f3b5cf5c34a4512a46f7fdbe9867c9 after final adversarial reclosure; merged-main Fast #1019, Planning/Contract #1215, Workload #605, Replay #167 and Browser #629 are green and the post-merge open-PR audit is empty. Start Chat 42 / 11.8 only through explicit numbered-chat activation; generic continuation in completed Chat 41 must not switch executor identity."
+  status: in_progress
+  action: "Continue Chat 42 / TREE 11.8 only. W1 reduced CI and W2 representative 4,096-security synthetic Research workload are green on PR #110 and recorded in .planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md without widening concurrency, budgets or timeouts. Next: execute current target-machine/Desktop W3 plugin/MCP bootstrap + fresh-context resume acceptance if the supported product surface permits it; otherwise record the exact external-product blocker, then finish user-doc synchronization and deterministic full reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -57,6 +57,7 @@ navigation:
   autonomous_ai_researcher_operating_contract: ".planning/AI_RESEARCHER_OPERATING_CONTRACT.md"
   autonomous_ai_researcher_security_resource: ".planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md"
   autonomous_ai_researcher_hardening_audit: ".planning/AI_RESEARCHER_HARDENING_AUDIT.md"
+  autonomous_ai_researcher_acceptance_evidence: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
   autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   chatgpt_research_plugin: "docs/CHATGPT_RESEARCH_PLUGIN.md"
