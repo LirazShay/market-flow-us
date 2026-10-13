@@ -14,6 +14,7 @@ export const RESEARCH_INSUFFICIENT_RECOMMENDATION_SCHEMA_VERSION = 1;
 export const RESEARCH_INSUFFICIENT_RECOMMENDATION_ARTIFACT_VERSION =
   "research-insufficient-evidence-recommendation-v1";
 
+const ANALYSIS_OPERATION = "execute_development_research_sql";
 const REQUIRED_TABLES = Object.freeze([
   "research_ledger_info",
   "research_runs",
@@ -339,11 +340,13 @@ export async function openResearchInsufficientRecommendationLedger({
   const instance = await DuckDBInstance.create(dbPath, RESEARCH_LEDGER_DUCKDB_HARDENING);
   const connection = await instance.connect();
   let closed = false;
+  let availableTables;
 
   try {
     const createdAtMs = assertSafeTimestamp(now(), "now()");
     await validatePrerequisites(connection);
     await bootstrapOrValidate(connection, createdAtMs);
+    availableTables = new Set(await tableNames(connection));
     await lockConfiguration(connection);
   } catch (error) {
     closeQuietly(connection);
@@ -383,31 +386,61 @@ export async function openResearchInsufficientRecommendationLedger({
   }
 
   async function searchBreadth(runId) {
-    const [candidates, experiments, exposures] = await Promise.all([
-      queryRows(connection, "SELECT COUNT(*) AS count FROM query_artifacts WHERE research_run_id = $researchRunId", { researchRunId: runId }),
-      queryRows(connection, "SELECT COUNT(*) AS count FROM experiment_records WHERE research_run_id = $researchRunId", { researchRunId: runId }),
-      queryRows(connection, "SELECT COUNT(*) AS count FROM validation_exposures WHERE research_run_id = $researchRunId", { researchRunId: runId })
-    ]);
+    const candidates = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM query_artifacts WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
+    const experiments = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM experiment_records WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
+    const exposures = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM validation_exposures WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
+    let analysisCount = 0;
+    if (availableTables.has("research_jobs")) {
+      const analyses = await queryRows(
+        connection,
+        `SELECT COUNT(*) AS count FROM research_jobs
+         WHERE research_run_id = $researchRunId AND operation = $operation`,
+        { researchRunId: runId, operation: ANALYSIS_OPERATION }
+      );
+      analysisCount = countValue(analyses[0], "count", "analysis");
+    }
     return freezeCopy({
       candidateArtifactCount: countValue(candidates[0], "count", "candidate artifact"),
       experimentCount: countValue(experiments[0], "count", "experiment"),
-      analysisCount: 0,
+      analysisCount,
       validationExposureCount: countValue(exposures[0], "count", "validation exposure")
     });
   }
 
   async function assertNoIndependentFinalizationAuthority(runId, objectiveVersionId) {
-    const [plans, finalists, holdouts, regularArtifacts] = await Promise.all([
-      queryRows(
-        connection,
-        `SELECT COUNT(*) AS count FROM evidence_plans
-         WHERE research_run_id = $researchRunId AND objective_version_id = $objectiveVersionId`,
-        { researchRunId: runId, objectiveVersionId }
-      ),
-      queryRows(connection, "SELECT COUNT(*) AS count FROM finalist_sets WHERE research_run_id = $researchRunId", { researchRunId: runId }),
-      queryRows(connection, "SELECT COUNT(*) AS count FROM holdout_evaluations WHERE research_run_id = $researchRunId", { researchRunId: runId }),
-      queryRows(connection, "SELECT COUNT(*) AS count FROM recommendation_artifacts WHERE research_run_id = $researchRunId", { researchRunId: runId })
-    ]);
+    const plans = await queryRows(
+      connection,
+      `SELECT COUNT(*) AS count FROM evidence_plans
+       WHERE research_run_id = $researchRunId AND objective_version_id = $objectiveVersionId`,
+      { researchRunId: runId, objectiveVersionId }
+    );
+    const finalists = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM finalist_sets WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
+    const holdouts = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM holdout_evaluations WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
+    const regularArtifacts = await queryRows(
+      connection,
+      "SELECT COUNT(*) AS count FROM recommendation_artifacts WHERE research_run_id = $researchRunId",
+      { researchRunId: runId }
+    );
     if (countValue(plans[0], "count", "evidence plan") > 0) {
       throw new Error("Insufficient-evidence finalization is unavailable after an Evidence Plan was committed for this Objective");
     }
