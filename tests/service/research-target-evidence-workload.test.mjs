@@ -50,8 +50,7 @@ test("TREE 11.8 target-machine source selection consumes existing evidence and n
       kind: "active",
       schemaVersion: 4,
       latestAtMs: 22000,
-      t0AtMs: 12000,
-      sampledCycleCount: 3
+      t0AtMs: 12000
     });
     assert.equal(JSON.stringify(selection).includes(root), false, "selection must never expose an absolute source path");
 
