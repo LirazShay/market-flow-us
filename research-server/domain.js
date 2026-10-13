@@ -546,10 +546,19 @@ export async function openResearchDomain(options = {}) {
       assertPublicSafeValue(input, "query artifact");
       const artifact = await useLedger((ledger) => ledger.createQueryArtifact(input));
       if (artifact.parentQueryArtifactId !== null) {
-        await useHoldout((holdout) => holdout.recordPostHoldoutQueryArtifact({
-          researchRunId: artifact.researchRunId,
-          queryArtifactId: artifact.queryArtifactId
-        }));
+        const parent = await useLedger((ledger) => ledger.getQueryArtifact(
+          artifact.researchRunId,
+          artifact.parentQueryArtifactId
+        ));
+        if (!parent) {
+          throw new Error("Query Artifact parent disappeared after durable creation");
+        }
+        if (parent.sqlHash !== artifact.sqlHash) {
+          await useHoldout((holdout) => holdout.recordPostHoldoutQueryArtifact({
+            researchRunId: artifact.researchRunId,
+            queryArtifactId: artifact.queryArtifactId
+          }));
+        }
       }
       return artifact;
     },
