@@ -21,6 +21,14 @@ function assertIntervalMs(value) {
   return value;
 }
 
+function readNow(now) {
+  const value = now();
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new TypeError("now() must return a non-negative safe integer millisecond timestamp");
+  }
+  return value;
+}
+
 function assertNonEmptyString(value, label) {
   if (typeof value !== "string" || value.length === 0) {
     throw new TypeError(`${label} must be a non-empty string`);
@@ -76,15 +84,15 @@ function normalizeReconciledOrder(value, requestId) {
   };
 }
 
-function publicLoopSnapshot(active) {
-  if (active === null) return Object.freeze({ running: false });
+function publicLoopSnapshot(state) {
+  if (state === null) return Object.freeze({ running: false });
   return Object.freeze({
-    running: !active.stopped,
-    tradingRunId: active.tradingRunId,
-    tradeEpisodeId: active.tradeEpisodeId,
-    intervalMs: active.intervalMs,
-    cyclesCompleted: active.cyclesCompleted,
-    lastStatus: active.lastStatus
+    running: !state.stopped,
+    tradingRunId: state.tradingRunId,
+    tradeEpisodeId: state.tradeEpisodeId,
+    intervalMs: state.intervalMs,
+    cyclesCompleted: state.cyclesCompleted,
+    lastStatus: state.lastStatus
   });
 }
 
@@ -93,6 +101,7 @@ export function createContinuousTradingSupervisor({
   ledger,
   readDecisionProposal = async () => null,
   readReconciledOrder = async () => null,
+  now = Date.now,
   setTimeoutFn = setTimeout,
   clearTimeoutFn = clearTimeout
 }) {
@@ -111,6 +120,7 @@ export function createContinuousTradingSupervisor({
   if (typeof readReconciledOrder !== "function") {
     throw new TypeError("readReconciledOrder must be a function");
   }
+  if (typeof now !== "function") throw new TypeError("now must be a function");
   if (typeof setTimeoutFn !== "function" || typeof clearTimeoutFn !== "function") {
     throw new TypeError("timer functions are required");
   }
@@ -122,7 +132,7 @@ export function createContinuousTradingSupervisor({
     await ledger.appendPositionState({
       tradingRunId,
       tradeEpisodeId,
-      observedAtMs: Date.now(),
+      observedAtMs: readNow(now),
       state: recovered
     });
     return recovered;
@@ -175,7 +185,7 @@ export function createContinuousTradingSupervisor({
       orderReference = await ledger.appendOrderReference({
         tradingRunId,
         tradeEpisodeId,
-        recordedAtMs: Date.now(),
+        recordedAtMs: readNow(now),
         localOrderId: normalized.localOrderId,
         requestId: normalized.requestId,
         lifecycleState: normalized.lifecycleState
@@ -194,19 +204,6 @@ export function createContinuousTradingSupervisor({
       reconciled: true,
       orderReference
     });
-  }
-
-  function scheduleNext(state, delayMs) {
-    if (active !== state || state.stopped) return;
-    state.timer = setTimeoutFn(() => {
-      state.timer = null;
-      void runCycle(state).catch((error) => {
-        if (active !== state || state.stopped) return;
-        state.stopped = true;
-        active = null;
-        state.rejectDone(error);
-      });
-    }, delayMs);
   }
 
   async function proposalOrFallback(restored) {
@@ -249,6 +246,17 @@ export function createContinuousTradingSupervisor({
       return;
     }
 
+    if (restored.snapshot.supervisorState.lifecycleState === "IDLE") {
+      await runtime.startWatching({
+        tradingRunId: state.tradingRunId,
+        tradeEpisodeId: state.tradeEpisodeId
+      });
+      restored = await runtime.restoreEpisode({
+        tradingRunId: state.tradingRunId,
+        tradeEpisodeId: state.tradeEpisodeId
+      });
+    }
+
     const lifecycleState = restored.snapshot.supervisorState.lifecycleState;
     if (!DECISION_READY_STATES.has(lifecycleState)) {
       state.lastStatus = lifecycleState;
@@ -257,7 +265,7 @@ export function createContinuousTradingSupervisor({
       return;
     }
 
-    const proposal = await proposalOrFallback(restored);
+    const proposal = (await proposalOrFallback(restored)) ?? null;
     const result = await runtime.evaluateCycle({
       tradingRunId: state.tradingRunId,
       tradeEpisodeId: state.tradeEpisodeId,
@@ -268,6 +276,25 @@ export function createContinuousTradingSupervisor({
     state.lastStatus = result.status;
     state.cyclesCompleted += 1;
     scheduleNext(state, state.intervalMs);
+  }
+
+  function failLoop(state, error) {
+    if (active !== state || state.stopped) return;
+    state.stopped = true;
+    active = null;
+    state.rejectDone(error);
+  }
+
+  function scheduleNext(state, delayMs) {
+    if (active !== state || state.stopped) return;
+    state.timer = setTimeoutFn(async () => {
+      state.timer = null;
+      try {
+        await runCycle(state);
+      } catch (error) {
+        failLoop(state, error);
+      }
+    }, delayMs);
   }
 
   async function start({
@@ -287,10 +314,7 @@ export function createContinuousTradingSupervisor({
       throw new TypeError("authorizedSwitchTargetKeys must be an array");
     }
 
-    const restored = await runtime.restoreEpisode({ tradingRunId, tradeEpisodeId });
-    if (restored.snapshot.supervisorState.lifecycleState === "IDLE") {
-      await runtime.startWatching({ tradingRunId, tradeEpisodeId });
-    }
+    await runtime.restoreEpisode({ tradingRunId, tradeEpisodeId });
 
     let resolveDone;
     let rejectDone;
@@ -298,6 +322,7 @@ export function createContinuousTradingSupervisor({
       resolveDone = resolve;
       rejectDone = reject;
     });
+    void done.catch(() => {});
     const state = {
       tradingRunId,
       tradeEpisodeId,
@@ -325,7 +350,7 @@ export function createContinuousTradingSupervisor({
       },
       done,
       get status() {
-        return publicLoopSnapshot(active === state ? state : null);
+        return publicLoopSnapshot(state);
       }
     });
   }
@@ -348,6 +373,7 @@ export function createContinuousTradingSupervisorRuntime(options) {
       ledger: options.ledger,
       readDecisionProposal: options.readDecisionProposal,
       readReconciledOrder: options.readReconciledOrder,
+      now: options.now,
       setTimeoutFn: options.setTimeoutFn,
       clearTimeoutFn: options.clearTimeoutFn
     })
