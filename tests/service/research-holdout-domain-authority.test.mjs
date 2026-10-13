@@ -71,6 +71,8 @@ function evaluationProfile() {
     selectionPolicy: "TOP_N",
     topX: 3,
     horizonsMs: [10_000, 60_000],
+    intervalValue: 1,
+    intervalUnit: "seconds",
     metricProfile: {
       contractVersion: "research-experiment-metrics-v1",
       primaryMetric: "positiveRate"
@@ -138,35 +140,26 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
           sourceId: SOURCE_ID,
           sourceFingerprint: SOURCE_FINGERPRINT,
           classification: "ARCHIVE",
-          schemaVersion: 4
+          schemaVersion: 4,
+          firstCompleteAtMs: 0,
+          lastCompleteAtMs: 1_000_000
         }]
       }
     });
-    await domain.createEvidencePlan({
+    const proposal = await domain.proposeEvidencePlan({
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
       evidenceInventoryId: INVENTORY_ID,
-      plan: { algorithmVersion: "chronological-purged-v1", horizonAwarePurgeMs: 60_000 },
-      partitions: [
-        { role: "DEVELOPMENT", partition: { sourceIds: [SOURCE_ID], range: { fromMs: 1_000, toMs: 9_000 } } },
-        { role: "VALIDATION", partition: { sourceIds: [SOURCE_ID], range: { fromMs: 20_000, toMs: 29_000 } } },
-        {
-          role: "SEALED_HOLDOUT",
-          partition: {
-            sourceIds: [SOURCE_ID],
-            holdoutSchedule: {
-              sources: [{
-                sourceId: SOURCE_ID,
-                fromAtMs: 40_000,
-                toAtMs: 40_000,
-                intervalValue: 1,
-                intervalUnit: "seconds"
-              }]
-            }
-          }
-        }
-      ]
+      evaluationProfile: evaluationProfile()
     });
+    await domain.commitEvidencePlan({
+      researchRunId: RUN_ID,
+      objectiveVersionId: OBJECTIVE_ID,
+      evidenceInventoryId: INVENTORY_ID,
+      proposal
+    });
+    const validationSchedule = proposal.partitions[1].partition.validationSchedule.sources[0];
+    const holdoutSchedule = proposal.partitions[2].partition.holdoutSchedule.sources[0];
 
     await domain.executeValidationExperiment({
       researchRunId: RUN_ID,
@@ -174,10 +167,10 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
       partitionId: PART_VALIDATION,
       sourceId: SOURCE_ID,
       queryArtifactIds: [QUERY_FINALIST],
-      fromAtMs: 20_000,
-      toAtMs: 20_000,
-      intervalValue: 1,
-      intervalUnit: "seconds",
+      fromAtMs: validationSchedule.fromAtMs,
+      toAtMs: validationSchedule.toAtMs,
+      intervalValue: validationSchedule.intervalValue,
+      intervalUnit: validationSchedule.intervalUnit,
       topX: 3,
       horizonsMs: [10_000, 60_000]
     });
@@ -213,17 +206,18 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     assert.equal(holdout.sourceResults.length, 1);
     assert.equal(holdout.sourceResults[0].sourceId, SOURCE_ID);
     assert.deepEqual(holdout.sourceResults[0].schedule, {
-      fromAtMs: 40_000,
-      toAtMs: 40_000,
-      intervalValue: 1,
-      intervalUnit: "seconds"
+      fromAtMs: holdoutSchedule.fromAtMs,
+      toAtMs: holdoutSchedule.toAtMs,
+      intervalValue: holdoutSchedule.intervalValue,
+      intervalUnit: holdoutSchedule.intervalUnit
     });
 
     assert.equal(executions.length, 2);
     assert.equal(executions[1].evidencePartitionId, PART_HOLDOUT);
     assert.equal(executions[1].sourceId, SOURCE_ID);
     assert.equal(executions[1].queryArtifacts[0].queryArtifactId, QUERY_FINALIST);
-    assert.equal(executions[1].fromAtMs, 40_000);
+    assert.equal(executions[1].fromAtMs, holdoutSchedule.fromAtMs);
+    assert.equal(executions[1].toAtMs, holdoutSchedule.toAtMs);
     assert.equal(executions[1].topX, 3);
     assert.deepEqual(executions[1].horizonsMs, [10_000, 60_000]);
 
