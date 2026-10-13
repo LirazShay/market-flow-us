@@ -1,0 +1,20 @@
+{
+  "name": "market-flow-us-local",
+  "interface": {
+    "displayName": "Market Flow US Local"
+  },
+  "plugins": [
+    {
+      "name": "market-flow-us-researcher",
+      "source": {
+        "source": "local",
+        "path": "./plugins/market-flow-us-researcher"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

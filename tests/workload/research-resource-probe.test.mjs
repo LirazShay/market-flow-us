@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -21,6 +21,7 @@ const HARD_QUEUED_CANCEL_CEILING_MS = 1000;
 const RUN_ID = "run_99999999-9999-4999-8999-999999999999";
 const OBJECTIVE_ID = "obj_99999999-9999-4999-8999-999999999999";
 const QUERY_ID = "qry_99999999-9999-4999-8999-999999999999";
+const QUERY_FAST_ID = "qry_99999999-9999-4999-8999-999999999998";
 const INVENTORY_ID = "inv_99999999-9999-4999-8999-999999999999";
 const PLAN_ID = "plan_99999999-9999-4999-8999-999999999999";
 const PART_DEV = "part_99999999-9999-4999-8999-999999999991";
@@ -30,8 +31,11 @@ const JOB_SQL_QUEUED = "job_99999999-9999-4999-8999-999999999992";
 const JOB_EXPERIMENT = "job_99999999-9999-4999-8999-999999999993";
 const JOB_SQL_SUCCESS = "job_99999999-9999-4999-8999-999999999994";
 const JOB_SQL_RESTART = "job_99999999-9999-4999-8999-999999999995";
+const JOB_EXPERIMENT_SUCCESS = "job_99999999-9999-4999-8999-999999999996";
 const RESULT_SQL_SUCCESS = "res_99999999-9999-4999-8999-999999999991";
 const RESULT_SQL_RESTART = "res_99999999-9999-4999-8999-999999999992";
+const RESULT_EXPERIMENT_SUCCESS = "res_99999999-9999-4999-8999-999999999993";
+const DUPLICATE_SUBMISSION_COUNT = 16;
 const LONG_SCANNER_SQL = `
   SELECT latest.security_id
   FROM latest
@@ -39,6 +43,12 @@ const LONG_SCANNER_SQL = `
   GROUP BY latest.security_id
   ORDER BY SUM(SIN(i::DOUBLE)) DESC
   LIMIT 1
+`;
+const FAST_SCANNER_SQL = `
+  SELECT latest.security_id
+  FROM latest
+  ORDER BY latest.DailyVolume DESC, latest.security_id ASC
+  LIMIT 10
 `;
 const LONG_RESEARCH_SQL = `
   SELECT research_history.security_id
@@ -87,6 +97,16 @@ const RESOURCE_POLICY = Object.freeze({
     sqlAnalysis: Object.freeze({ workUnits: 1, t0Evaluations: 100, resultRows: 1000, resultBytes: 500_000 })
   })
 });
+
+async function directoryBytes(directory) {
+  let total = 0;
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) total += await directoryBytes(entryPath);
+    else if (entry.isFile()) total += (await stat(entryPath)).size;
+  }
+  return total;
+}
 
 async function seedMarketData(dataDir, universeSize) {
   const database = await openMarketFlowUsDatabase({
@@ -200,27 +220,46 @@ function resultHandle(job) {
   return job.progress.resultHandles[0];
 }
 
-test("TREE 11.4 representative managed workload measures cancellation, restart and bounded resource reuse", { timeout: 3 * 60 * 1000 }, async () => {
+test("TREE 11.8 representative managed workload proves bounded 4,096-security research execution", { timeout: 3 * 60 * 1000 }, async () => {
   const profile = resolveProfile();
+  const mode = workloadMode();
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-research-workload-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   const jobIdFactory = sequence([
     JOB_SQL_ACTIVE,
     JOB_SQL_QUEUED,
     JOB_EXPERIMENT,
+    JOB_EXPERIMENT_SUCCESS,
     JOB_SQL_SUCCESS,
     JOB_SQL_RESTART
   ]);
-  const resultHandleFactory = sequence([RESULT_SQL_SUCCESS, RESULT_SQL_RESTART]);
+  const resultHandleFactory = sequence([
+    RESULT_EXPERIMENT_SUCCESS,
+    RESULT_SQL_SUCCESS,
+    RESULT_SQL_RESTART
+  ]);
+  const queryArtifactIdFactory = sequence([QUERY_ID, QUERY_FAST_ID]);
   const partitionIdFactory = sequence([PART_DEV, PART_VALIDATION]);
+  const cpuBefore = process.cpuUsage();
+  const resourcesBefore = process.resourceUsage();
   const report = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     product: "Market Flow US",
-    profileMode: workloadMode(),
+    profileMode: mode,
     profile,
     result: "running",
+    gates: {
+      W1: mode === "ci" ? "PASS_ON_SUCCESS" : "SEPARATE_CI_PROOF_REQUIRED",
+      W2: profile.targetAuthority ? "PASS_ON_SUCCESS" : "NOT_TARGET_PROFILE",
+      W3: "REQUIRES_TARGET_MACHINE_DESKTOP_ACCEPTANCE"
+    },
     limits: RESOURCE_POLICY,
     cancellation: null,
+    duplicatePressure: null,
+    strategySandboxMs: null,
+    strategySandboxResultRows: null,
+    strategySandboxResultBytes: null,
+    strategySandboxProgressBytes: null,
     successfulSqlMs: null,
     resultPageMs: null,
     closeMs: null,
@@ -229,9 +268,16 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     sourceFingerprintEqual: null,
     marketDbBytes: null,
     researchLedgerBytes: null,
+    tempDirBytesBefore: null,
+    tempDirBytesAfter: null,
+    tempDirDeltaBytes: null,
     rssBeforeBytes: process.memoryUsage().rss,
     rssAfterBytes: null,
     rssDeltaBytes: null,
+    maxRssBeforeBytes: resourcesBefore.maxRSS * 1024,
+    maxRssAfterBytes: null,
+    cpuUserMicros: null,
+    cpuSystemMicros: null,
     tuningDecision: null,
     error: null
   };
@@ -245,7 +291,7 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     resourcePolicy: RESOURCE_POLICY,
     idFactory: () => RUN_ID,
     objectiveVersionIdFactory: () => OBJECTIVE_ID,
-    queryArtifactIdFactory: () => QUERY_ID,
+    queryArtifactIdFactory,
     evidenceInventoryIdFactory: () => INVENTORY_ID,
     evidencePlanIdFactory: () => PLAN_ID,
     partitionIdFactory,
@@ -255,9 +301,11 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
 
   try {
     await seedMarketData(tempDir, profile.universeSize);
+    report.tempDirBytesBefore = await directoryBytes(tempDir);
     const fingerprintBefore = await fingerprintResearchEvidenceSource({ dataDir: tempDir, sourceId: "active" });
     domain = await openManagedResearchDomain(openOptions);
     assert.deepEqual(domain.resourceLimits.concurrency, RESOURCE_POLICY.concurrency);
+    if (profile.targetAuthority) assert.equal(profile.universeSize, 4096);
 
     await domain.createResearchRun({
       userIntent: "Measure bounded cancellation/restart resource behavior.",
@@ -274,6 +322,12 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
       sqlText: LONG_SCANNER_SQL,
       scannerContractVersion: "scanner-authority-v1",
       label: "workload-long-query"
+    });
+    await domain.createQueryArtifact({
+      researchRunId: RUN_ID,
+      sqlText: FAST_SCANNER_SQL,
+      scannerContractVersion: "scanner-authority-v1",
+      label: "workload-bounded-query"
     });
     await domain.createEvidenceInventory({
       researchRunId: RUN_ID,
@@ -341,6 +395,50 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     report.cancellation = { queued, activeSql, activeExperiment };
 
     let started = performance.now();
+    const duplicateSubmissions = await Promise.all(
+      Array.from({ length: DUPLICATE_SUBMISSION_COUNT }, () => domain.submitDevelopmentExperiment({
+        clientRequestId: "workload-experiment-success",
+        researchRunId: RUN_ID,
+        objectiveVersionId: OBJECTIVE_ID,
+        partitionId: PART_DEV,
+        sourceId: "active",
+        queryArtifactIds: [QUERY_FAST_ID],
+        fromAtMs: 2_000,
+        toAtMs: 2_000,
+        intervalValue: 1,
+        intervalUnit: "seconds",
+        topX: 10,
+        horizonsMs: [10_000]
+      }))
+    );
+    const duplicateJobIds = new Set(duplicateSubmissions.map((submission) => submission.jobId));
+    const duplicateExperimentIds = new Set(duplicateSubmissions.map((submission) => submission.experimentId));
+    assert.equal(duplicateJobIds.size, 1, "duplicate pressure must reuse one durable Job");
+    assert.equal(duplicateExperimentIds.size, 1, "duplicate pressure must reuse one deterministic Experiment");
+    assert.equal(duplicateSubmissions[0].jobId, JOB_EXPERIMENT_SUCCESS);
+    const strategyExperiment = await waitForTerminal(domain, JOB_EXPERIMENT_SUCCESS);
+    report.strategySandboxMs = roundMs(performance.now() - started);
+    assert.equal(strategyExperiment.status, "SUCCEEDED");
+    const strategyResult = resultHandle(strategyExperiment);
+    assert.equal(strategyResult.resultHandle, RESULT_EXPERIMENT_SUCCESS);
+    assert.ok(
+      strategyResult.serializedBytes <= RESOURCE_POLICY.budgets.request.resultBytes,
+      "Strategy Sandbox summary payload must remain within the request result-byte budget"
+    );
+    const strategyPage = await domain.getResultPage(RUN_ID, RESULT_EXPERIMENT_SUCCESS, { pageSize: 10 });
+    assert.equal(strategyPage.rows.length, 1);
+    assert.equal(strategyPage.truncated, false);
+    report.strategySandboxResultRows = strategyResult.rowCount;
+    report.strategySandboxResultBytes = strategyResult.serializedBytes;
+    report.strategySandboxProgressBytes = Buffer.byteLength(JSON.stringify(strategyExperiment.progress), "utf8");
+    report.duplicatePressure = {
+      submissions: DUPLICATE_SUBMISSION_COUNT,
+      uniqueJobIds: duplicateJobIds.size,
+      uniqueExperimentIds: duplicateExperimentIds.size,
+      terminalStatus: strategyExperiment.status
+    };
+
+    started = performance.now();
     await domain.submitDevelopmentResearchSql({
       clientRequestId: "workload-sql-success",
       researchRunId: RUN_ID,
@@ -373,7 +471,12 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     assert.equal((await domain.getJob(RUN_ID, JOB_SQL_ACTIVE)).status, "CANCELLED");
     assert.equal((await domain.getJob(RUN_ID, JOB_SQL_QUEUED)).status, "CANCELLED");
     assert.equal((await domain.getJob(RUN_ID, JOB_EXPERIMENT)).status, "CANCELLED");
+    assert.equal((await domain.getJob(RUN_ID, JOB_EXPERIMENT_SUCCESS)).status, "SUCCEEDED");
     assert.equal((await domain.getJob(RUN_ID, JOB_SQL_SUCCESS)).status, "SUCCEEDED");
+    assert.deepEqual(
+      await domain.getResultPage(RUN_ID, RESULT_EXPERIMENT_SUCCESS, { pageSize: 10 }),
+      strategyPage
+    );
     assert.deepEqual(
       await domain.getResultPage(RUN_ID, RESULT_SQL_SUCCESS, { pageSize: 10 }),
       page
@@ -395,7 +498,7 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     assert.equal(resultHandle(restarted).resultHandle, RESULT_SQL_RESTART);
     assert.ok(
       restarted.progress.budget.find((scope) => scope.scope === "RUN")
-        .dimensions.workUnits.consumed >= 4,
+        .dimensions.workUnits.consumed >= 5,
       "restart must preserve prior run-level work-unit consumption"
     );
 
@@ -406,17 +509,28 @@ test("TREE 11.4 representative managed workload measures cancellation, restart a
     assert.equal(report.sourceFingerprintEqual, true);
     report.marketDbBytes = (await stat(path.join(tempDir, "market-flow-us.duckdb"))).size;
     report.researchLedgerBytes = (await stat(dbPath)).size;
+    report.tempDirBytesAfter = await directoryBytes(tempDir);
+    report.tempDirDeltaBytes = report.tempDirBytesAfter - report.tempDirBytesBefore;
     report.rssAfterBytes = process.memoryUsage().rss;
     report.rssDeltaBytes = report.rssAfterBytes - report.rssBeforeBytes;
+    report.maxRssAfterBytes = process.resourceUsage().maxRSS * 1024;
+    const cpuDelta = process.cpuUsage(cpuBefore);
+    report.cpuUserMicros = cpuDelta.user;
+    report.cpuSystemMicros = cpuDelta.system;
     report.tuningDecision = {
       increaseConcurrency: false,
-      reason: "Bounded serial heavy-job/reader policy remained responsive; no CI evidence justifies higher parallelism."
+      widenTimeouts: false,
+      widenBudgets: false,
+      reason: "The bounded serial heavy-job/reader policy completed the representative path without evidence justifying broader parallelism, timeouts or budgets."
     };
+    report.gates.W1 = mode === "ci" ? "PASS" : report.gates.W1;
+    report.gates.W2 = profile.targetAuthority ? "PASS" : report.gates.W2;
     report.result = "pass";
   } catch (error) {
     failure = error;
     report.result = "fail";
     report.error = sanitizedFailure(error, tempDir);
+    assert.notEqual(report.gates.W1, "PASS", "failed workload report must not claim W1 PASS");
   } finally {
     try {
       await domain?.close();

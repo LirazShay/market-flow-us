@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -12,6 +13,14 @@ const SHAPE_OVERRIDE_KEYS = Object.freeze([
   "MARKET_FLOW_US_WORKLOAD_PATTERN",
   "MARKET_FLOW_US_WORKLOAD_FAILURE_CYCLES"
 ]);
+
+const REPORT_ENV_BY_TEST_FILE = Object.freeze({
+  "tests/workload/representative-workload.test.mjs": "MARKET_FLOW_US_WORKLOAD_REPORT",
+  "tests/workload/isolated-probes.test.mjs": "MARKET_FLOW_US_ISOLATED_REPORT",
+  "tests/workload/demo-buy-evaluator-probe.test.mjs": "MARKET_FLOW_US_DEMO_BUY_REPORT",
+  "tests/workload/backtest-lab-probe.test.mjs": "MARKET_FLOW_US_BACKTEST_REPORT",
+  "tests/workload/research-resource-probe.test.mjs": "MARKET_FLOW_US_RESEARCH_REPORT"
+});
 
 export function buildWorkloadEnvironment(profile, baseEnv = process.env) {
   const env = { ...baseEnv };
@@ -34,7 +43,10 @@ export function buildWorkloadEnvironment(profile, baseEnv = process.env) {
       ?? path.join(reportDir, `${profile}-demo-buy-evaluator.json`),
     MARKET_FLOW_US_BACKTEST_REPORT:
       env.MARKET_FLOW_US_BACKTEST_REPORT
-      ?? path.join(reportDir, `${profile}-backtest-lab.json`)
+      ?? path.join(reportDir, `${profile}-backtest-lab.json`),
+    MARKET_FLOW_US_RESEARCH_REPORT:
+      env.MARKET_FLOW_US_RESEARCH_REPORT
+      ?? path.join(reportDir, `${profile}-research-resource.json`)
   };
 }
 
@@ -43,14 +55,16 @@ export function resolveWorkloadTestFiles(profile) {
     return [
       "tests/workload/representative-workload.test.mjs",
       "tests/workload/demo-buy-evaluator-probe.test.mjs",
-      "tests/workload/backtest-lab-probe.test.mjs"
+      "tests/workload/backtest-lab-probe.test.mjs",
+      "tests/workload/research-resource-probe.test.mjs"
     ];
   }
   if (profile === "target-day") {
     return [
       "tests/workload/isolated-probes.test.mjs",
       "tests/workload/demo-buy-evaluator-probe.test.mjs",
-      "tests/workload/backtest-lab-probe.test.mjs"
+      "tests/workload/backtest-lab-probe.test.mjs",
+      "tests/workload/research-resource-probe.test.mjs"
     ];
   }
   return [
@@ -61,6 +75,35 @@ export function resolveWorkloadTestFiles(profile) {
   ];
 }
 
+export function resolveWorkloadReportPaths(profile, environment = buildWorkloadEnvironment(profile)) {
+  return resolveWorkloadTestFiles(profile).map((testFile) => {
+    const envKey = REPORT_ENV_BY_TEST_FILE[testFile];
+    const reportPath = envKey ? environment[envKey] : null;
+    if (typeof reportPath !== "string" || reportPath.length === 0) {
+      throw new Error(`Workload report path missing for ${testFile}.`);
+    }
+    return reportPath;
+  });
+}
+
+export function clearWorkloadReports(
+  profile,
+  environment = buildWorkloadEnvironment(profile),
+  removeFile = rmSync
+) {
+  for (const reportPath of resolveWorkloadReportPaths(profile, environment)) {
+    removeFile(reportPath, { force: true });
+  }
+}
+
+export function missingWorkloadReports(
+  profile,
+  environment = buildWorkloadEnvironment(profile),
+  fileExists = existsSync
+) {
+  return resolveWorkloadReportPaths(profile, environment).filter((reportPath) => !fileExists(reportPath));
+}
+
 export function runWorkloadProfile(profile = process.argv[2] ?? "ci") {
   const allowed = new Set(["ci", "target-e2e", "target-day", "custom"]);
   if (!allowed.has(profile)) {
@@ -69,11 +112,14 @@ export function runWorkloadProfile(profile = process.argv[2] ?? "ci") {
     return null;
   }
 
+  const env = buildWorkloadEnvironment(profile);
+  clearWorkloadReports(profile, env);
+
   const child = spawn(
     process.execPath,
     ["--test", ...resolveWorkloadTestFiles(profile)],
     {
-      env: buildWorkloadEnvironment(profile),
+      env,
       stdio: "inherit",
       shell: false
     }
@@ -87,6 +133,11 @@ export function runWorkloadProfile(profile = process.argv[2] ?? "ci") {
   child.on("exit", (code, signal) => {
     if (signal) {
       console.error(`Workload profile ${profile} terminated by ${signal}.`);
+      process.exitCode = 1;
+      return;
+    }
+    if (code === 0 && missingWorkloadReports(profile, env).length > 0) {
+      console.error(`Workload profile ${profile} completed without all expected fresh reports.`);
       process.exitCode = 1;
       return;
     }

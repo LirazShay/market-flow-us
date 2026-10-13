@@ -18,32 +18,32 @@ source_of_truth:
   decisions: ".planning/DECISIONS.md"
   backlog: "backlog/README.md"
 
-phase: implementation
-overall_status: ai_researcher_in_progress
+phase: implementation_reclosure
+overall_status: ai_researcher_implementation_complete_merge_transition
 
 current:
   chat: 42
   node: "11.8"
-  title: "Representative workload, desktop acceptance and deterministic reclosure"
-  status: pending
-  activation_required: true
+  title: "Representative workload, acceptance readiness and deterministic reclosure"
+  status: done
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 56
-  pending: 1
+  done: 57
+  pending: 0
   in_progress: 0
   blocked: 0
-  current_chat: 42
-  current_node: "11.8"
+  current_chat: null
+  current_node: null
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.8"
+  task: "PR #110 merge transition"
   owner: "Chat 42"
-  status: pending
-  action: "Chat 41 / TREE 11.7 is complete. PR #108 squash-merged as e5e04a1a72f3b5cf5c34a4512a46f7fdbe9867c9 after final adversarial reclosure; merged-main Fast #1019, Planning/Contract #1215, Workload #605, Replay #167 and Browser #629 are green and the post-merge open-PR audit is empty. Start Chat 42 / 11.8 only through explicit numbered-chat activation; generic continuation in completed Chat 41 must not switch executor identity."
+  status: in_progress
+  action: "TREE 11.8 implementation is done. Require the completion-head PR CI green, update/review PR #110, squash merge it, require merged-main CI green and reconcile open PR state. Do not run or fabricate W2T/W3 during this transition; the user explicitly deferred those real target-machine/Desktop acceptance gates to non-blocking post-merge backlog B-US-009, where they remain PENDING until actually executed against fresh intended main."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -57,26 +57,28 @@ navigation:
   autonomous_ai_researcher_operating_contract: ".planning/AI_RESEARCHER_OPERATING_CONTRACT.md"
   autonomous_ai_researcher_security_resource: ".planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md"
   autonomous_ai_researcher_hardening_audit: ".planning/AI_RESEARCHER_HARDENING_AUDIT.md"
+  autonomous_ai_researcher_acceptance_evidence: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
   autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   chatgpt_research_plugin: "docs/CHATGPT_RESEARCH_PLUGIN.md"
+  chatgpt_research_desktop_acceptance: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
   backtest_contract: "docs/BACKTEST_LAB.md"
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
   post_backtest_ai_mcp_backlog_record: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
+  ai_researcher_target_acceptance_backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
   final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
 acceptance_projection:
-  task: "B-US-000"
+  task: "B-US-009"
   status: backlog_non_blocking
-  candidate_policy: "Select the latest intended runtime candidate from fresh main when the backlog item is explicitly activated."
-  historical_candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
-  checkpoint_summary: "Historical FR-0/FR-1 evidence remains preserved; B-US-000 stays separate and does not block Branch 11."
+  candidate_policy: "When explicitly activated, fetch fresh main and accept the latest intended AI Researcher candidate; never substitute historical PR #110 acceptance evidence."
+  checkpoint_summary: "W2T/W3 remain PENDING_POST_MERGE by explicit user decision. Their criteria are preserved in B-US-009 and the Desktop acceptance runbook; deferral is not PASS."
   authority:
-    backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
-    runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
-    execution_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
+    backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+    runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
+    evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
 
 blockers_projection: []

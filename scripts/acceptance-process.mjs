@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 
 const DEFAULT_KILL_GRACE_MS = 2000;
+const DEFAULT_WINDOWS_TASKKILL_TIMEOUT_MS = 2000;
 
 function isRunning(child) {
   return child.exitCode === null && child.signalCode === null;
@@ -22,20 +23,76 @@ async function waitForExit(child, timeoutMs) {
   }
 }
 
-export async function terminateChildTree(child, { graceMs = DEFAULT_KILL_GRACE_MS } = {}) {
+export async function terminateChildTree(
+  child,
+  {
+    graceMs = DEFAULT_KILL_GRACE_MS,
+    platform = process.platform,
+    spawnProcess = spawn,
+    taskkillTimeoutMs = DEFAULT_WINDOWS_TASKKILL_TIMEOUT_MS
+  } = {}
+) {
   if (!child || !Number.isSafeInteger(child.pid) || child.pid <= 0 || !isRunning(child)) return;
 
-  if (process.platform === "win32") {
+  if (platform === "win32") {
     await new Promise((resolve) => {
-      const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
-        stdio: "ignore",
-        windowsHide: true,
-        shell: false
+      let settled = false;
+      let timer = null;
+      let killer = null;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) clearTimeout(timer);
+        resolve();
+      };
+      const fallbackKill = () => {
+        try {
+          if (isRunning(child)) child.kill();
+        } catch {
+          // Best-effort cleanup must not hide the original acceptance timeout.
+        }
+      };
+      const stopKiller = () => {
+        try {
+          if (killer && killer.exitCode === null && killer.signalCode === null) killer.kill();
+        } catch {
+          // The cleanup deadline is authoritative; do not replace the original timeout.
+        }
+      };
+
+      try {
+        killer = spawnProcess("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+          stdio: "ignore",
+          windowsHide: true,
+          shell: false
+        });
+      } catch {
+        fallbackKill();
+        finish();
+        return;
+      }
+
+      killer.once("error", () => {
+        fallbackKill();
+        finish();
       });
-      killer.once("error", () => resolve());
-      killer.once("exit", () => resolve());
+      killer.once("exit", (code) => {
+        if (code !== 0) fallbackKill();
+        finish();
+      });
+      timer = setTimeout(() => {
+        stopKiller();
+        fallbackKill();
+        finish();
+      }, taskkillTimeoutMs);
     });
     await waitForExit(child, graceMs);
+    if (isRunning(child)) {
+      try {
+        child.kill();
+      } catch {}
+      await waitForExit(child, graceMs);
+    }
     return;
   }
 

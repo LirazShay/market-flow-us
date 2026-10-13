@@ -1,15 +1,46 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { runBoundedCommand } from "../../scripts/acceptance-process.mjs";
+import {
+  runBoundedCommand,
+  terminateChildTree
+} from "../../scripts/acceptance-process.mjs";
 import { parseNewTradingDayCliArgs } from "../../scripts/new-trading-day.mjs";
 import { buildWorkloadEnvironment } from "../../scripts/run-workload-profile.mjs";
 import {
   sanitizeWorkloadDiagnostic,
   sanitizedFailure
 } from "../workload/us-workload-support.mjs";
+
+function fakeRunningChild(pid = 4321) {
+  const child = new EventEmitter();
+  child.pid = pid;
+  child.exitCode = null;
+  child.signalCode = null;
+  child.killCount = 0;
+  child.kill = () => {
+    child.killCount += 1;
+    child.signalCode = "SIGTERM";
+    return true;
+  };
+  return child;
+}
+
+function fakeTaskkill() {
+  const killer = new EventEmitter();
+  killer.exitCode = null;
+  killer.signalCode = null;
+  killer.killCount = 0;
+  killer.kill = () => {
+    killer.killCount += 1;
+    killer.signalCode = "SIGTERM";
+    return true;
+  };
+  return killer;
+}
 
 test("acceptance subprocesses fail closed on a hard timeout", async () => {
   const startedAt = Date.now();
@@ -44,6 +75,73 @@ test("acceptance subprocesses preserve normal exit status", async () => {
   assert.equal(result.signal, null);
   assert.equal(result.error, null);
   assert.equal(result.output, "ok");
+});
+
+test("Windows acceptance cleanup bounds a hung taskkill and falls back to the child", async () => {
+  const child = fakeRunningChild();
+  const killer = fakeTaskkill();
+  const startedAt = Date.now();
+
+  await terminateChildTree(child, {
+    platform: "win32",
+    graceMs: 5,
+    taskkillTimeoutMs: 5,
+    spawnProcess(command, args, options) {
+      assert.equal(command, "taskkill");
+      assert.deepEqual(args, ["/PID", String(child.pid), "/T", "/F"]);
+      assert.deepEqual(options, {
+        stdio: "ignore",
+        windowsHide: true,
+        shell: false
+      });
+      return killer;
+    }
+  });
+
+  assert.equal(killer.killCount, 1, "hung taskkill helper must be stopped at its deadline");
+  assert.equal(child.killCount, 1, "hung taskkill must fall back to direct child termination");
+  assert.ok(Date.now() - startedAt < 1000, "Windows cleanup must remain bounded");
+});
+
+test("Windows acceptance cleanup falls back when taskkill reports failure", async () => {
+  const child = fakeRunningChild();
+  const killer = fakeTaskkill();
+
+  await terminateChildTree(child, {
+    platform: "win32",
+    graceMs: 5,
+    taskkillTimeoutMs: 100,
+    spawnProcess() {
+      queueMicrotask(() => {
+        killer.exitCode = 1;
+        killer.emit("exit", 1, null);
+      });
+      return killer;
+    }
+  });
+
+  assert.equal(child.killCount, 1);
+  assert.equal(killer.killCount, 0);
+});
+
+test("Windows acceptance cleanup verifies the child exited after successful taskkill", async () => {
+  const child = fakeRunningChild();
+  const killer = fakeTaskkill();
+
+  await terminateChildTree(child, {
+    platform: "win32",
+    graceMs: 5,
+    taskkillTimeoutMs: 100,
+    spawnProcess() {
+      queueMicrotask(() => {
+        killer.exitCode = 0;
+        killer.emit("exit", 0, null);
+      });
+      return killer;
+    }
+  });
+
+  assert.equal(child.killCount, 1, "taskkill success must not substitute for observed child exit");
 });
 
 test("workload failure artifacts redact machine paths and URLs before rethrow", () => {
