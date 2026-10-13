@@ -46,7 +46,7 @@ next_pointer:
   owner: "Chat 38"
   current_chat_part: 2
   status: in_progress
-  action: "Chat 38 Part 2 is active. Blocker #7 diff hygiene is closed: completed row 11.1 now matches main exactly after restoration commit da16ed0e, and the authoritative 11.4 result records the checkpoint. Next run the full 11.4 success-evidence/diff review as the next segment; do not mark PR #102 ready before that review is green. PR #102 remains draft."
+  action: "Chat 38 Part 2 full 11.4 review found Blocker #8: active Development Experiment execution has cooperative cancellation/native DuckDB interrupt but no configurable automatic wall-clock execution ceiling, while D-US-053 and the Research security/resource contract require time to be bounded where measurable. PR #102 remains draft; Fast #903, Planning/Contract #1095 and Workload #489 are green on reviewed head 3221a14c. Next close Blocker #8 with the smallest timeout through the existing AbortSignal/cancellation path, stable timeout failure code and focused cancellation/timeout/workload proof, then re-run the final 11.4 review."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
