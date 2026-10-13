@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -37,6 +38,23 @@ function sequence(values) {
     if (remaining.length === 0) throw new Error("test sequence exhausted");
     return remaining.shift();
   };
+}
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key) => [key, canonicalize(value[key])])
+    );
+  }
+  return value;
+}
+
+function artifactPayloadHash(artifact) {
+  const { artifactHash, ...payload } = artifact;
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalize(payload)), "utf8")
+    .digest("hex");
 }
 
 function completedExecution(input) {
@@ -78,7 +96,11 @@ function evaluationProfile() {
   };
 }
 
-async function createFixture({ dbPath, queryArtifactIds = [QUERY_FINALIST] } = {}) {
+async function createFixture({
+  dbPath,
+  queryArtifactIds = [QUERY_FINALIST],
+  verificationGate = { allow: true }
+} = {}) {
   const domain = await openResearchDomain({
     dbPath,
     marketDataDir: "server-owned-market-data",
@@ -102,6 +124,7 @@ async function createFixture({ dbPath, queryArtifactIds = [QUERY_FINALIST] } = {
     verifySourceFingerprint: async ({ sourceId, expectedFingerprint }) => {
       assert.equal(sourceId, SOURCE_ID);
       assert.equal(expectedFingerprint, SOURCE_FINGERPRINT);
+      if (!verificationGate.allow) throw new Error("source fingerprint drift fixture");
       return expectedFingerprint;
     }
   });
@@ -207,8 +230,11 @@ test("TREE 11.5 final recommendation is deterministic, evidence-complete and res
 
     assert.equal(artifact.artifactId, ARTIFACT_ID);
     assert.match(artifact.artifactHash, /^[0-9a-f]{64}$/u);
+    assert.equal(artifact.artifactHash, artifactPayloadHash(artifact));
     assert.equal(artifact.researchRunId, RUN_ID);
     assert.equal(artifact.outcome, "SELECTED_QUERY");
+    assert.equal(artifact.confidenceClassification, "INDEPENDENT_HOLDOUT_SUPPORTED");
+    assert.equal(artifact.terminalIntent.queryArtifactId, QUERY_FINALIST);
     assert.equal(artifact.selectedQuery.queryArtifactId, QUERY_FINALIST);
     assert.equal(artifact.selectedQuery.sqlText, FINALIST_SQL);
     assert.equal(artifact.objective.objectiveVersionId, OBJECTIVE_ID);
@@ -233,6 +259,8 @@ test("TREE 11.5 final recommendation is deterministic, evidence-complete and res
     assert.equal(artifact.holdout.independentProofForSelectedQuery, true);
     assert.equal(Object.hasOwn(artifact.holdout, "rows"), false);
     assert.equal(Object.hasOwn(artifact.holdout, "outcomes"), false);
+    assert.equal(artifact.comparisonContext.baselineReference, null);
+    assert.deepEqual(artifact.comparisonContext.alternativeQueryArtifactIds, []);
     assert.equal(artifact.reproductionReferences.finalistSetId, FINALIST_ID);
     assert.equal(artifact.reproductionReferences.holdoutEvaluationId, HOLDOUT_ID);
     assert.deepEqual(artifact.limitations, request.limitations);
@@ -251,7 +279,12 @@ test("TREE 11.5 final recommendation is deterministic, evidence-complete and res
     assert.equal(run.currentPhase, "FINALIZATION");
 
     await domain.close();
-    domain = await openResearchDomain({ dbPath, now: () => NOW + 10_000 });
+    domain = await openResearchDomain({
+      dbPath,
+      now: () => NOW + 10_000,
+      marketDataDir: "server-owned-market-data",
+      verifySourceFingerprint: async () => SOURCE_FINGERPRINT
+    });
     assert.deepEqual(await domain.getRecommendationArtifact(RUN_ID), artifact);
   } finally {
     if (domain) await domain.close();
@@ -299,6 +332,7 @@ test("TREE 11.5 revised post-Holdout SQL cannot claim independent proof and NO_R
     });
 
     assert.equal(artifact.outcome, "NO_RECOMMENDATION");
+    assert.equal(artifact.confidenceClassification, "INSUFFICIENT_FOR_RECOMMENDATION");
     assert.equal(artifact.selectedQuery, null);
     assert.equal(artifact.strongestCandidates.length, 1);
     assert.equal(artifact.strongestCandidates[0].queryArtifactId, QUERY_FINALIST);
@@ -307,11 +341,45 @@ test("TREE 11.5 revised post-Holdout SQL cannot claim independent proof and NO_R
     assert.deepEqual(artifact.holdout.contaminatedQueryArtifactIds, [QUERY_REVISED]);
     assert.equal(artifact.holdout.independentProofForSelectedQuery, false);
     assert.equal(artifact.searchBreadth.candidateArtifactCount, 2);
+    assert.deepEqual(artifact.comparisonContext.alternativeQueryArtifactIds, [QUERY_FINALIST]);
     assert.equal(artifact.stoppingReason.includes("no independent final candidate"), true);
     assert.deepEqual(
       artifact.limitations,
       ["Fresh independent Holdout evidence would be required for the revised lineage."]
     );
+    assert.equal(artifact.artifactHash, artifactPayloadHash(artifact));
+  } finally {
+    if (domain) await domain.close();
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("TREE 11.5 finalization fails closed on source fingerprint drift without fabricating a terminal artifact", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-final-source-drift-"));
+  const dbPath = path.join(tempDir, "research-ledger.duckdb");
+  const verificationGate = { allow: true };
+  let domain = null;
+
+  try {
+    domain = await createFixture({ dbPath, verificationGate });
+    verificationGate.allow = false;
+
+    await assert.rejects(
+      domain.buildRecommendationArtifact({
+        researchRunId: RUN_ID,
+        finalistSetId: FINALIST_ID,
+        holdoutEvaluationId: HOLDOUT_ID,
+        outcome: "NO_RECOMMENDATION",
+        stoppingReason: "Do not finalize when reproduction evidence bytes no longer match their fingerprint.",
+        limitations: ["Source fingerprint drift prevents trustworthy reproduction."]
+      }),
+      /source fingerprint drift fixture/u
+    );
+
+    assert.equal(await domain.getRecommendationArtifact(RUN_ID), null);
+    const run = await domain.getResearchRun(RUN_ID);
+    assert.equal(run.status, "ACTIVE");
+    assert.notEqual(run.currentPhase, "FINALIZATION");
   } finally {
     if (domain) await domain.close();
     await rm(tempDir, { recursive: true, force: true });
