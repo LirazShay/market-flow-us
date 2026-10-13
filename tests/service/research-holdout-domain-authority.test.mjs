@@ -12,6 +12,7 @@ import {
 import { openResearchLedger } from "../../research-server/ledger.js";
 
 const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
+const CROSS_RUN_ID = "run_99999999-9999-4999-8999-999999999999";
 const OBJECTIVE_ID = "obj_11111111-1111-4111-8111-111111111111";
 const QUERY_FINALIST = "qry_11111111-1111-4111-8111-111111111111";
 const QUERY_SAME = "qry_22222222-2222-4222-8222-222222222222";
@@ -80,7 +81,18 @@ function evaluationProfile() {
   };
 }
 
-test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists once and derives only material post-Holdout SQL contamination", async () => {
+function assertSealedHoldoutPartition(partition) {
+  assert.equal(partition.partitionId, PART_HOLDOUT);
+  assert.equal(partition.researchRunId, RUN_ID);
+  assert.equal(partition.evidencePlanId, PLAN_ID);
+  assert.equal(partition.role, "SEALED_HOLDOUT");
+  assert.deepEqual(partition.partition, { sealed: true });
+  assert.equal(partition.partitionHash, null);
+  assert.equal(JSON.stringify(partition).includes("holdoutSchedule"), false);
+  assert.equal(JSON.stringify(partition).includes("range"), false);
+}
+
+test("TREE 11.5 Research Domain keeps Holdout metadata/results sealed, evaluates frozen finalists once and derives only material post-Holdout SQL contamination", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-holdout-domain-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   const executions = [];
@@ -152,15 +164,27 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
       evidenceInventoryId: INVENTORY_ID,
       evaluationProfile: evaluationProfile()
     });
-    await domain.commitEvidencePlan({
+    assert.deepEqual(proposal.partitions[2], {
+      role: "SEALED_HOLDOUT",
+      partition: { sealed: true }
+    });
+    assert.equal(JSON.stringify(proposal).includes("holdoutSchedule"), false);
+
+    const committedPlan = await domain.commitEvidencePlan({
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
       evidenceInventoryId: INVENTORY_ID,
       proposal
     });
-    const validationSchedule = proposal.partitions[1].partition.validationSchedule.sources[0];
-    const holdoutSchedule = proposal.partitions[2].partition.holdoutSchedule.sources[0];
+    assertSealedHoldoutPartition(committedPlan.partitions[2]);
+    assertSealedHoldoutPartition((await domain.getEvidencePlan(RUN_ID, PLAN_ID)).partitions[2]);
+    assertSealedHoldoutPartition((await domain.getCurrentEvidencePlan(RUN_ID)).partitions[2]);
+    assertSealedHoldoutPartition((await domain.listEvidencePlans(RUN_ID))[0].partitions[2]);
+    assertSealedHoldoutPartition(await domain.getPartition(RUN_ID, PART_HOLDOUT));
+    assertSealedHoldoutPartition((await domain.listPartitions(RUN_ID, PLAN_ID))[2]);
+    assert.equal(await domain.getPartition(CROSS_RUN_ID, PART_HOLDOUT), null);
 
+    const validationSchedule = proposal.partitions[1].partition.validationSchedule.sources[0];
     await domain.executeValidationExperiment({
       researchRunId: RUN_ID,
       objectiveVersionId: OBJECTIVE_ID,
@@ -205,21 +229,20 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     assert.equal(Object.hasOwn(holdout, "outcomes"), false);
     assert.equal(holdout.sourceResults.length, 1);
     assert.equal(holdout.sourceResults[0].sourceId, SOURCE_ID);
-    assert.deepEqual(holdout.sourceResults[0].schedule, {
-      fromAtMs: holdoutSchedule.fromAtMs,
-      toAtMs: holdoutSchedule.toAtMs,
-      intervalValue: holdoutSchedule.intervalValue,
-      intervalUnit: holdoutSchedule.intervalUnit
-    });
 
     assert.equal(executions.length, 2);
-    assert.equal(executions[1].evidencePartitionId, PART_HOLDOUT);
-    assert.equal(executions[1].sourceId, SOURCE_ID);
-    assert.equal(executions[1].queryArtifacts[0].queryArtifactId, QUERY_FINALIST);
-    assert.equal(executions[1].fromAtMs, holdoutSchedule.fromAtMs);
-    assert.equal(executions[1].toAtMs, holdoutSchedule.toAtMs);
-    assert.equal(executions[1].topX, 3);
-    assert.deepEqual(executions[1].horizonsMs, [10_000, 60_000]);
+    const holdoutExecution = executions[1];
+    assert.equal(holdoutExecution.evidencePartitionId, PART_HOLDOUT);
+    assert.equal(holdoutExecution.sourceId, SOURCE_ID);
+    assert.equal(holdoutExecution.queryArtifacts[0].queryArtifactId, QUERY_FINALIST);
+    assert.equal(holdoutExecution.topX, 3);
+    assert.deepEqual(holdoutExecution.horizonsMs, [10_000, 60_000]);
+    assert.deepEqual(holdout.sourceResults[0].schedule, {
+      fromAtMs: holdoutExecution.fromAtMs,
+      toAtMs: holdoutExecution.toAtMs,
+      intervalValue: holdoutExecution.intervalValue,
+      intervalUnit: holdoutExecution.intervalUnit
+    });
 
     assert.deepEqual(
       await domain.executeHoldoutEvaluation({ researchRunId: RUN_ID, finalistSetId: FINALIST_ID }),
