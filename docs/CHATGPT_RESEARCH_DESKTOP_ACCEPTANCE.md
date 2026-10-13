@@ -45,7 +45,31 @@ The repository `package.json` owns that executable through its `bin` mapping. On
 ```bash
 npm ci
 npm link
+npm run research-desktop:preflight
 ```
+
+The preflight is repository-owned and public-safe. It verifies before opening Desktop that:
+
+- the repo marketplace resolves the intended local Plugin;
+- Plugin/MCP/package manifests agree on the `stdio` executable;
+- the intended data directory contains DuckDB market evidence;
+- `market-flow-us-research-mcp` is actually visible through the inherited `PATH`;
+- a real `stdio` initialize/tool-discovery call exposes the expected 46-tool registry and data/instruction boundary.
+
+A passing report is written to `test-results/acceptance/research-desktop-preflight.json` and still contains `"desktopAcceptance": "STILL_REQUIRED"`. This preflight is not a substitute for ChatGPT Desktop acceptance.
+
+Expected preflight indicators before opening Desktop:
+
+```text
+result = pass
+mcp.pathVisible = true
+mcp.toolCount = 46
+mcp.requiredToolsPresent = true
+mcp.dataBoundary = true
+desktopAcceptance = STILL_REQUIRED
+```
+
+If it fails, use the stable `error.code` to diagnose the repository/machine prerequisite. Do not paste filesystem paths, environment dumps, credentials, browser state or session material into acceptance evidence.
 
 After changing PATH-visible npm links or marketplace/plugin files, fully restart ChatGPT Desktop before testing so the desktop process sees the current executable and marketplace snapshot.
 
@@ -55,14 +79,15 @@ On the target machine and intended repository checkout:
 
 1. Use the exact candidate commit/branch being accepted.
 2. Run `npm ci`.
-3. Run `npm link` so `market-flow-us-research-mcp` is available on PATH.
+3. Run `npm link` so `market-flow-us-research-mcp` is available on `PATH`.
 4. Confirm the intended Market Flow US historical evidence is present in the repository-owned/default data location, or set only the supported absolute-path overrides documented in `docs/CHATGPT_RESEARCH_PLUGIN.md`.
-5. Fully restart ChatGPT Desktop.
-6. Open the trusted Market Flow US repository in a Desktop surface that loads the repo marketplace.
-7. Open the Plugins Directory, select the `Market Flow US Local` marketplace, and explicitly install `market-flow-us-researcher`.
-8. Verify the installed plugin exposes its Research skill and local MCP tools. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
+5. Run `npm run research-desktop:preflight` and require a `pass` report with 46 tools. Fix any repository/machine prerequisite failure before blaming Desktop.
+6. Fully restart ChatGPT Desktop.
+7. Open the trusted Market Flow US repository in a Desktop surface that loads the repo marketplace.
+8. Open the Plugins Directory, select the `Market Flow US Local` marketplace, and explicitly install `market-flow-us-researcher`.
+9. Verify the installed plugin exposes its Research skill and local MCP tools. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
 
-If the plugin does not appear, record the exact Desktop build, visible marketplace state and public-safe error code/text. Do not work around the failure by exposing the Research Server to `0.0.0.0`, weakening localhost/source boundaries or copying private browser/auth data into diagnostics.
+If repository preflight passes but the plugin does not appear or its local MCP app cannot launch, record the exact Desktop build, visible marketplace state and public-safe error code/text. That is a target-client acceptance failure. Do not work around it by exposing the Research Server to `0.0.0.0`, weakening localhost/source boundaries or copying private browser/auth data into diagnostics.
 
 ## W3 acceptance mission
 
@@ -97,6 +122,7 @@ Before declaring W3 complete:
 Record only public-safe acceptance facts in `.planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md`:
 
 - candidate commit;
+- preflight result and stable failure code if any;
 - ChatGPT Desktop build/surface used;
 - plugin marketplace/install result;
 - local MCP startup/tool-discovery result;
@@ -112,6 +138,6 @@ Never record credentials, cookies, authorization headers, session/account identi
 
 ## Pass / blocked rules
 
-`W3 = PASS` only when the real Desktop plugin path completes the mission and restart/fresh-context proof above.
+`W3 = PASS` only when the repository preflight passes and the real Desktop plugin path completes the mission and restart/fresh-context proof above.
 
-If the current Desktop product does not expose the documented local marketplace/plugin surface on the target account/build, or the installed local MCP app cannot launch despite the repository contract being satisfied, record the exact external-product blocker and leave `W3` open/blocked. Do not substitute direct MCP scripts, web ChatGPT, Codex-only execution or a synthetic adapter test for the required Desktop acceptance.
+If the current Desktop product does not expose the documented local marketplace/plugin surface on the target account/build, or the installed local MCP app cannot launch despite a passing repository preflight, record the exact external-product blocker and leave `W3` open/blocked. Do not substitute direct MCP scripts, web ChatGPT, Codex-only execution or a synthetic adapter test for the required Desktop acceptance.
