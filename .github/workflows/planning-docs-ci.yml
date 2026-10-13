@@ -55,6 +55,7 @@ jobs:
             backlog/B-US-005-replay-pre-user-run-hardening-audit.md
             backlog/B-US-006-basic-in-product-buy.md
             backlog/B-US-007-prioritize-backlog.md
+            backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md
             .planning/BASELINE_PROVENANCE.md
             .planning/FINAL_ACCEPTANCE_EXECUTION.md .planning/FINAL_ACCEPTANCE_RUNBOOK.md
             .planning/FIRST_RUN_ACCEPTANCE_PLAN.md
@@ -77,6 +78,7 @@ jobs:
             docs/DEMO_BUY_UX.md docs/AI_INVESTIGATION_PACK.md
             docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md
             docs/MARKET_REPLAY.md docs/REPLAY_HARDENING.md docs/BASIC_BUY_INTEGRATION.md
+            docs/AUTONOMOUS_AI_TRADING.md
             scripts/validate-ci-hygiene.mjs
           )
 
@@ -142,12 +144,25 @@ jobs:
           require_execution_allocation '10.4' 'Chat 32' '`10.2`, `10.3`'
           require_execution_allocation '10.5' 'Chat 33' '`10.4`'
           require_execution_allocation '10.6' 'Chat 34' '`10.5`'
-          require_text 'backlog/B-US-000-final-target-machine-provider-acceptance.md' .planning/EXECUTION.md
+          require_execution_allocation '12.1' 'Chat 43' '—'
+          require_execution_allocation '12.2' 'Chat 44' '`12.1`'
+          require_execution_allocation '12.3' 'Chat 45' '`12.1`'
+          require_execution_allocation '12.5' 'Chat 46' '`12.1`'
+          require_execution_allocation '12.6' 'Chat 46' '`12.5`, `8.4`'
+          require_execution_allocation '12.4' 'Chat 47' '`12.2`, `12.3`, `12.5`, `12.6`'
+          require_execution_allocation '12.7' 'Chat 48' '`12.4`, `12.6`'
+          require_execution_allocation '12.8' 'Chat 49' '`12.7`'
+          require_execution_allocation '12.9' 'Chat 50' '`12.8`'
+          require_text '`B-US-000`' .planning/EXECUTION.md
+          require_text 'non-blocking future provider acceptance work' .planning/EXECUTION.md
+          require_text '| `B-US-009` | Target-machine acceptance executor | `blocked` | `11.8` |' .planning/EXECUTION.md
           require_text '# Market Flow US Backlog' backlog/README.md
           require_text 'Backlog items are **non-blocking by default**.' backlog/README.md
           require_text 'B-US-007' backlog/README.md
+          require_text 'B-US-010' backlog/README.md
           require_text 'Blocking: `No`' backlog/B-US-000-final-target-machine-provider-acceptance.md
           require_text 'latest intended runtime candidate' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text '# B-US-010 — Autonomous AI Trading & Strategy Distillation' backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md
           require_text 'backlog/README.md' .planning/BACKLOG.md
           require_text 'role: projection' STATUS.yaml
           require_text 'non_authoritative: true' STATUS.yaml
@@ -155,6 +170,8 @@ jobs:
           require_text 'execution: ".planning/EXECUTION.md"' STATUS.yaml
           require_text 'backlog: "backlog/README.md"' STATUS.yaml
           require_text 'backtest_contract: "docs/BACKTEST_LAB.md"' STATUS.yaml
+          require_text 'node: "12.1"' STATUS.yaml
+          require_text 'chat: 43' STATUS.yaml
 
           require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
           require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md
@@ -173,6 +190,10 @@ jobs:
           require_text '# Market Recording + Replay Contract' docs/MARKET_REPLAY.md
           require_text '# Replay Pre-User-Run Hardening Contract' docs/REPLAY_HARDENING.md
           require_text '# Basic In-Product BUY Integration Contract' docs/BASIC_BUY_INTEGRATION.md
+          require_text '# Autonomous AI Trading & Strategy Distillation' docs/AUTONOMOUS_AI_TRADING.md
+          require_text 'human-confirmed LIVE submission boundary' docs/AUTONOMOUS_AI_TRADING.md
+          require_text '| `12.1` Trading domain + durable authority |' docs/EXECUTOR_ROUTING.md
+          require_text '| `12.9` staged acceptance + adversarial reclosure |' docs/EXECUTOR_ROUTING.md
           require_text '# Market Flow US — Pre-Acceptance Extension Code Audit' .planning/PRE_ACCEPTANCE_CODE_AUDIT.md
           require_text '# R-US-PRE-ACCEPTANCE-CODE-AUDIT-REPLAN' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPLAN_REVIEW.md
           require_text '# Market Flow US — Pre-Acceptance Extension Code Audit Report' .planning/PRE_ACCEPTANCE_CODE_AUDIT_REPORT.md
