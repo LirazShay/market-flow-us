@@ -43,7 +43,7 @@ next_pointer:
   task: "11.7"
   owner: "Chat 41"
   status: in_progress
-  action: "Continue TREE 11.7 from `.planning/AI_RESEARCHER_HARDENING_AUDIT.md`: SQL/source, composed failure/restart, MCP authority, local stdio transport/process and public-safe diagnostics are reviewed with green adversarial proof. Next perform resource-bound/growth/duplicate/cancellation-responsiveness adversarial attacks over composed managed Research workloads. Every material finding remains owned by Chat 41 through RCA, smallest sufficient fix, deterministic regression proof, analogous-area review and affected green verification. Do not advance to Chat 42 / 11.8 until TREE 11.7 success evidence is fully green."
+  action: "Continue TREE 11.7 with the final success-evidence / diff reclosure against `.planning/PLAN.md`. Every adversarial matrix area is REVIEWED and H-11.7-001 through H-11.7-009 are fixed with green proof. Next review the complete PR #108 diff against the TREE 11.7 contract, run the required final verification, resolve any discovered blocker, and only then transition 11.7 to done / merge. Do not advance to Chat 42 / 11.8 until PR #108 is merged, main CI is green and execution truth reflects the next state."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
