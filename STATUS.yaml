@@ -46,7 +46,7 @@ next_pointer:
   owner: "Chat 38"
   current_chat_part: 2
   status: in_progress
-  action: "Chat 38 Part 2 full 11.4 review found Blocker #8: active Development Experiment execution has cooperative cancellation/native DuckDB interrupt but no configurable automatic wall-clock execution ceiling, while D-US-053 and the Research security/resource contract require time to be bounded where measurable. PR #102 remains draft; Fast #903, Planning/Contract #1095 and Workload #489 are green on reviewed head 3221a14c. Next close Blocker #8 with the smallest timeout through the existing AbortSignal/cancellation path, stable timeout failure code and focused cancellation/timeout/workload proof, then re-run the final 11.4 review."
+  action: "Blocker #8 is closed on f825602d: Development Experiment execution now has a configurable 60s default wall-clock ceiling via MARKET_FLOW_US_RESEARCH_EXPERIMENT_TIMEOUT_MS, using the existing AbortSignal/native DuckDB interruption path. Timeout persists RESEARCH_EXPERIMENT_TIMEOUT as FAILED without Experiment/Result success; caller cancellation remains CANCELLED. Fast #906, Planning/Contract #1098 and Workload #492 are green. PR #102 remains draft. Next rerun the full 11.4 success-evidence/diff review; do not mark ready or merge before that review is green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
