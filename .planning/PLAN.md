@@ -24,6 +24,8 @@ Backlog `B-US-008` has now completed discovery and Final Planning Review and is 
 
 Former target-machine/provider acceptance `B-US-000` remains separate non-blocking backlog work. It is not a prerequisite for Branch 11.
 
+On 2026-10-13 the user explicitly changed the Branch-11 completion policy: actual target-machine Research workload acceptance and real ChatGPT Desktop mission/restart acceptance are deferred to non-blocking post-merge backlog `B-US-009`. This changes sequencing/completion policy only. It does **not** convert unexecuted target-machine gates into PASS, and it does not weaken any acceptance criterion when `B-US-009` is later run against fresh `main`.
+
 ## Constraints and non-goals
 
 - Preserve proven mechanisms unless current evidence requires change; prefer composition/adaptation over rewrite.
@@ -52,7 +54,7 @@ Deliver one complete local U.S.-market product that preserves proven acquisition
 
 ### Tactic
 
-Preserve completed Branches 1–10 and add Branch 11 as one local autonomous research layer using a project-owned Plugin/Skill, thin MCP adapter, dedicated Research Server, separate durable Research Ledger, typed authoritative experiment APIs, bounded general read-only research SQL, server-enforced evidence phases and target-machine end-to-end acceptance.
+Preserve completed Branches 1–10 and add Branch 11 as one local autonomous research layer using a project-owned Plugin/Skill, thin MCP adapter, dedicated Research Server, separate durable Research Ledger, typed authoritative experiment APIs, bounded general read-only research SQL, server-enforced evidence phases and a repository-owned target-machine/Desktop acceptance package. Actual target-machine execution of that package is deferred post-merge to `B-US-009`.
 
 ### Parallel assumptions
 
@@ -65,18 +67,18 @@ Preserve completed Branches 1–10 and add Branch 11 as one local autonomous res
 
 ### Necessity
 
-Completed Branches 1–10 preserve the product capabilities already delivered. Branch 11 is independently necessary because the requested outcome is not another human Backtest screen: it requires durable autonomous research state, machine-first experiment/analytics access, anti-overfitting evidence governance, ChatGPT integration, security/resource control and end-to-end autonomous acceptance.
+Completed Branches 1–10 preserve the product capabilities already delivered. Branch 11 is independently necessary because the requested outcome is not another human Backtest screen: it requires durable autonomous research state, machine-first experiment/analytics access, anti-overfitting evidence governance, ChatGPT integration, security/resource control and a deterministic acceptance package for later real-machine proof.
 
 ### Sufficiency
 
-Leaves `11.1`–`11.8` jointly supply every independently necessary new outcome: durable run identity/resume, authoritative experiments, open-ended research analytics, jobs/results/resources, Validation/Holdout authority, Plugin/MCP operation, adversarial hardening and representative/real acceptance. No broker automation, fixed optimizer, permanent warehouse or self-modifying research agent is required.
+Leaves `11.1`–`11.8` jointly supply every independently necessary implementation outcome: durable run identity/resume, authoritative experiments, open-ended research analytics, jobs/results/resources, Validation/Holdout authority, Plugin/MCP operation, adversarial hardening, representative workload proof and target-machine/Desktop acceptance readiness. No broker automation, fixed optimizer, permanent warehouse or self-modifying research agent is required. Actual target-machine/Desktop execution remains preserved, not waived, in `B-US-009`.
 
 ### Root success evidence
 
 - Completed Branches 1–10 remain valid and regression-safe under their durable contracts.
-- Every Branch-11 leaf satisfies its success evidence below.
-- On the user's target machine, a fresh desktop ChatGPT conversation can connect through the shipped integration, discover or resume a durable Research Run, inspect real evidence/coverage/cadence, autonomously perform bounded authoritative experiments and general research analytics, preserve Development/Validation/Sealed-Holdout validity, survive chat/server restart, and return copy/paste Scanner SQL or explicit `NO_RECOMMENDATION` with objective, denominators, robustness, holdout state, limitations and reproduction references.
-- Original market evidence fingerprints/bytes remain unchanged, and no broker/provider/auth/private-browser authority is exposed.
+- Every Branch-11 leaf satisfies its revised implementation success evidence below.
+- The repository ships the complete target-machine/Desktop acceptance path needed to prove a fresh desktop ChatGPT conversation can connect through the shipped integration, discover or resume a durable Research Run, inspect real evidence/coverage/cadence, autonomously perform bounded authoritative experiments and general research analytics, preserve Development/Validation/Sealed-Holdout validity, survive chat/server restart, and return copy/paste Scanner SQL or explicit `NO_RECOMMENDATION` with objective, denominators, robustness, holdout state, limitations and reproduction references. Execution of that real-machine proof is tracked as `PENDING` in non-blocking backlog `B-US-009`, not fabricated as completed Branch-11 evidence.
+- Original market evidence fingerprints/bytes remain unchanged under deterministic/focused verification, and no broker/provider/auth/private-browser authority is exposed.
 - Required Fast/Browser/Planning/focused security/workload gates remain green without turning ordinary hosted CI into target-machine heavy performance testing.
 
 ---
@@ -151,15 +153,15 @@ Do not preemptively add a warehouse, feature store, temporal precompute/index su
 
 ### Necessity
 
-Without durable run/objective/evidence identity the AI cannot resume safely. Without authoritative experiments it cannot produce defensible Scanner SQL. Without expressive research analytics it cannot discover signals not predicted by the implementation. Without jobs/results/resources long autonomous work is unreliable. Without Validation/Holdout authority results can overfit. Without Plugin/MCP bootstrap the intended user path does not exist. Without adversarial hardening and workload/desktop acceptance the system is not trustworthy or proven usable.
+Without durable run/objective/evidence identity the AI cannot resume safely. Without authoritative experiments it cannot produce defensible Scanner SQL. Without expressive research analytics it cannot discover signals not predicted during implementation. Without jobs/results/resources long autonomous work is unreliable. Without Validation/Holdout authority results can overfit. Without Plugin/MCP bootstrap the intended user path does not exist. Without adversarial hardening, representative workload proof and a deterministic target-machine/Desktop acceptance package, the implementation would not be ready for responsible real-machine acceptance.
 
 ### Sufficiency
 
-Leaves `11.1`–`11.8` together provide those outcomes while preserving Scanner, Backtest, market, Replay and order authority boundaries.
+Leaves `11.1`–`11.8` together provide those implementation outcomes while preserving Scanner, Backtest, market, Replay and order authority boundaries. Actual target-machine/Desktop execution is an explicit non-blocking post-merge acceptance task in `B-US-009`.
 
 ### Branch success evidence
 
-A fresh target-machine desktop ChatGPT conversation can operate the complete researcher through the shipped integration, use current and future denser evidence without redesign, resume durable work without chat history, produce a reproducible Scanner SQL recommendation or `NO_RECOMMENDATION`, and prove source immutability plus phase/security/resource boundaries.
+Branch 11 implementation is complete when the researcher architecture, durable authorities, security/resource boundaries, representative workload proof, local Plugin/MCP packaging, target-machine workload runner, Desktop preflight/runbook and deterministic repository reclosure are all green. Real target-machine `W2T` and Desktop `W3` remain required acceptance evidence when `B-US-009` is executed later, but are not claimed as Branch-11 implementation PASS.
 
 ### 11.1 — Research Server domain foundation and durable ledger
 
@@ -197,7 +199,7 @@ A fresh target-machine desktop ChatGPT conversation can operate the complete res
 
 **Tactic:** Implement persistent `QUEUED/RUNNING/SUCCEEDED/FAILED/CANCELLED` jobs, retry-safe `clientRequestId`, result handles/pagination, hierarchical budgets, cancellation propagation, deterministic restart recovery and measured optional partition-cache reuse only when workload proves useful.
 
-**Success evidence:** Expensive work returns durable `jobId` plus compact progress; `SUCCEEDED` is written only after durable results/metrics/provenance; crash/restart distinguishes completed atomic units from interrupted work; cancel is idempotent and prevents new scheduling while attempting active DuckDB interruption; partial output cannot masquerade as complete; payload/page bounds are independent; request/job/run/global budgets bound CPU/memory/disk/result/concurrency growth; identical retry reuses created work while changed intent under the same idempotency key rejects; practical defaults come from workload evidence and hard timeouts remain failure ceilings.
+**Success evidence:** Expensive work returns durable `jobId` plus compact progress; `SUCCEEDED` is written only after durable results/metrics/provenance commit; crash/restart distinguishes completed atomic units from interrupted work; cancel is idempotent and prevents new scheduling while attempting active DuckDB interruption; partial output cannot masquerade as complete; payload/page bounds are independent; request/job/run/global budgets bound CPU/memory/disk/result/concurrency growth; identical retry reuses created work while changed intent under the same idempotency key rejects; practical defaults come from workload evidence and hard timeouts remain failure ceilings.
 
 ### 11.5 — Validation, sealed holdout and final recommendation authority
 
@@ -223,25 +225,25 @@ A fresh target-machine desktop ChatGPT conversation can operate the complete res
 
 **Success evidence:** Source bytes/fingerprints remain identical across hostile sequences; `ATTACH/COPY`, external readers, file/network paths, extensions, secrets/config mutation, side-effecting functions, `query/query_table`, obfuscation/multi-statement and equivalent catalog escapes fail closed; cross-run IDs/handles/cursors and phase-confused requests cannot expose unauthorized evidence; Holdout is absent from lower-phase sandboxes and result/cache/error side channels; local transport rejects unapproved exposure/origin/body/path use; crash/fault injection cannot create false `SUCCEEDED`, false validation exposure or half-created finalist/holdout authority; diagnostics/artifacts remain bounded/public-safe; every material finding receives regression proof and analogous-area review.
 
-### 11.8 — Representative workload, desktop acceptance and deterministic reclosure
+### 11.8 — Representative workload, acceptance readiness and deterministic reclosure
 
-**Strategy:** The complete autonomous researcher is practical on the intended machine, coherent in durable contracts and proven end-to-end rather than only as isolated APIs.
+**Strategy:** The complete autonomous researcher is coherent, representative-load verified, packaged for the intended Desktop path and ready for real-machine acceptance without requiring that acceptance to block the implementation merge.
 
-**Tactic:** Extend the existing workload framework from bounded CI through synthetic 4,096-security profiles to real target-machine evidence; measure bootstrap, single/multi-day projection, experiment batches, research SQL, result paging, cancellation/restart and holdout; remove measured repeated work; then run real Desktop ChatGPT → Plugin/Skill + MCP → Research Server → historical evidence → recommendation acceptance and reclose by repository PR/CI policy.
+**Tactic:** Extend the existing workload framework through bounded CI and synthetic 4,096-security profiles; ship a target-machine actual-evidence workload runner, repo-local Plugin/MCP packaging, deterministic Desktop preflight and exact acceptance runbook; remove measured repeated work; then reclose implementation by repository PR/CI policy. Execute the real target-machine workload and Desktop mission/restart later under non-blocking backlog `B-US-009` against fresh `main`.
 
-**Success evidence:** Bounded CI proves correctness/security without turning ordinary feedback into heavy target-machine testing; 4,096-security synthetic profiles cover representative width/cadence/days and source immutability; target-machine work measures wall-clock/RAM/disk/concurrency/result-size on actual evidence and tunes configurable limits from evidence; a fresh desktop ChatGPT mission creates/resumes a run, performs autonomous multi-step research, survives chat/server restart and produces reproducible final SQL/report through the actual shipped integration; final artifacts/contracts/user guidance match implementation; focused security/workload/Plugin-MCP acceptance plus affected Fast/Browser/Planning/Workload gates are green; PR merges by repository policy, main CI is green and open-PR state is reconciled.
+**Success evidence:** Bounded CI proves correctness/security without turning ordinary feedback into heavy target-machine testing; 4,096-security synthetic profiles cover representative width/cadence/days and source immutability; `npm run research-target:workload` is deterministic, read-only, public-safe, measures wall-clock/RAM/disk/concurrency/result-size and refuses synthetic fallback; `npm run research-desktop:preflight` verifies repo marketplace/package/MCP coherence and local tool discovery without fabricating Desktop PASS; exact W2T/W3 criteria remain documented and explicitly `PENDING` in `B-US-009`; final artifacts/contracts/user guidance match implementation; focused security/workload/Plugin-MCP verification plus affected Fast/Browser/Planning/Workload gates are green; PR merges by repository policy, main CI is green and open-PR state is reconciled.
 
 ---
 
 ## Material planning decisions carried forward
 
-Durable decisions `D-US-001`–`D-US-048` continue to constrain completed product behavior. Branch 11 additionally depends on `D-US-049`–`D-US-055` in `.planning/DECISIONS.md` covering the hybrid Research Server architecture, durable ledger/chat independence, strategy-vs-research authority separation, server-enforced evidence phases, bounded jobs/resources, Plugin/MCP operating boundary and cadence/capability-gap policy.
+Durable decisions `D-US-001`–`D-US-048` continue to constrain completed product behavior. Branch 11 additionally depends on `D-US-049`–`D-US-055` in `.planning/DECISIONS.md` covering the hybrid Research Server architecture, durable ledger/chat independence, strategy-vs-research authority separation, server-enforced evidence phases, bounded jobs/resources, Plugin/MCP operating boundary and cadence/capability-gap policy. The 2026-10-13 acceptance deferral is recorded directly in this authoritative PLAN and `B-US-009`; it changes completion sequencing only and does not reinterpret any technical/security decision.
 
 ## Final Planning Review — Branch 11
 
-Outside-in review found the outcome boundary correctly limited to autonomous short-horizon momentum / buy-candidate Scanner research rather than general quantitative finance or automatic trading. Each Branch-11 leaf passes the removal test: remove 11.1 and durable identity/resume disappears; remove 11.2 and Scanner recommendations lose authoritative evidence; remove 11.3 and autonomous discovery is limited to implementation-predicted questions; remove 11.4 and long work is not durably bounded/cancellable; remove 11.5 and final evidence can silently overfit; remove 11.6 and the intended fresh desktop ChatGPT path does not exist; remove 11.7 and the new attack/failure surface is not trustworthy; remove 11.8 and the integrated target-machine outcome is unproven.
+Outside-in review found the outcome boundary correctly limited to autonomous short-horizon momentum / buy-candidate Scanner research rather than general quantitative finance or automatic trading. Each Branch-11 leaf passes the removal test: remove 11.1 and durable identity/resume disappears; remove 11.2 and Scanner recommendations lose authoritative evidence; remove 11.3 and autonomous discovery is limited to implementation-predicted questions; remove 11.4 and long work is not durably bounded/cancellable; remove 11.5 and final evidence can silently overfit; remove 11.6 and the intended desktop ChatGPT integration surface does not exist; remove 11.7 and the new attack/failure surface is not trustworthy; remove 11.8 and representative workload proof, target-machine/Desktop acceptance tooling and deterministic implementation reclosure disappear.
 
-The sibling set is sufficient without a permanent warehouse, hard-coded optimizer, broker automation, model chain-of-thought storage or self-modifying product. Remaining choices such as exact local transport and numeric budgets are deliberately implementation/measurement details because the governing invariants are fixed and those values can be selected without reopening product semantics.
+The sibling set is sufficient without a permanent warehouse, hard-coded optimizer, broker automation, model chain-of-thought storage or self-modifying product. Actual target-machine/Desktop acceptance is intentionally deferred rather than deleted; `B-US-009` preserves the exact remaining proof against fresh `main`.
 
 The implementation leaves are decision-complete at planning level. Any executor discovering evidence that invalidates one of the stated assumptions must use the Planning Impact Test and repair only the smallest affected area before coding forward.
 
@@ -279,4 +281,4 @@ Their execution owners/dependencies live only in `.planning/EXECUTION.md`. Alloc
 
 ## Program completion condition
 
-Branch 11 is complete only when all eight leaves are `done` with their success evidence verified, the integrated target-machine Desktop ChatGPT path satisfies Branch-11/root success evidence, durable contracts are reconciled, no blocking defect remains, the final implementation/reclosure PR is merged, main CI is green and open-PR state is clean. `B-US-000` remains a separate non-blocking backlog item unless explicitly activated later.
+Branch 11 implementation is complete when all eight leaves are `done` with their revised success evidence verified, durable contracts are reconciled, no blocking implementation defect remains, the final implementation/reclosure PR is merged, main CI is green and open-PR state is clean. Real target-machine Research workload acceptance and ChatGPT Desktop mission/restart acceptance remain explicitly `PENDING` in non-blocking post-merge backlog `B-US-009`; their deferral must never be represented as PASS. `B-US-000` remains a separate non-blocking provider-acceptance backlog item unless explicitly activated later.
