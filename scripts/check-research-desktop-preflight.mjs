@@ -18,6 +18,8 @@ const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
   ?? path.join(PROJECT_ROOT, "test-results", "acceptance", "research-desktop-preflight.json");
 const MCP_COMMAND = "market-flow-us-research-mcp";
+const MCP_PROTOCOL_VERSION = "2025-06-18";
+const EXPECTED_MCP_TOOL_COUNT = 46;
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
 const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
@@ -124,6 +126,37 @@ async function assertUsableMarketEvidence({ dataDir, evidenceSources }) {
     }
   }
   fail("RESEARCH_DESKTOP_PREFLIGHT_MARKET_EVIDENCE_UNUSABLE");
+}
+
+export function validateMcpInitializeResult(initialized) {
+  if (initialized?.protocolVersion !== MCP_PROTOCOL_VERSION) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MISMATCH");
+  }
+  if (initialized?.serverInfo?.name !== "market-flow-us-research") {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_SERVER_MISMATCH");
+  }
+  return initialized;
+}
+
+export function validateMcpToolList(tools) {
+  const entries = Array.isArray(tools?.tools) ? tools.tools : null;
+  if (entries === null || entries.length !== EXPECTED_MCP_TOOL_COUNT) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH");
+  }
+
+  const names = entries.map((tool) => tool?.name);
+  if (
+    names.some((name) => typeof name !== "string" || name.length === 0)
+    || new Set(names).size !== names.length
+  ) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH");
+  }
+
+  const uniqueNames = new Set(names);
+  if (REQUIRED_TOOLS.some((name) => !uniqueNames.has(name))) {
+    fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH");
+  }
+  return uniqueNames;
 }
 
 function timeoutPromise(ms, code) {
@@ -333,21 +366,14 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   }
 
   try {
-    const initialized = await request("initialize", {
-      protocolVersion: "2025-06-18",
+    const initialized = validateMcpInitializeResult(await request("initialize", {
+      protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: {},
       clientInfo: { name: "market-flow-us-desktop-preflight", version: "1.0.0" }
-    });
-    if (initialized?.serverInfo?.name !== "market-flow-us-research") {
-      fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_SERVER_MISMATCH");
-    }
+    }));
     write({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
 
-    const tools = await request("tools/list", {});
-    const names = new Set((tools?.tools ?? []).map((tool) => tool.name));
-    if (names.size !== 46 || REQUIRED_TOOLS.some((name) => !names.has(name))) {
-      fail("RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH");
-    }
+    const names = validateMcpToolList(await request("tools/list", {}));
 
     const environment = await request("tools/call", {
       name: "describe_research_environment",
