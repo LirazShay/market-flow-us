@@ -1,6 +1,6 @@
 # Autonomous AI Researcher Hardening Audit — TREE 11.7
 
-Status: IN PROGRESS
+Status: IN PROGRESS — FINAL RECLOSURE GREEN; MERGE/MAIN-CI TRANSITION PENDING
 
 This record is public-safe. It must not contain credentials, cookies, auth/session data, account identifiers, private browser data, raw authenticated dumps, private model reasoning, or unsanitized target-machine paths.
 
@@ -261,6 +261,26 @@ The proof covers:
 
 No additional production defect was found by the stdio process fuzz.
 
+## Final success-evidence / complete-diff reclosure — GREEN (pre-merge)
+
+The final reclosure resumed after `H-11.7-010` and reviewed the complete PR #108 delta from merged `main` baseline `c74dc3e0c751eb112ca0b35cc6bc710ae2fef332` through pre-merge head `6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908`. The baseline still equals current `main`; the branch is strictly ahead with no unrelated upstream drift. The complete delta contains 27 files: 10 production files, 14 focused regression files and 3 planning/status files. No additional blocker or scope drift was found.
+
+| TREE 11.7 success-evidence clause | Reclosure evidence | Result |
+|---|---|---|
+| Source bytes/fingerprints remain identical across hostile sequences; attachment/copy/external reader/path/extension/secret/config/side-effect/dynamic-query/obfuscation/catalog equivalents fail closed. | `research-sql-host-source-hardening`, H-006 admission hardening, existing Research SQL sandbox/source-fingerprint proofs; exact source bytes/fingerprint and no export artifact are asserted. | GREEN |
+| Cross-run IDs/handles/cursors and phase-confused requests cannot expose unauthorized evidence. | Real MCP authority-boundary proof, existing Result Handle/cursor scoping/restart paging, Validation/Holdout run/partition checks, H-003 current-plan Finalist lock. | GREEN |
+| Holdout remains absent from lower-phase sandboxes and result/cache/error side channels. | Typed Validation/Holdout authority from 11.5 remains green; H-001/H-002 close duplicate/restart sealed execution; MCP phase-shape and diagnostics proofs expose no sealed payload. | GREEN |
+| Local transport rejects unapproved exposure/body/path-style widening. | Selected 11.6 transport is project-owned stdio, so there is no HTTP Origin/path listener to widen. Real stdio malformed-framing/EOF/SIGTERM proof plus strict MCP schemas and H-007 input ceilings reject malformed/oversized transport input without creating a second transport authority. | GREEN |
+| Crash/fault injection cannot create false `SUCCEEDED`, false Validation exposure or half-created Finalist/Holdout authority. | Existing transaction fault baseline plus H-002 durable Holdout claim, H-003 ledger-local Finalist recheck, H-004 success-commit boundary, H-005 interrupted Result reconciliation and H-010 non-success Result cleanup/restart repair. | GREEN |
+| Diagnostics/artifacts remain bounded and public-safe. | MCP tool failure sanitization, real stdio canary/path proof and H-008 durable nested failure-code normalization; public-safe persistence baseline remains green. | GREEN |
+| Every material finding receives regression proof and analogous-area review. | H-11.7-001 through H-11.7-010 each have deterministic proof; findings with broader families explicitly review concurrency/restart, stable-code surfaces, resource backstops or non-success terminal variants. | GREEN |
+
+Production-diff review confirms KISS preservation: Scanner bounded streaming is opt-in and Research-only; MCP adds transport ceilings without duplicating Domain authority; Holdout uses a local durable claim instead of a generic subsystem; Validation adds a final ledger-local recheck; Job hardening reuses the existing controller/ledger/restart mechanisms. No broker/provider/browser authority or source-writer path was introduced.
+
+PR #108 has no review/conversation comments, remains mergeable, and intentionally remains draft during this pre-merge checkpoint. Pre-merge head `6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908` is fully green: Fast `#1017`, Planning/Contract `#1213`, Workload `#603`, Replay `#165`, Browser `#627`; Fast includes unit `302/302`, service `319/319` and order acceptance, while Browser includes full Chromium + Local Fake acceptance.
+
+This closes the TREE `11.7` success-evidence/diff reclosure. Execution status intentionally remains `in_progress` until PR #108 is squash-merged, merged `main` CI is green and open-PR state is reconciled. The next work unit is the repository merge/main-verification transition only; no new audit slice remains.
+
 ## Verification ledger
 
 | Candidate | Verification | Result |
@@ -290,17 +310,19 @@ No additional production defect was found by the stdio process fuzz.
 | `0f2480638dcf323985a94d89a0b5c188ecc6208e` | Fast `#1012` | RED-by-design — unit `302/302`, service `316/317`, only H-010 failed; Planning `#1208`, Workload `#598`, Replay `#160` green |
 | `50799bd58a933800270127f35f99dd371122acf1` | Fast `#1013` | FAILED fix candidate — H-010 still failed; Planning `#1209`, Workload `#599`, Replay `#161`, Browser `#623` green |
 | `6ac38db1220058c1fb3274d4547c0b9fd5a7d48d` | Fast `#1015`, Planning `#1211`, Workload `#601`, Replay `#163`, Browser `#625` | GREEN — unit `302/302`, service `319/319`, FAILED/CANCELLED/legacy-restart H-010 family + H-004/H-005 compatibility + order acceptance PASS |
-| PR `#108` | integration PR | DRAFT; do not merge while TREE `11.7` remains in progress |
+| `6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908` | Fast `#1017`, Planning `#1213`, Workload `#603`, Replay `#165`, Browser `#627` | GREEN — final post-H-010 complete-diff/success-evidence reclosure candidate |
+| PR `#108` | integration PR | DRAFT / MERGE PENDING; reclosure GREEN, execution remains `in_progress` until merge + main verification |
 
 ## Current audit result
 
-- Audit status: `IN PROGRESS`.
+- Audit reclosure: `GREEN`.
+- Execution task `11.7`: still `in_progress` only because repository merge/main-verification completion has not yet occurred.
 - `H-11.7-001` through `H-11.7-010`: fixed with deterministic proof and affected green verification.
 - Every adversarial matrix area is `REVIEWED`; no matrix row remains `OPEN`.
+- The complete 27-file PR #108 delta has been reviewed against every TREE `11.7` success-evidence clause; no additional blocker or scope drift was found.
 - SQL/source/host admission and source immutability are reclosed on composed hostile execution with exact before/after source proof.
 - Cross-run/phase/MCP authority, Result Handle/cursor, transactionality, Validation/Holdout and local stdio lifecycle are reclosed with the dedicated TREE 11.7 proofs.
 - Result terminal truth is reclosed across `RUNNING` crash reconciliation and direct/restart `FAILED`/`CANCELLED` cleanup; only `SUCCEEDED` Jobs retain authoritative Results.
 - Public-safe diagnostics are reclosed across MCP, stdio and durable Job progress.
-- Resource bounds are `REVIEWED`: pre-materialization Research SQL output is hard-bounded, durable hierarchical budgets/growth limits remain green across restart, queue/readers remain bounded, exact retries are idempotent under 32-way concurrent queue pressure, queued cancellation remains responsive, and streaming preserves interrupt/drain behavior.
-- Final reclosure discovered `H-11.7-010`; that blocker is now closed and green. Closure claim remains intentionally withheld until the complete TREE `11.7` diff/success-evidence reclosure is resumed and completed from this new head.
-- Next audit slice: none. Next work unit is to resume final TREE `11.7` reclosure against `.planning/PLAN.md`, then perform the required final PR/verification transition. Do not advance to Chat 42 / `11.8` until that reclosure is green and merged according to execution truth.
+- Resource bounds are reclosed: pre-materialization Research SQL output is hard-bounded, durable hierarchical budgets/growth limits remain green across restart, queue/readers remain bounded, exact retries are idempotent under 32-way concurrent queue pressure, queued cancellation remains responsive, and streaming preserves interrupt/drain behavior.
+- No remaining audit slice exists. Next work is PR #108 readiness/squash merge, merged-main CI verification and open-PR reconciliation. Only after those repository completion conditions are green may `11.7` become `done` and Chat 42 / `11.8` activate.

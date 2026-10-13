@@ -43,7 +43,7 @@ next_pointer:
   task: "11.7"
   owner: "Chat 41"
   status: in_progress
-  action: "Resume the final TREE 11.7 success-evidence / complete-diff reclosure against `.planning/PLAN.md` from the post-H-11.7-010 head. Every adversarial matrix area is REVIEWED and H-11.7-001 through H-11.7-010 are fixed with green proof. H-010 additionally proves FAILED/CANCELLED Jobs cannot retain provisional Results and restart repairs legacy non-success orphans while preserving SUCCEEDED authority. Continue the remaining full PR #108 diff/success-evidence review, resolve any discovered blocker, run final verification, and only then transition 11.7 to done / merge. Do not advance to Chat 42 / 11.8 until PR #108 is merged, main CI is green and execution truth reflects the next state."
+  action: "TREE 11.7 final success-evidence / complete-diff reclosure is GREEN. Every adversarial matrix area is REVIEWED, H-11.7-001 through H-11.7-010 are fixed with deterministic proof and analogous-area review, and pre-merge head 6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908 passed Fast #1017, Planning #1213, Workload #603, Replay #165 and Browser #627. Next perform the repository completion transition only: take PR #108 through readiness/squash merge, verify merged-main CI green and open-PR state reconciled, then update EXECUTION/STATUS to mark 11.7 done and activate Chat 42 / 11.8. Do not start 11.8 before those conditions are green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
