@@ -1,6 +1,6 @@
 # AI Researcher acceptance evidence
 
-This file is the public-safe TREE `11.8` acceptance ledger for representative workload and current-desktop reclosure.
+This file is the public-safe TREE `11.8` acceptance ledger for representative workload, target-machine actual-evidence measurement and current-desktop reclosure.
 
 It records only synthetic/public-safe measurements and GitHub verification identifiers. It must never contain credentials, cookies, session material, account identifiers, private browser data or authenticated dumps.
 
@@ -10,7 +10,8 @@ It records only synthetic/public-safe measurements and GitHub verification ident
 |---|---|---|
 | `W1` deterministic reduced CI workload | `PASS` | Workload CI run `38358501031`, job `115166877682`, `ci-256` Research resource probe. |
 | `W2` representative 4,096-security synthetic workload | `PASS` | One-time PR verification run `38358501349`, job `115166878192`, artifact `11793616887`, `target-4096` Research resource probe. |
-| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. Repo/local marketplace discovery is specifically documented through Work mode or Codex inside ChatGPT Desktop; the repo ships the marketplace, deterministic target-machine preflight and exact Desktop runbook, but the real target-machine mission/restart proof still must be executed in Desktop. |
+| `W2T` target-machine actual-evidence resource workload | `PENDING_TARGET_MACHINE` | Repository runner `npm run research-target:workload` is implemented and CI-proven to consume existing evidence only, preserve source bytes/fingerprint and refuse synthetic fallback. It still must run against the intended target machine's real historical evidence before target-machine wall-clock/RAM/disk/concurrency/result-size evidence can be accepted. |
+| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. Repo/local marketplace discovery is specifically documented through Work mode or Codex inside ChatGPT Desktop; the repo ships the marketplace, deterministic target-machine preflight and exact Desktop runbook, but the real target-machine mission/restart proof still must be executed in Desktop after `W2T` passes. |
 
 ## W1 — reduced deterministic CI
 
@@ -64,9 +65,68 @@ A PR-only verification workflow ran the exact Research resource probe with `MARK
 
 ### Resource-policy conclusion
 
-The representative path completed inside the existing conservative serial heavy-job/reader policy. No evidence justifies changing the current concurrency, cancellation ceilings, timeouts or result budgets. TREE `11.8` therefore preserves the existing resource policy unchanged.
+The representative path completed inside the existing conservative serial heavy-job/reader policy. No evidence justifies changing the current concurrency, cancellation ceilings, timeouts or result budgets. TREE `11.8` therefore preserves the existing resource policy unchanged unless the actual target-machine evidence demonstrates a concrete need to tune it.
 
 The measured disk growth is the bounded Research Ledger created by the synthetic run; the authoritative market source fingerprint remains unchanged after cancellation, successful Research SQL, successful Strategy Sandbox execution, restart and result reads.
+
+## W2T — target-machine actual-evidence resource workload
+
+The repository now owns a dedicated target-machine command:
+
+```text
+npm run research-target:workload
+```
+
+The runner is intentionally separate from normal hosted Workload CI. Its purpose is to measure the existing managed Research path against the target machine's **already-existing Market Flow US historical evidence**, not to create another synthetic benchmark.
+
+The runner:
+
+- enumerates only product-owned Backtest evidence sources;
+- opens source evidence read-only;
+- chooses an eligible real `T0` from complete-cycle chronology without assuming a fixed collection cadence;
+- creates a temporary Research Ledger outside the source evidence;
+- runs the existing managed Strategy Sandbox path and managed Research SQL path;
+- submits `16` duplicate experiment requests and requires one durable Job / one Experiment identity;
+- reads bounded Result Handles;
+- closes and reopens the managed Research Domain and re-reads durable results;
+- records public-safe wall-clock/RSS/max-RSS/CPU/disk/concurrency/result-row/result-byte measurements;
+- compares source fingerprint and source byte size before/after;
+- refuses to seed/fabricate market data if no usable product evidence exists;
+- emits `desktopAcceptance = STILL_REQUIRED`, because resource measurement is not Desktop acceptance.
+
+Implementation proof before target execution:
+
+- one-time full managed-path service proof passed in Fast CI `#1075` (`~7390.75 ms` for that explicit composition proof);
+- the recurring regression was then reduced to source discovery/read-only/immutability/no-synthetic-fallback proof so ordinary Fast CI does not permanently pay for the target workload;
+- the reduced regression passed in Fast CI `#1078` at approximately `102.83 ms`;
+- Planning/Contract `#1276`, Workload `#664`, Replay `#216` and Browser `#688` were also green on implementation head `1dbff7e86863c15125879ed2bdaed5e2e67f27c0`.
+
+These CI results prove the runner contract and composition, **not** the target machine's real resource measurements. `W2T` remains `PENDING_TARGET_MACHINE` until the intended candidate is run on the target machine against the intended historical evidence and the public-safe report is reviewed.
+
+A passing target report is expected at:
+
+```text
+test-results/acceptance/research-target-evidence.json
+```
+
+Required target evidence to capture here after execution:
+
+- exact candidate commit;
+- `result = pass`;
+- selected source count/kinds/schema versions without filesystem paths;
+- wall-clock duration;
+- experiment and Research SQL durations;
+- result row/serialized-byte sizes;
+- Research Ledger/temp-directory disk bytes;
+- RSS before/after/delta and max RSS;
+- CPU user/system microseconds;
+- effective managed concurrency policy;
+- duplicate submissions -> one Job / one Experiment;
+- durable result reads after managed-domain reopen;
+- source fingerprint equality and source byte-size equality;
+- explicit tuning disposition based only on those measurements.
+
+Do not copy source paths, raw rows, provider/session material, browser state or environment dumps into this ledger.
 
 ## W3 — current Desktop surface re-verification
 
@@ -97,7 +157,7 @@ Repository repair on PR `#110`:
 - preserved portable `plugin.json` + `mcp.json` Agent Plugins packaging;
 - preserved the `market-flow-us-research-mcp` `stdio` executable and server-owned resource/security policy;
 - added `tests/unit/research-plugin-packaging.test.mjs` to lock marketplace -> plugin -> MCP command -> `package.json.bin` coherence and reject accidental network-endpoint substitution;
-- added `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` with the exact current target-machine preflight, Work/Codex marketplace discovery path, fresh-chat mission, Desktop/server restart proof and public-safe evidence rules;
+- added `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` with the exact target-machine actual-evidence workload, current preflight, Work/Codex marketplace discovery path, fresh-chat mission, Desktop/server restart proof and public-safe evidence rules;
 - added `npm run research-desktop:preflight`, backed by `scripts/check-research-desktop-preflight.mjs`, to prove the actual target-machine prerequisites that Desktop inherits: repo marketplace/package coherence, real market evidence presence, PATH-visible `market-flow-us-research-mcp`, real `stdio` initialization, 46-tool discovery and the data/instruction boundary;
 - added deterministic unit and real-process integration regressions for the preflight contract.
 
@@ -107,18 +167,21 @@ The GitHub/web execution surface used to implement PR `#110` cannot inspect or c
 
 The current web Plugin Directory visible to this executor does not expose the repo-local `market-flow-us-researcher`; that is expected because local marketplaces are separate Desktop sources rather than universal public-directory entries. It must not be interpreted as a plugin-discovery failure on the target Desktop machine.
 
-Accordingly, this executor must not fabricate `W3 = PASS`. The repository now makes the first target-machine step deterministic:
+Accordingly, this executor must not fabricate `W2T = PASS` or `W3 = PASS`. The target-machine order is deterministic:
 
 ```text
 npm ci
+npm run research-target:workload
 npm link
 npm run research-desktop:preflight
 ```
 
-A passing preflight proves the repository/machine MCP prerequisites before the real Desktop run and intentionally reports `desktopAcceptance = STILL_REQUIRED`. Only after that pass should a Desktop-specific failure be classified as a target-client blocker.
+Require the actual-evidence workload to pass before Desktop preflight. A passing Desktop preflight proves the repository/machine MCP prerequisites and intentionally reports `desktopAcceptance = STILL_REQUIRED`. Only after both target-machine prerequisites pass should a Desktop-specific failure be classified as a target-client blocker.
 
 The real W3 acceptance remains intentionally **not** marked passed from this web/GitHub executor surface. `W3 = PASS` requires the target-machine ChatGPT Desktop app to discover/install the local plugin through the documented Work/Codex repo marketplace surface, run the complete mission through the shipped plugin/MCP path in a fresh Desktop conversation, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
 
 ## Remaining acceptance
 
-Next, on the target machine run the three-command repository preflight from `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md`, then in ChatGPT Desktop open the trusted repository in Work mode or Codex, install `Market Flow US Local` -> `market-flow-us-researcher`, and execute the real fresh-chat Desktop mission plus restart/resume proof. If repository preflight passes but the documented Desktop marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
+Next, on the exact target-machine candidate run the actual-evidence workload and review its public-safe resource/immutability report. If and only if that passes, run the Desktop repository preflight from `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md`. Then fully restart ChatGPT Desktop, open the trusted repository in Work mode or Codex, install `Market Flow US Local` -> `market-flow-us-researcher`, and execute the real fresh-chat Desktop mission plus restart/resume proof.
+
+If the actual-evidence workload fails, perform RCA against the real measurement before changing resource policy; do not widen concurrency/timeouts/budgets merely to make the gate pass. If repository preflight passes but the documented Desktop marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
