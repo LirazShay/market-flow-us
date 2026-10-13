@@ -40,39 +40,48 @@ export function createProtectedOrderBridge({
       quote,
       policyLimits
     }) {
-      return await hardRiskAuthority.gateOrderIntent({
+      const riskInput = {
         tradingRunId,
         tradeEpisodeId,
         intent,
         quote,
         policyLimits
-      }, async ({ normalizedIntent, riskPermit }) => {
-        if (normalizedIntent.executionMode === "LIVE") {
-          if (requestLiveOperatorConfirmation === null) {
-            throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
-          }
+      };
 
-          let confirmation;
-          try {
-            confirmation = await requestLiveOperatorConfirmation(Object.freeze({
-              tradingRunId,
-              tradeEpisodeId,
-              intent: normalizedIntent,
-              riskPermit
-            }));
-          } catch (error) {
-            if (error instanceof ProtectedOrderBridgeError) throw error;
-            throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
-          }
-          if (!confirmation || confirmation.confirmed !== true) {
-            throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
-          }
+      return await hardRiskAuthority.gateOrderIntent(riskInput, async ({ normalizedIntent, riskPermit }) => {
+        if (normalizedIntent.executionMode !== "LIVE") {
+          return await orderServiceClient.createOrder(normalizedIntent);
         }
 
-        // The bridge performs no broker logic and no retry of its own.
-        // The shared local client preserves exact request identity and the existing
-        // IBKR Order Service owns idempotency, ACK reconciliation and lifecycle state.
-        return await orderServiceClient.createOrder(normalizedIntent);
+        if (requestLiveOperatorConfirmation === null) {
+          throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
+        }
+
+        let confirmation;
+        try {
+          confirmation = await requestLiveOperatorConfirmation(Object.freeze({
+            tradingRunId,
+            tradeEpisodeId,
+            intent: normalizedIntent,
+            riskPermit
+          }));
+        } catch (error) {
+          if (error instanceof ProtectedOrderBridgeError) throw error;
+          throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
+        }
+        if (!confirmation || confirmation.confirmed !== true) {
+          throw new ProtectedOrderBridgeError("LIVE_OPERATOR_CONFIRMATION_REQUIRED");
+        }
+
+        // Human confirmation can take long enough for quote/risk/operator state to change.
+        // Re-run the same independent hard authority immediately before mutation so LIVE
+        // cannot turn a previously safe observation into a stale time-of-check/time-of-use permit.
+        return await hardRiskAuthority.gateOrderIntent({
+          ...riskInput,
+          intent: normalizedIntent
+        }, async ({ normalizedIntent: recheckedIntent }) => {
+          return await orderServiceClient.createOrder(recheckedIntent);
+        });
       });
     }
   });
