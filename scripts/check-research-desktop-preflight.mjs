@@ -20,7 +20,7 @@ const MCP_COMMAND = "market-flow-us-research-mcp";
 const REQUEST_TIMEOUT_MS = 10_000;
 const EXIT_TIMEOUT_MS = 10_000;
 const PROCESS_TREE_TERMINATION_TIMEOUT_MS = 5_000;
-const STABLE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,127}$/u;
+const STABLE_ERROR_CODE = /^RESEARCH_DESKTOP_PREFLIGHT_[A-Z0-9_]{1,96}$/u;
 const REQUIRED_TOOLS = Object.freeze([
   "describe_research_environment",
   "bootstrap_research",
