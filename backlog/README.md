@@ -24,14 +24,14 @@ There is currently **no approved backlog priority order**. Every remaining backl
 | [B-US-005](B-US-005-replay-pre-user-run-hardening-audit.md) | Preserved Replay hardening backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-006](B-US-006-basic-in-product-buy.md) | Preserved basic BUY backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-007](B-US-007-prioritize-backlog.md) | Review the full backlog against fresh `main`, remove/supersede stale items, and assign an explicit priority/order. | Backlog | Unprioritized | No |
-| [B-US-010](B-US-010-autonomous-ai-trading-strategy-distillation.md) | Strategic future goal for bounded AI-assisted trading, continuous supervision, hard risk authority, durable trade evidence and deterministic strategy distillation. It is explicitly independent of user/target-machine acceptance tasks unless PLAN/EXECUTION records a real dependency. | Backlog | Unprioritized | No |
 
 ## Promoted / historical records
 
 | Item | Current disposition |
 |---|---|
 | [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | Promoted to active **Branch 11 — Autonomous AI Researcher** and completed. Current planning/execution authority is `.planning/PLAN.md` + `.planning/EXECUTION.md`; the backlog file is provenance/supporting context only. |
-| [B-US-009](B-US-009-ai-researcher-target-machine-desktop-acceptance.md) | Promoted on 2026-10-13 into active post-merge acceptance execution. The existing PLAN already defines this exact acceptance boundary; live owner/status/result truth now lives in `.planning/EXECUTION.md`. The backlog file is provenance/supporting acceptance context only. |
+| [B-US-009](B-US-009-ai-researcher-target-machine-desktop-acceptance.md) | Promoted on 2026-10-13 into active post-merge acceptance execution. The existing PLAN defines this exact acceptance boundary; live owner/status/result truth lives in `.planning/EXECUTION.md`. The backlog file is provenance/supporting acceptance context only. |
+| [B-US-010](B-US-010-autonomous-ai-trading-strategy-distillation.md) | Promoted to active **Branch 12 — Autonomous AI Trading & Strategy Distillation**. PLAN/EXECUTION are authority; `docs/AUTONOMOUS_AI_TRADING.md` is the durable domain contract and this backlog file is provenance/supporting context only. |
 
 ## Backlog rules
 
