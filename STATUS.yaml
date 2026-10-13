@@ -22,28 +22,28 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: "Chat 47"
-  node: "12.4"
-  title: "Continuous Trading Supervisor + AI Decision Proposal model"
-  status: in_progress
-  activation_required: false
+  chat: null
+  node: "12.7"
+  title: "Separate Trading Skill + Trading MCP"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 62
+  done: 63
   pending: 3
-  in_progress: 1
+  in_progress: 0
   blocked: 1
-  current_chat: "Chat 47"
-  current_node: "12.4"
+  current_chat: null
+  current_node: "12.7"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.4"
-  owner: "Chat 47"
-  status: in_progress
-  action: "Continue Chat 47 on feature branch chat-47-12-4-trading-supervisor. The first deterministic Supervisor/DecisionProposal kernel checkpoint is implemented with focused local proof; durable Trading ledger/order composition, restart recovery/idempotency proof and required CI remain pending. B-US-009 remains independently blocked on target-machine evidence."
+  task: "12.7"
+  owner: "Chat 48"
+  status: pending
+  action: "Activate Chat 48 only on an explicit numbered-chat request. TREE 12.4 / Chat 47 is reclosed on PR #126: deterministic continuous Supervisor, durable DecisionProposal/state/order evidence, authoritative same-request reconciliation, restart no-duplicate-order proof, AI unavailable/slow fallback and shutdown behavior are green. Pre-reclosure Planning #1364 and Fast #1142 are green; Fast ran 345 unit + 355 service tests and synthetic order-service acceptance PASS with realOrderSubmitted=false. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
