@@ -51,10 +51,10 @@ export async function startResearchMcpStdio({
   if (typeof serve !== "function") throw new TypeError("serve must be a function");
 
   const domain = await domainFactory(resolveResearchMcpRuntimeOptions(environment));
-  let closed = false;
-  const close = async () => {
-    if (closed) return;
-    closed = true;
+  let domainClosed = false;
+  const closeDomain = async () => {
+    if (domainClosed) return;
+    domainClosed = true;
     await domain.close();
   };
 
@@ -68,16 +68,26 @@ export async function startResearchMcpStdio({
         }
       }
     );
+    let closePromise = null;
+    const closeRuntime = () => {
+      if (closePromise === null) {
+        closePromise = (async () => {
+          try {
+            await handle.close();
+          } finally {
+            await closeDomain();
+          }
+        })();
+      }
+      return closePromise;
+    };
 
     return Object.freeze({
       version: RESEARCH_MCP_STDIO_VERSION,
-      close: async () => {
-        await handle.close();
-        await close();
-      }
+      close: closeRuntime
     });
   } catch (error) {
-    await close();
+    await closeDomain();
     throw error;
   }
 }
