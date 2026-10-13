@@ -34,7 +34,10 @@ export function buildWorkloadEnvironment(profile, baseEnv = process.env) {
       ?? path.join(reportDir, `${profile}-demo-buy-evaluator.json`),
     MARKET_FLOW_US_BACKTEST_REPORT:
       env.MARKET_FLOW_US_BACKTEST_REPORT
-      ?? path.join(reportDir, `${profile}-backtest-lab.json`)
+      ?? path.join(reportDir, `${profile}-backtest-lab.json`),
+    MARKET_FLOW_US_RESEARCH_REPORT:
+      env.MARKET_FLOW_US_RESEARCH_REPORT
+      ?? path.join(reportDir, `${profile}-research-resource.json`)
   };
 }
 
@@ -43,14 +46,16 @@ export function resolveWorkloadTestFiles(profile) {
     return [
       "tests/workload/representative-workload.test.mjs",
       "tests/workload/demo-buy-evaluator-probe.test.mjs",
-      "tests/workload/backtest-lab-probe.test.mjs"
+      "tests/workload/backtest-lab-probe.test.mjs",
+      "tests/workload/research-resource-probe.test.mjs"
     ];
   }
   if (profile === "target-day") {
     return [
       "tests/workload/isolated-probes.test.mjs",
       "tests/workload/demo-buy-evaluator-probe.test.mjs",
-      "tests/workload/backtest-lab-probe.test.mjs"
+      "tests/workload/backtest-lab-probe.test.mjs",
+      "tests/workload/research-resource-probe.test.mjs"
     ];
   }
   return [
