@@ -22,28 +22,28 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: "Chat 45"
-  node: "12.3"
-  title: "Targeted live quote watch"
-  status: in_progress
-  activation_required: false
+  chat: null
+  node: "12.5"
+  title: "Independent Hard Risk Authority"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 59
+  done: 60
   pending: 6
-  in_progress: 1
+  in_progress: 0
   blocked: 1
-  current_chat: "Chat 45"
-  current_node: "12.3"
+  current_chat: null
+  current_node: "12.5"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.3"
-  owner: "Chat 45"
-  status: in_progress
-  action: "Restart/no-fabricated-continuity proof is green. Perform final affected verification and PR/repository reclosure for 12.3; keep bounded polling and do not add streaming. Real provider latency remains for later live-shadow/target-machine acceptance and is not inferred from CI."
+  task: "12.5"
+  owner: "Chat 46"
+  status: pending
+  action: "Activate Chat 46 only on an explicit numbered-chat request after TREE 12.3 / Chat 45 PR #120 is merged and post-merge main verification is green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
