@@ -1,3 +1,9 @@
+import { DuckDBInstance } from "@duckdb/node-api";
+
+import {
+  DEFAULT_RESEARCH_LEDGER_PATH,
+  RESEARCH_LEDGER_DUCKDB_HARDENING
+} from "./ledger.js";
 import {
   RESEARCH_JOB_SCHEMA_VERSION,
   openResearchJobLedger as openCoreResearchJobLedger
@@ -28,9 +34,139 @@ function mergeDurableCounts(target, durable) {
   );
 }
 
+async function queryRows(connection, sql, values) {
+  const reader = values === undefined
+    ? await connection.runAndReadAll(sql)
+    : await connection.runAndReadAll(sql, values);
+  return reader.getRowObjects();
+}
+
+function interruptedProgressWithoutResults(progressJson) {
+  if (typeof progressJson !== "string") {
+    throw new Error("research job progress persistence is invalid during restart reconciliation");
+  }
+  let progress;
+  try {
+    progress = JSON.parse(progressJson);
+  } catch {
+    throw new Error("research job progress persistence is invalid during restart reconciliation");
+  }
+  if (!progress || typeof progress !== "object" || Array.isArray(progress)) {
+    throw new Error("research job progress persistence is invalid during restart reconciliation");
+  }
+  if (!Object.hasOwn(progress, "resultHandles")) return progressJson;
+  progress.resultHandles = [];
+  return JSON.stringify(progress);
+}
+
+async function rollbackQuietly(connection) {
+  try {
+    await connection.run("ROLLBACK");
+  } catch {
+    // Preserve the original restart-reconciliation error.
+  }
+}
+
+async function reconcileInterruptedJobArtifacts(options) {
+  const dbPath = options.dbPath ?? DEFAULT_RESEARCH_LEDGER_PATH;
+  const now = options.now ?? Date.now;
+  if (typeof now !== "function") throw new TypeError("now must be a function");
+  const timestamp = Number(now());
+  if (!Number.isSafeInteger(timestamp) || timestamp < 0) {
+    throw new TypeError("now() must be a non-negative safe integer");
+  }
+
+  const instance = await DuckDBInstance.create(dbPath, RESEARCH_LEDGER_DUCKDB_HARDENING);
+  const connection = await instance.connect();
+  try {
+    await connection.run("BEGIN TRANSACTION");
+    try {
+      const runningJobs = await queryRows(
+        connection,
+        `SELECT job_id, progress_json
+         FROM research_jobs
+         WHERE status = 'RUNNING'
+         ORDER BY created_at_ms ASC, job_id ASC`
+      );
+
+      if (runningJobs.length > 0) {
+        const tableRows = await queryRows(
+          connection,
+          "SELECT table_name FROM information_schema.tables WHERE table_schema = 'main'"
+        );
+        const tables = new Set(tableRows.map((row) => String(row.table_name)));
+        if (tables.has("research_results") && tables.has("research_result_rows")) {
+          const provisionalResults = await queryRows(
+            connection,
+            `SELECT r.result_handle
+             FROM research_results AS r
+             INNER JOIN research_jobs AS j
+               ON j.research_run_id = r.research_run_id
+              AND j.job_id = r.source_job_id
+             WHERE j.status = 'RUNNING'
+             ORDER BY r.result_handle ASC`
+          );
+          for (const row of provisionalResults) {
+            const resultHandle = String(row.result_handle);
+            await connection.run(
+              "DELETE FROM research_result_rows WHERE result_handle = $resultHandle",
+              { resultHandle }
+            );
+            await connection.run(
+              "DELETE FROM research_results WHERE result_handle = $resultHandle",
+              { resultHandle }
+            );
+          }
+        }
+
+        for (const row of runningJobs) {
+          const jobId = String(row.job_id);
+          const progressJson = interruptedProgressWithoutResults(String(row.progress_json));
+          await connection.run(
+            `UPDATE research_jobs
+             SET progress_json = $progressJson
+             WHERE job_id = $jobId
+               AND status = 'RUNNING'`,
+            { jobId, progressJson }
+          );
+        }
+
+        await connection.run(
+          `UPDATE research_jobs
+           SET status = 'FAILED',
+               error_code = 'RESEARCH_JOB_INTERRUPTED',
+               finished_at_ms = $timestamp,
+               updated_at_ms = $timestamp
+           WHERE status = 'RUNNING'`,
+          { timestamp }
+        );
+      }
+      await connection.run("COMMIT");
+    } catch (error) {
+      await rollbackQuietly(connection);
+      throw error;
+    }
+  } finally {
+    connection.closeSync();
+    instance.closeSync();
+  }
+}
+
 export async function openResearchJobLedger(options = {}) {
   const growthLimits = normalizeResearchGrowthLimits(options.growthLimits);
-  const core = await openCoreResearchJobLedger(options);
+  if (options.reconcileInterrupted !== undefined && typeof options.reconcileInterrupted !== "boolean") {
+    throw new TypeError("reconcileInterrupted must be boolean");
+  }
+  const shouldReconcileInterrupted = options.reconcileInterrupted !== false;
+  const transientOptions = Object.freeze({ ...options, reconcileInterrupted: false });
+  let core = await openCoreResearchJobLedger(transientOptions);
+  if (shouldReconcileInterrupted) {
+    await core.close();
+    core = null;
+    await reconcileInterruptedJobArtifacts(options);
+    core = await openCoreResearchJobLedger(transientOptions);
+  }
+
   const runGrowth = new Map();
   let closed = false;
   let createTail = Promise.resolve();
