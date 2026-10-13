@@ -1,8 +1,10 @@
 # AI Researcher acceptance evidence
 
-This file is the public-safe TREE `11.8` acceptance ledger for representative workload, target-machine actual-evidence measurement and current-desktop reclosure.
+This file is the public-safe TREE `11.8` evidence ledger for representative workload, acceptance readiness and the explicitly deferred post-merge target-machine/Desktop acceptance.
 
 It records only synthetic/public-safe measurements and GitHub verification identifiers. It must never contain credentials, cookies, session material, account identifiers, private browser data or authenticated dumps.
+
+On 2026-10-13 the user explicitly changed the completion policy so real target-machine `W2T` and ChatGPT Desktop `W3` acceptance do not block the Branch-11 implementation merge. Those gates remain pending under non-blocking backlog `B-US-009`; this deferral is not PASS evidence.
 
 ## Gate disposition
 
@@ -10,8 +12,8 @@ It records only synthetic/public-safe measurements and GitHub verification ident
 |---|---|---|
 | `W1` deterministic reduced CI workload | `PASS` | Workload CI run `38358501031`, job `115166877682`, `ci-256` Research resource probe. |
 | `W2` representative 4,096-security synthetic workload | `PASS` | One-time PR verification run `38358501349`, job `115166878192`, artifact `11793616887`, `target-4096` Research resource probe. |
-| `W2T` target-machine actual-evidence resource workload | `PENDING_TARGET_MACHINE` | Repository runner `npm run research-target:workload` is implemented and CI-proven to consume existing evidence only, preserve source bytes/fingerprint and refuse synthetic fallback. It still must run against the intended target machine's real historical evidence before target-machine wall-clock/RAM/disk/concurrency/result-size evidence can be accepted. |
-| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. Repo/local marketplace discovery is specifically documented through Work mode or Codex inside ChatGPT Desktop; the repo ships the marketplace, deterministic target-machine preflight and exact Desktop runbook, but the real target-machine mission/restart proof still must be executed in Desktop after `W2T` passes. |
+| `W2T` target-machine actual-evidence resource workload | `PENDING_POST_MERGE` | Repository runner `npm run research-target:workload` is implemented and CI-proven to consume existing evidence only, preserve source bytes/fingerprint and refuse synthetic fallback. Real target-machine execution is deferred to non-blocking `B-US-009` and must still produce actual wall-clock/RAM/disk/concurrency/result-size evidence before W2T can be called PASS. |
+| `W3` current target-machine/Desktop acceptance | `PENDING_POST_MERGE` | Repo-local Plugin/MCP packaging, deterministic preflight and exact Desktop runbook are implemented. The real target-machine mission/restart proof is deferred to non-blocking `B-US-009` and must still be executed after W2T when that backlog item is activated. |
 
 ## W1 — reduced deterministic CI
 
@@ -65,13 +67,13 @@ A PR-only verification workflow ran the exact Research resource probe with `MARK
 
 ### Resource-policy conclusion
 
-The representative path completed inside the existing conservative serial heavy-job/reader policy. No evidence justifies changing the current concurrency, cancellation ceilings, timeouts or result budgets. TREE `11.8` therefore preserves the existing resource policy unchanged unless the actual target-machine evidence demonstrates a concrete need to tune it.
+The representative path completed inside the existing conservative serial heavy-job/reader policy. No evidence justifies changing the current concurrency, cancellation ceilings, timeouts or result budgets. TREE `11.8` therefore preserves the existing resource policy unchanged unless later actual target-machine evidence demonstrates a concrete need to tune it.
 
 The measured disk growth is the bounded Research Ledger created by the synthetic run; the authoritative market source fingerprint remains unchanged after cancellation, successful Research SQL, successful Strategy Sandbox execution, restart and result reads.
 
 ## W2T — target-machine actual-evidence resource workload
 
-The repository now owns a dedicated target-machine command:
+The repository owns a dedicated target-machine command:
 
 ```text
 npm run research-target:workload
@@ -101,7 +103,7 @@ Implementation proof before target execution:
 - the reduced regression passed in Fast CI `#1078` at approximately `102.83 ms`;
 - Planning/Contract `#1276`, Workload `#664`, Replay `#216` and Browser `#688` were also green on implementation head `1dbff7e86863c15125879ed2bdaed5e2e67f27c0`.
 
-These CI results prove the runner contract and composition, **not** the target machine's real resource measurements. `W2T` remains `PENDING_TARGET_MACHINE` until the intended candidate is run on the target machine against the intended historical evidence and the public-safe report is reviewed.
+These CI results prove the runner contract and composition, **not** the target machine's real resource measurements. `W2T` remains pending post-merge under `B-US-009` until a fresh intended `main` candidate is run on the target machine against the intended historical evidence and the public-safe report is reviewed.
 
 A passing target report is expected at:
 
@@ -135,7 +137,7 @@ TREE `11.6` recorded an earlier assumption that ChatGPT access to the local `std
 Current product-surface refinement verified on 2026-10-13:
 
 - the OpenAI plugin packaging documentation says repo/local marketplaces are exposed from a trusted repository in **Work mode or Codex inside the ChatGPT desktop app**;
-- the OpenAI ChatGPT plugin help documentation says local MCP apps run on the user's computer and are Desktop-only; saving/installing the plugin does not make those local tools available on web or mobile;
+- the OpenAI ChatGPT plugin help documentation says local MCP apps run on the user's computer and are Desktop-only; saving/installing the plugin does not make the local tools available on web or mobile;
 - therefore ChatGPT web cannot satisfy or emulate W3, and the target-machine install/discovery step must use the documented Desktop Work/Codex marketplace surface before the actual fresh Desktop conversation mission.
 
 Official product references used for this disposition:
@@ -167,7 +169,7 @@ The GitHub/web execution surface used to implement PR `#110` cannot inspect or c
 
 The current web Plugin Directory visible to this executor does not expose the repo-local `market-flow-us-researcher`; that is expected because local marketplaces are separate Desktop sources rather than universal public-directory entries. It must not be interpreted as a plugin-discovery failure on the target Desktop machine.
 
-Accordingly, this executor must not fabricate `W2T = PASS` or `W3 = PASS`. The target-machine order is deterministic:
+Accordingly, this executor must not fabricate `W2T = PASS` or `W3 = PASS`. The post-merge target-machine order preserved by `B-US-009` is:
 
 ```text
 npm ci
@@ -178,10 +180,12 @@ npm run research-desktop:preflight
 
 Require the actual-evidence workload to pass before Desktop preflight. A passing Desktop preflight proves the repository/machine MCP prerequisites and intentionally reports `desktopAcceptance = STILL_REQUIRED`. Only after both target-machine prerequisites pass should a Desktop-specific failure be classified as a target-client blocker.
 
-The real W3 acceptance remains intentionally **not** marked passed from this web/GitHub executor surface. `W3 = PASS` requires the target-machine ChatGPT Desktop app to discover/install the local plugin through the documented Work/Codex repo marketplace surface, run the complete mission through the shipped plugin/MCP path in a fresh Desktop conversation, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
+The real W3 acceptance remains intentionally **not** marked passed. `W3 = PASS` requires the target-machine ChatGPT Desktop app to discover/install the local plugin through the documented Work/Codex repo marketplace surface, run the complete mission through the shipped plugin/MCP path in a fresh Desktop conversation, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
 
-## Remaining acceptance
+## Deferred post-merge acceptance
 
-Next, on the exact target-machine candidate run the actual-evidence workload and review its public-safe resource/immutability report. If and only if that passes, run the Desktop repository preflight from `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md`. Then fully restart ChatGPT Desktop, open the trusted repository in Work mode or Codex, install `Market Flow US Local` -> `market-flow-us-researcher`, and execute the real fresh-chat Desktop mission plus restart/resume proof.
+`B-US-009` is the non-blocking authority for the remaining actual acceptance. When activated later, start from fresh `main`, run W2T and review its public-safe resource/immutability report. If and only if that passes, run the Desktop repository preflight from `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md`. Then fully restart ChatGPT Desktop, open the trusted repository in Work mode or Codex, install `Market Flow US Local` -> `market-flow-us-researcher`, and execute the real fresh-chat Desktop mission plus restart/resume proof.
 
 If the actual-evidence workload fails, perform RCA against the real measurement before changing resource policy; do not widen concurrency/timeouts/budgets merely to make the gate pass. If repository preflight passes but the documented Desktop marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
+
+The implementation merge may complete while W2T/W3 remain pending because the user explicitly changed the PLAN completion policy. This ledger must preserve that distinction permanently.
