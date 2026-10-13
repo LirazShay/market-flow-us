@@ -18,32 +18,32 @@ source_of_truth:
   decisions: ".planning/DECISIONS.md"
   backlog: "backlog/README.md"
 
-phase: implementation
-overall_status: ai_researcher_in_progress
+phase: implementation_reclosure
+overall_status: ai_researcher_implementation_complete_merge_transition
 
 current:
   chat: 42
   node: "11.8"
   title: "Representative workload, acceptance readiness and deterministic reclosure"
-  status: in_progress
+  status: done
   activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 56
+  done: 57
   pending: 0
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 42
-  current_node: "11.8"
+  current_chat: null
+  current_node: null
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.8"
+  task: "PR #110 merge transition"
   owner: "Chat 42"
   status: in_progress
-  action: "Continue Chat 42 / TREE 11.8 only. Finish final contract/evidence reconciliation and complete PR #110 diff/CI review, then close 11.8, squash merge, verify merged-main CI and reconcile open PR state. Do not run or fabricate W2T/W3 as part of this merge; the user explicitly deferred those real target-machine/Desktop acceptance gates to non-blocking post-merge backlog B-US-009, where they remain PENDING until actually executed against fresh intended main."
+  action: "TREE 11.8 implementation is done. Require the completion-head PR CI green, update/review PR #110, squash merge it, require merged-main CI green and reconcile open PR state. Do not run or fabricate W2T/W3 during this transition; the user explicitly deferred those real target-machine/Desktop acceptance gates to non-blocking post-merge backlog B-US-009, where they remain PENDING until actually executed against fresh intended main."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -72,14 +72,13 @@ navigation:
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
 acceptance_projection:
-  task: "B-US-000"
+  task: "B-US-009"
   status: backlog_non_blocking
-  candidate_policy: "Select the latest intended runtime candidate from fresh main when the backlog item is explicitly activated."
-  historical_candidate: "682f8c8b01e9f68c7f8e159de8b0f233221f1878"
-  checkpoint_summary: "Historical FR-0/FR-1 evidence remains preserved; B-US-000 stays separate and does not block Branch 11."
+  candidate_policy: "When explicitly activated, fetch fresh main and accept the latest intended AI Researcher candidate; never substitute historical PR #110 acceptance evidence."
+  checkpoint_summary: "W2T/W3 remain PENDING_POST_MERGE by explicit user decision. Their criteria are preserved in B-US-009 and the Desktop acceptance runbook; deferral is not PASS."
   authority:
-    backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
-    runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
-    execution_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
+    backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+    runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
+    evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
 
 blockers_projection: []
