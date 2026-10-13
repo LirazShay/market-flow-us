@@ -11,6 +11,7 @@ import {
   RESEARCH_LEDGER_DUCKDB_HARDENING,
   RESEARCH_LEDGER_SCHEMA_VERSION
 } from "./ledger.js";
+import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
 import { RESEARCH_VALIDATION_SCHEMA_VERSION } from "./validation-ledger.js";
 
 export const RESEARCH_RECOMMENDATION_SCHEMA_VERSION = 1;
@@ -266,6 +267,13 @@ function roleRank(role) {
   return index;
 }
 
+function confidenceClassification(outcome, independentProofForSelectedQuery) {
+  if (outcome === "SELECTED_QUERY" && independentProofForSelectedQuery) {
+    return "INDEPENDENT_HOLDOUT_SUPPORTED";
+  }
+  return "INSUFFICIENT_FOR_RECOMMENDATION";
+}
+
 export function normalizeRecommendationRequest(input) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     throw new TypeError("final recommendation request must be an object");
@@ -348,12 +356,20 @@ async function bootstrapOrValidate(connection, createdAtMs) {
 export async function openResearchRecommendationLedger({
   dbPath = DEFAULT_RESEARCH_LEDGER_PATH,
   now = Date.now,
-  recommendationArtifactIdFactory = () => `artifact_${randomUUID()}`
+  recommendationArtifactIdFactory = () => `artifact_${randomUUID()}`,
+  marketDataDir = "data",
+  verifySourceFingerprint = verifyResearchEvidenceSourceFingerprint
 } = {}) {
   if (typeof dbPath !== "string" || dbPath.length === 0) throw new TypeError("dbPath is required");
   if (typeof now !== "function") throw new TypeError("now must be a function");
   if (typeof recommendationArtifactIdFactory !== "function") {
     throw new TypeError("recommendationArtifactIdFactory must be a function");
+  }
+  if (typeof marketDataDir !== "string" || marketDataDir.length === 0) {
+    throw new TypeError("marketDataDir must be a non-empty server-owned path");
+  }
+  if (typeof verifySourceFingerprint !== "function") {
+    throw new TypeError("verifySourceFingerprint must be a function");
   }
 
   await ensureParentDirectory(dbPath);
@@ -393,6 +409,9 @@ export async function openResearchRecommendationLedger({
     if (sha256(canonicalJson(payload, "recommendation artifact")) !== artifactHash) {
       throw new Error("Recommendation artifact hash does not match persisted content");
     }
+    if (!sameJson(payload.terminalIntent, terminalIntent)) {
+      throw new Error("Recommendation artifact terminal intent does not match durable terminal intent");
+    }
     if (
       payload.artifactId !== String(row.artifact_id)
       || payload.researchRunId !== runId
@@ -402,7 +421,7 @@ export async function openResearchRecommendationLedger({
     ) {
       throw new Error("Recommendation artifact persisted columns do not match content");
     }
-    return freezeCopy({ ...payload, artifactHash, terminalIntent });
+    return freezeCopy({ ...payload, artifactHash });
   }
 
   async function requireRun(runId) {
@@ -534,6 +553,26 @@ export async function openResearchRecommendationLedger({
       planHash: assertSha256(String(planRows[0].plan_hash), "planHash"),
       partitions
     });
+  }
+
+  async function verifyEvidenceSources(evidence) {
+    if (!Array.isArray(evidence.inventory?.sources) || evidence.inventory.sources.length < 1) {
+      throw new Error("Final Evidence Inventory requires one or more fingerprinted sources");
+    }
+    for (const source of evidence.inventory.sources) {
+      if (
+        typeof source?.sourceId !== "string"
+        || typeof source?.sourceFingerprint !== "string"
+        || !/^[0-9a-f]{64}$/u.test(source.sourceFingerprint)
+      ) {
+        throw new Error("Final Evidence Inventory contains invalid source provenance");
+      }
+      await verifySourceFingerprint({
+        dataDir: marketDataDir,
+        sourceId: source.sourceId,
+        expectedFingerprint: source.sourceFingerprint
+      });
+    }
   }
 
   async function loadValidationSupport(runId, finalist) {
@@ -692,15 +731,14 @@ export async function openResearchRecommendationLedger({
         throw new Error("Final recommendation Finalist/Holdout authority is inconsistent");
       }
 
-      const strongestCandidates = Object.freeze([]);
       const loadedCandidates = [];
       for (const reference of finalist.queryArtifacts) {
         loadedCandidates.push(await loadQuery(terminalIntent.researchRunId, reference));
       }
-      const frozenCandidates = Object.freeze(loadedCandidates);
+      const strongestCandidates = Object.freeze(loadedCandidates);
       let selectedQuery = null;
       if (terminalIntent.outcome === "SELECTED_QUERY") {
-        selectedQuery = frozenCandidates.find(
+        selectedQuery = strongestCandidates.find(
           (candidate) => candidate.queryArtifactId === terminalIntent.queryArtifactId
         ) ?? null;
         if (!selectedQuery) {
@@ -717,6 +755,7 @@ export async function openResearchRecommendationLedger({
         run.userIntent
       );
       const evidence = await loadEvidence(terminalIntent.researchRunId, finalist);
+      await verifyEvidenceSources(evidence);
       const validationSupport = await loadValidationSupport(terminalIntent.researchRunId, finalist);
       const breadth = await searchBreadth(terminalIntent.researchRunId);
 
@@ -749,6 +788,10 @@ export async function openResearchRecommendationLedger({
 
       const independentProofForSelectedQuery = terminalIntent.outcome === "SELECTED_QUERY"
         && !(holdoutEvaluation.contaminatedQueryArtifactIds ?? []).includes(terminalIntent.queryArtifactId);
+      const classification = confidenceClassification(
+        terminalIntent.outcome,
+        independentProofForSelectedQuery
+      );
       const artifactId = assertArtifactId(recommendationArtifactIdFactory());
       const timestamp = assertSafeTimestamp(now(), "now()");
       const failures = knownFailures(validationSupport, holdoutEvaluation);
@@ -757,9 +800,17 @@ export async function openResearchRecommendationLedger({
         artifactId,
         researchRunId: terminalIntent.researchRunId,
         finalistSetId: terminalIntent.finalistSetId,
+        terminalIntent,
         outcome: terminalIntent.outcome,
+        confidenceClassification: classification,
         selectedQuery,
-        strongestCandidates: frozenCandidates,
+        strongestCandidates,
+        comparisonContext: {
+          baselineReference: null,
+          alternativeQueryArtifactIds: strongestCandidates
+            .filter((candidate) => candidate.queryArtifactId !== selectedQuery?.queryArtifactId)
+            .map((candidate) => candidate.queryArtifactId)
+        },
         objective,
         evidence,
         searchBreadth: breadth,
@@ -810,7 +861,7 @@ export async function openResearchRecommendationLedger({
             role: partition.role,
             partitionHash: partition.partitionHash
           })),
-          queryArtifacts: frozenCandidates.map((candidate) => ({
+          queryArtifacts: strongestCandidates.map((candidate) => ({
             queryArtifactId: candidate.queryArtifactId,
             sqlHash: candidate.sqlHash,
             scannerContractVersion: candidate.scannerContractVersion
@@ -869,7 +920,9 @@ export async function openResearchRecommendationLedger({
         );
       });
 
-      return freezeCopy({ ...payload, artifactHash, terminalIntent });
+      const stored = await getExisting(terminalIntent.researchRunId);
+      if (!stored) throw new Error("Final recommendation artifact disappeared after durable commit");
+      return stored;
     },
 
     async close() {
