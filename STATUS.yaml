@@ -22,7 +22,7 @@ phase: execution
 overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: 44
+  chat: "Chat 44"
   node: "12.2"
   title: "Scanner candidate handoff + immutable selection provenance"
   status: in_progress
@@ -35,7 +35,7 @@ execution_projection:
   pending: 7
   in_progress: 1
   blocked: 1
-  current_chat: 44
+  current_chat: "Chat 44"
   current_node: "12.2"
   projected_from: ".planning/EXECUTION.md"
 
