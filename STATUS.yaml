@@ -22,31 +22,28 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 38
-  chat_part: 2
-  node: "11.4"
-  title: "Durable jobs, result handles and resource governance"
-  status: in_progress
-  activation_required: false
+  chat: 39
+  node: "11.5"
+  title: "Validation, sealed holdout and final recommendation authority"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 52
+  done: 53
   pending: 4
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 38
-  current_chat_part: 2
-  current_node: "11.4"
+  current_chat: 39
+  current_node: "11.5"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.4"
-  owner: "Chat 38"
-  current_chat_part: 2
-  status: in_progress
-  action: "Final 11.4 success-evidence/diff review is green on current branch truth: Blockers #1-#8 are closed, no unresolved review threads remain, and Fast #908 + Planning/Contract #1100 + Workload #494 are green on reviewed head 03b469ac. Fresh main 702f65ae adds only AGENTS.md chat-parts governance, which PR #102 does not modify. PR #102 remains draft. Next mark PR #102 ready, perform final PR review/squash merge, verify main CI and open-PR state, then mark 11.4 done and advance to Chat 39."
+  task: "11.5"
+  owner: "Chat 39"
+  status: pending
+  action: "Chat 38 / 11.4 is complete: PR #102 squash-merged as d3c62afe90d1b9656ee7e47ca1d6fabcadde08ce; merged-main Fast #912, Planning/Contract #1104 and Workload #498 are green; the post-merge open-PR audit was empty. Start Chat 39 / 11.5 only through explicit numbered-chat activation; generic continuation in the completed Chat 38 conversation must not switch executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
