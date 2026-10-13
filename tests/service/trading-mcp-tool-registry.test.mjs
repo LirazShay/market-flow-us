@@ -86,6 +86,8 @@ test("DecisionProposal tool is strictly state/policy bound and enum limited", ()
     ["ENTER", "SKIP", "SWITCH", "HOLD", "EXIT"]
   );
   assert.equal(proposal.inputSchema.properties.observedStateVersion.minimum, 0);
+  assert.equal(proposal.inputSchema.properties.targetCandidateKey.maxLength, 512);
+  assert.equal(proposal.inputSchema.required.includes("targetCandidateKey"), false);
   assert.equal(proposal.inputSchema.additionalProperties, false);
 });
 
@@ -107,6 +109,22 @@ test("DecisionProposal MCP call delegates once to Trading Domain without broker 
   assert.equal(result.toolName, "submit_decision_proposal");
   assert.equal(result.dataBoundary, TRADING_MCP_DATA_BOUNDARY);
   assert.equal(result.data.accepted, true);
+});
+
+test("SWITCH DecisionProposal preserves the bounded target candidate for Domain validation", async () => {
+  const domain = domainStub();
+  const registry = createTradingMcpToolRegistry({ domain });
+  const input = Object.freeze({
+    decisionType: "SWITCH",
+    tradingRunId: "trun-1",
+    tradeEpisodeId: "tep-1",
+    policyVersionId: "pol-1",
+    observedStateVersion: 7,
+    targetCandidateKey: "NASDAQ:MSFT"
+  });
+
+  await registry.callTool("submit_decision_proposal", input);
+  assert.deepEqual(domain.calls, [["submitDecisionProposal", input]]);
 });
 
 test("Episode inspection stays behind durable run/episode IDs", async () => {
