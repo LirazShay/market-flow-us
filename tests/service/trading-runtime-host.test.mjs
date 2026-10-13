@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   TRADING_RUNTIME_HOST_VERSION,
+  resolveTradingRuntimeHostTransportOptions,
   startTradingRuntimeHost
 } from "../../trading-server/runtime-host.js";
 
@@ -122,6 +123,35 @@ function proposal() {
     observedStateVersion: 4
   });
 }
+
+test("TREE 12.7 runtime host resolves the same loopback connection contract passed to Trading MCP stdio", () => {
+  const options = resolveTradingRuntimeHostTransportOptions({
+    MARKET_FLOW_US_TRADING_DOMAIN_URL: "http://127.0.0.1:8771",
+    MARKET_FLOW_US_TRADING_DOMAIN_TOKEN: "ephemeral-session-token"
+  });
+  assert.deepEqual(options, {
+    host: "127.0.0.1",
+    port: 8771,
+    callerToken: "ephemeral-session-token"
+  });
+
+  for (const environment of [
+    {},
+    {
+      MARKET_FLOW_US_TRADING_DOMAIN_URL: "http://example.com:8771",
+      MARKET_FLOW_US_TRADING_DOMAIN_TOKEN: "token"
+    },
+    {
+      MARKET_FLOW_US_TRADING_DOMAIN_URL: "http://127.0.0.1",
+      MARKET_FLOW_US_TRADING_DOMAIN_TOKEN: "token"
+    }
+  ]) {
+    assert.throws(
+      () => resolveTradingRuntimeHostTransportOptions(environment),
+      /required|127\.0\.0\.1|explicit port/u
+    );
+  }
+});
 
 test("TREE 12.7 runtime host delivers one MCP proposal to Supervisor and keeps fallback alive after MCP transport loss", async () => {
   const calls = [];
