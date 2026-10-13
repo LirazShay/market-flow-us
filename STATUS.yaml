@@ -19,13 +19,13 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: acceptance
-overall_status: ai_researcher_target_acceptance_in_progress
+overall_status: ai_researcher_target_acceptance_blocked
 
 current:
   chat: null
   node: "B-US-009"
   title: "AI Researcher target-machine + Desktop acceptance"
-  status: in_progress
+  status: blocked
   activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
@@ -33,8 +33,8 @@ execution_projection:
   active_execution_rows: 58
   done: 57
   pending: 0
-  in_progress: 1
-  blocked: 0
+  in_progress: 0
+  blocked: 1
   current_chat: null
   current_node: "B-US-009"
   projected_from: ".planning/EXECUTION.md"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "B-US-009 / W2T"
   owner: "Target-machine acceptance executor"
-  status: in_progress
-  action: "On the user's target machine, fetch fresh intended main, install dependencies and run npm run research-target:workload against actual Market Flow US historical evidence. Review the public-safe report and source immutability/resource measurements. Only after W2T PASS run npm link plus npm run research-desktop:preflight; only after that PASS proceed to the real Desktop mission and full restart/resume proof. Any failure stays with B-US-009 through RCA, fix, regression and affected verification."
+  status: blocked
+  action: "The connected GitHub/chat executor cannot run commands on the user's target machine or inspect its local historical evidence. On the target machine, fetch fresh intended main, install dependencies and run npm run research-target:workload against actual Market Flow US historical evidence, then provide the public-safe report. This is an execution-environment blocker, not W2T failure evidence. Only after W2T PASS run npm link plus npm run research-desktop:preflight; only after that PASS proceed to the real Desktop mission and full restart/resume proof."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -73,13 +73,17 @@ navigation:
 
 acceptance_projection:
   task: "B-US-009"
-  status: in_progress
+  status: blocked_target_machine_evidence
   candidate_policy: "Use fresh intended main at each machine-local acceptance attempt; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "B-US-009 is explicitly activated in EXECUTION. W2T is the current gate and W3 remains pending. Activation is not PASS: actual target-machine/Desktop evidence is still required."
+  checkpoint_summary: "B-US-009 is activated but blocked on real target-machine W2T evidence. W2T/W3 remain NOT PASS. Resume when the public-safe W2T report from the user's target machine is available."
   authority:
     execution: ".planning/EXECUTION.md"
     runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
     evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
     provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
 
-blockers_projection: []
+blockers_projection:
+  - task: "B-US-009 / W2T"
+    type: execution_environment
+    reason: "Actual W2T must run on the user's target machine against its local historical evidence; the connected executor cannot produce that evidence."
+    resume_when: "A public-safe research-target-evidence.json result from a fresh intended main target-machine run is provided."
