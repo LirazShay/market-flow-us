@@ -103,6 +103,14 @@ async function waitForTerminal(domain, jobId) {
   throw new Error(`Job ${jobId} did not reach a terminal state`);
 }
 
+async function waitForExecutionCount(readCount, expected) {
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    if (readCount() === expected) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`execution count did not reach ${expected}`);
+}
+
 function experimentRequest(clientRequestId) {
   return {
     clientRequestId,
@@ -196,7 +204,7 @@ test("TREE 11.7 concurrent duplicate submissions reuse one queued Job without am
     const blocker = await domain.submitDevelopmentExperiment(experimentRequest("blocker-request"));
     assert.equal(blocker.jobId, JOB_BLOCKER);
     await waitForStatus(domain, JOB_BLOCKER, "RUNNING");
-    assert.equal(executionCount, 1);
+    await waitForExecutionCount(() => executionCount, 1);
 
     const duplicates = await Promise.all(
       Array.from({ length: 32 }, () => domain.submitDevelopmentExperiment(experimentRequest("duplicate-request")))
