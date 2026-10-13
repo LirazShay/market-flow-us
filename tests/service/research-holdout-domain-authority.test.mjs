@@ -14,7 +14,8 @@ import { openResearchLedger } from "../../research-server/ledger.js";
 const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
 const OBJECTIVE_ID = "obj_11111111-1111-4111-8111-111111111111";
 const QUERY_FINALIST = "qry_11111111-1111-4111-8111-111111111111";
-const QUERY_REVISED = "qry_22222222-2222-4222-8222-222222222222";
+const QUERY_SAME = "qry_22222222-2222-4222-8222-222222222222";
+const QUERY_REVISED = "qry_33333333-3333-4333-8333-333333333333";
 const INVENTORY_ID = "inv_11111111-1111-4111-8111-111111111111";
 const PLAN_ID = "plan_11111111-1111-4111-8111-111111111111";
 const PART_DEV = "part_11111111-1111-4111-8111-111111111111";
@@ -27,6 +28,7 @@ const FINALIST_ID = "finalist_11111111-1111-4111-8111-111111111111";
 const HOLDOUT_ID = "holdout_11111111-1111-4111-8111-111111111111";
 const SOURCE_ID = "archive:holdout-domain-fixture.duckdb";
 const SOURCE_FINGERPRINT = "a".repeat(64);
+const FINALIST_SQL = "SELECT security_id FROM latest ORDER BY Price DESC LIMIT 3";
 const NOW = 1_880_000_000_000;
 
 function sequence(values) {
@@ -76,7 +78,7 @@ function evaluationProfile() {
   };
 }
 
-test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists once and derives post-Holdout contamination after restart", async () => {
+test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists once and derives only material post-Holdout SQL contamination", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-holdout-domain-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   const executions = [];
@@ -93,7 +95,7 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
       })(),
       idFactory: () => RUN_ID,
       objectiveVersionIdFactory: () => OBJECTIVE_ID,
-      queryArtifactIdFactory: () => QUERY_FINALIST,
+      queryArtifactIdFactory: sequence([QUERY_FINALIST, QUERY_SAME]),
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
       partitionIdFactory: sequence([PART_DEV, PART_VALIDATION, PART_HOLDOUT]),
@@ -125,7 +127,7 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     });
     await domain.createQueryArtifact({
       researchRunId: RUN_ID,
-      sqlText: "SELECT security_id FROM latest ORDER BY Price DESC LIMIT 3",
+      sqlText: FINALIST_SQL,
       scannerContractVersion: "scanner-authority-v1",
       label: "finalist"
     });
@@ -232,6 +234,18 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     );
     assert.equal(executions.length, 2);
 
+    const sameSql = await domain.createQueryArtifact({
+      researchRunId: RUN_ID,
+      parentQueryArtifactId: QUERY_FINALIST,
+      sqlText: FINALIST_SQL,
+      scannerContractVersion: "scanner-authority-v1",
+      label: "byte-identical post-holdout lineage"
+    });
+    assert.equal(sameSql.queryArtifactId, QUERY_SAME);
+    const stillClean = await domain.getHoldoutEvaluation(RUN_ID, HOLDOUT_ID);
+    assert.equal(stillClean.contaminationState, "CLEAN");
+    assert.deepEqual(stillClean.contaminatedQueryArtifactIds, []);
+
     await domain.close();
     domain = null;
 
@@ -242,7 +256,7 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     });
     const revised = await baseLedger.createQueryArtifact({
       researchRunId: RUN_ID,
-      parentQueryArtifactId: QUERY_FINALIST,
+      parentQueryArtifactId: QUERY_SAME,
       sqlText: "SELECT security_id FROM latest ORDER BY PriceChangePercent DESC LIMIT 3",
       scannerContractVersion: "scanner-authority-v1",
       label: "post-holdout revision"
