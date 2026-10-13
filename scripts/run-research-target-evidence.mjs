@@ -22,30 +22,39 @@ const DEFAULT_REPORT_PATH = path.join(
   "research-target-evidence.json"
 );
 const MAX_SELECTED_SOURCES = 2;
-const CYCLE_SAMPLE_LIMIT = 128;
 const HORIZON_MS = 10_000;
 const OBSERVER_TIMEOUT_MS = 60_000;
 const STABLE_ERROR_CODE = /^RESEARCH_TARGET_EVIDENCE_[A-Z0-9_]{1,96}$/u;
 
 /*
 Static SQL preflight required by AGENTS.md before first execution.
-1. Purpose/contract: sample recent completed cycle timestamps to select one real T0 with a >=10s future row; later count authorized Research rows per selected source. No mutation.
+1. Purpose/contract: locate the latest complete cycle and the latest real T0 at least 10s earlier without assuming cadence density; later count authorized Research rows per selected source. No mutation.
 2. Schema/source: `cycles.status` + `cycles.committed_at_ms` are product-owned Market Flow US fields validated by openBacktestEvidenceSource; `research_history.source_id` is the Research SQL projection authority.
-3. Cardinality: cycle sample output <=128 rows per candidate source; Research SQL output <=2 rows because this runner selects at most two logical sources.
-4. Access paths: each query performs one bounded table scan; there are no joins, correlated subqueries, lateral lookups or repeated table visits.
-5. Predicates/selectivity: cycle status/null predicates are applied before the top-N ordering; Research SQL intentionally covers the complete authorized Development partition.
-6. Join/row explosion: neither query contains a join, so no multiplicative intermediate cardinality is possible.
-7. Sort/group/window: cycle sampling has one top-N ORDER BY; Research SQL has one GROUP BY over <=2 source IDs and a tiny final ORDER BY; no windows/distinct/materialization.
-8. Repeated work: source inspection runs once per catalog candidate until two usable sources are found; the Research count is one pass and reuses the managed projection.
+3. Cardinality: the cycle-boundary query returns exactly one scalar row per candidate source; Research SQL output <=2 rows because this runner selects at most two logical sources.
+4. Access paths: the cycle-boundary query performs at most two scans of `cycles` (latest aggregate plus one scalar eligible-T0 aggregate); Research SQL performs one projection scan. There are no multiplicative joins.
+5. Predicates/selectivity: complete/non-null predicates are applied to both cycle scans; the eligible-T0 predicate is applied before its MAX aggregate. Research SQL intentionally covers the complete authorized Development partition.
+6. Join/row explosion: no query creates a many-to-many relation; the scalar subquery returns at most one value and the Research grouping is bounded by <=2 authorized source IDs.
+7. Sort/group/window: cycle selection uses scalar MAX aggregates with no sort/window; Research SQL has one GROUP BY over <=2 source IDs and a tiny final ORDER BY.
+8. Repeated work: the second cycles scan is intentional to remain cadence-agnostic instead of fetching an arbitrary top-N sample; source inspection stops after two usable sources and Research count is one pass.
 9. Boundedness/resources: source connections are READ_ONLY, outputs are tiny, no transaction/write path exists, and managed Research result budgets remain authoritative.
 10. Architecture alternative: source catalog/evidence opener + existing managed Research Domain already own these semantics; adding a warehouse/index/precompute/helper subsystem would duplicate authority for two bounded reads.
 */
 export const TARGET_CYCLE_SAMPLE_SQL = `
-  SELECT committed_at_ms
-  FROM cycles
-  WHERE status = 'complete' AND committed_at_ms IS NOT NULL
-  ORDER BY committed_at_ms DESC
-  LIMIT ${CYCLE_SAMPLE_LIMIT}
+  WITH latest AS (
+    SELECT MAX(committed_at_ms) AS latest_at_ms
+    FROM cycles
+    WHERE status = 'complete' AND committed_at_ms IS NOT NULL
+  )
+  SELECT
+    latest_at_ms,
+    (
+      SELECT MAX(candidate.committed_at_ms)
+      FROM cycles AS candidate
+      WHERE candidate.status = 'complete'
+        AND candidate.committed_at_ms IS NOT NULL
+        AND candidate.committed_at_ms <= latest.latest_at_ms - ${HORIZON_MS}
+    ) AS t0_at_ms
+  FROM latest
 `;
 
 export const TARGET_RESEARCH_SQL = `
@@ -93,14 +102,21 @@ async function queryJsonRows(connection, sql) {
 }
 
 function selectT0(cycleRows) {
-  const timestamps = cycleRows
-    .map((row) => Number(row.committed_at_ms))
-    .filter((value) => Number.isSafeInteger(value) && value >= 0);
-  if (timestamps.length < 2) return null;
-  const latestAtMs = timestamps[0];
-  const t0AtMs = timestamps.find((value) => value <= latestAtMs - HORIZON_MS);
-  if (!Number.isSafeInteger(t0AtMs)) return null;
-  return Object.freeze({ latestAtMs, t0AtMs, sampledCycleCount: timestamps.length });
+  if (!Array.isArray(cycleRows) || cycleRows.length !== 1) return null;
+  const row = cycleRows[0];
+  if (row.latest_at_ms === null || row.t0_at_ms === null) return null;
+  const latestAtMs = Number(row.latest_at_ms);
+  const t0AtMs = Number(row.t0_at_ms);
+  if (
+    !Number.isSafeInteger(latestAtMs)
+    || !Number.isSafeInteger(t0AtMs)
+    || latestAtMs < 0
+    || t0AtMs < 0
+    || latestAtMs - t0AtMs < HORIZON_MS
+  ) {
+    return null;
+  }
+  return Object.freeze({ latestAtMs, t0AtMs });
 }
 
 export async function selectTargetEvidenceSources({
@@ -450,8 +466,7 @@ export async function runResearchTargetEvidenceWorkload({
       maxRssAfterBytes: resourcesAfter.maxRSS * 1024,
       cpuUserMicros: cpuDelta.user,
       cpuSystemMicros: cpuDelta.system,
-      concurrency: domain?.resourceLimits?.concurrency
-        ?? DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY.concurrency
+      concurrency: DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY.concurrency
     };
     report.restart = {
       durableExperimentResultRead: true,
