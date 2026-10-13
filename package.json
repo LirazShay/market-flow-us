@@ -35,6 +35,7 @@
     "test:workload:target-e2e": "node scripts/run-workload-profile.mjs target-e2e",
     "test:workload:target-day": "node scripts/run-workload-profile.mjs target-day",
     "test:workload:custom": "node scripts/run-workload-profile.mjs custom",
+    "research-target:workload": "node scripts/run-research-target-evidence.mjs",
     "service": "node local-service/server/index.js",
     "backtest-lab": "node backtest-lab/index.js",
     "replay-host": "node replay-host/index.js",
