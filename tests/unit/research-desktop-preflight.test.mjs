@@ -4,10 +4,13 @@ import test from "node:test";
 
 import {
   finalizeResearchDesktopPreflightReport,
+  parseMcpStdoutMessage,
   researchDesktopPreflightErrorCode,
+  splitMcpStdoutFrames,
   terminateProcessTree,
   validateDesktopPluginRepositoryContract,
   validateMcpInitializeResult,
+  validateMcpResponseEnvelope,
   validateMcpToolList,
   waitForMcpProcessClose
 } from "../../scripts/check-research-desktop-preflight.mjs";
@@ -91,6 +94,45 @@ test("TREE 11.8 Desktop preflight rejects duplicate or malformed MCP tool entrie
       tools: validNames.map((name, index) => index === 45 ? { name: "" } : { name })
     }),
     (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_TOOLSET_MISMATCH"
+  );
+});
+
+test("TREE 11.8 Desktop preflight bounds MCP stdout frames and incomplete buffers", () => {
+  const framed = splitMcpStdoutFrames(
+    "",
+    '{"jsonrpc":"2.0","id":1,"result":{}}\r\npartial',
+    128
+  );
+  assert.deepEqual(framed.lines, ['{"jsonrpc":"2.0","id":1,"result":{}}']);
+  assert.equal(framed.remainder, "partial");
+
+  assert.throws(
+    () => splitMcpStdoutFrames("", "x".repeat(9), 8),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_STDOUT_FRAME_TOO_LARGE"
+  );
+  assert.throws(
+    () => splitMcpStdoutFrames("", `${"x".repeat(9)}\n`, 8),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_STDOUT_FRAME_TOO_LARGE"
+  );
+});
+
+test("TREE 11.8 Desktop preflight rejects malformed JSON-RPC response envelopes", () => {
+  assert.deepEqual(
+    validateMcpResponseEnvelope(parseMcpStdoutMessage('{"jsonrpc":"2.0","id":1,"result":{}}')),
+    { jsonrpc: "2.0", id: 1, result: {} }
+  );
+
+  assert.throws(
+    () => parseMcpStdoutMessage("not-json"),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED"
+  );
+  assert.throws(
+    () => validateMcpResponseEnvelope({ jsonrpc: "1.0", id: 1, result: {} }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED"
+  );
+  assert.throws(
+    () => validateMcpResponseEnvelope({ jsonrpc: "2.0", id: 1, result: {}, error: {} }),
+    (error) => error?.code === "RESEARCH_DESKTOP_PREFLIGHT_MCP_PROTOCOL_MALFORMED"
   );
 });
 
