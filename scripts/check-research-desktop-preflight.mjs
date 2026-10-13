@@ -133,6 +133,12 @@ function timeoutPromise(ms, code) {
   });
 }
 
+export function waitForMcpProcessClose(child) {
+  return new Promise((resolve) => {
+    child.once("close", (code, signal) => resolve({ code, signal }));
+  });
+}
+
 export async function terminateProcessTree(
   child,
   {
@@ -221,6 +227,7 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
     MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR: marketDataDir,
     MARKET_FLOW_US_RESEARCH_LEDGER_PATH: ledgerPath
   });
+  const closePromise = waitForMcpProcessClose(child);
 
   child.stdin.setDefaultEncoding("utf8");
   child.stdout.setEncoding("utf8");
@@ -278,20 +285,17 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
   });
 
   let exitOutcome = null;
-  const exitPromise = new Promise((resolve) => {
-    child.once("exit", (code, signal) => {
-      exitOutcome = { code, signal };
-      const prematureExit = Object.assign(
-        new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE"),
-        { code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE" }
-      );
-      for (const waiter of pending.values()) {
-        clearTimeout(waiter.timer);
-        waiter.reject(prematureExit);
-      }
-      pending.clear();
-      resolve(exitOutcome);
-    });
+  child.once("exit", (code, signal) => {
+    exitOutcome = { code, signal };
+    const prematureExit = Object.assign(
+      new Error("RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE"),
+      { code: "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_BEFORE_RESPONSE" }
+    );
+    for (const waiter of pending.values()) {
+      clearTimeout(waiter.timer);
+      waiter.reject(prematureExit);
+    }
+    pending.clear();
   });
 
   function write(message) {
@@ -355,8 +359,8 @@ async function probePathVisibleMcp({ marketDataDir, ledgerPath }) {
     }
 
     child.stdin.end();
-    const outcome = exitOutcome ?? await Promise.race([
-      exitPromise,
+    const outcome = await Promise.race([
+      closePromise,
       timeoutPromise(EXIT_TIMEOUT_MS, "RESEARCH_DESKTOP_PREFLIGHT_MCP_EXIT_TIMEOUT")
     ]);
     if (outcome.code !== 0 || outcome.signal !== null) {
