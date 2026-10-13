@@ -29,7 +29,8 @@ const REQUIRED_TABLES = Object.freeze([
 const HOLDOUT_TABLES = Object.freeze([
   "research_holdout_info",
   "holdout_evaluations",
-  "holdout_contaminations"
+  "holdout_contaminations",
+  "holdout_lineage_baseline"
 ]);
 
 const CREATE_RESEARCH_HOLDOUT_INFO = `
@@ -59,6 +60,16 @@ CREATE TABLE holdout_contaminations (
   query_artifact_id VARCHAR NOT NULL,
   parent_query_artifact_id VARCHAR NOT NULL,
   created_at_ms BIGINT NOT NULL,
+  PRIMARY KEY (holdout_evaluation_id, query_artifact_id)
+)`;
+
+const CREATE_HOLDOUT_LINEAGE_BASELINE = `
+CREATE TABLE holdout_lineage_baseline (
+  holdout_evaluation_id VARCHAR NOT NULL,
+  research_run_id VARCHAR NOT NULL,
+  query_artifact_id VARCHAR NOT NULL,
+  parent_query_artifact_id VARCHAR,
+  sql_hash VARCHAR NOT NULL,
   PRIMARY KEY (holdout_evaluation_id, query_artifact_id)
 )`;
 
@@ -292,6 +303,7 @@ async function bootstrapOrValidate(connection, createdAtMs) {
       await connection.run(CREATE_RESEARCH_HOLDOUT_INFO);
       await connection.run(CREATE_HOLDOUT_EVALUATIONS);
       await connection.run(CREATE_HOLDOUT_CONTAMINATIONS);
+      await connection.run(CREATE_HOLDOUT_LINEAGE_BASELINE);
       await connection.run(
         `INSERT INTO research_holdout_info (schema_version, created_at_ms)
          VALUES ($schemaVersion, $createdAtMs)`,
@@ -458,48 +470,145 @@ export async function openResearchHoldoutLedger({
     });
   }
 
-  async function explicitContaminationIds(holdoutEvaluationId) {
+  async function queryLineageRows(researchRunId) {
     const rows = await queryRows(
       connection,
-      `SELECT query_artifact_id FROM holdout_contaminations
-       WHERE holdout_evaluation_id = $holdoutEvaluationId
-       ORDER BY created_at_ms ASC, query_artifact_id ASC`,
-      { holdoutEvaluationId }
-    );
-    return rows.map((row) => String(row.query_artifact_id));
-  }
-
-  async function derivedContaminationIds(researchRunId, finalistSetId, exposedAtMs) {
-    if (exposedAtMs === null) return [];
-    const finalist = await finalistForRun(researchRunId, finalistSetId);
-    const rootHashes = new Map(finalist.queryArtifacts.map((artifact) => [
-      artifact.queryArtifactId,
-      artifact.sqlHash
-    ]));
-    const lineageRootHash = new Map(rootHashes);
-    const rows = await queryRows(
-      connection,
-      `SELECT query_artifact_id, parent_query_artifact_id, sql_hash, created_at_ms
+      `SELECT query_artifact_id, parent_query_artifact_id, sql_hash
        FROM query_artifacts
-       WHERE research_run_id = $researchRunId
-       ORDER BY created_at_ms ASC, query_artifact_id ASC`,
+       WHERE research_run_id = $researchRunId`,
       { researchRunId }
     );
-    const contaminated = [];
-    for (const row of rows) {
-      const queryArtifactId = assertQueryArtifactId(String(row.query_artifact_id));
-      const parentQueryArtifactId = row.parent_query_artifact_id === null
+    return rows.map((row) => Object.freeze({
+      queryArtifactId: assertQueryArtifactId(String(row.query_artifact_id)),
+      parentQueryArtifactId: row.parent_query_artifact_id === null
         ? null
-        : assertQueryArtifactId(String(row.parent_query_artifact_id));
-      if (parentQueryArtifactId === null) continue;
-      const rootHash = lineageRootHash.get(parentQueryArtifactId);
-      if (rootHash === undefined) continue;
-      lineageRootHash.set(queryArtifactId, rootHash);
-      const createdAtMs = assertSafeTimestamp(row.created_at_ms, "query createdAtMs");
-      const sqlHash = assertSha256(String(row.sql_hash), "query artifact sqlHash");
-      if (createdAtMs >= exposedAtMs && sqlHash !== rootHash) contaminated.push(queryArtifactId);
+        : assertQueryArtifactId(String(row.parent_query_artifact_id)),
+      sqlHash: assertSha256(String(row.sql_hash), "query artifact sqlHash")
+    }));
+  }
+
+  function finalistLineage(rows, finalist) {
+    const byId = new Map(rows.map((row) => [row.queryArtifactId, row]));
+    const roots = new Set(finalist.queryArtifacts.map((artifact) => artifact.queryArtifactId));
+    const reachableMemo = new Map([...roots].map((queryArtifactId) => [queryArtifactId, true]));
+
+    function isReachable(queryArtifactId, visiting = new Set()) {
+      if (reachableMemo.has(queryArtifactId)) return reachableMemo.get(queryArtifactId);
+      const row = byId.get(queryArtifactId);
+      if (!row) throw new Error("Query Artifact lineage references missing durable content");
+      if (row.parentQueryArtifactId === null) {
+        reachableMemo.set(queryArtifactId, false);
+        return false;
+      }
+      if (visiting.has(queryArtifactId)) throw new Error("Query Artifact lineage contains a cycle");
+      const next = new Set(visiting);
+      next.add(queryArtifactId);
+      const reachable = isReachable(row.parentQueryArtifactId, next);
+      reachableMemo.set(queryArtifactId, reachable);
+      return reachable;
     }
-    return contaminated;
+
+    for (const row of rows) isReachable(row.queryArtifactId);
+    return Object.freeze({ byId, isReachable });
+  }
+
+  async function baselineRows(holdoutEvaluationId) {
+    const rows = await queryRows(
+      connection,
+      `SELECT query_artifact_id, parent_query_artifact_id, sql_hash
+       FROM holdout_lineage_baseline
+       WHERE holdout_evaluation_id = $holdoutEvaluationId`,
+      { holdoutEvaluationId }
+    );
+    return rows.map((row) => Object.freeze({
+      queryArtifactId: assertQueryArtifactId(String(row.query_artifact_id)),
+      parentQueryArtifactId: row.parent_query_artifact_id === null
+        ? null
+        : assertQueryArtifactId(String(row.parent_query_artifact_id)),
+      sqlHash: assertSha256(String(row.sql_hash), "Holdout baseline sqlHash")
+    }));
+  }
+
+  async function captureLineageBaseline({ researchRunId, finalistSetId, holdoutEvaluationId }) {
+    const finalist = await finalistForRun(researchRunId, finalistSetId);
+    const rows = await queryLineageRows(researchRunId);
+    const lineage = finalistLineage(rows, finalist);
+    const reachable = rows.filter((row) => lineage.isReachable(row.queryArtifactId));
+    if (reachable.length < finalist.queryArtifacts.length) {
+      throw new Error("Holdout lineage baseline is missing a Finalist Query Artifact");
+    }
+    for (const row of reachable) {
+      await connection.run(
+        `INSERT INTO holdout_lineage_baseline (
+           holdout_evaluation_id, research_run_id, query_artifact_id,
+           parent_query_artifact_id, sql_hash
+         ) VALUES (
+           $holdoutEvaluationId, $researchRunId, $queryArtifactId,
+           $parentQueryArtifactId, $sqlHash
+         )`,
+        {
+          holdoutEvaluationId,
+          researchRunId,
+          queryArtifactId: row.queryArtifactId,
+          parentQueryArtifactId: row.parentQueryArtifactId,
+          sqlHash: row.sqlHash
+        }
+      );
+    }
+  }
+
+  async function derivedContaminationIds(researchRunId, finalistSetId, holdoutEvaluationId, exposedAtMs) {
+    if (exposedAtMs === null) return [];
+    const finalist = await finalistForRun(researchRunId, finalistSetId);
+    const rows = await queryLineageRows(researchRunId);
+    const lineage = finalistLineage(rows, finalist);
+    const baseline = await baselineRows(holdoutEvaluationId);
+    const baselineById = new Map(baseline.map((row) => [row.queryArtifactId, row]));
+    if (baseline.length < finalist.queryArtifacts.length) {
+      throw new Error("Exposed Holdout is missing its durable lineage baseline");
+    }
+
+    for (const baselineRow of baseline) {
+      const current = lineage.byId.get(baselineRow.queryArtifactId);
+      if (
+        !current
+        || current.parentQueryArtifactId !== baselineRow.parentQueryArtifactId
+        || current.sqlHash !== baselineRow.sqlHash
+        || !lineage.isReachable(current.queryArtifactId)
+      ) {
+        throw new Error("Holdout lineage baseline no longer matches immutable Query Artifact persistence");
+      }
+    }
+
+    const contaminationMemo = new Map();
+    function isContaminated(queryArtifactId, visiting = new Set()) {
+      if (contaminationMemo.has(queryArtifactId)) return contaminationMemo.get(queryArtifactId);
+      const row = lineage.byId.get(queryArtifactId);
+      if (!row || !lineage.isReachable(queryArtifactId)) {
+        contaminationMemo.set(queryArtifactId, false);
+        return false;
+      }
+      if (baselineById.has(queryArtifactId)) {
+        contaminationMemo.set(queryArtifactId, false);
+        return false;
+      }
+      if (row.parentQueryArtifactId === null) {
+        contaminationMemo.set(queryArtifactId, false);
+        return false;
+      }
+      if (visiting.has(queryArtifactId)) throw new Error("Query Artifact contamination lineage contains a cycle");
+      const parent = lineage.byId.get(row.parentQueryArtifactId);
+      if (!parent) throw new Error("Query Artifact contamination lineage references missing parent content");
+      const next = new Set(visiting);
+      next.add(queryArtifactId);
+      const contaminated = isContaminated(parent.queryArtifactId, next) || row.sqlHash !== parent.sqlHash;
+      contaminationMemo.set(queryArtifactId, contaminated);
+      return contaminated;
+    }
+
+    return rows
+      .filter((row) => lineage.isReachable(row.queryArtifactId) && isContaminated(row.queryArtifactId))
+      .map((row) => row.queryArtifactId);
   }
 
   async function normalizeEvaluation(row) {
@@ -523,16 +632,13 @@ export async function openResearchHoldoutLedger({
     const exposedAtMs = row.exposed_at_ms === null
       ? null
       : assertSafeTimestamp(row.exposed_at_ms, "exposedAtMs");
-    const explicit = await explicitContaminationIds(payload.holdoutEvaluationId);
-    const derived = await derivedContaminationIds(
+    const contaminatedQueryArtifactIds = Object.freeze(await derivedContaminationIds(
       payload.researchRunId,
       payload.finalistSetId,
+      payload.holdoutEvaluationId,
       exposedAtMs
-    );
-    const contaminatedQueryArtifactIds = Object.freeze([...new Set([...explicit, ...derived])]);
-    const contaminationState = persistedState === "CONTAMINATED" || contaminatedQueryArtifactIds.length > 0
-      ? "CONTAMINATED"
-      : "CLEAN";
+    ));
+    const contaminationState = contaminatedQueryArtifactIds.length > 0 ? "CONTAMINATED" : "CLEAN";
     return freezeCopy({
       ...payload,
       exposedAtMs,
@@ -667,21 +773,33 @@ export async function openResearchHoldoutLedger({
 
     async exposeHoldoutEvaluation({ researchRunId, holdoutEvaluationId }) {
       const runId = await requireRun(researchRunId);
-      const existing = await getEvaluationById(runId, holdoutEvaluationId);
-      if (!existing) throw new Error("Holdout Evaluation was not found in this Research Run");
-      if (existing.exposedAtMs !== null) return existing;
+      const boundedId = assertHoldoutEvaluationId(holdoutEvaluationId);
       const timestamp = assertSafeTimestamp(now(), "now()");
       await inTransaction(connection, async () => {
+        const rows = await queryRows(
+          connection,
+          `SELECT finalist_set_id, exposed_at_ms FROM holdout_evaluations
+           WHERE research_run_id = $researchRunId AND holdout_evaluation_id = $holdoutEvaluationId
+           LIMIT 2`,
+          { researchRunId: runId, holdoutEvaluationId: boundedId }
+        );
+        if (rows.length !== 1) throw new Error("Holdout Evaluation was not found in this Research Run");
+        if (rows[0].exposed_at_ms !== null) return;
+        await captureLineageBaseline({
+          researchRunId: runId,
+          finalistSetId: String(rows[0].finalist_set_id),
+          holdoutEvaluationId: boundedId
+        });
         await connection.run(
           `UPDATE holdout_evaluations SET exposed_at_ms = $exposedAtMs
            WHERE research_run_id = $researchRunId
              AND holdout_evaluation_id = $holdoutEvaluationId
              AND exposed_at_ms IS NULL`,
-          { researchRunId: runId, holdoutEvaluationId, exposedAtMs: timestamp }
+          { researchRunId: runId, holdoutEvaluationId: boundedId, exposedAtMs: timestamp }
         );
         await touchRun(runId, timestamp);
       });
-      return await getEvaluationById(runId, holdoutEvaluationId);
+      return await getEvaluationById(runId, boundedId);
     },
 
     async recordPostHoldoutQueryArtifact({ researchRunId, queryArtifactId }) {
@@ -697,8 +815,7 @@ export async function openResearchHoldoutLedger({
       if (artifactRows.length !== 1) throw new Error("Query Artifact was not found in this Research Run");
       if (artifactRows[0].parent_query_artifact_id === null) return Object.freeze([]);
       const parentId = assertQueryArtifactId(String(artifactRows[0].parent_query_artifact_id));
-      const createdAtMs = assertSafeTimestamp(artifactRows[0].created_at_ms, "query createdAtMs");
-
+      const artifactCreatedAtMs = assertSafeTimestamp(artifactRows[0].created_at_ms, "query createdAtMs");
       const evaluations = await queryRows(
         connection,
         `SELECT ${EVALUATION_COLUMNS} FROM holdout_evaluations
@@ -708,21 +825,8 @@ export async function openResearchHoldoutLedger({
       );
       const contaminated = [];
       for (const row of evaluations) {
-        const exposedAtMs = assertSafeTimestamp(row.exposed_at_ms, "exposedAtMs");
-        if (createdAtMs < exposedAtMs) continue;
         const evaluation = await normalizeEvaluation(row);
-        const finalist = await finalistForRun(runId, evaluation.finalistSetId);
-        const directlyDescends = finalist.queryArtifacts.some((artifact) => artifact.queryArtifactId === parentId);
-        const descendantRows = await queryRows(
-          connection,
-          `SELECT query_artifact_id FROM holdout_contaminations
-           WHERE holdout_evaluation_id = $holdoutEvaluationId
-             AND query_artifact_id = $parentQueryArtifactId
-           LIMIT 2`,
-          { holdoutEvaluationId: evaluation.holdoutEvaluationId, parentQueryArtifactId: parentId }
-        );
-        if (!directlyDescends && descendantRows.length === 0) continue;
-
+        if (!evaluation.contaminatedQueryArtifactIds.includes(artifactId)) continue;
         await inTransaction(connection, async () => {
           await connection.run(
             `INSERT OR IGNORE INTO holdout_contaminations (
@@ -737,7 +841,7 @@ export async function openResearchHoldoutLedger({
               researchRunId: runId,
               queryArtifactId: artifactId,
               parentQueryArtifactId: parentId,
-              createdAtMs
+              createdAtMs: artifactCreatedAtMs
             }
           );
           await connection.run(
@@ -745,7 +849,7 @@ export async function openResearchHoldoutLedger({
              WHERE holdout_evaluation_id = $holdoutEvaluationId`,
             { holdoutEvaluationId: evaluation.holdoutEvaluationId }
           );
-          await touchRun(runId, createdAtMs);
+          await touchRun(runId, assertSafeTimestamp(now(), "now()"));
         });
         contaminated.push(evaluation.holdoutEvaluationId);
       }
