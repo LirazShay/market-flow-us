@@ -257,7 +257,7 @@ The H-004 success-commit owner is intentionally process-local, so it cannot repa
 | `cee44fddd3e974a8b901475b00aff7415e29d772` | Fast `#965`, Planning `#1161`, Workload `#551` | GREEN — H-001 regression PASS |
 | `bbed659218c4b485c6c2d2918e77ea1789f494fc` | Fast `#967`, Planning `#1163`, Workload `#553` | GREEN — real MCP authority-boundary regression PASS |
 | `21213326a5330d19e8b9f302d728472472ee9777` | Fast `#969` / `38343971596` | RED-by-design — only new crash/restart Holdout regression failed; Planning `#1165` + Workload `#555` green |
-| `d5df2bc1e8d20c948d8bdc6d6e186ba638a8d840` | Fast `#970`, Planning `#1166`, Workload `#556` | GREEN — H-002 crash/restart regression PASS |
+| `d5df2bc1e8d20c948848d6d6e186ba638a8d840` | Fast `#970`, Planning `#1166`, Workload `#556` | GREEN — H-002 crash/restart regression PASS |
 | `acd4d8ea8448591b3073be099c9c310c506905ed` | Fast `#971`, Planning `#1167`, Workload `#557` | GREEN — unit `301/301`, service `304/304`, Holdout v1→v2 migration PASS |
 | `33e8c918ab30a854eea1a9431607355412a3f096` | Fast `#973` / `38345191465` | RED-by-design — unit `301/301`; service `304/305`; only H-003 Finalist-plan regression failed |
 | `8f4eab236a244d0aeba66a7ac33491f978156ca4` | Fast `#974`, Planning `#1170`, Workload `#560` | GREEN — H-003 regression and affected gates PASS |
