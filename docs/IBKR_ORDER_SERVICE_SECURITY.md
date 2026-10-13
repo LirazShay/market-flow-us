@@ -159,3 +159,24 @@ The authority is composed with operator/project-owned hard limits and operator c
 The initial hard-risk envelope covers per-order notional, concurrent positions, aggregate exposure, order-attempt rate, loss ceiling, failed-entry ceiling, quote staleness, new-entry pause and the global kill switch. Rejections occur before the downstream order seam and are written to the Trading Ledger as `HARD_RISK_REJECTED` decisions with stable public-safe reason codes. If that durable diagnostic write fails, the order remains blocked.
 
 Entry-only ceilings must not trap a risk-reducing `SELL`: new-entry pause, concurrent-position, aggregate-exposure, loss and failed-entry ceilings apply to entry-side `BUY` intent. Global kill switch, quote freshness, per-order notional and order-attempt rate remain hard gates for every autonomous order intent.
+
+## 12. Protected autonomous Order Bridge
+
+The autonomous Order Bridge reuses the same authenticated local Order Service client used by the existing Market Flow US-owned integration. It does not add a second IBKR/CPGW adapter, broker endpoint, idempotency implementation or order lifecycle.
+
+The bridge order is fixed:
+
+```text
+normalized order intent
+→ initial Hard Risk Authority gate
+→ explicit operator confirmation for LIVE only
+→ final Hard Risk Authority recheck for LIVE
+→ authenticated local POST /orders
+→ existing IBKR Order Service state machine
+```
+
+`DRY_RUN` may proceed after one hard-risk authorization. `LIVE` must fail closed unless a trusted composition-time operator-confirmation authority explicitly confirms that exact normalized intent after the initial risk gate. Because human review may outlive quote freshness or other mutable risk/operator state, the same independent Hard Risk Authority is evaluated again immediately after confirmation and before mutation. A stale quote, newly enabled kill switch or other newly violated hard gate blocks submission even after the operator clicked confirm.
+
+Confirmation is not a field accepted from an AI proposal, MCP payload or order request. The bridge itself exposes no provider-reply confirmation or cancel shortcut; those lifecycles remain owned by the existing order-service/operator boundary.
+
+The shared local client preserves the existing one bounded same-request retry after a lost local response. A second response loss becomes `ACKNOWLEDGEMENT_UNKNOWN`; the protected bridge must propagate that state unchanged and must not generate another request ID or perform an additional retry.
