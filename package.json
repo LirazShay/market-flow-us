@@ -40,6 +40,7 @@
     "replay-host": "node replay-host/index.js",
     "order-service": "node ibkr-order-service/index.js",
     "research-mcp": "node research-server/mcp-stdio.js",
+    "research-desktop:preflight": "node scripts/check-research-desktop-preflight.mjs",
     "order-service:session-check": "node scripts/check-ibkr-cpgw-session.mjs",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
     "demo:reset": "node scripts/demo-reset.mjs",
