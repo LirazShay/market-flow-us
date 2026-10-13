@@ -341,9 +341,11 @@ export async function openResearchDomain(options = {}) {
     if (!plan || plan.objectiveVersionId !== request.objectiveVersionId) {
       throw new Error(`${phaseLabel(role)} partition does not match the Experiment Objective Version`);
     }
-    const currentPlan = await useEvidence((evidence) => evidence.getCurrentEvidencePlan(request.researchRunId));
-    if (!currentPlan || currentPlan.evidencePlanId !== plan.evidencePlanId) {
-      throw new Error(`${phaseLabel(role)} experiment requires the current Evidence Plan`);
+    if (role === "VALIDATION") {
+      const currentPlan = await useEvidence((evidence) => evidence.getCurrentEvidencePlan(request.researchRunId));
+      if (!currentPlan || currentPlan.evidencePlanId !== plan.evidencePlanId) {
+        throw new Error("Validation experiment requires the current Evidence Plan");
+      }
     }
     const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
       request.researchRunId,
