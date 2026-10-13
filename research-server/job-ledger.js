@@ -231,6 +231,7 @@ export async function openResearchJobLedger(options = {}) {
   const shouldReconcileInterrupted = options.reconcileInterrupted !== false;
   const transientOptions = Object.freeze({ ...options, reconcileInterrupted: false });
   let core = await openCoreResearchJobLedger(transientOptions);
+  const schemaVersion = core.schemaVersion;
   if (shouldReconcileInterrupted) {
     await core.close();
     core = null;
@@ -240,17 +241,17 @@ export async function openResearchJobLedger(options = {}) {
 
   const runGrowth = new Map();
   let closed = false;
-  let createTail = Promise.resolve();
+  let coreTail = Promise.resolve();
 
-  async function serializeCreate(operation) {
-    const previous = createTail;
+  async function serializeCore(operation) {
+    const previous = coreTail;
     let release;
-    createTail = new Promise((resolve) => {
+    coreTail = new Promise((resolve) => {
       release = resolve;
     });
     await previous;
     try {
-      if (closed) throw new Error("Research Job Ledger is closed");
+      if (closed || !core) throw new Error("Research Job Ledger is closed");
       return await operation();
     } finally {
       release();
@@ -299,50 +300,87 @@ export async function openResearchJobLedger(options = {}) {
     return created;
   }
 
+  async function cleanupWithFreshCore(researchRunId, jobId) {
+    await core.close();
+    core = null;
+    try {
+      await removeJobResultArtifacts(options, researchRunId, jobId);
+    } finally {
+      core = await openCoreResearchJobLedger(transientOptions);
+    }
+  }
+
   return Object.freeze({
-    ...core,
+    schemaVersion,
     growthLimits,
 
     async createJob(input) {
-      if (growthLimits === null) return await core.createJob(input);
-      return await serializeCreate(() => createGrowthGovernedJob(input));
+      return await serializeCore(async () => {
+        if (growthLimits === null) return await core.createJob(input);
+        return await createGrowthGovernedJob(input);
+      });
+    },
+
+    async getJob(researchRunId, jobId) {
+      return await serializeCore(() => core.getJob(researchRunId, jobId));
+    },
+
+    async listJobs(researchRunId, listOptions) {
+      return await serializeCore(() => core.listJobs(researchRunId, listOptions));
     },
 
     async updateJobProgress(researchRunId, jobId, progress) {
-      return await core.updateJobProgress(researchRunId, jobId, publicSafeProgress(progress));
+      return await serializeCore(
+        () => core.updateJobProgress(researchRunId, jobId, publicSafeProgress(progress))
+      );
+    },
+
+    async markJobRunning(researchRunId, jobId) {
+      return await serializeCore(() => core.markJobRunning(researchRunId, jobId));
+    },
+
+    async markJobSucceeded(researchRunId, jobId) {
+      return await serializeCore(() => core.markJobSucceeded(researchRunId, jobId));
     },
 
     async markJobFailed(researchRunId, jobId, errorCode = FALLBACK_ERROR_CODE) {
-      const current = await core.getJob(researchRunId, jobId);
-      if (!current) return await core.markJobFailed(researchRunId, jobId, errorCode);
-      if (typeof errorCode !== "string" || !STABLE_ERROR_CODE.test(errorCode)) {
+      return await serializeCore(async () => {
+        const current = await core.getJob(researchRunId, jobId);
+        if (!current) return await core.markJobFailed(researchRunId, jobId, errorCode);
+        if (typeof errorCode !== "string" || !STABLE_ERROR_CODE.test(errorCode)) {
+          return await core.markJobFailed(researchRunId, jobId, errorCode);
+        }
+        if (current.status !== "RUNNING" && current.status !== "FAILED") {
+          return await core.markJobFailed(researchRunId, jobId, errorCode);
+        }
+        if (current.status === "FAILED" && current.errorCode !== errorCode) {
+          return await core.markJobFailed(researchRunId, jobId, errorCode);
+        }
+        await cleanupWithFreshCore(researchRunId, jobId);
         return await core.markJobFailed(researchRunId, jobId, errorCode);
-      }
-      if (current.status !== "RUNNING" && current.status !== "FAILED") {
-        return await core.markJobFailed(researchRunId, jobId, errorCode);
-      }
-      if (current.status === "FAILED" && current.errorCode !== errorCode) {
-        return await core.markJobFailed(researchRunId, jobId, errorCode);
-      }
-      await removeJobResultArtifacts(options, researchRunId, jobId);
-      return await core.markJobFailed(researchRunId, jobId, errorCode);
+      });
     },
 
     async finalizeJobCancelled(researchRunId, jobId) {
-      const current = await core.getJob(researchRunId, jobId);
-      if (!current) return await core.finalizeJobCancelled(researchRunId, jobId);
-      if (!["QUEUED", "RUNNING", "CANCELLED"].includes(current.status)) {
+      return await serializeCore(async () => {
+        const current = await core.getJob(researchRunId, jobId);
+        if (!current) return await core.finalizeJobCancelled(researchRunId, jobId);
+        if (!["QUEUED", "RUNNING", "CANCELLED"].includes(current.status)) {
+          return await core.finalizeJobCancelled(researchRunId, jobId);
+        }
+        await cleanupWithFreshCore(researchRunId, jobId);
         return await core.finalizeJobCancelled(researchRunId, jobId);
-      }
-      await removeJobResultArtifacts(options, researchRunId, jobId);
-      return await core.finalizeJobCancelled(researchRunId, jobId);
+      });
     },
 
     async close() {
       if (closed) return;
       closed = true;
-      await createTail;
-      await core.close();
+      await coreTail;
+      if (core) {
+        await core.close();
+        core = null;
+      }
     }
   });
 }
