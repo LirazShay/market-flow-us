@@ -22,28 +22,28 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 40
-  node: "11.6"
-  title: "ChatGPT Plugin / Skill + MCP operating integration"
-  status: in_progress
-  activation_required: false
+  chat: 41
+  node: "11.7"
+  title: "Adversarial security / failure audit"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 54
+  done: 55
   pending: 2
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 40
-  current_node: "11.6"
+  current_chat: 41
+  current_node: "11.7"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.6"
-  owner: "Chat 40"
-  status: in_progress
-  action: "Final TREE 11.6 composed diff/security review is green: strict 46-tool MCP contracts, on-demand reuse of the TREE 11.3 field manifest, sanitized/idempotent stdio lifecycle and real two-process resume/evidence/Analysis/Result proof passed Fast #961, Planning #1155, Workload #547, Replay #131 and Browser #593 on reviewed head 02b6dd57. Complete PR #106 reclosure next: verify this truth-only head CI, mark the PR ready, squash-merge it, verify merged-main CI and open-PR state, then advance to Chat 41 / TREE 11.7 only if every completion gate is green."
+  task: "11.7"
+  owner: "Chat 41"
+  status: pending
+  action: "Chat 40 / 11.6 is complete in squash-merged PR #106 at 5c0475bb438a6b26f2efbac273d7c972523c6216; merged-main Fast #964, Planning/Contract #1158, Workload #550, Replay #134 and Browser #596 are green. Start Chat 41 / 11.7 only through explicit numbered-chat activation; generic continuation in completed Chat 40 must not switch executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
