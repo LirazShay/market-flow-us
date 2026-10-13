@@ -6,6 +6,7 @@ import {
   DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY
 } from "../../research-server/runtime-policy.js";
 import {
+  researchMcpErrorCode,
   resolveResearchMcpRuntimeOptions,
   startResearchMcpStdio
 } from "../../research-server/mcp-stdio.js";
@@ -155,6 +156,24 @@ test("TREE 11.6 stdio runtime uses project-owned paths and the measured managed 
   );
 });
 
+test("TREE 11.6 stdio diagnostics preserve only bounded stable error codes", () => {
+  assert.equal(
+    researchMcpErrorCode({ code: "EPIPE" }, "RESEARCH_MCP_TRANSPORT_ERROR"),
+    "EPIPE"
+  );
+  assert.equal(
+    researchMcpErrorCode(
+      { code: "Authorization: Bearer private-value" },
+      "RESEARCH_MCP_TRANSPORT_ERROR"
+    ),
+    "RESEARCH_MCP_TRANSPORT_ERROR"
+  );
+  assert.equal(
+    researchMcpErrorCode({ code: "private/path" }, "RESEARCH_MCP_STARTUP_FAILED"),
+    "RESEARCH_MCP_STARTUP_FAILED"
+  );
+});
+
 test("TREE 11.6 stdio launcher is lifecycle-only and closes the managed domain with the transport", async () => {
   const calls = [];
   const domain = {
@@ -182,4 +201,32 @@ test("TREE 11.6 stdio launcher is lifecycle-only and closes the managed domain w
   assert.equal(calls[0][0], "domainFactory");
   assert.equal(calls[0][1], DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY);
   assert.deepEqual(calls.slice(1), ["serve", "transport.close", "domain.close"]);
+});
+
+test("TREE 11.6 failed stdio close still closes domain once and memoizes the same failure", async () => {
+  const calls = [];
+  const closeFailure = Object.assign(new Error("private machine path must not escape"), {
+    code: "private/path"
+  });
+  const domain = {
+    ...fakeDomain(),
+    async close() { calls.push("domain.close"); }
+  };
+  const runtime = await startResearchMcpStdio({
+    environment: {},
+    domainFactory: async () => domain,
+    serve: () => ({
+      async close() {
+        calls.push("transport.close");
+        throw closeFailure;
+      }
+    })
+  });
+
+  const firstClose = runtime.close();
+  const secondClose = runtime.close();
+  assert.equal(firstClose, secondClose);
+  await assert.rejects(firstClose, (error) => error === closeFailure);
+  await assert.rejects(secondClose, (error) => error === closeFailure);
+  assert.deepEqual(calls, ["transport.close", "domain.close"]);
 });
