@@ -16,7 +16,10 @@ Official product references checked for this reclosure:
 Therefore the preferred TREE `11.8` acceptance path is now:
 
 ```text
-ChatGPT Desktop Work mode or Codex with trusted repo
+exact target candidate + existing Market Flow US evidence
+→ target-machine actual-evidence Research workload
+→ repo-local Desktop/MCP preflight
+→ ChatGPT Desktop Work mode or Codex with trusted repo
 → repo marketplace `.agents/plugins/marketplace.json`
 → install local `market-flow-us-researcher` Agent Plugin
 → bundled `stdio` MCP declaration
@@ -24,6 +27,8 @@ ChatGPT Desktop Work mode or Codex with trusted repo
 → Desktop conversation with installed plugin available
 → Research Server / Research Ledger
 → immutable Market Flow US historical evidence
+→ full Desktop/MCP restart
+→ second fresh Desktop conversation resumes exact durable Research Run
 ```
 
 A public HTTPS MCP endpoint or Secure MCP Tunnel remains a valid remote/private-network connection option, but it is **not required** for the intended same-machine Desktop acceptance path.
@@ -48,11 +53,70 @@ The bundled MCP command is:
 market-flow-us-research-mcp
 ```
 
-The repository `package.json` owns that executable through its `bin` mapping. On a development checkout, make the executable available to the desktop process before acceptance:
+The repository `package.json` owns that executable through its `bin` mapping.
+
+## Target-machine order
+
+Use the exact candidate commit/branch being accepted. Do not mix measurements from an older checkout with Desktop acceptance from a newer one.
+
+Run in this order:
 
 ```bash
 npm ci
+npm run research-target:workload
 npm link
+npm run research-desktop:preflight
+```
+
+The two commands after `npm ci` are distinct acceptance gates:
+
+1. `research-target:workload` measures the managed Research path against **existing target-machine Market Flow US historical evidence**.
+2. `research-desktop:preflight` verifies the repository/machine/plugin/MCP prerequisites that ChatGPT Desktop will inherit.
+
+Do not skip directly to Desktop because the synthetic `W2` workload passed in CI. TREE `11.8` separately requires actual target-machine wall-clock/RAM/disk/concurrency/result-size evidence.
+
+## W2T — actual-evidence workload
+
+Run:
+
+```bash
+npm run research-target:workload
+```
+
+The runner must use already-existing product evidence. It intentionally has no synthetic fallback.
+
+A passing report is written to:
+
+```text
+test-results/acceptance/research-target-evidence.json
+```
+
+The report is public-safe and must show `result = pass` before continuing to Desktop preflight. It records:
+
+- selected source count/kinds/schema versions without filesystem paths;
+- wall-clock duration;
+- Strategy Sandbox and Research SQL durations;
+- Result Handle row and serialized-byte sizes;
+- Research Ledger/temp-directory disk bytes;
+- RSS before/after/delta and max RSS;
+- CPU user/system usage;
+- effective managed concurrency policy;
+- duplicate-pressure idempotency (`16` submissions -> one durable Job / one Experiment);
+- durable Result Handle reads after managed-domain close/reopen;
+- source fingerprint and byte-size equality before/after;
+- `desktopAcceptance = STILL_REQUIRED`.
+
+The source selection is cadence-agnostic: it derives an eligible real `T0` from complete-cycle chronology rather than assuming a fixed number of cycles inside the 10-second horizon.
+
+If this workload fails, stop before Desktop acceptance and perform RCA on the real target-machine failure. Do not widen concurrency, timeouts, result budgets or DuckDB limits simply to make the gate pass. Any tuning must be justified by the measured report and then reverified.
+
+Never paste source paths, raw market rows, provider/session material, credentials, environment dumps or private machine data into the acceptance ledger.
+
+## Desktop/MCP repository preflight
+
+After `W2T` passes, make the executable visible to the Desktop process with `npm link`, then run:
+
+```bash
 npm run research-desktop:preflight
 ```
 
@@ -60,9 +124,9 @@ The preflight is repository-owned and public-safe. It verifies before opening De
 
 - the repo marketplace resolves the intended local Plugin;
 - Plugin/MCP/package manifests agree on the `stdio` executable;
-- the intended data directory contains DuckDB market evidence;
+- the intended data directory contains usable DuckDB market evidence;
 - `market-flow-us-research-mcp` is actually visible through the inherited `PATH`;
-- a real `stdio` initialize/tool-discovery call exposes the expected 46-tool registry and data/instruction boundary.
+- a real `stdio` initialize/tool-discovery call negotiates the expected MCP protocol, exposes the exact expected 46-tool registry and preserves the data/instruction boundary.
 
 A passing report is written to `test-results/acceptance/research-desktop-preflight.json` and still contains `"desktopAcceptance": "STILL_REQUIRED"`. This preflight is not a substitute for ChatGPT Desktop acceptance.
 
@@ -83,18 +147,14 @@ After changing PATH-visible npm links or marketplace/plugin files, fully restart
 
 ## W3 preflight
 
-On the target machine and intended repository checkout:
+Only after both `W2T` and the repository Desktop/MCP preflight pass:
 
-1. Use the exact candidate commit/branch being accepted.
-2. Run `npm ci`.
-3. Run `npm link` so `market-flow-us-research-mcp` is available on `PATH`.
-4. Confirm the intended Market Flow US historical evidence is present in the repository-owned/default data location, or set only the supported absolute-path overrides documented in `docs/CHATGPT_RESEARCH_PLUGIN.md`.
-5. Run `npm run research-desktop:preflight` and require a `pass` report with 46 tools. Fix any repository/machine prerequisite failure before blaming Desktop.
-6. Fully restart ChatGPT Desktop.
-7. In ChatGPT Desktop, open the trusted Market Flow US repository in **Work mode or Codex**, the current documented local-marketplace discovery surfaces.
-8. Open the Plugins Directory, select the `Market Flow US Local` marketplace, and explicitly install `market-flow-us-researcher`.
-9. Move to a fresh Desktop conversation/surface where the installed plugin is available and verify that it exposes its Research skill and local MCP tools. Do not use ChatGPT web as a substitute for this local-MCP gate.
-10. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
+1. Confirm the checkout is still the exact candidate commit being accepted.
+2. Fully restart ChatGPT Desktop.
+3. In ChatGPT Desktop, open the trusted Market Flow US repository in **Work mode or Codex**, the current documented local-marketplace discovery surfaces.
+4. Open the Plugins Directory, select the `Market Flow US Local` marketplace, and explicitly install `market-flow-us-researcher`.
+5. Move to a fresh Desktop conversation/surface where the installed plugin is available and verify that it exposes its Research skill and local MCP tools. Do not use ChatGPT web as a substitute for this local-MCP gate.
+6. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
 
 If repository preflight passes but the plugin does not appear in the documented Desktop Work/Codex marketplace surface, the installed plugin is unavailable to a Desktop conversation, or its local MCP app cannot launch, record the exact Desktop build/surface, visible marketplace/install state and public-safe error code/text. That is a target-client acceptance failure. Do not work around it by exposing the Research Server to `0.0.0.0`, weakening localhost/source boundaries or copying private browser/auth data into diagnostics.
 
@@ -131,15 +191,15 @@ Before declaring W3 complete:
 Record only public-safe acceptance facts in `.planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md`:
 
 - candidate commit;
-- preflight result and stable failure code if any;
+- actual-evidence workload result and target resource measurements;
+- source fingerprint/byte-size immutability result;
+- Desktop/MCP preflight result and stable failure code if any;
 - ChatGPT Desktop build/surface used;
 - plugin marketplace/install result;
 - local MCP startup/tool-discovery result;
 - Research Run ID and sanitized durable artifact/job/result IDs;
 - fresh-chat bootstrap result;
 - restart/resume result;
-- representative wall-clock/RAM/disk/result-size observations if available from the target-machine workload;
-- source fingerprint/immutability result;
 - final SQL vs `NO_RECOMMENDATION` disposition;
 - any exact public-safe blocker.
 
@@ -147,6 +207,8 @@ Never record credentials, cookies, authorization headers, session/account identi
 
 ## Pass / blocked rules
 
-`W3 = PASS` only when the repository preflight passes and the real Desktop plugin path completes the mission and restart/fresh-context proof above.
+`W2T = PASS` only after `npm run research-target:workload` passes on the intended target-machine candidate against existing intended historical evidence and its public-safe measurements/immutability evidence are reviewed.
+
+`W3 = PASS` only when `W2T` is already green, the repository Desktop/MCP preflight passes, and the real Desktop plugin path completes the mission and restart/fresh-context proof above.
 
 If the current Desktop product does not expose the documented local marketplace/plugin surface on the target account/build, or the installed local MCP app cannot launch despite a passing repository preflight, record the exact external-product blocker and leave `W3` open/blocked. Do not substitute direct MCP scripts, web ChatGPT, Codex-only execution or a synthetic adapter test for the required Desktop acceptance.
