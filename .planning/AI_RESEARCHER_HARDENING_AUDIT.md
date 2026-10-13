@@ -43,16 +43,16 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 | Source selection / attachment | Real Domain-composed hostile corpus uses server-owned logical sources, read-only opening, detached in-memory projection, implicit local/remote scans, detached-source references and export/maintenance attempts. Exact source bytes/fingerprint remain unchanged. | REVIEWED |
 | SQL statement admission | Direct + composed corpus covers multi-statement/non-SELECT, DDL/DML, `ATTACH/DETACH`, `COPY/EXPORT`, config/maintenance, extensions/secrets and quoted/comment-obfuscated forms. `H-11.7-006` closes the discovered relation-form settings gap. | REVIEWED |
 | SQL host access | External access/extensions/secrets are disabled; dangerous functions are denied; replacement scans/readers fail closed. `H-11.7-006` blocks `pg_settings` in plain/qualified/quoted forms without blocking inert text or safe schema discovery. | REVIEWED |
-| Phase isolation | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection and cross-phase diagnostics are green. Error/side-channel cases remain with diagnostics review. | REVIEWED |
-| Run/object ownership | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. `H-11.7-003` additionally binds Finalist support to the exact current plan Validation partition. | REVIEWED |
+| Phase isolation | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection, post-Holdout contamination checks and public-safe error surfaces are green. No material phase/error side-channel bypass was found in the reviewed corpus. | REVIEWED |
+| Run/object ownership | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. `H-11.7-003` additionally binds Finalist support to the exact current-plan Validation partition. | REVIEWED |
 | Result handles / cursors | Run+handle scoping, handle-bound cursors and restart paging are green. `H-11.7-005` removes provisional Results/handles from interrupted Jobs while preserving `SUCCEEDED` authority. | REVIEWED |
-| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005` closes interrupted Result publication. | REVIEWED |
-| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Remaining responsiveness belongs to resource review. | REVIEWED |
+| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005` closes interrupted Result publication; `H-11.7-008` closes unstable durable failure diagnostics. | REVIEWED |
+| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Remaining responsiveness pressure belongs to resource review. | REVIEWED |
 | Ledger transactionality | `H-11.7-002` Holdout claim, `H-11.7-003` Finalist current-plan recheck, `H-11.7-004` success-commit boundary and `H-11.7-005` restart reconciliation cover representative composed publication/fault splits. | REVIEWED |
-| Validation / Holdout | Concurrent/restart duplicate consumption and superseded-plan Finalist support are fail-closed. Contamination/error-side-channel cases remain with diagnostics review. | REVIEWED |
-| MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments and preserves exact logical IDs for Domain authorization. `H-11.7-007` adds transport-side SQL and Experiment-reference ceilings before Domain execution; arbitrary tool exception text/invalid codes are sanitized. Actual stdio process fuzz remains. | REVIEWED |
-| Local transport / process | Pinned MCP v2 stdio lifecycle/restart/close ownership is baseline; malformed-input/process-lifecycle adversarial closure remains. | OPEN |
-| Public-safe diagnostics | MCP tool failures now have explicit arbitrary-message/path/invalid-code non-leak proof. Durable Job progress and remaining process failure surfaces still require composed review. | REVIEWED |
+| Validation / Holdout | Concurrent/restart duplicate consumption, superseded-plan Finalist support, post-Holdout contamination and finalization restart/source-drift paths are fail-closed. Public error surfaces are covered by the diagnostics slice. | REVIEWED |
+| MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments, preserves exact logical IDs for Domain authorization, and applies transport-side SQL/Experiment-reference ceilings via `H-11.7-007`. Arbitrary tool exception text/invalid codes are sanitized. | REVIEWED |
+| Local transport / process | Real stdio restart is baseline. TREE 11.7 additionally proves malformed framing does not kill or poison the process, valid requests remain usable, EOF shuts down cleanly, SIGTERM is product-owned, and stdout/stderr do not echo private canaries/paths. | REVIEWED |
+| Public-safe diagnostics | Synchronous MCP failures, stdio diagnostics and durable Job failure progress are explicitly bounded. `H-11.7-008` normalizes invalid nested durable failure codes while preserving stable codes. | REVIEWED |
 | Source immutability | TREE 11.7 composed SQL-host corpus proves exact before/after source bytes + fingerprint and no export artifact. | REVIEWED |
 | Resource bounds | CPU/RAM/temp/result/run budgets, paging and bounded queue/readers are baseline; adversarial growth/duplicate/cancellation responsiveness remains. | OPEN |
 
@@ -84,18 +84,21 @@ The TREE 11.7 Domain-composed corpus covers namespaced/quoted/commented reader e
 - Restart paging and cross-run/cross-handle rejection are green.
 - `H-11.7-005` treats Results owned by still-`RUNNING` Jobs as provisional during restart.
 
-### MCP authority parity
+### MCP / local-process boundary
 
 ```text
 actual MCP transport JSON schema
+→ bounded strict inputs
 → thin registry translation
 → exact caller-supplied logical IDs
 → Research Domain / ledger run + phase authorization
 ```
 
-`tests/service/research-mcp-adversarial-authority-boundary.test.mjs` proves real MCP rejects missing/extra/wrong-type authority fields before Domain and forwards valid IDs unchanged. `tests/service/research-mcp-transport-hardening.test.mjs` additionally proves transport ceilings reject oversized Research SQL / Query Artifact SQL and over-wide Experiment references before Domain, while arbitrary exception message/path/code material does not cross the MCP result boundary.
+`tests/service/research-mcp-adversarial-authority-boundary.test.mjs` proves real MCP rejects missing/extra/wrong-type authority fields before Domain and forwards valid IDs unchanged. `tests/service/research-mcp-transport-hardening.test.mjs` proves transport ceilings reject oversized Research SQL / Query Artifact SQL and over-wide Experiment references before Domain while arbitrary exception message/path/code material does not cross the MCP result boundary. `tests/service/research-mcp-stdio-adversarial.test.mjs` proves malformed framing, EOF and SIGTERM behavior against the real stdio process without private diagnostic leakage.
 
-## Fixed finding H-11.7-001 — concurrent Holdout calls could execute sealed authority twice
+## Fixed findings
+
+### H-11.7-001 — concurrent Holdout calls could execute sealed authority twice
 
 **Severity:** blocking correctness/methodology defect — fixed.
 
@@ -103,107 +106,109 @@ actual MCP transport JSON schema
 
 **Fix / proof:** `cee44fddd3e974a8b901475b00aff7415e29d772` adds exact `(researchRunId, finalistSetId)` process-local single-flight in `openResearchDomain()`. `tests/service/research-holdout-concurrency-hardening.test.mjs` proves only one `executeExperimentBatch` entry while both callers receive the same outcome.
 
-**Green:** Fast `#965` / `38342962058`, Planning `#1161`, Workload `#551`.
+**Green:** Fast `#965`, Planning `#1161`, Workload `#551`.
 
-**Analogous review:** MCP/managed Holdout routes share this Domain boundary; Development/Validation experiments are intentionally repeatable.
-
-**Status:** FIXED / regression GREEN.
-
-## Fixed finding H-11.7-002 — crash after sealed Holdout compute could consume the same Finalist again
+### H-11.7-002 — crash after sealed Holdout compute could consume the same Finalist again
 
 **Severity:** blocking correctness/methodology defect — fixed.
 
 **Root cause:** one-shot consumption uncertainty was persisted only after sealed compute. Crash before publication left no durable evidence that Holdout may already have been consumed.
 
-**RED:** `21213326a5330d19e8b9f302d728472472ee9777`; Fast `#969` / `38343971596` failed only the restart regression; Planning `#1165` + Workload `#555` green.
+**RED:** `21213326a5330d19e8b9f302d728472472ee9777`; Fast `#969` failed only the restart regression.
 
-**Fix:** `d5df2bc1e8d20c948d8bdc6d6e186ba638a8d840` adds Holdout schema v2 `holdout_execution_claims`, claimed before sealed compute and completed transactionally with the Holdout evaluation. An unfinished claim fails closed with `RESEARCH_INTEGRITY_ERROR`. `acd4d8ea8448591b3073be099c9c310c506905ed` proves transactional v1→v2 migration.
+**Fix:** `d5df2bc1e8d20c948d8bdc6d6e186ba638a8d840` adds Holdout schema v2 `holdout_execution_claims`, claimed before sealed compute and completed transactionally with the Holdout evaluation. An unfinished claim fails closed. `acd4d8ea8448591b3073be099c9c310c506905ed` proves transactional v1→v2 migration.
 
-**Green:** Fast `#970`, Planning `#1166`, Workload `#556`; migration candidate Fast `#971` unit `301/301`, service `304/304`, Planning `#1167`, Workload `#557`.
+**Green:** Fast `#970/#971`, Planning `#1166/#1167`, Workload `#556/#557`.
 
-**Analogous review:** managed Jobs already persist execution lifecycle; Final Recommendation publishes terminal artifact/state transactionally. No generic claim subsystem was added.
-
-**Status:** FIXED / RED→GREEN / migration GREEN.
-
-## Fixed finding H-11.7-003 — Finalist could inherit Validation support from a superseded plan
+### H-11.7-003 — Finalist could inherit Validation support from a superseded plan
 
 **Severity:** blocking correctness/methodology defect — fixed.
 
 **Root cause:** Domain prechecked Validation support before the final durable Finalist lock. A newer Evidence Plan could become current between the precheck and ledger publication.
 
-**RED:** `33e8c918ab30a854eea1a9431607355412a3f096`; Fast `#973` / `38345191465`: unit `301/301`, service `304/305`, only the new stale-plan regression failed; Planning `#1169` + Workload `#559` green.
+**RED:** `33e8c918ab30a854eea1a9431607355412a3f096`; Fast `#973` failed only the stale-plan regression.
 
 **Fix:** `8f4eab236a244d0aeba66a7ac33491f978156ca4` adds final ledger-local revalidation against the exact current Objective, current-plan Validation partition, Query Artifact ID, SQL hash and Scanner contract version before Finalist publication.
 
-**Green:** Fast `#974` / `38345355839` unit `301/301`, service `305/305`, order acceptance PASS; Planning `#1170`, Workload `#560`.
+**Green:** Fast `#974`, Planning `#1170`, Workload `#560`.
 
-**Analogous review:** Validation experiment completion is not Finalist support until durable Validation exposure exists; terminal recommendation publication is transactional.
-
-**Status:** FIXED / RED→GREEN regression.
-
-## Fixed finding H-11.7-004 — late cancellation could split Result and Job terminal truth
+### H-11.7-004 — late cancellation could split Result and Job terminal truth
 
 **Severity:** blocking correctness/failure-hardening defect — fixed.
 
 **Root cause:** durable Result creation occurred while the managed Job was still cancellable; the non-cancellable success-finalization owner was claimed too late.
 
-**Proof history:** `34266ce85ade5308b7450f89e5f3e33ce29007a2` was an invalid RED fixture. Corrected `2dd97516f147a01262967f06b935fd93631fba42` / Fast `#977` passed unit `301/301`, failed service `305/306` only because late cancellation still won. `45152a2da9841c14bec601bd19062a5134705d4e` was a useful RED intermediate proving the controller seam alone did not cover concrete publishers.
+**RED:** corrected proof `2dd97516f147a01262967f06b935fd93631fba42`; Fast `#977` failed only the late-cancel regression.
 
 **Fix:** shared serialized `beginSuccessCommit` plus explicit entry immediately before `createResult` in both managed Development Experiment and Research SQL publishers; complete candidate `2e5496c90b05da5e2115fbaa47fddf5057f44e20`.
 
-**Green:** Fast `#979` unit `301/301`, service `306/306`, legacy cancellation + order acceptance PASS; Planning `#1175`, Workload `#565`.
+**Green:** Fast `#979`, Planning `#1175`, Workload `#565`.
 
-**Status:** FIXED / deterministic RED→GREEN regression.
-
-## Fixed finding H-11.7-005 — crash after Result commit could leave a FAILED Job with a readable Result
+### H-11.7-005 — crash after Result commit could leave a FAILED Job with a readable Result
 
 **Severity:** blocking correctness/failure-hardening defect — fixed.
 
 **Root cause:** Result commit and `Job = SUCCEEDED` are separate durable transactions. Startup reconciliation previously failed stale `RUNNING` Jobs without deciding the authority of already-committed Results/handles.
 
-**RED:** `245aa0b8edd05761b52df66d751ff17bed4a06cd`; Fast `#982` unit `301/301`, service `306/307`, only the restart Result regression failed; Planning `#1178`, Workload `#568` green.
+**RED:** `245aa0b8edd05761b52df66d751ff17bed4a06cd`; Fast `#982` failed only the restart Result regression.
 
-**Fix:** `62152ccf835da6b00cc8d1f595527ab889d89e2a` moves default startup reconciliation into the composed Job-ledger wrapper and transactionally deletes Results owned by still-`RUNNING` Jobs, clears only their `progress.resultHandles`, then marks those Jobs `FAILED / RESEARCH_JOB_INTERRUPTED`. `reconcileInterrupted:false` remains the active-work transient path. `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` expands proof to persisted handles and a `SUCCEEDED` control.
+**Fix:** `62152ccf835da6b00cc8d1f595527ab889d89e2a` transactionally removes Results owned by still-`RUNNING` Jobs, clears only their result handles, then marks those Jobs interrupted/failed. `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` expands proof to persisted handles and a `SUCCEEDED` control.
 
-**Green:** Fast `#984` unit `301/301`, service `307/307`, prior cancellation/restart/idempotency + order acceptance PASS; Planning `#1180`, Workload `#570`.
+**Green:** Fast `#984`, Planning `#1180`, Workload `#570`.
 
-**Analogous review:** managed Experiment and Research SQL share this Job/Result lifecycle; Holdout uses its separate durable execution claim; Final Recommendation already publishes terminal artifact + Run state transactionally.
-
-**Status:** FIXED / deterministic RED→GREEN restart regression.
-
-## Fixed finding H-11.7-006 — `pg_settings` relation exposed sandbox configuration
+### H-11.7-006 — `pg_settings` relation exposed sandbox configuration
 
 **Severity:** blocking security/data-boundary defect — fixed.
 
-**Root cause:** Research admission denied configuration functions such as `duckdb_settings()` and `current_setting(...)`, but DuckDB also exposes PostgreSQL-compatible `pg_settings` as a relation. The shared lexer deliberately identified invoked functions, not relation references, so plain, qualified and quoted `pg_settings` remained valid `SELECT`s.
+**Root cause:** Research admission denied configuration functions such as `duckdb_settings()` and `current_setting(...)`, but DuckDB also exposes PostgreSQL-compatible `pg_settings` as a relation. The shared lexer identified function calls, not relation references.
 
-**RED:** `43616e0a3ba677d2b506cab9fbf82e62244b4a91` adds `tests/service/research-sql-host-source-hardening.test.mjs` through real `openResearchDomain()`. Fast `#986` / `38348341605` passed unit `301/301`, failed service `307/308`, with only three unexpected successes: `pg_settings`, `pg_catalog.pg_settings`, and the quoted equivalent. Planning `#1182`, Workload `#572` green. All other hostile forms rejected and exact source bytes/fingerprint stayed unchanged.
+**RED:** `43616e0a3ba677d2b506cab9fbf82e62244b4a91`; Fast `#986` passed unit `301/301`, failed service `307/308`, only the plain/qualified/quoted `pg_settings` forms unexpectedly executed.
 
-**Fix:** `1da53186a84d8675bfd51ef7ba7969c66c6ef10e` factors the existing Scanner lexical walk to expose normalized identifiers while preserving function-call behavior. `ada298fc3318b225d85edb59127a16dd64a1895f` adds one Research-only forbidden identifier: `pg_settings`. Existing stable `SCANNER_FORBIDDEN_FUNCTION` remains the public rejection contract; no SQL parser or broad catalog blacklist was added. `4a8132506900266506bd049bddb467c65720cc7a` adds unit proof for plain/qualified/quoted/comment-separated forms and inert strings/comments.
+**Fix:** `1da53186a84d8675bfd51ef7ba7969c66c6ef10e` exposes normalized lexical identifiers; `ada298fc3318b225d85edb59127a16dd64a1895f` adds one Research-only forbidden identifier, `pg_settings`; `4a8132506900266506bd049bddb467c65720cc7a` adds unit proof.
 
-**Composed proof:** hostile queries also cover namespaced/quoted/comment-separated file readers, dynamic SQL, pragma/catalog helpers, metadata readers, implicit local/remote replacement scans, JSON reader aliases, detached `evidence.main.history`, `EXPORT DATABASE`, `CHECKPOINT` and `VACUUM`. Afterward a normal Research query still works, exact source bytes/fingerprint are unchanged and no export artifact exists.
+**Green:** Fast `#989` unit `302/302`, service `308/308`; Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599`.
 
-**Green:** Fast `#989` / `38348633907` unit `302/302`, service `308/308`, H-006 unit + composed host/source proof + prior Research SQL proofs + order acceptance PASS. Shared-lexer affected verification: Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599` — all green.
-
-**Analogous review:** safe `information_schema` introspection remains available. Existing dangerous catalog/config functions remain denied. Implicit scans and `read_json_objects` / `read_ndjson_objects` are additionally contained by locked `enable_external_access=false`, so no redundant policy layer was added.
-
-**Status:** FIXED / deterministic RED→GREEN / Browser+Replay affected verification GREEN.
-
-## Fixed finding H-11.7-007 — MCP accepted oversized bounded Research inputs before Domain authority
+### H-11.7-007 — MCP accepted oversized bounded Research inputs before Domain authority
 
 **Severity:** blocking transport/resource-boundary defect — fixed.
 
-**Root cause:** the actual MCP server correctly validated each registered tool through `fromJsonSchema(...)`, but the registered schemas for Query Artifact `sqlText`, managed Research SQL `sql`, and `experimentIds` omitted transport ceilings. The Domain/session already enforced exact 1 MiB UTF-8 SQL limits and at most 20 explicit Experiment references, so oversized requests eventually failed, but only after the MCP transport had accepted and forwarded them into Domain authority.
+**Root cause:** actual MCP registration used strict JSON schemas, but Query Artifact `sqlText`, managed Research SQL `sql`, and `experimentIds` omitted transport ceilings already enforced by Domain/session authority.
 
-**RED:** `d02b5e38766055bf25c31b8042d89957e0c63c38` adds `tests/service/research-mcp-transport-hardening.test.mjs` using the real MCP protocol path. Fast `#995` / `38349560063` passed unit `302/302`, failed service `309/310` only because oversized Query Artifact SQL reached the instrumented Domain (`1 !== 0`). Planning `#1191`, Workload `#581`, Replay `#143`, Browser `#605` stayed green. The companion failure-surface proof already passed and showed arbitrary exception message/path/invalid-code material was replaced by `RESEARCH_MCP_TOOL_FAILED`.
+**RED:** `d02b5e38766055bf25c31b8042d89957e0c63c38`; Fast `#995` passed unit `302/302`, failed service `309/310` only because oversized Query Artifact SQL reached Domain. Planning `#1191`, Workload `#581`, Replay `#143`, Browser `#605` stayed green.
 
-**Fix:** `059880be0c5e18de31b293cfac679891f46122d2` adds a narrow actual-transport schema hardening seam in `research-server/mcp-server.js`: Query Artifact `sqlText` and managed Research SQL `sql` are capped at 1 MiB characters before Domain invocation, and managed `experimentIds` is capped at 20 entries. The Domain remains the exact UTF-8 byte/semantic authority, so multi-byte SQL can still be rejected by its stricter 1 MiB byte limit and no server authority moved into MCP.
+**Fix:** `059880be0c5e18de31b293cfac679891f46122d2` adds narrow transport registration ceilings: SQL strings cap at 1 MiB characters and managed `experimentIds` caps at 20. Domain remains the exact UTF-8 byte/semantic authority.
 
-**Green:** Fast `#996` / `38349903239` passed unit `302/302`, service `310/310`, both TREE 11.7 MCP transport tests, all prior MCP authority/lifecycle tests and order acceptance. Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606` are green.
+**Green:** Fast `#996`, Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606`; subsequent documentation head Fast `#997`, Planning `#1193`, Workload `#583`, Replay `#145`, Browser `#607` also green.
 
-**Analogous review:** existing bounded `userIntent`, interpretation, cursors, list/page limits and note/limitation fields continue to reject at schema level. Error mapping remains public-safe. The registry remains a thin invocation adapter; the new ceiling belongs specifically to the actual MCP transport registration layer. Real stdio malformed-input/process-lifecycle fuzz and durable Job-progress public-safety remain for the next diagnostic/transport slice.
+### H-11.7-008 — durable Job progress could persist an unstable failure code
 
-**Status:** FIXED / deterministic RED→GREEN / Browser+Replay affected verification GREEN.
+**Severity:** blocking public-safe diagnostics/contract defect — fixed.
+
+**Root cause:** terminal `research_jobs.error_code` and synchronous MCP/stdio errors already used the stable `[A-Z][A-Z0-9_]{0,127}` contract, but `progress_json` was generic JSON. `managed-domain-core` copied `error.code` into nested `progress.failure.code`, allowing a non-contract diagnostic code to survive persistence and appear through Domain/MCP reads.
+
+**RED:** `d6b51676378c59b0c71df5153563b555a8323df2` adds `tests/service/research-job-diagnostics-hardening.test.mjs`. Fast `#999` passed unit `302/302`, failed service `312/313` only on the new regression. The injected private bearer value had already been redacted, but the durable nested code was still the unstable `Authorization: ***` instead of `RESEARCH_JOB_FAILED`. Planning `#1195`, Workload `#585`, Replay `#147`, Browser `#609` remained green.
+
+**Fix:** `de34b2b6ab934593537a5178e7dce56ec2bdb7c7` hardens the shared Job-ledger wrapper before persistence: nested `progress.failure.code` is preserved only when it matches the existing stable error-code contract; otherwise it becomes `RESEARCH_JOB_FAILED`. No schema change or new diagnostics subsystem was introduced.
+
+**Green:** Fast `#1000` passed unit `302/302`, service `313/313`, the H-008 Domain+MCP regression, the pre-existing `stable work failures are persisted instead of being collapsed to RESEARCH_JOB_FAILED` proof, all stdio/transport hardening tests and order acceptance. Planning `#1196`, Workload `#586`, Replay `#148`, Browser `#610` are green.
+
+**Analogous review:** synchronous MCP failures, stdio diagnostics and top-level Job error codes already share the stable-code policy. H-008 closes the inconsistent nested durable progress surface while the legacy stable-code test proves legitimate codes are still retained.
+
+## Real stdio adversarial process proof
+
+`2b701388fc224c027a40327ed6b65c3127bdb72b` adds `tests/service/research-mcp-stdio-adversarial.test.mjs` against the real `research-server/mcp-stdio.js` child process.
+
+The proof covers:
+
+1. malformed JSON-RPC framing carrying a private canary/path does not terminate or poison the process;
+2. a subsequent valid initialize + `tools/list` succeeds;
+3. EOF closes transport/domain and exits cleanly with code `0`, no signal death;
+4. SIGTERM is handled by the product shutdown path and exits cleanly with code `0`, no signal death;
+5. stdout/stderr never echo the private payload/path; any stderr diagnostic must be the fixed product prefix plus one stable code.
+
+**Green:** Fast `#998` unit `302/302`, service `312/312`, order acceptance PASS; Planning `#1194`, Workload `#584`, Replay `#146`, Browser `#608`.
+
+No additional production defect was found by the stdio process fuzz.
 
 ## Verification ledger
 
@@ -212,32 +217,32 @@ actual MCP transport JSON schema
 | `c74dc3e0c751eb112ca0b35cc6bc710ae2fef332` | merged-main Branch-11 gates through `11.6` | GREEN baseline |
 | audit branch | Local shell checkout | UNAVAILABLE because this executor shell cannot resolve `github.com`; GitHub CI is executable proof |
 | `cee44fddd3e974a8b901475b00aff7415e29d772` | Fast `#965`, Planning `#1161`, Workload `#551` | GREEN — H-001 |
-| `bbed659218c4b485c6c2d2918e77ea1789f494fc` | Fast `#967`, Planning `#1163`, Workload `#553` | GREEN — real MCP authority proof |
-| `21213326a5330d19e8b9f302d728472472ee9777` | Fast `#969` | RED-by-design H-002; Planning `#1165`, Workload `#555` green |
-| `d5df2bc1e8d20c948d8bdc6d6e186ba638a8d840` | Fast `#970`, Planning `#1166`, Workload `#556` | GREEN — H-002 |
-| `acd4d8ea8448591b3073be099c9c310c506905ed` | Fast `#971`, Planning `#1167`, Workload `#557` | GREEN — Holdout migration |
-| `33e8c918ab30a854eea1a9431607355412a3f096` | Fast `#973` | RED-by-design H-003; Planning `#1169`, Workload `#559` green |
+| `21213326a5330d19e8b9f302d728472472ee9777` | Fast `#969` | RED-by-design — H-002 |
+| `acd4d8ea8448591b3073be099c9c310c506905ed` | Fast `#971`, Planning `#1167`, Workload `#557` | GREEN — H-002 + migration |
+| `33e8c918ab30a854eea1a9431607355412a3f096` | Fast `#973` | RED-by-design — H-003 |
 | `8f4eab236a244d0aeba66a7ac33491f978156ca4` | Fast `#974`, Planning `#1170`, Workload `#560` | GREEN — H-003 |
-| `2dd97516f147a01262967f06b935fd93631fba42` | Fast `#977` | RED-by-design H-004; Planning `#1173`, Workload `#563` green |
+| `2dd97516f147a01262967f06b935fd93631fba42` | Fast `#977` | RED-by-design — H-004 |
 | `2e5496c90b05da5e2115fbaa47fddf5057f44e20` | Fast `#979`, Planning `#1175`, Workload `#565` | GREEN — H-004 |
-| `245aa0b8edd05761b52df66d751ff17bed4a06cd` | Fast `#982` | RED-by-design H-005; Planning `#1178`, Workload `#568` green |
+| `245aa0b8edd05761b52df66d751ff17bed4a06cd` | Fast `#982` | RED-by-design — H-005 |
 | `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Fast `#984`, Planning `#1180`, Workload `#570` | GREEN — H-005 |
-| `43616e0a3ba677d2b506cab9fbf82e62244b4a91` | Fast `#986` / `38348341605` | RED-by-design — unit `301/301`, service `307/308`, only H-006 failed; Planning `#1182`, Workload `#572` green |
-| `4a8132506900266506bd049bddb467c65720cc7a` | Fast `#989` / `38348633907` | GREEN — unit `302/302`, service `308/308`, H-006 + source immutability + order acceptance PASS |
-| `4a8132506900266506bd049bddb467c65720cc7a` | Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599` | GREEN — affected shared-lexer verification |
-| `d02b5e38766055bf25c31b8042d89957e0c63c38` | Fast `#995` / `38349560063` | RED-by-design — unit `302/302`, service `309/310`; only H-007 oversized MCP transport proof failed; Planning `#1191`, Workload `#581`, Replay `#143`, Browser `#605` green |
-| `059880be0c5e18de31b293cfac679891f46122d2` | Fast `#996`, Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606` | GREEN — unit `302/302`, service `310/310`, H-007 + public-safe MCP error proof + affected gates PASS |
+| `43616e0a3ba677d2b506cab9fbf82e62244b4a91` | Fast `#986` | RED-by-design — H-006 |
+| `4a8132506900266506bd049bddb467c65720cc7a` | Fast `#989`, Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599` | GREEN — H-006 |
+| `d02b5e38766055bf25c31b8042d89957e0c63c38` | Fast `#995` | RED-by-design — H-007; other gates green |
+| `059880be0c5e18de31b293cfac679891f46122d2` | Fast `#996`, Planning `#1192`, Workload `#582`, Replay `#144`, Browser `#606` | GREEN — H-007 |
+| `2b701388fc224c027a40327ed6b65c3127bdb72b` | Fast `#998`, Planning `#1194`, Workload `#584`, Replay `#146`, Browser `#608` | GREEN — real stdio malformed/EOF/SIGTERM proof |
+| `d6b51676378c59b0c71df5153563b555a8323df2` | Fast `#999` | RED-by-design — unit `302/302`, service `312/313`, only H-008 failed; Planning `#1195`, Workload `#585`, Replay `#147`, Browser `#609` green |
+| `de34b2b6ab934593537a5178e7dce56ec2bdb7c7` | Fast `#1000`, Planning `#1196`, Workload `#586`, Replay `#148`, Browser `#610` | GREEN — unit `302/302`, service `313/313`, H-008 + stable-code compatibility + order acceptance PASS |
 | PR `#108` | integration PR | DRAFT; do not merge while TREE `11.7` remains in progress |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
-- `H-11.7-001` through `H-11.7-007`: fixed with deterministic proof and affected green verification.
+- `H-11.7-001` through `H-11.7-008`: fixed with deterministic proof and affected green verification.
 - SQL statement admission, SQL host access, source selection/attachment and source immutability are `REVIEWED` on a real Domain-composed hostile corpus with exact before/after source proof.
-- Cross-run / phase / MCP authority parity: no material bypass found in reviewed slices.
+- Cross-run / phase / MCP authority parity is `REVIEWED`; no material bypass was found in the reviewed corpus.
 - Result Handle/cursor, cancellation/timeout and ledger transactionality are `REVIEWED` with the H-004/H-005 restart/publication proofs green.
-- MCP boundary is `REVIEWED`: authority-shape and oversized input rejection plus public-safe tool error mapping are green; real stdio malformed-input/process-lifecycle fuzz remains.
-- Public-safe diagnostics is `REVIEWED`, not closed: MCP wrapper arbitrary message/path/code leakage is green; durable Job progress and remaining process failure surfaces still require composed proof.
-- Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/error-side-channel cases remain for diagnostics review.
-- Closure claim: none. Local transport/process, remaining public-safe diagnostics and resource-bound attacks remain before TREE `11.7` can be marked done.
-- Next audit slice: real stdio/process lifecycle + durable Job-progress public-safe failure proof; after that, resource-bound/growth/cancellation responsiveness attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
+- MCP tool boundary and local stdio transport/process are `REVIEWED`: authority-shape rejection, H-007 transport ceilings, malformed-framing recovery, EOF/SIGTERM lifecycle ownership and public-safe process diagnostics are green.
+- Public-safe diagnostics is `REVIEWED`: synchronous MCP failures, stdio output and durable Job progress all have explicit non-leak/stable-code proof; H-008 closes the only material inconsistency found in this slice.
+- Validation/Holdout is `REVIEWED`: concurrent/restart duplicate consumption, stale-plan support, post-Holdout contamination and finalization restart/source-drift paths are fail-closed in the reviewed proofs.
+- Closure claim: none. Resource-bound/growth/duplicate/cancellation-responsiveness attacks remain before TREE `11.7` can be marked done.
+- Next audit slice: adversarial resource-bound/growth/duplicate/cancellation-responsiveness attacks over composed managed Research workloads. Any material finding remains with Chat 41 through RCA, smallest sufficient fix, deterministic regression, analogous review and affected green verification.
