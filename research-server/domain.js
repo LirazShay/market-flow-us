@@ -12,6 +12,10 @@ import {
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchHoldoutLedger } from "./holdout-ledger.js";
+import {
+  normalizeInsufficientRecommendationRequest,
+  openResearchInsufficientRecommendationLedger
+} from "./insufficient-recommendation-ledger.js";
 import { openResearchLedger } from "./ledger.js";
 import {
   normalizeRecommendationRequest,
@@ -229,6 +233,7 @@ export async function openResearchDomain(options = {}) {
   await bootstrapComponent(openResearchValidationLedger, options);
   await bootstrapComponent(openResearchHoldoutLedger, options);
   await bootstrapComponent(openResearchRecommendationLedger, options);
+  await bootstrapComponent(openResearchInsufficientRecommendationLedger, options);
 
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
   const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
@@ -288,6 +293,10 @@ export async function openResearchDomain(options = {}) {
     return enqueue(() => withComponent(openResearchRecommendationLedger, options, operation));
   }
 
+  function useInsufficientRecommendation(operation) {
+    return enqueue(() => withComponent(openResearchInsufficientRecommendationLedger, options, operation));
+  }
+
   async function loadQueryArtifacts(researchRunId, references) {
     const queryArtifacts = [];
     for (const reference of references) {
@@ -330,6 +339,27 @@ export async function openResearchDomain(options = {}) {
     });
     await verifySourceFingerprint(verificationInput);
     return execution;
+  }
+
+  async function verifyEvidenceInventorySources(inventory) {
+    const sources = inventory?.inventory?.sources;
+    if (!Array.isArray(sources) || sources.length < 1) {
+      throw new Error("Final Evidence Inventory requires one or more fingerprinted sources");
+    }
+    for (const source of sources) {
+      if (
+        typeof source?.sourceId !== "string"
+        || typeof source?.sourceFingerprint !== "string"
+        || !/^[0-9a-f]{64}$/u.test(source.sourceFingerprint)
+      ) {
+        throw new Error("Final Evidence Inventory contains invalid source provenance");
+      }
+      await verifySourceFingerprint({
+        dataDir: marketDataDir,
+        sourceId: source.sourceId,
+        expectedFingerprint: source.sourceFingerprint
+      });
+    }
   }
 
   async function exposeValidationExperiment(experiment) {
@@ -844,6 +874,12 @@ export async function openResearchDomain(options = {}) {
     async buildRecommendationArtifact(input) {
       assertPublicSafeValue(input, "final recommendation");
       const request = normalizeRecommendationRequest(input);
+      const insufficient = await useInsufficientRecommendation(
+        (recommendation) => recommendation.getRecommendationArtifact(request.researchRunId)
+      );
+      if (insufficient) {
+        throw new Error("Research Run is already finalized by insufficient-evidence recommendation authority");
+      }
       const holdoutEvaluation = await useHoldout((holdout) => holdout.getHoldoutEvaluation(
         request.researchRunId,
         request.holdoutEvaluationId
@@ -857,8 +893,62 @@ export async function openResearchDomain(options = {}) {
       }));
     },
 
+    async buildInsufficientEvidenceRecommendationArtifact(input) {
+      assertPublicSafeValue(input, "insufficient-evidence final recommendation");
+      const request = normalizeInsufficientRecommendationRequest(input);
+      const regular = await useRecommendation(
+        (recommendation) => recommendation.getRecommendationArtifact(request.researchRunId)
+      );
+      if (regular) {
+        throw new Error("Research Run is already finalized by regular recommendation authority");
+      }
+      const run = await useLedger((ledger) => ledger.getResearchRun(request.researchRunId));
+      if (!run) throw new Error("Research Run was not found");
+      const objective = await useLedger((ledger) => ledger.getObjectiveVersion(
+        request.researchRunId,
+        request.objectiveVersionId
+      ));
+      if (!objective) throw new Error("Objective Version was not found in this Research Run");
+      const currentObjective = await useLedger((ledger) => ledger.getCurrentObjectiveVersion(request.researchRunId));
+      if (!currentObjective || currentObjective.objectiveVersionId !== objective.objectiveVersionId) {
+        throw new Error("Insufficient-evidence finalization requires the current Objective Version");
+      }
+      const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
+        request.researchRunId,
+        request.evidenceInventoryId
+      ));
+      if (!inventory) throw new Error("Evidence Inventory was not found in this Research Run");
+      const planningDecision = proposeDeterministicEvidencePlan({
+        objectiveVersion: objective,
+        evidenceInventory: inventory,
+        evaluationProfile: request.evaluationProfile,
+        timingToleranceMs: request.timingToleranceMs
+      });
+      if (planningDecision.status !== "INSUFFICIENT_INDEPENDENT_EVIDENCE") {
+        throw new Error(
+          "Insufficient-evidence finalization requires server-derived INSUFFICIENT_INDEPENDENT_EVIDENCE"
+        );
+      }
+      await verifyEvidenceInventorySources(inventory);
+      return await useInsufficientRecommendation((recommendation) => recommendation.buildRecommendationArtifact({
+        request,
+        objective: Object.freeze({ ...objective, userIntent: run.userIntent }),
+        evidenceInventory: inventory,
+        planningDecision
+      }));
+    },
+
     async getRecommendationArtifact(researchRunId) {
-      return await useRecommendation((recommendation) => recommendation.getRecommendationArtifact(researchRunId));
+      const regular = await useRecommendation(
+        (recommendation) => recommendation.getRecommendationArtifact(researchRunId)
+      );
+      const insufficient = await useInsufficientRecommendation(
+        (recommendation) => recommendation.getRecommendationArtifact(researchRunId)
+      );
+      if (regular && insufficient) {
+        throw new Error("Research Run has conflicting terminal recommendation artifacts");
+      }
+      return regular ?? insufficient;
     },
 
     async openDevelopmentResearchSql(input) {
