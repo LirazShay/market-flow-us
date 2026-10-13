@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "market_flow_us_research": {
+      "type": "stdio",
+      "command": "market-flow-us-research-mcp"
+    }
+  }
+}
