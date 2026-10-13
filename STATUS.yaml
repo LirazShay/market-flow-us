@@ -22,28 +22,28 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 41
-  node: "11.7"
-  title: "Adversarial security / failure audit"
-  status: in_progress
-  activation_required: false
+  chat: 42
+  node: "11.8"
+  title: "Representative workload, desktop acceptance and deterministic reclosure"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 55
+  done: 56
   pending: 1
-  in_progress: 1
+  in_progress: 0
   blocked: 0
-  current_chat: 41
-  current_node: "11.7"
+  current_chat: 42
+  current_node: "11.8"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.7"
-  owner: "Chat 41"
-  status: in_progress
-  action: "TREE 11.7 final success-evidence / complete-diff reclosure is GREEN. Every adversarial matrix area is REVIEWED, H-11.7-001 through H-11.7-010 are fixed with deterministic proof and analogous-area review, and pre-merge head 6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908 passed Fast #1017, Planning #1213, Workload #603, Replay #165 and Browser #627. Next perform the repository completion transition only: take PR #108 through readiness/squash merge, verify merged-main CI green and open-PR state reconciled, then update EXECUTION/STATUS to mark 11.7 done and activate Chat 42 / 11.8. Do not start 11.8 before those conditions are green."
+  task: "11.8"
+  owner: "Chat 42"
+  status: pending
+  action: "Chat 41 / TREE 11.7 is complete. PR #108 squash-merged as e5e04a1a72f3b5cf5c34a4512a46f7fdbe9867c9 after final adversarial reclosure; merged-main Fast #1019, Planning/Contract #1215, Workload #605, Replay #167 and Browser #629 are green and the post-merge open-PR audit is empty. Start Chat 42 / 11.8 only through explicit numbered-chat activation; generic continuation in completed Chat 41 must not switch executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
