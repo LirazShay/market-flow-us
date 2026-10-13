@@ -11,6 +11,18 @@ import { DEFAULT_MANAGED_RESEARCH_RESOURCE_POLICY } from "./runtime-policy.js";
 
 export const RESEARCH_MCP_STDIO_VERSION = "market-flow-us-research-mcp-stdio-v1";
 
+const STABLE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,127}$/u;
+
+export function researchMcpErrorCode(error, fallback) {
+  return typeof error?.code === "string" && STABLE_ERROR_CODE.test(error.code)
+    ? error.code
+    : fallback;
+}
+
+function reportResearchMcpError(error, fallback) {
+  process.stderr.write(`[market-flow-us-research-mcp] ${researchMcpErrorCode(error, fallback)}\n`);
+}
+
 function optionalAbsolutePath(value, fallback, label) {
   if (value === undefined || value === null || value === "") return fallback;
   if (typeof value !== "string" || !path.isAbsolute(value)) {
@@ -63,8 +75,7 @@ export async function startResearchMcpStdio({
       () => createResearchMcpServer({ domain }),
       {
         onerror(error) {
-          const code = typeof error?.code === "string" ? error.code : "RESEARCH_MCP_TRANSPORT_ERROR";
-          process.stderr.write(`[market-flow-us-research-mcp] ${code}\n`);
+          reportResearchMcpError(error, "RESEARCH_MCP_TRANSPORT_ERROR");
         }
       }
     );
@@ -101,8 +112,9 @@ async function main() {
     shuttingDown = true;
     try {
       await runtime.close();
-    } finally {
-      process.exitCode = 0;
+    } catch (error) {
+      reportResearchMcpError(error, "RESEARCH_MCP_SHUTDOWN_FAILED");
+      process.exitCode = 1;
     }
   };
 
@@ -114,8 +126,7 @@ async function main() {
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : null;
 if (invokedPath === import.meta.url) {
   main().catch((error) => {
-    const code = typeof error?.code === "string" ? error.code : "RESEARCH_MCP_STARTUP_FAILED";
-    process.stderr.write(`[market-flow-us-research-mcp] ${code}\n`);
+    reportResearchMcpError(error, "RESEARCH_MCP_STARTUP_FAILED");
     process.exitCode = 1;
   });
 }
