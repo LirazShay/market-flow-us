@@ -9,6 +9,7 @@ import { openResearchLedger } from "./ledger.js";
 import { openResearchMemory } from "./research-memory.js";
 import { openDevelopmentResearchSqlSession } from "./research-sql-session.js";
 import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
+import { openResearchValidationLedger } from "./validation-ledger.js";
 
 const FORBIDDEN_KEY_SUFFIXES = Object.freeze([
   "password",
@@ -104,9 +105,9 @@ function assertPublicSafeValue(value, label) {
   return value;
 }
 
-function assertDevelopmentExperimentInput(input) {
+function assertExperimentInput(input, label) {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
-    throw new TypeError("development experiment request must be an object");
+    throw new TypeError(`${label} request must be an object`);
   }
   for (const key of DISALLOWED_EXPERIMENT_AUTHORITY_KEYS) {
     if (Object.hasOwn(input, key)) {
@@ -144,10 +145,14 @@ function assertDevelopmentResearchSqlInput(input) {
   return input;
 }
 
-function authorizedPartitionSource(partition, inventory, sourceId) {
+function phaseLabel(role) {
+  return role === "DEVELOPMENT" ? "Development" : "Validation";
+}
+
+function authorizedPartitionSource(partition, inventory, sourceId, role) {
   const sourceIds = partition?.partition?.sourceIds;
   if (!Array.isArray(sourceIds) || !sourceIds.includes(sourceId)) {
-    throw new Error("Experiment source is not authorized by the Development partition");
+    throw new Error(`Experiment source is not authorized by the ${phaseLabel(role)} partition`);
   }
   const matches = inventory?.inventory?.sources?.filter((source) => source?.sourceId === sourceId) ?? [];
   if (matches.length !== 1) {
@@ -188,6 +193,8 @@ export async function openResearchDomain(options = {}) {
     experiments: await bootstrapComponent(openResearchExperimentLedger, options),
     memory: await bootstrapComponent(openResearchMemory, options)
   });
+  await bootstrapComponent(openResearchValidationLedger, options);
+
   const executeExperimentBatch = options.executeExperimentBatch ?? executeAuthoritativeExperimentBatch;
   const verifySourceFingerprint = options.verifySourceFingerprint ?? verifyResearchEvidenceSourceFingerprint;
   const marketDataDir = options.marketDataDir ?? "data";
@@ -234,6 +241,10 @@ export async function openResearchDomain(options = {}) {
     return enqueue(() => withComponent(openResearchMemory, options, operation));
   }
 
+  function useValidation(operation) {
+    return enqueue(() => withComponent(openResearchValidationLedger, options, operation));
+  }
+
   async function loadQueryArtifacts(researchRunId, references) {
     const queryArtifacts = [];
     for (const reference of references) {
@@ -278,13 +289,142 @@ export async function openResearchDomain(options = {}) {
     return execution;
   }
 
+  async function exposeValidationExperiment(experiment) {
+    if (experiment?.phase === "VALIDATION") {
+      await useValidation((validation) => validation.recordValidationExposure({
+        researchRunId: experiment.researchRunId,
+        experimentId: experiment.experimentId
+      }));
+    }
+    return experiment;
+  }
+
   async function requireExperiment(researchRunId, experimentId) {
     const experiment = await useExperiments((experiments) => experiments.getExperiment(
       researchRunId,
       experimentId
     ));
     if (!experiment) throw new Error("Experiment was not found in this Research Run");
-    return experiment;
+    return await exposeValidationExperiment(experiment);
+  }
+
+  async function executeAuthorizedExperiment(input, { phase, role }) {
+    const label = phase === "DEVELOPMENT" ? "development experiment" : "validation experiment";
+    assertPublicSafeValue(input, label);
+    const request = assertExperimentInput(input, label);
+    const objective = await useLedger((ledger) => ledger.getObjectiveVersion(
+      request.researchRunId,
+      request.objectiveVersionId
+    ));
+    if (!objective) {
+      throw new Error("Objective Version was not found in this Research Run");
+    }
+
+    const partition = await useEvidence((evidence) => evidence.getPartition(
+      request.researchRunId,
+      request.partitionId
+    ));
+    if (!partition) {
+      throw new Error("Partition was not found in this Research Run");
+    }
+    if (partition.role !== role) {
+      if (role === "DEVELOPMENT") {
+        throw new Error("Only DEVELOPMENT experiments are authorized before Validation/Holdout authority");
+      }
+      throw new Error("Validation experiments require the exact VALIDATION partition");
+    }
+
+    const plan = await useEvidence((evidence) => evidence.getEvidencePlan(
+      request.researchRunId,
+      partition.evidencePlanId
+    ));
+    if (!plan || plan.objectiveVersionId !== request.objectiveVersionId) {
+      throw new Error(`${phaseLabel(role)} partition does not match the Experiment Objective Version`);
+    }
+    const currentPlan = await useEvidence((evidence) => evidence.getCurrentEvidencePlan(request.researchRunId));
+    if (!currentPlan || currentPlan.evidencePlanId !== plan.evidencePlanId) {
+      throw new Error(`${phaseLabel(role)} experiment requires the current Evidence Plan`);
+    }
+    const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
+      request.researchRunId,
+      plan.evidenceInventoryId
+    ));
+    if (!inventory) {
+      throw new Error(`${phaseLabel(role)} partition evidence inventory was not found`);
+    }
+    const source = authorizedPartitionSource(partition, inventory, request.sourceId, role);
+    const queryArtifacts = await loadQueryArtifacts(request.researchRunId, request.queryArtifactIds);
+
+    const execution = await executeWithVerifiedSource({
+      objectiveVersionId: request.objectiveVersionId,
+      evidencePartitionId: request.partitionId,
+      phase,
+      sourceId: request.sourceId,
+      sourceFingerprint: source.sourceFingerprint,
+      queryArtifacts,
+      fromAtMs: request.fromAtMs,
+      toAtMs: request.toAtMs,
+      intervalValue: request.intervalValue,
+      intervalUnit: request.intervalUnit,
+      topX: request.topX,
+      horizonsMs: request.horizonsMs
+    });
+    assertPublicSafeValue({
+      request: execution.durableRequest,
+      metrics: execution.metrics
+    }, "completed experiment");
+
+    const experiment = await useExperiments((experiments) => experiments.recordCompletedExperiment({
+      researchRunId: request.researchRunId,
+      request: execution.durableRequest,
+      metrics: execution.metrics
+    }));
+    return await exposeValidationExperiment(experiment);
+  }
+
+  async function assertValidationSupportedFinalists({
+    researchRunId,
+    objectiveVersionId,
+    queryArtifactIds
+  }) {
+    const currentPlan = await useEvidence((evidence) => evidence.getCurrentEvidencePlan(researchRunId));
+    if (!currentPlan || currentPlan.objectiveVersionId !== objectiveVersionId) {
+      throw new Error("Finalist Set requires the current Evidence Plan for this Objective Version");
+    }
+    const partitions = await useEvidence((evidence) => evidence.listPartitions(
+      researchRunId,
+      currentPlan.evidencePlanId
+    ));
+    const validationPartitions = partitions.filter((partition) => partition.role === "VALIDATION");
+    if (validationPartitions.length !== 1) {
+      throw new Error("Finalist Set requires exactly one current VALIDATION partition");
+    }
+    const validationPartitionId = validationPartitions[0].partitionId;
+    const queryArtifacts = await loadQueryArtifacts(researchRunId, queryArtifactIds);
+    const exposureCount = await useValidation((validation) => validation.getValidationExposureCount(researchRunId));
+    if (exposureCount > 200) {
+      throw new Error("Finalist Set Validation support exceeds the bounded verification window");
+    }
+    const exposures = await useValidation((validation) => validation.listValidationExposures(
+      researchRunId,
+      { limit: Math.max(1, exposureCount) }
+    ));
+    for (const queryArtifact of queryArtifacts) {
+      const supported = exposures.some((exposure) => (
+        exposure.objectiveVersionId === objectiveVersionId
+        && exposure.partitionId === validationPartitionId
+        && exposure.queryArtifacts.some((reference) => (
+          reference.queryArtifactId === queryArtifact.queryArtifactId
+          && reference.sqlHash === queryArtifact.sqlHash
+          && reference.scannerContractVersion === queryArtifact.scannerContractVersion
+        ))
+      ));
+      if (!supported) {
+        throw new Error(
+          "Finalist Query Artifact requires Validation exposure under the current Objective and Validation partition"
+        );
+      }
+    }
   }
 
   async function reconstructDevelopmentExperiment(researchRunId, experimentId) {
@@ -424,76 +564,24 @@ export async function openResearchDomain(options = {}) {
     },
 
     async executeDevelopmentExperiment(input) {
-      assertPublicSafeValue(input, "development experiment");
-      const request = assertDevelopmentExperimentInput(input);
-      const objective = await useLedger((ledger) => ledger.getObjectiveVersion(
-        request.researchRunId,
-        request.objectiveVersionId
-      ));
-      if (!objective) {
-        throw new Error("Objective Version was not found in this Research Run");
-      }
+      return await executeAuthorizedExperiment(input, { phase: "DEVELOPMENT", role: "DEVELOPMENT" });
+    },
 
-      const partition = await useEvidence((evidence) => evidence.getPartition(
-        request.researchRunId,
-        request.partitionId
-      ));
-      if (!partition) {
-        throw new Error("Partition was not found in this Research Run");
-      }
-      if (partition.role !== "DEVELOPMENT") {
-        throw new Error("Only DEVELOPMENT experiments are authorized before Validation/Holdout authority");
-      }
-
-      const plan = await useEvidence((evidence) => evidence.getEvidencePlan(
-        request.researchRunId,
-        partition.evidencePlanId
-      ));
-      if (!plan || plan.objectiveVersionId !== request.objectiveVersionId) {
-        throw new Error("Development partition does not match the Experiment Objective Version");
-      }
-      const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
-        request.researchRunId,
-        plan.evidenceInventoryId
-      ));
-      if (!inventory) {
-        throw new Error("Development partition evidence inventory was not found");
-      }
-      const source = authorizedPartitionSource(partition, inventory, request.sourceId);
-      const queryArtifacts = await loadQueryArtifacts(request.researchRunId, request.queryArtifactIds);
-
-      const execution = await executeWithVerifiedSource({
-        objectiveVersionId: request.objectiveVersionId,
-        evidencePartitionId: request.partitionId,
-        phase: "DEVELOPMENT",
-        sourceId: request.sourceId,
-        sourceFingerprint: source.sourceFingerprint,
-        queryArtifacts,
-        fromAtMs: request.fromAtMs,
-        toAtMs: request.toAtMs,
-        intervalValue: request.intervalValue,
-        intervalUnit: request.intervalUnit,
-        topX: request.topX,
-        horizonsMs: request.horizonsMs
-      });
-      assertPublicSafeValue({
-        request: execution.durableRequest,
-        metrics: execution.metrics
-      }, "completed experiment");
-
-      return await useExperiments((experiments) => experiments.recordCompletedExperiment({
-        researchRunId: request.researchRunId,
-        request: execution.durableRequest,
-        metrics: execution.metrics
-      }));
+    async executeValidationExperiment(input) {
+      return await executeAuthorizedExperiment(input, { phase: "VALIDATION", role: "VALIDATION" });
     },
 
     async getExperiment(researchRunId, experimentId) {
-      return await useExperiments((experiments) => experiments.getExperiment(researchRunId, experimentId));
+      const experiment = await useExperiments((experiments) => experiments.getExperiment(researchRunId, experimentId));
+      return experiment ? await exposeValidationExperiment(experiment) : null;
     },
 
     async listExperiments(researchRunId, listOptions) {
-      return await useExperiments((experiments) => experiments.listExperiments(researchRunId, listOptions));
+      const experiments = await useExperiments((ledger) => ledger.listExperiments(researchRunId, listOptions));
+      for (const experiment of experiments) {
+        await exposeValidationExperiment(experiment);
+      }
+      return experiments;
     },
 
     async getExperimentSummary(researchRunId, experimentId) {
@@ -534,6 +622,28 @@ export async function openResearchDomain(options = {}) {
     async diagnoseMissingCandidate(researchRunId, experimentId, request) {
       const { diagnostics } = await reconstructDevelopmentExperiment(researchRunId, experimentId);
       return diagnostics.diagnoseMissingCandidate(request);
+    },
+
+    async getValidationExposureCount(researchRunId) {
+      return await useValidation((validation) => validation.getValidationExposureCount(researchRunId));
+    },
+
+    async listValidationExposures(researchRunId, listOptions) {
+      return await useValidation((validation) => validation.listValidationExposures(researchRunId, listOptions));
+    },
+
+    async createFinalistSet(input) {
+      assertPublicSafeValue(input, "finalist set");
+      await assertValidationSupportedFinalists(input);
+      return await useValidation((validation) => validation.createFinalistSet(input));
+    },
+
+    async getFinalistSet(researchRunId, finalistSetId) {
+      return await useValidation((validation) => validation.getFinalistSet(researchRunId, finalistSetId));
+    },
+
+    async listFinalistSets(researchRunId, listOptions) {
+      return await useValidation((validation) => validation.listFinalistSets(researchRunId, listOptions));
     },
 
     async openDevelopmentResearchSql(input) {
