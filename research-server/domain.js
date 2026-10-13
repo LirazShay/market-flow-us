@@ -3,6 +3,12 @@ import {
   createAuthoritativeExperimentDiagnostics,
   RESEARCH_EXPERIMENT_DIAGNOSTICS_VERSION
 } from "./experiment-diagnostics.js";
+import {
+  assertFinalistProfileMatchesPlan,
+  assertValidationRequestMatchesPlan,
+  committedPlanInputFromProposal,
+  proposeDeterministicEvidencePlan
+} from "./evidence-plan-authority.js";
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchHoldoutLedger } from "./holdout-ledger.js";
@@ -383,6 +389,7 @@ export async function openResearchDomain(options = {}) {
       if (!currentPlan || currentPlan.evidencePlanId !== plan.evidencePlanId) {
         throw new Error("Validation experiment requires the current Evidence Plan");
       }
+      assertValidationRequestMatchesPlan({ plan, partition, request });
     }
     const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
       request.researchRunId,
@@ -593,8 +600,64 @@ export async function openResearchDomain(options = {}) {
       return await useEvidence((evidence) => evidence.listEvidenceInventories(researchRunId, listOptions));
     },
 
+    async proposeEvidencePlan(input) {
+      assertPublicSafeValue(input, "evidence plan proposal");
+      const objective = await useLedger((ledger) => ledger.getObjectiveVersion(
+        input?.researchRunId,
+        input?.objectiveVersionId
+      ));
+      if (!objective) throw new Error("Objective Version was not found in this Research Run");
+      const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
+        input.researchRunId,
+        input.evidenceInventoryId
+      ));
+      if (!inventory) throw new Error("Evidence Inventory was not found in this Research Run");
+      return proposeDeterministicEvidencePlan({
+        objectiveVersion: objective,
+        evidenceInventory: inventory,
+        evaluationProfile: input.evaluationProfile,
+        timingToleranceMs: input.timingToleranceMs ?? 0
+      });
+    },
+
+    async commitEvidencePlan(input) {
+      assertPublicSafeValue(input, "evidence plan commit");
+      const objective = await useLedger((ledger) => ledger.getObjectiveVersion(
+        input?.researchRunId,
+        input?.objectiveVersionId
+      ));
+      if (!objective) throw new Error("Objective Version was not found in this Research Run");
+      const inventory = await useEvidence((evidence) => evidence.getEvidenceInventory(
+        input.researchRunId,
+        input.evidenceInventoryId
+      ));
+      if (!inventory) throw new Error("Evidence Inventory was not found in this Research Run");
+      const proposal = input.proposal;
+      const recomputed = proposeDeterministicEvidencePlan({
+        objectiveVersion: objective,
+        evidenceInventory: inventory,
+        evaluationProfile: proposal?.evaluationProfile,
+        timingToleranceMs: proposal?.timingToleranceMs ?? 0
+      });
+      if (!sameJson(recomputed, proposal) || proposal?.status !== "PROPOSED") {
+        throw new Error("Evidence Plan proposal no longer matches immutable Objective/Evidence truth");
+      }
+      const committed = committedPlanInputFromProposal(proposal);
+      return await useEvidence((evidence) => evidence.createEvidencePlan({
+        researchRunId: input.researchRunId,
+        objectiveVersionId: input.objectiveVersionId,
+        evidenceInventoryId: input.evidenceInventoryId,
+        ...committed
+      }));
+    },
+
     async createEvidencePlan(input) {
       assertPublicSafeValue(input, "evidence plan");
+      if (input?.partitions?.some((partition) => partition?.role === "SEALED_HOLDOUT")) {
+        throw new Error(
+          "SEALED_HOLDOUT Evidence Plans must use server-owned proposeEvidencePlan/commitEvidencePlan authority"
+        );
+      }
       return await useEvidence((evidence) => evidence.createEvidencePlan(input));
     },
 
@@ -689,6 +752,11 @@ export async function openResearchDomain(options = {}) {
 
     async createFinalistSet(input) {
       assertPublicSafeValue(input, "finalist set");
+      const currentPlan = await useEvidence((evidence) => evidence.getCurrentEvidencePlan(input?.researchRunId));
+      if (!currentPlan || currentPlan.objectiveVersionId !== input?.objectiveVersionId) {
+        throw new Error("Finalist Set requires the current Evidence Plan for this Objective Version");
+      }
+      assertFinalistProfileMatchesPlan({ plan: currentPlan, evaluationProfile: input.evaluationProfile });
       await assertValidationSupportedFinalists(input);
       return await useValidation((validation) => validation.createFinalistSet(input));
     },
