@@ -136,3 +136,44 @@ test("TREE 11.8 target-machine preflight proves PATH-visible MCP prerequisites w
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test("TREE 11.8 target-machine preflight rejects catalog-shaped files that are not usable Market Flow US DuckDB evidence", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-desktop-preflight-invalid-evidence-"));
+  const dataDir = path.join(tempDir, "data");
+  const reportPath = path.join(tempDir, "research-desktop-preflight.json");
+  const previousDataDir = process.env.MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR;
+  const previousReport = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT;
+  const previousExitCode = process.exitCode;
+
+  try {
+    await mkdir(dataDir, { recursive: true });
+    await writeFile(path.join(dataDir, "market-flow-us.duckdb"), "not-a-duckdb-database\n", "utf8");
+
+    process.env.MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR = dataDir;
+    process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT = reportPath;
+
+    const moduleUrl = pathToFileURL(PREFLIGHT_ENTRY);
+    moduleUrl.searchParams.set("invalid-evidence-proof", String(Date.now()));
+    const { runResearchDesktopPreflight } = await import(moduleUrl.href);
+    const report = await runResearchDesktopPreflight();
+
+    assert.equal(report.result, "fail");
+    assert.deepEqual(report.error, {
+      code: "RESEARCH_DESKTOP_PREFLIGHT_MARKET_EVIDENCE_UNUSABLE"
+    });
+    assert.equal(report.marketEvidence, null);
+    assert.equal(report.mcp, null, "MCP must not launch after market evidence validation fails");
+    assert.equal(report.desktopAcceptance, "STILL_REQUIRED");
+
+    const persisted = JSON.parse(await readFile(reportPath, "utf8"));
+    assert.deepEqual(persisted.error, {
+      code: "RESEARCH_DESKTOP_PREFLIGHT_MARKET_EVIDENCE_UNUSABLE"
+    });
+    assert.equal(JSON.stringify(persisted).includes(tempDir), false, "failure report must not expose local paths");
+  } finally {
+    process.exitCode = previousExitCode;
+    restoreEnvironment("MARKET_FLOW_US_RESEARCH_MARKET_DATA_DIR", previousDataDir);
+    restoreEnvironment("MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT", previousReport);
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
