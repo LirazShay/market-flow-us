@@ -24,6 +24,7 @@ There is currently **no approved backlog priority order**. Every remaining backl
 | [B-US-005](B-US-005-replay-pre-user-run-hardening-audit.md) | Preserved Replay hardening backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-006](B-US-006-basic-in-product-buy.md) | Preserved basic BUY backlog item; must be reconciled against current `main` because later execution may already satisfy it. | Needs fresh-main review | Unprioritized | No |
 | [B-US-007](B-US-007-prioritize-backlog.md) | Review the full backlog against fresh `main`, remove/supersede stale items, and assign an explicit priority/order. | Backlog | Unprioritized | No |
+| [B-US-010](B-US-010-autonomous-ai-trading-strategy-distillation.md) | Strategic future goal for bounded AI-assisted trading, continuous supervision, hard risk authority, durable trade evidence and deterministic strategy distillation. It is explicitly independent of user/target-machine acceptance tasks unless PLAN/EXECUTION records a real dependency. | Backlog | Unprioritized | No |
 
 ## Promoted / historical records
 
