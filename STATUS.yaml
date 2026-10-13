@@ -25,15 +25,15 @@ current:
   chat: 40
   node: "11.6"
   title: "ChatGPT Plugin / Skill + MCP operating integration"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 54
-  pending: 3
-  in_progress: 0
+  pending: 2
+  in_progress: 1
   blocked: 0
   current_chat: 40
   current_node: "11.6"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.6"
   owner: "Chat 40"
-  status: pending
-  action: "Chat 39 / 11.5 success evidence is green and execution truth is complete. Start Chat 40 / 11.6 only through explicit numbered-chat activation after PR #105 is merged and main CI is green; generic continuation in completed Chat 39 must not switch executor identity."
+  status: in_progress
+  action: "Final TREE 11.6 composed diff/security review is green: strict 46-tool MCP contracts, on-demand reuse of the TREE 11.3 field manifest, sanitized/idempotent stdio lifecycle and real two-process resume/evidence/Analysis/Result proof passed Fast #961, Planning #1155, Workload #547, Replay #131 and Browser #593 on reviewed head 02b6dd57. Complete PR #106 reclosure next: verify this truth-only head CI, mark the PR ready, squash-merge it, verify merged-main CI and open-PR state, then advance to Chat 41 / TREE 11.7 only if every completion gate is green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -58,6 +58,7 @@ navigation:
   autonomous_ai_researcher_security_resource: ".planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md"
   autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
+  chatgpt_research_plugin: "docs/CHATGPT_RESEARCH_PLUGIN.md"
   backtest_contract: "docs/BACKTEST_LAB.md"
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
