@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   buildWorkloadEnvironment,
   clearWorkloadReports,
+  missingWorkloadReports,
   resolveWorkloadReportPaths,
   resolveWorkloadTestFiles
 } from "../../scripts/run-workload-profile.mjs";
@@ -71,4 +72,19 @@ test("workload report cleanup honors explicit report destinations", () => {
 
   assert.equal(environment.MARKET_FLOW_US_RESEARCH_REPORT, overrides.MARKET_FLOW_US_RESEARCH_REPORT);
   assert.ok(resolveWorkloadReportPaths("target-e2e", environment).includes(overrides.MARKET_FLOW_US_RESEARCH_REPORT));
+});
+
+test("successful workload profiles require every selected report to be freshly present", () => {
+  const environment = buildWorkloadEnvironment("target-e2e", reportOverrides("fresh-report-test"));
+  const expected = resolveWorkloadReportPaths("target-e2e", environment);
+  const present = new Set(expected.slice(0, -1));
+
+  assert.deepEqual(
+    missingWorkloadReports("target-e2e", environment, (reportPath) => present.has(reportPath)),
+    [environment.MARKET_FLOW_US_RESEARCH_REPORT]
+  );
+  assert.deepEqual(
+    missingWorkloadReports("target-e2e", environment, () => true),
+    []
+  );
 });
