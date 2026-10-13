@@ -1,6 +1,8 @@
 # Market Flow US — ChatGPT Desktop Research Acceptance
 
-Status: TREE `11.8` target-machine acceptance runbook.
+Status: post-merge non-blocking target-machine/Desktop acceptance runbook for `B-US-009`.
+
+This runbook preserves the exact real-machine acceptance that was originally inside TREE `11.8`. On 2026-10-13 the user explicitly changed the completion policy so this acceptance no longer blocks the Branch-11 implementation merge. `W2T` and `W3` remain pending until actually executed; this deferral must never be represented as PASS.
 
 ## Current OpenAI surface decision — 2026-10-13
 
@@ -13,10 +15,10 @@ Official product references checked for this reclosure:
 - `https://developers.openai.com/plugins/build/plugins`
 - `https://help.openai.com/en/articles/20001256-plugins-in-chatgpt`
 
-Therefore the preferred TREE `11.8` acceptance path is now:
+Therefore the `B-US-009` acceptance path is:
 
 ```text
-exact target candidate + existing Market Flow US evidence
+fresh intended main candidate + existing Market Flow US evidence
 → target-machine actual-evidence Research workload
 → repo-local Desktop/MCP preflight
 → ChatGPT Desktop Work mode or Codex with trusted repo
@@ -57,7 +59,7 @@ The repository `package.json` owns that executable through its `bin` mapping.
 
 ## Target-machine order
 
-Use the exact candidate commit/branch being accepted. Do not mix measurements from an older checkout with Desktop acceptance from a newer one.
+When `B-US-009` is activated, fetch fresh `main` and use the latest intended candidate unless repository truth explicitly says otherwise. Do not mix measurements from an older checkout with Desktop acceptance from a newer one.
 
 Run in this order:
 
@@ -73,7 +75,7 @@ The two commands after `npm ci` are distinct acceptance gates:
 1. `research-target:workload` measures the managed Research path against **existing target-machine Market Flow US historical evidence**.
 2. `research-desktop:preflight` verifies the repository/machine/plugin/MCP prerequisites that ChatGPT Desktop will inherit.
 
-Do not skip directly to Desktop because the synthetic `W2` workload passed in CI. TREE `11.8` separately requires actual target-machine wall-clock/RAM/disk/concurrency/result-size evidence.
+Do not skip directly to Desktop because the synthetic `W2` workload passed in CI. `B-US-009` separately requires actual target-machine wall-clock/RAM/disk/concurrency/result-size evidence.
 
 ## W2T — actual-evidence workload
 
@@ -212,3 +214,7 @@ Never record credentials, cookies, authorization headers, session/account identi
 `W3 = PASS` only when `W2T` is already green, the repository Desktop/MCP preflight passes, and the real Desktop plugin path completes the mission and restart/fresh-context proof above.
 
 If the current Desktop product does not expose the documented local marketplace/plugin surface on the target account/build, or the installed local MCP app cannot launch despite a passing repository preflight, record the exact external-product blocker and leave `W3` open/blocked. Do not substitute direct MCP scripts, web ChatGPT, Codex-only execution or a synthetic adapter test for the required Desktop acceptance.
+
+## Branch-11 relationship
+
+This runbook is intentionally **post-merge and non-blocking** for Branch 11 implementation completion. Its criteria are not weakened; only their sequencing changed. The source of truth for activating this work later is `backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md`.
