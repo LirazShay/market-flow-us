@@ -16,6 +16,7 @@ const QUERY_ID = "qry_91919191-9191-4191-8191-919191919191";
 const INVENTORY_ID = "inv_91919191-9191-4191-8191-919191919191";
 const PLAN_ID = "plan_91919191-9191-4191-8191-919191919191";
 const PART_DEV = "part_91919191-9191-4191-8191-919191919191";
+const PART_VALIDATION = "part_92929292-9292-4292-8292-929292929292";
 const EXPERIMENT_ID = "exp_91919191-9191-4191-8191-919191919191";
 const METRIC_SET_ID = "metrics_91919191-9191-4191-8191-919191919191";
 const JOB_ID = "job_91919191-9191-4191-8191-919191919191";
@@ -79,6 +80,7 @@ test("TREE 11.7 durable Result publication and Job cancellation cannot split ter
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   let domain = null;
   let cancellationPromise = null;
+  const partitionIds = [PART_DEV, PART_VALIDATION];
 
   try {
     domain = await openManagedResearchDomain({
@@ -91,7 +93,7 @@ test("TREE 11.7 durable Result publication and Job cancellation cannot split ter
       queryArtifactIdFactory: () => QUERY_ID,
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
-      partitionIdFactory: () => PART_DEV,
+      partitionIdFactory: () => partitionIds.shift(),
       experimentIdFactory: () => EXPERIMENT_ID,
       metricSetIdFactory: () => METRIC_SET_ID,
       jobIdFactory: () => JOB_ID,
@@ -141,7 +143,10 @@ test("TREE 11.7 durable Result publication and Job cancellation cannot split ter
       objectiveVersionId: OBJECTIVE_ID,
       evidenceInventoryId: INVENTORY_ID,
       plan: { algorithmVersion: "result-finalization-race-v1" },
-      partitions: [{ role: "DEVELOPMENT", partition: { sourceIds: [SOURCE_ID] } }]
+      partitions: [
+        { role: "DEVELOPMENT", partition: { sourceIds: [SOURCE_ID] } },
+        { role: "VALIDATION", partition: { sourceIds: [SOURCE_ID] } }
+      ]
     });
 
     const submitted = await domain.submitDevelopmentExperiment({
