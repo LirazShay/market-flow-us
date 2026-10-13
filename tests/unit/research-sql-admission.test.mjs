@@ -26,9 +26,11 @@ test("research SQL admission keeps analytical functions and inert text available
   assert.doesNotThrow(() => assertResearchSqlAdmission(`
     SELECT
       'read_csv(../../etc/passwd)' AS inert_path,
-      $$query_table('research_history')$$ AS inert_dynamic_sql
+      $$query_table('research_history')$$ AS inert_dynamic_sql,
+      'pg_settings' AS inert_relation_name
     FROM research_history
-    /* duckdb_settings() in a comment is inert */
+    /* duckdb_settings() and pg_settings in a comment are inert */
+    -- pg_settings
     LIMIT 1
   `));
   assert.equal(isResearchSqlForbiddenFunction("duckdb_tables"), false);
@@ -82,5 +84,24 @@ test("research SQL admission recognizes quoted and comment-separated forbidden c
     SELECT 'query_table(' AS text_value
     -- read_csv('../../etc/passwd')
     /* duckdb_databases() */
+  `));
+});
+
+test("research SQL admission rejects PostgreSQL-compatible settings relations in plain, qualified and quoted forms", () => {
+  assertForbidden("SELECT name, setting FROM pg_settings");
+  assertForbidden("SELECT name, setting FROM pg_catalog.pg_settings");
+  assertForbidden('SELECT name, setting FROM "pg_catalog"."pg_settings"');
+  assertForbidden(`
+    SELECT name, setting
+    FROM pg_catalog /* trivia */ . /* more trivia */ pg_settings
+  `);
+
+  assert.doesNotThrow(() => assertResearchSqlAdmission(`
+    SELECT
+      'pg_catalog.pg_settings' AS inert_text,
+      $$pg_settings$$ AS inert_dollar_text
+    FROM research_history
+    /* FROM pg_settings */
+    -- JOIN pg_catalog.pg_settings
   `));
 });

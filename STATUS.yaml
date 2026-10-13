@@ -25,15 +25,15 @@ current:
   chat: 41
   node: "11.7"
   title: "Adversarial security / failure audit"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
   done: 55
-  pending: 2
-  in_progress: 0
+  pending: 1
+  in_progress: 1
   blocked: 0
   current_chat: 41
   current_node: "11.7"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "11.7"
   owner: "Chat 41"
-  status: pending
-  action: "Chat 40 / 11.6 is complete in squash-merged PR #106 at 5c0475bb438a6b26f2efbac273d7c972523c6216; merged-main Fast #964, Planning/Contract #1158, Workload #550, Replay #134 and Browser #596 are green. Start Chat 41 / 11.7 only through explicit numbered-chat activation; generic continuation in completed Chat 40 must not switch executor identity."
+  status: in_progress
+  action: "TREE 11.7 final success-evidence / complete-diff reclosure is GREEN. Every adversarial matrix area is REVIEWED, H-11.7-001 through H-11.7-010 are fixed with deterministic proof and analogous-area review, and pre-merge head 6ce2ebb53b6ca09d23c7b349f22b9ad7bbb4f908 passed Fast #1017, Planning #1213, Workload #603, Replay #165 and Browser #627. Next perform the repository completion transition only: take PR #108 through readiness/squash merge, verify merged-main CI green and open-PR state reconciled, then update EXECUTION/STATUS to mark 11.7 done and activate Chat 42 / 11.8. Do not start 11.8 before those conditions are green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -56,6 +56,7 @@ navigation:
   autonomous_ai_researcher_data_surface: ".planning/AI_RESEARCHER_DATA_SURFACE.md"
   autonomous_ai_researcher_operating_contract: ".planning/AI_RESEARCHER_OPERATING_CONTRACT.md"
   autonomous_ai_researcher_security_resource: ".planning/AI_RESEARCHER_SECURITY_RESOURCE_MODEL.md"
+  autonomous_ai_researcher_hardening_audit: ".planning/AI_RESEARCHER_HARDENING_AUDIT.md"
   autonomous_ai_researcher_consolidation_record: ".planning/AI_RESEARCHER_SNT_CONSOLIDATION.md"
   executor_routing: "docs/EXECUTOR_ROUTING.md"
   chatgpt_research_plugin: "docs/CHATGPT_RESEARCH_PLUGIN.md"

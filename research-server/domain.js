@@ -256,6 +256,7 @@ export async function openResearchDomain(options = {}) {
   let accepting = true;
   let queue = Promise.resolve();
   const researchSqlSessions = new Set();
+  const holdoutEvaluationsInFlight = new Map();
 
   function enqueue(operation) {
     if (!accepting) {
@@ -804,63 +805,82 @@ export async function openResearchDomain(options = {}) {
 
     async executeHoldoutEvaluation(input) {
       assertPublicSafeValue(input, "holdout evaluation");
-      const request = assertHoldoutEvaluationInput(input);
-      const existing = await useHoldout((holdout) => holdout.getHoldoutEvaluationByFinalist(
-        request.researchRunId,
-        request.finalistSetId
-      ));
-      if (existing) {
-        return existing.exposedAtMs === null
-          ? await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
-              researchRunId: request.researchRunId,
-              holdoutEvaluationId: existing.holdoutEvaluationId
-            }))
-          : existing;
-      }
+      const asserted = assertHoldoutEvaluationInput(input);
+      const request = Object.freeze({
+        researchRunId: asserted.researchRunId,
+        finalistSetId: asserted.finalistSetId
+      });
+      const key = `${request.researchRunId}\u0000${request.finalistSetId}`;
+      const active = holdoutEvaluationsInFlight.get(key);
+      if (active) return await active;
 
-      const authority = await useHoldout((holdout) => holdout.prepareHoldoutEvaluation(request));
-      const queryArtifacts = await loadQueryArtifacts(request.researchRunId, authority.queryArtifacts);
-      const sourceResults = [];
-      for (const source of authority.sourceSchedules) {
-        const execution = await executeWithVerifiedSource({
-          objectiveVersionId: authority.objectiveVersionId,
-          evidencePartitionId: authority.partitionId,
-          phase: "VALIDATION",
-          sourceId: source.sourceId,
-          sourceFingerprint: source.sourceFingerprint,
-          queryArtifacts,
-          fromAtMs: source.schedule.fromAtMs,
-          toAtMs: source.schedule.toAtMs,
-          intervalValue: source.schedule.intervalValue,
-          intervalUnit: source.schedule.intervalUnit,
-          topX: authority.evaluationProfile.topX,
-          horizonsMs: authority.evaluationProfile.horizonsMs
-        });
-        if (
-          execution?.durableRequest?.evidencePartitionId !== authority.partitionId
-          || execution?.durableRequest?.source?.sourceId !== source.sourceId
-          || execution?.durableRequest?.source?.sourceFingerprint !== source.sourceFingerprint
-        ) {
-          throw new Error("Holdout strategy execution did not preserve frozen partition/source authority");
+      const execution = (async () => {
+        const existing = await useHoldout((holdout) => holdout.getHoldoutEvaluationByFinalist(
+          request.researchRunId,
+          request.finalistSetId
+        ));
+        if (existing) {
+          return existing.exposedAtMs === null
+            ? await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
+                researchRunId: request.researchRunId,
+                holdoutEvaluationId: existing.holdoutEvaluationId
+              }))
+            : existing;
         }
-        assertPublicSafeValue({ metrics: execution.metrics }, "completed holdout evaluation");
-        sourceResults.push(Object.freeze({
-          sourceId: source.sourceId,
-          sourceFingerprint: source.sourceFingerprint,
-          schedule: source.schedule,
-          engineRequestFingerprint: execution.durableRequest.requestFingerprint,
-          metrics: execution.metrics
-        }));
-      }
 
-      const recorded = await useHoldout((holdout) => holdout.recordCompletedHoldoutEvaluation({
-        authority,
-        sourceResults
-      }));
-      return await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
-        researchRunId: request.researchRunId,
-        holdoutEvaluationId: recorded.holdoutEvaluationId
-      }));
+        const authority = await useHoldout((holdout) => holdout.prepareHoldoutEvaluation(request));
+        const queryArtifacts = await loadQueryArtifacts(request.researchRunId, authority.queryArtifacts);
+        const sourceResults = [];
+        for (const source of authority.sourceSchedules) {
+          const result = await executeWithVerifiedSource({
+            objectiveVersionId: authority.objectiveVersionId,
+            evidencePartitionId: authority.partitionId,
+            phase: "VALIDATION",
+            sourceId: source.sourceId,
+            sourceFingerprint: source.sourceFingerprint,
+            queryArtifacts,
+            fromAtMs: source.schedule.fromAtMs,
+            toAtMs: source.schedule.toAtMs,
+            intervalValue: source.schedule.intervalValue,
+            intervalUnit: source.schedule.intervalUnit,
+            topX: authority.evaluationProfile.topX,
+            horizonsMs: authority.evaluationProfile.horizonsMs
+          });
+          if (
+            result?.durableRequest?.evidencePartitionId !== authority.partitionId
+            || result?.durableRequest?.source?.sourceId !== source.sourceId
+            || result?.durableRequest?.source?.sourceFingerprint !== source.sourceFingerprint
+          ) {
+            throw new Error("Holdout strategy execution did not preserve frozen partition/source authority");
+          }
+          assertPublicSafeValue({ metrics: result.metrics }, "completed holdout evaluation");
+          sourceResults.push(Object.freeze({
+            sourceId: source.sourceId,
+            sourceFingerprint: source.sourceFingerprint,
+            schedule: source.schedule,
+            engineRequestFingerprint: result.durableRequest.requestFingerprint,
+            metrics: result.metrics
+          }));
+        }
+
+        const recorded = await useHoldout((holdout) => holdout.recordCompletedHoldoutEvaluation({
+          authority,
+          sourceResults
+        }));
+        return await useHoldout((holdout) => holdout.exposeHoldoutEvaluation({
+          researchRunId: request.researchRunId,
+          holdoutEvaluationId: recorded.holdoutEvaluationId
+        }));
+      })();
+
+      holdoutEvaluationsInFlight.set(key, execution);
+      try {
+        return await execution;
+      } finally {
+        if (holdoutEvaluationsInFlight.get(key) === execution) {
+          holdoutEvaluationsInFlight.delete(key);
+        }
+      }
     },
 
     async getHoldoutEvaluation(researchRunId, holdoutEvaluationId) {

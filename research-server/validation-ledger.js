@@ -476,6 +476,34 @@ export async function openResearchValidationLedger({
     return artifacts;
   }
 
+  async function assertCurrentPlanValidationSupport(researchRunId, plan, queryArtifacts) {
+    const rows = await queryRows(
+      connection,
+      `SELECT ${EXPOSURE_COLUMNS}
+       FROM validation_exposures
+       WHERE research_run_id = $researchRunId
+       ORDER BY exposure_index ASC`,
+      { researchRunId }
+    );
+    const exposures = rows.map(normalizeExposure);
+    for (const queryArtifact of queryArtifacts) {
+      const supported = exposures.some((exposure) => (
+        exposure.objectiveVersionId === plan.objectiveVersionId
+        && exposure.partitionId === plan.validationPartitionId
+        && exposure.queryArtifacts.some((reference) => (
+          reference.queryArtifactId === queryArtifact.queryArtifactId
+          && reference.sqlHash === queryArtifact.sqlHash
+          && reference.scannerContractVersion === queryArtifact.scannerContractVersion
+        ))
+      ));
+      if (!supported) {
+        throw new Error(
+          "Finalist Query Artifact requires Validation exposure under the current Objective and Validation partition"
+        );
+      }
+    }
+  }
+
   async function getFinalistSet(researchRunId, finalistSetId) {
     const runId = assertResearchRunId(researchRunId);
     const boundedFinalistSetId = assertFinalistSetId(finalistSetId);
@@ -586,6 +614,7 @@ export async function openResearchValidationLedger({
       const runId = await requireRun(researchRunId);
       const plan = await requireLatestEvidencePlan(runId, objectiveVersionId);
       const queryArtifacts = await resolveQueryArtifacts(runId, queryArtifactIds);
+      await assertCurrentPlanValidationSupport(runId, plan, queryArtifacts);
       const validationExposureCountAtLock = await validationExposureCount(runId);
       const finalistSetId = assertFinalistSetId(finalistSetIdFactory());
       const timestamp = assertSafeTimestamp(now(), "now()");

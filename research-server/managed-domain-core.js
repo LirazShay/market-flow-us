@@ -410,6 +410,7 @@ export async function openManagedResearchDomain(options = {}) {
         }];
         requestBudget.consume("resultRows", rows.length);
         requestBudget.consume("resultBytes", resultBytes(rows));
+        await control.beginSuccessCommit();
         const result = await useResults((results) => results.createResult({
           researchRunId: job.researchRunId,
           sourceJobId: job.jobId,
@@ -478,6 +479,7 @@ export async function openManagedResearchDomain(options = {}) {
         const bounded = rowsFromSqlResult(sqlResult);
         sqlBudget.consume("resultRows", bounded.rows.length);
         sqlBudget.consume("resultBytes", resultBytes(bounded.rows));
+        await control.beginSuccessCommit();
         const result = await useResults((results) => results.createResult({
           researchRunId: job.researchRunId,
           sourceJobId: job.jobId,

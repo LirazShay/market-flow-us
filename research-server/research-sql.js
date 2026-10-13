@@ -14,6 +14,7 @@ import {
   CONTROLLED_RESEARCH_SCHEMA_MANIFEST,
   materializeControlledResearchInputs
 } from "./research-sql-controlled-inputs.js";
+import { DEFAULT_RESEARCH_RESULT_LIMITS } from "./result-ledger-storage.js";
 import { verifyResearchEvidenceSourceFingerprint } from "./source-fingerprint.js";
 
 export const RESEARCH_DATA_SURFACE_VERSION = "research-data-surface-v1";
@@ -21,6 +22,10 @@ export const RESEARCH_DATA_SURFACE_VERSION = "research-data-surface-v1";
 const SOURCE_FINGERPRINT = /^[0-9a-f]{64}$/u;
 const MAX_SOURCE_COUNT = 512;
 const DEVELOPMENT_PHASES = Object.freeze(["DEVELOPMENT"]);
+const RESEARCH_SQL_RESULT_LIMITS = Object.freeze({
+  maxRows: DEFAULT_RESEARCH_RESULT_LIMITS.maxResultRows,
+  maxBytes: DEFAULT_RESEARCH_RESULT_LIMITS.maxResultBytes
+});
 
 function manifestField({
   column,
@@ -650,7 +655,11 @@ export async function openDevelopmentResearchSqlSandbox({
     await applySandboxHardening(connection, resourceLimits);
     const appliedResourceLimits = await readAppliedResourceLimits(connection);
 
-    const authority = await createScannerAuthority({ connection, now });
+    const authority = await createScannerAuthority({
+      connection,
+      now,
+      resultLimits: RESEARCH_SQL_RESULT_LIMITS
+    });
     const schemaManifest = describeResearchSqlSchema({ includeControlledInputs });
     let closed = false;
 

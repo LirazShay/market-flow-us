@@ -12,7 +12,7 @@ import {
 import { freezeFinalistSet } from "./validation-authority-core.js";
 import { RESEARCH_VALIDATION_SCHEMA_VERSION } from "./validation-ledger.js";
 
-export const RESEARCH_HOLDOUT_SCHEMA_VERSION = 1;
+export const RESEARCH_HOLDOUT_SCHEMA_VERSION = 2;
 export const RESEARCH_HOLDOUT_AUTHORITY_VERSION = "research-holdout-authority-v1";
 
 const REQUIRED_TABLES = Object.freeze([
@@ -26,11 +26,15 @@ const REQUIRED_TABLES = Object.freeze([
   "research_validation_info",
   "finalist_sets"
 ]);
-const HOLDOUT_TABLES = Object.freeze([
+const HOLDOUT_V1_TABLES = Object.freeze([
   "research_holdout_info",
   "holdout_evaluations",
   "holdout_contaminations",
   "holdout_lineage_baseline"
+]);
+const HOLDOUT_TABLES = Object.freeze([
+  ...HOLDOUT_V1_TABLES,
+  "holdout_execution_claims"
 ]);
 
 const CREATE_RESEARCH_HOLDOUT_INFO = `
@@ -71,6 +75,16 @@ CREATE TABLE holdout_lineage_baseline (
   parent_query_artifact_id VARCHAR,
   sql_hash VARCHAR NOT NULL,
   PRIMARY KEY (holdout_evaluation_id, query_artifact_id)
+)`;
+
+const CREATE_HOLDOUT_EXECUTION_CLAIMS = `
+CREATE TABLE holdout_execution_claims (
+  research_run_id VARCHAR NOT NULL,
+  finalist_set_id VARCHAR NOT NULL,
+  authority_hash VARCHAR NOT NULL,
+  claimed_at_ms BIGINT NOT NULL,
+  completed_at_ms BIGINT,
+  PRIMARY KEY (research_run_id, finalist_set_id)
 )`;
 
 const EVALUATION_COLUMNS = `
@@ -139,6 +153,12 @@ function closeQuietly(value) {
   } catch {
     // Preserve the original startup error.
   }
+}
+
+function integrityError(message) {
+  const error = new Error(message);
+  error.code = "RESEARCH_INTEGRITY_ERROR";
+  return error;
 }
 
 function assertSafeTimestamp(value, label) {
@@ -297,13 +317,15 @@ async function validatePrerequisites(connection) {
 
 async function bootstrapOrValidate(connection, createdAtMs) {
   const present = new Set(await tableNames(connection));
-  const presentHoldout = HOLDOUT_TABLES.filter((table) => present.has(table));
-  if (presentHoldout.length === 0) {
+  const presentV1 = HOLDOUT_V1_TABLES.filter((table) => present.has(table));
+  const hasClaims = present.has("holdout_execution_claims");
+  if (presentV1.length === 0 && !hasClaims) {
     await inTransaction(connection, async () => {
       await connection.run(CREATE_RESEARCH_HOLDOUT_INFO);
       await connection.run(CREATE_HOLDOUT_EVALUATIONS);
       await connection.run(CREATE_HOLDOUT_CONTAMINATIONS);
       await connection.run(CREATE_HOLDOUT_LINEAGE_BASELINE);
+      await connection.run(CREATE_HOLDOUT_EXECUTION_CLAIMS);
       await connection.run(
         `INSERT INTO research_holdout_info (schema_version, created_at_ms)
          VALUES ($schemaVersion, $createdAtMs)`,
@@ -312,13 +334,32 @@ async function bootstrapOrValidate(connection, createdAtMs) {
     });
     return;
   }
+  const missingV1 = HOLDOUT_V1_TABLES.filter((table) => !present.has(table));
+  if (missingV1.length > 0) {
+    throw new Error(`Research Holdout ledger is missing required tables: ${missingV1.join(", ")}`);
+  }
+  const info = await queryRows(connection, "SELECT schema_version FROM research_holdout_info");
+  if (info.length !== 1) throw new Error("Research Holdout ledger schema version is unsupported");
+  const version = Number(info[0].schema_version);
+  if (version === 1) {
+    if (hasClaims) {
+      throw new Error("Research Holdout v1 ledger contains unexpected execution-claim state");
+    }
+    await inTransaction(connection, async () => {
+      await connection.run(CREATE_HOLDOUT_EXECUTION_CLAIMS);
+      await connection.run(
+        "UPDATE research_holdout_info SET schema_version = $schemaVersion WHERE schema_version = 1",
+        { schemaVersion: RESEARCH_HOLDOUT_SCHEMA_VERSION }
+      );
+    });
+    return;
+  }
+  if (version !== RESEARCH_HOLDOUT_SCHEMA_VERSION) {
+    throw new Error("Research Holdout ledger schema version is unsupported");
+  }
   const missing = HOLDOUT_TABLES.filter((table) => !present.has(table));
   if (missing.length > 0) {
     throw new Error(`Research Holdout ledger is missing required tables: ${missing.join(", ")}`);
-  }
-  const info = await queryRows(connection, "SELECT schema_version FROM research_holdout_info");
-  if (info.length !== 1 || Number(info[0].schema_version) !== RESEARCH_HOLDOUT_SCHEMA_VERSION) {
-    throw new Error("Research Holdout ledger schema version is unsupported");
   }
 }
 
@@ -468,6 +509,67 @@ export async function openResearchHoldoutLedger({
       evaluationProfile: finalist.evaluationProfile,
       sourceSchedules
     });
+  }
+
+  async function claimHoldoutExecution(authority) {
+    const authorityHash = sha256(boundedJson(authority, "Holdout execution authority"));
+    const timestamp = assertSafeTimestamp(now(), "now()");
+    await inTransaction(connection, async () => {
+      const completed = await queryRows(
+        connection,
+        `SELECT holdout_evaluation_id FROM holdout_evaluations
+         WHERE research_run_id = $researchRunId AND finalist_set_id = $finalistSetId
+         LIMIT 2`,
+        { researchRunId: authority.researchRunId, finalistSetId: authority.finalistSetId }
+      );
+      if (completed.length > 1) throw integrityError("Finalist Set has multiple Holdout evaluations");
+      if (completed.length === 1) {
+        throw integrityError("Holdout Evaluation completed while sealed execution authority was being acquired; retry the durable read");
+      }
+      const claims = await queryRows(
+        connection,
+        `SELECT authority_hash, completed_at_ms FROM holdout_execution_claims
+         WHERE research_run_id = $researchRunId AND finalist_set_id = $finalistSetId
+         LIMIT 2`,
+        { researchRunId: authority.researchRunId, finalistSetId: authority.finalistSetId }
+      );
+      if (claims.length > 1) throw integrityError("Finalist Set has multiple Holdout execution claims");
+      if (claims.length === 1) {
+        if (String(claims[0].authority_hash) !== authorityHash) {
+          throw integrityError("Durable Holdout execution claim no longer matches frozen authority");
+        }
+        throw integrityError("Sealed Holdout execution was already claimed without a completed durable evaluation");
+      }
+      await connection.run(
+        `INSERT INTO holdout_execution_claims (
+           research_run_id, finalist_set_id, authority_hash, claimed_at_ms, completed_at_ms
+         ) VALUES (
+           $researchRunId, $finalistSetId, $authorityHash, $claimedAtMs, NULL
+         )`,
+        {
+          researchRunId: authority.researchRunId,
+          finalistSetId: authority.finalistSetId,
+          authorityHash,
+          claimedAtMs: timestamp
+        }
+      );
+      await touchRun(authority.researchRunId, timestamp);
+    });
+  }
+
+  async function requireExecutionClaim(authority) {
+    const authorityHash = sha256(boundedJson(authority, "Holdout execution authority"));
+    const rows = await queryRows(
+      connection,
+      `SELECT authority_hash, completed_at_ms FROM holdout_execution_claims
+       WHERE research_run_id = $researchRunId AND finalist_set_id = $finalistSetId
+       LIMIT 2`,
+      { researchRunId: authority.researchRunId, finalistSetId: authority.finalistSetId }
+    );
+    if (rows.length !== 1 || String(rows[0].authority_hash) !== authorityHash) {
+      throw integrityError("Holdout completion requires the matching durable execution claim");
+    }
+    return rows[0];
   }
 
   async function queryLineageRows(researchRunId) {
@@ -681,7 +783,9 @@ export async function openResearchHoldoutLedger({
     schemaVersion: RESEARCH_HOLDOUT_SCHEMA_VERSION,
 
     async prepareHoldoutEvaluation({ researchRunId, finalistSetId }) {
-      return await resolveAuthority(researchRunId, finalistSetId);
+      const authority = await resolveAuthority(researchRunId, finalistSetId);
+      await claimHoldoutExecution(authority);
+      return authority;
     },
 
     async getHoldoutEvaluation(researchRunId, holdoutEvaluationId) {
@@ -701,6 +805,10 @@ export async function openResearchHoldoutLedger({
       }
       const existing = await getEvaluationByFinalist(authority.researchRunId, authority.finalistSetId);
       if (existing) return existing;
+      const claim = await requireExecutionClaim(authority);
+      if (claim.completed_at_ms !== null) {
+        throw integrityError("Holdout execution claim is completed without a durable Holdout evaluation");
+      }
       if (!Array.isArray(sourceResults) || sourceResults.length !== authority.sourceSchedules.length) {
         throw new Error("Holdout result must contain exactly one completed result per frozen source schedule");
       }
@@ -748,6 +856,10 @@ export async function openResearchHoldoutLedger({
       await inTransaction(connection, async () => {
         const raced = await getEvaluationByFinalist(authority.researchRunId, authority.finalistSetId);
         if (raced) return;
+        const liveClaim = await requireExecutionClaim(authority);
+        if (liveClaim.completed_at_ms !== null) {
+          throw integrityError("Holdout execution claim is already completed");
+        }
         await connection.run(
           `INSERT INTO holdout_evaluations (
              holdout_evaluation_id, research_run_id, finalist_set_id, partition_id,
@@ -764,6 +876,18 @@ export async function openResearchHoldoutLedger({
             evaluationJson,
             evaluationHash,
             createdAtMs: timestamp
+          }
+        );
+        await connection.run(
+          `UPDATE holdout_execution_claims
+           SET completed_at_ms = $completedAtMs
+           WHERE research_run_id = $researchRunId
+             AND finalist_set_id = $finalistSetId
+             AND completed_at_ms IS NULL`,
+          {
+            researchRunId: authority.researchRunId,
+            finalistSetId: authority.finalistSetId,
+            completedAtMs: timestamp
           }
         );
         await touchRun(authority.researchRunId, timestamp);

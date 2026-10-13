@@ -13,6 +13,14 @@ function scannerError(code) {
   return new ProtocolValidationError(code);
 }
 
+function researchResultLimitError(dimension, limit) {
+  const error = new Error(`Research SQL result exceeded ${dimension} ceiling`);
+  error.code = "RESEARCH_BUDGET_EXCEEDED";
+  error.dimension = dimension;
+  error.limit = limit;
+  return error;
+}
+
 function isIdentifierStart(char) {
   return /[A-Za-z_]/.test(char);
 }
@@ -121,14 +129,15 @@ function skipTrivia(sql, start) {
   return index;
 }
 
-export function extractScannerFunctionCalls(sql) {
+function scanScannerIdentifiers(sql, visitor) {
   if (typeof sql !== "string") {
     throw new TypeError("sql must be a string.");
   }
+  if (typeof visitor !== "function") {
+    throw new TypeError("identifier visitor must be a function.");
+  }
 
-  const calls = [];
   let index = 0;
-
   while (index < sql.length) {
     if (sql[index] === "-" && sql[index + 1] === "-") {
       index = skipLineComment(sql, index);
@@ -155,9 +164,8 @@ export function extractScannerFunctionCalls(sql) {
 
     if (sql[index] === '"') {
       const quoted = readQuotedIdentifier(sql, index);
-      const next = skipTrivia(sql, quoted.end);
-      if (quoted.value.length > 0 && sql[next] === "(") {
-        calls.push(quoted.value.toLowerCase());
+      if (quoted.value.length > 0) {
+        visitor(quoted.value.toLowerCase(), quoted.end);
       }
       index = quoted.end;
       continue;
@@ -166,19 +174,27 @@ export function extractScannerFunctionCalls(sql) {
     if (isIdentifierStart(sql[index])) {
       let end = index + 1;
       while (end < sql.length && isIdentifierPart(sql[end])) end += 1;
-
-      const identifier = sql.slice(index, end).toLowerCase();
-      const next = skipTrivia(sql, end);
-      if (sql[next] === "(") {
-        calls.push(identifier);
-      }
+      visitor(sql.slice(index, end).toLowerCase(), end);
       index = end;
       continue;
     }
 
     index += 1;
   }
+}
 
+export function extractScannerIdentifiers(sql) {
+  const identifiers = [];
+  scanScannerIdentifiers(sql, (identifier) => identifiers.push(identifier));
+  return identifiers;
+}
+
+export function extractScannerFunctionCalls(sql) {
+  const calls = [];
+  scanScannerIdentifiers(sql, (identifier, end) => {
+    const next = skipTrivia(sql, end);
+    if (sql[next] === "(") calls.push(identifier);
+  });
   return calls;
 }
 
@@ -207,12 +223,92 @@ function readClock(now) {
 
 function mapScannerFailure(error) {
   if (error instanceof ProtocolValidationError) return error;
+  if (
+    error?.code === "RESEARCH_BUDGET_EXCEEDED"
+    && (error?.dimension === "resultRows" || error?.dimension === "resultBytes")
+  ) {
+    return error;
+  }
   return scannerError(ERROR_CODES.SCANNER_EXECUTION_ERROR);
+}
+
+function normalizeResultLimits(resultLimits) {
+  if (resultLimits === undefined || resultLimits === null) return null;
+  if (typeof resultLimits !== "object" || Array.isArray(resultLimits)) {
+    throw new TypeError("resultLimits must be an object.");
+  }
+  const keys = Object.keys(resultLimits).sort();
+  if (keys.length !== 2 || keys[0] !== "maxBytes" || keys[1] !== "maxRows") {
+    throw new TypeError("resultLimits must contain exactly maxRows and maxBytes.");
+  }
+  const maxRows = Number(resultLimits.maxRows);
+  const maxBytes = Number(resultLimits.maxBytes);
+  if (!Number.isSafeInteger(maxRows) || maxRows < 1) {
+    throw new TypeError("resultLimits.maxRows must be a positive safe integer.");
+  }
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 2) {
+    throw new TypeError("resultLimits.maxBytes must be a safe integer of at least 2.");
+  }
+  return Object.freeze({ maxRows, maxBytes });
+}
+
+function resultColumns(reader) {
+  return Array.from({ length: reader.columnCount }, (_, columnIndex) => ({
+    name: reader.columnName(columnIndex),
+    type: reader.columnType(columnIndex).toString()
+  }));
+}
+
+function rowObject(columns, row) {
+  return Object.fromEntries(columns.map((column, index) => [column.name, row[index]]));
+}
+
+async function readBoundedResult(prepared, limits) {
+  if (typeof prepared.streamAndRead !== "function") {
+    throw new Error("Scanner bounded execution requires DuckDB streaming support");
+  }
+
+  const reader = await prepared.streamAndRead();
+  const columns = resultColumns(reader);
+  const rows = [];
+  let processed = 0;
+  let serializedBytes = 2;
+
+  while (true) {
+    if (reader.done && processed >= reader.currentRowCount) break;
+    if (processed >= reader.currentRowCount) {
+      await reader.readUntil(reader.currentRowCount + 1);
+    }
+
+    const available = reader.getRowsJson();
+    while (processed < available.length) {
+      const row = available[processed];
+      processed += 1;
+
+      if (rows.length >= limits.maxRows) {
+        throw researchResultLimitError("resultRows", limits.maxRows);
+      }
+
+      const objectBytes = Buffer.byteLength(JSON.stringify(rowObject(columns, row)), "utf8");
+      const nextSerializedBytes = serializedBytes + objectBytes + (rows.length === 0 ? 0 : 1);
+      if (nextSerializedBytes > limits.maxBytes) {
+        throw researchResultLimitError("resultBytes", limits.maxBytes);
+      }
+
+      rows.push(row);
+      serializedBytes = nextSerializedBytes;
+    }
+
+    if (reader.done) break;
+  }
+
+  return { columns, rows };
 }
 
 export async function createScannerAuthority({
   connection,
-  now = () => Date.now()
+  now = () => Date.now(),
+  resultLimits
 } = {}) {
   if (
     !connection
@@ -224,6 +320,7 @@ export async function createScannerAuthority({
   if (typeof now !== "function") {
     throw new TypeError("now must be a function.");
   }
+  const boundedResultLimits = normalizeResultLimits(resultLimits);
 
   const sideEffectFunctions = await loadSideEffectFunctions(connection);
   const forbiddenFunctions = new Set([
@@ -262,12 +359,15 @@ export async function createScannerAuthority({
         throw scannerError(ERROR_CODES.SCANNER_FORBIDDEN_FUNCTION);
       }
 
-      const reader = await prepared.runAndReadAll();
-      const columns = Array.from({ length: reader.columnCount }, (_, columnIndex) => ({
-        name: reader.columnName(columnIndex),
-        type: reader.columnType(columnIndex).toString()
-      }));
-      const rows = reader.getRowsJson();
+      let columns;
+      let rows;
+      if (boundedResultLimits) {
+        ({ columns, rows } = await readBoundedResult(prepared, boundedResultLimits));
+      } else {
+        const reader = await prepared.runAndReadAll();
+        columns = resultColumns(reader);
+        rows = reader.getRowsJson();
+      }
       const completedAtMs = readClock(now);
 
       return {
