@@ -10,7 +10,7 @@ It records only synthetic/public-safe measurements and GitHub verification ident
 |---|---|---|
 | `W1` deterministic reduced CI workload | `PASS` | Workload CI run `38358501031`, job `115166877682`, `ci-256` Research resource probe. |
 | `W2` representative 4,096-security synthetic workload | `PASS` | One-time PR verification run `38358501349`, job `115166878192`, artifact `11793616887`, `target-4096` Research resource probe. |
-| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. The repo now ships the marketplace and exact Desktop runbook; the real target-machine mission/restart proof still must be executed in ChatGPT Desktop. |
+| `W3` current target-machine/Desktop acceptance | `PENDING_TARGET_MACHINE` | Current official OpenAI Plugin docs support repo/local marketplaces and local MCP apps in ChatGPT Desktop. The repo now ships the marketplace, deterministic target-machine preflight and exact Desktop runbook; the real target-machine mission/restart proof still must be executed in ChatGPT Desktop. |
 
 ## W1 — reduced deterministic CI
 
@@ -86,10 +86,26 @@ Repository repair on PR `#110`:
 - preserved portable `plugin.json` + `mcp.json` Agent Plugins packaging;
 - preserved the `market-flow-us-research-mcp` `stdio` executable and server-owned resource/security policy;
 - added `tests/unit/research-plugin-packaging.test.mjs` to lock marketplace -> plugin -> MCP command -> `package.json.bin` coherence and reject accidental network-endpoint substitution;
-- added `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` with the exact current target-machine preflight, fresh-chat mission, Desktop/server restart proof and public-safe evidence rules.
+- added `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` with the exact current target-machine preflight, fresh-chat mission, Desktop/server restart proof and public-safe evidence rules;
+- added `npm run research-desktop:preflight`, backed by `scripts/check-research-desktop-preflight.mjs`, to prove the actual target-machine prerequisites that Desktop inherits: repo marketplace/package coherence, real market evidence presence, PATH-visible `market-flow-us-research-mcp`, real `stdio` initialization, 46-tool discovery and the data/instruction boundary;
+- added a deterministic unit regression for the preflight's repository contract.
 
-The real W3 acceptance is intentionally **not** marked passed from this web/GitHub executor surface. `W3 = PASS` requires the target-machine ChatGPT Desktop app to install the local plugin, run the complete mission through the shipped plugin/MCP path, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
+### Executor boundary for the real Desktop gate
+
+The GitHub/web execution surface used to implement PR `#110` cannot inspect or control the user's local ChatGPT Desktop process, its local repository workspace, inherited Windows `PATH`, Plugin Directory UI, plugin installation state, Desktop restart, or a second fresh local conversation. That is an execution-environment boundary, **not** evidence that the Desktop product path is broken.
+
+Accordingly, this executor must not fabricate `W3 = PASS`. The repository now makes the first target-machine step deterministic:
+
+```text
+npm ci
+npm link
+npm run research-desktop:preflight
+```
+
+A passing preflight proves the repository/machine MCP prerequisites before the real Desktop run and intentionally reports `desktopAcceptance = STILL_REQUIRED`. Only after that pass should a Desktop-specific failure be classified as a target-client blocker.
+
+The real W3 acceptance remains intentionally **not** marked passed from this web/GitHub executor surface. `W3 = PASS` requires the target-machine ChatGPT Desktop app to install the local plugin, run the complete mission through the shipped plugin/MCP path, restart, resume the exact durable run from a second fresh conversation and preserve final reproduction references.
 
 ## Remaining acceptance
 
-Next, execute `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md` on the target machine. If the documented local marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account despite the repository preflight being satisfied, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
+Next, on the target machine run the three-command repository preflight from `docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md`, then execute the real fresh-chat Desktop mission and restart/resume proof. If repository preflight passes but the documented local marketplace/plugin surface is absent or the local MCP app cannot launch on the actual Desktop build/account, record the exact public-safe external-product blocker without weakening source, phase, transport or security boundaries.
