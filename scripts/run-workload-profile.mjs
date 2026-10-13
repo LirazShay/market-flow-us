@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { rmSync } from "node:fs";
+import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -96,6 +96,14 @@ export function clearWorkloadReports(
   }
 }
 
+export function missingWorkloadReports(
+  profile,
+  environment = buildWorkloadEnvironment(profile),
+  fileExists = existsSync
+) {
+  return resolveWorkloadReportPaths(profile, environment).filter((reportPath) => !fileExists(reportPath));
+}
+
 export function runWorkloadProfile(profile = process.argv[2] ?? "ci") {
   const allowed = new Set(["ci", "target-e2e", "target-day", "custom"]);
   if (!allowed.has(profile)) {
@@ -125,6 +133,11 @@ export function runWorkloadProfile(profile = process.argv[2] ?? "ci") {
   child.on("exit", (code, signal) => {
     if (signal) {
       console.error(`Workload profile ${profile} terminated by ${signal}.`);
+      process.exitCode = 1;
+      return;
+    }
+    if (code === 0 && missingWorkloadReports(profile, env).length > 0) {
+      console.error(`Workload profile ${profile} completed without all expected fresh reports.`);
       process.exitCode = 1;
       return;
     }
