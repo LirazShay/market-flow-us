@@ -86,17 +86,17 @@ test("TREE 11.7 Research-bounded Scanner stops huge row output before unbounded 
     now: () => 123
   });
 
-  const result = await scanner.execute("SELECT value FROM research_history");
+  await assert.rejects(
+    scanner.execute("SELECT value FROM research_history"),
+    (error) => error?.code === "RESEARCH_BUDGET_EXCEEDED"
+      && error?.dimension === "resultRows"
+      && error?.limit === 2
+  );
 
   assert.deepEqual(connection.executions(), {
     unboundedExecutions: 0,
     streamingExecutions: 1
   });
-  assert.deepEqual(result.limitExceeded, {
-    dimension: "resultRows",
-    limit: 2
-  });
-  assert.equal(result.rows.length <= 2, true);
 });
 
 test("TREE 11.7 Research-bounded Scanner stops oversized serialized output before full result materialization", async () => {
@@ -107,15 +107,15 @@ test("TREE 11.7 Research-bounded Scanner stops oversized serialized output befor
     now: () => 456
   });
 
-  const result = await scanner.execute("SELECT value FROM research_history");
+  await assert.rejects(
+    scanner.execute("SELECT value FROM research_history"),
+    (error) => error?.code === "RESEARCH_BUDGET_EXCEEDED"
+      && error?.dimension === "resultBytes"
+      && error?.limit === 20
+  );
 
   assert.deepEqual(connection.executions(), {
     unboundedExecutions: 0,
     streamingExecutions: 1
   });
-  assert.deepEqual(result.limitExceeded, {
-    dimension: "resultBytes",
-    limit: 20
-  });
-  assert.equal(Buffer.byteLength(JSON.stringify(result.rows), "utf8") <= 20, true);
 });
