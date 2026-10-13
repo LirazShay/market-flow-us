@@ -16,7 +16,7 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — completed all eight implementation leaves `11.1`–`11.8` and repository reclosure in PR #110. Its separate target-machine/Desktop acceptance task `B-US-009` remains `blocked` at W2T because the required evidence can only be produced on the user's target machine; W2T/W3 remain NOT PASS.
 
-That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — is now planned as nine pending implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` is the first runnable Branch-12 task but does not become active until an explicit `אני צאט 43 תתחיל` (or equivalent explicit owner activation).
+That external acceptance blocker is not a dependency of Branch 12. Branch 12 — Autonomous AI Trading & Strategy Distillation — has nine implementation leaves `12.1`–`12.9`. `12.1 / Chat 43` was explicitly activated and is now `in_progress`; its first contract-first proof commit defines the durable Trading Run / Policy / Episode acceptance surface before implementation.
 
 Allocation follows natural feature/context boundaries and real prerequisites only. Waiting for user/target-machine/provider acceptance elsewhere does not freeze unrelated work unless this table records a real dependency.
 
@@ -86,7 +86,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `11.7` | Chat 41 | `done` | `11.2`, `11.3`, `11.4`, `11.5`, `11.6` | Adversarial hardening reclosed with green affected verification. |
 | `11.8` | Chat 42 | `done` | `11.7` | PR #110 merged; representative synthetic workload, acceptance tooling and repository reclosure green; real W2T/W3 deferred to `B-US-009`. |
 | `B-US-009` | Target-machine acceptance executor | `blocked` | `11.8` | Current gate W2T requires actual user target-machine historical evidence. This blocker is not W2T failure evidence and does not block Branch 12. |
-| `12.1` | Chat 43 | `pending` | — | Trading domain + durable Run / Policy / Episode authority. |
+| `12.1` | Chat 43 | `in_progress` | — | Explicitly activated. Contract-first proof commit `3e0df8e` defines reopen, immutable PolicyVersion, scoped IDs, transaction rollback and public-safe durable evidence requirements; implementation pending. |
 | `12.2` | Chat 44 | `pending` | `12.1` | Scanner candidate handoff + immutable selection provenance. |
 | `12.3` | Chat 45 | `pending` | `12.1` | Targeted live quote watch; polling-first measurement. |
 | `12.5` | Chat 46 | `pending` | `12.1` | Independent Hard Risk Authority + pause/kill-switch boundary. |
@@ -113,16 +113,16 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 ## Migration / current-state reconciliation
 
 - Completed execution rows before Branch 12: **58** (`57 done`, `1 blocked`).
-- Branch-12 implementation rows: **9 pending**.
+- Branch-12 implementation rows: **9** (`1 in_progress`, `8 pending`).
 - Current execution rows: **67**.
 - Done: **57**.
-- Pending: **9**.
-- In progress: **0**.
+- Pending: **8**.
+- In progress: **1** (`12.1 / Chat 43`).
 - Blocked: **1** (`B-US-009`, external target-machine evidence).
-- Current normal sequence pointer: `12.1 / Chat 43` is the first runnable implementation leaf and requires explicit Chat 43 activation.
+- Current normal sequence pointer: `12.1 / Chat 43` is active and remains the current implementation leaf until its success evidence is green and merged.
 - `B-US-009 / W2T` remains separately blocked on target-machine evidence. It is not a dependency of `12.1`–`12.9`.
 - `12.2`, `12.3` and `12.5` are parallel siblings after `12.1`; chat numbering is not dependency truth.
 - `12.6` requires the risk boundary plus the already-completed order-service authority; `12.4` composes the candidate/quote/risk/order seams; later dependencies reflect actual composed prerequisites.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` and is not invented as done.
 
-Branch 11 implementation/repository reclosure remains complete. Branch 12 is planned and pending explicit numbered-chat activation while `B-US-009` remains independently blocked on user target-machine evidence.
+Branch 11 implementation/repository reclosure remains complete. Branch 12 execution is active at `12.1 / Chat 43` while `B-US-009` remains independently blocked on user target-machine evidence.
