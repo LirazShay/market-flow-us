@@ -48,10 +48,10 @@ The audit starts from these already-selected boundaries and attempts to break th
 | Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL session and physically constructed Development projection; typed Validation/Holdout authority. | Cross-phase object substitution, phase-confused requests, error/provenance/schema/result side channels. | OPEN |
 | Run/object ownership | Can IDs from another Research Run or Evidence Plan be replayed against reads/mutations? | Branch-11 domain/ledger ownership checks and fail-closed cross-run behavior. | Systematic cross-run matrix for run/objective/query/evidence/experiment/job/result/finalist/holdout/recommendation identities. | OPEN |
 | Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | `getResult` scopes by `research_run_id + result_handle`; creation requires the source Job in the same Research Run; cursor encodes and validates its Result Handle; row paging occurs only after the scoped Result Handle is resolved. Existing restart paging test is green baseline. | Complete phase/result substitution and incompatible-state attacks; current static ownership pass found no cross-run Result Handle escape. | REVIEWED |
-| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, normalized request fingerprints, `clientRequestId`, bounded queue/readers. | Duplicate/conflict races across expensive SQL/experiment/validation/holdout operations and restart boundaries. Holdout duplicate execution blocker `H-11.7-001` is active. | BLOCKED |
+| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, normalized request fingerprints, `clientRequestId`, bounded queue/readers. | Continue duplicate/conflict races across expensive SQL/experiment/validation operations and restart boundaries. Holdout duplicate execution finding `H-11.7-001` is fixed and green. | REVIEWED |
 | Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Native DuckDB interrupt, idempotent cancellation, finite SQL/queue/experiment ceilings. | Fault/race matrix around queue→run, run→finalize, cancel/timeout→restart and late completion callbacks. | OPEN |
 | Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Transaction-fault coverage, result-before-success ordering, transactional ledgers from `11.1`–`11.5`. | Inject failures at composed state transitions and verify rollback/reconciliation plus analogous transitions. | OPEN |
-| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Frozen Validation schedule, exposure accounting, immutable Finalist Set, one-shot durable Holdout row, contamination rules, sealed public view. | Fix and prove `H-11.7-001`: concurrent same-Finalist calls can both execute sealed authority before the ledger's transactional uniqueness/recheck collapses durable recording to one row. Then continue cross-run/finalist/objective substitution, restart/fault and side-channel attacks. | BLOCKED |
+| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Frozen Validation schedule, exposure accounting, immutable Finalist Set, one-shot durable Holdout row, contamination rules, sealed public view. Concurrent same-Finalist execution is now single-flight under `H-11.7-001`. | Continue cross-run/finalist/objective substitution, restart/fault, contamination and side-channel attacks. | REVIEWED |
 | MCP tool boundary | Can tool name/schema/arguments bypass Domain validation or expose non-public internals? | Strict 46-tool registry and thin mapping to managed Research Domain from `11.6`. | Fuzz unknown/malformed/oversized arguments, ID substitution, error mapping and authority parity against direct Domain calls. | OPEN |
 | Local transport / process | Can transport accept unapproved network/origin/body/path exposure or leak lifecycle state? | Pinned MCP v2 stdio path and sanitized/idempotent lifecycle from `11.6`; no research semantics depend on transport. | Verify actual stdio process boundary plus any local HTTP/browser diagnostics surface is absent or loopback/strict where applicable. | OPEN |
 | Public-safe diagnostics | Can SQL, provider values, paths, secrets/config, stack traces or unbounded rows leak via errors/logs/artifacts? | Stable logical IDs, bounded public errors/observability and public-view contracts. | Trigger representative invalid/security/internal failures and inspect every returned/persisted diagnostic surface. | OPEN |
@@ -93,11 +93,11 @@ The first composed ownership pass found no Result Handle cross-run escape in the
 
 This row is only `REVIEWED`, not closed, because phase/result substitution and composed managed-domain/MCP attacks remain in later slices.
 
-## Blocking finding H-11.7-001 — concurrent Holdout calls can execute sealed authority twice
+## Fixed finding H-11.7-001 — concurrent Holdout calls could execute sealed authority twice
 
-**Severity:** blocking correctness/methodology defect.
+**Severity:** blocking correctness/methodology defect — fixed in the current audit branch.
 
-**Observed design path:**
+**Observed vulnerable design path:**
 
 ```text
 executeHoldoutEvaluation
@@ -108,31 +108,37 @@ executeHoldoutEvaluation
 → transactional re-check / UNIQUE(research_run_id, finalist_set_id)
 ```
 
-The durable Holdout ledger correctly prevents two rows for the same Research Run + Finalist Set. However, that protection occurs **after** the external authoritative experiment execution. `openResearchDomain()` serializes individual ledger operations, not the complete check/prepare/execute/record sequence. Two concurrent calls can therefore both observe no existing evaluation, both prepare the same authority and both execute the sealed Holdout before one durable result wins the final recording race.
+The durable Holdout ledger correctly prevented two rows for the same Research Run + Finalist Set, but that protection occurred **after** external authoritative experiment execution. Two concurrent calls could both observe no existing evaluation and execute the sealed Holdout before one durable result won the recording race.
 
-The losing result being discarded is not sufficient: independent Holdout authority has already been consumed twice, violating the one-shot evidence contract and allowing duplicate expensive work.
+**Root cause:** idempotency existed at durable publication time but there was no same-authority in-flight ownership boundary around the complete Holdout operation.
 
-**Root cause:** idempotency exists at durable publication time but there is no same-authority in-flight ownership/single-flight boundary around the full Holdout evaluation operation.
+**Smallest sufficient fix:** commit `cee44fddd3e974a8b901475b00aff7415e29d772` adds a process-local `holdoutEvaluationsInFlight` single-flight map in `openResearchDomain()`, keyed by the exact `researchRunId + finalistSetId` authority. The validated request is copied into a frozen two-field object before asynchronous work starts. A concurrent duplicate joins the same Promise. The map entry is removed in `finally`, and only if it is still the same Promise, so a failed attempt does not permanently suppress an authorized retry. Durable ledger uniqueness remains the restart/publication backstop; no new persistence subsystem was introduced.
 
-**Analogous rule:** any expensive operation whose semantic contract is “execute at most once for this durable authority” must not rely only on a uniqueness constraint placed after the external work.
+**Deterministic regression:** `tests/service/research-holdout-concurrency-hardening.test.mjs` starts one Holdout execution and holds it at the injected authoritative execution boundary, submits the same Finalist Set concurrently, and proves both callers receive the same result while `executeExperimentBatch` is entered exactly once.
 
-**Red regression:** `tests/service/research-holdout-concurrency-hardening.test.mjs` starts one Holdout execution and holds it at the injected authoritative execution boundary, then submits the same Finalist Set concurrently. It requires the duplicate caller to join the first in-flight evaluation rather than enter `executeExperimentBatch` a second time. The test is committed before the runtime fix so the defect cannot be closed by documentation alone.
+**Green proof:** Fast CI run `#965` / workflow run `38342962058` passed the complete unit + real-service suite. The service output contains `TREE 11.7 concurrent Holdout requests consume sealed authority at most once`, and both service and unit suites report `301` tests / `301` passed / `0` failed. Planning/Contract CI `#1161` / `38342962022` is green. Workload CI `#551` / `38342962074` is green across all four jobs, including the bounded Research jobs cancellation/restart resource probe.
 
-**Fix status:** pending in Chat 41; do not advance to `11.8`.
+**Analogous-area review:** the MCP `execute_holdout_evaluation` tool is a thin direct delegation to `domain.executeHoldoutEvaluation`, while the managed domain composes/spreads the same base Research Domain, so neither path bypasses the single-flight boundary. Development/Validation experimentation is intentionally repeatable rather than a one-shot sealed-evidence capability; managed Development execution already has durable job/idempotency authority. Diagnostic reconstruction is intentionally recomputation, not one-shot evidence consumption. No second exact “execute at most once for this sealed durable authority” path was found in this slice.
+
+**Status:** FIXED / regression GREEN. This closes `H-11.7-001` only; it does not close TREE `11.7`.
 
 ## Verification ledger
 
 | Candidate | Verification | Result |
 |---|---|---|
 | `c74dc3e0c751eb112ca0b35cc6bc710ae2fef332` | Prior merged-main Branch-11 gates through `11.6` | GREEN baseline from authoritative execution record |
-| audit branch | Local shell checkout | UNAVAILABLE in this executor environment because the temporary shell cannot resolve `github.com`; do not substitute this for executable proof |
-| `fdd8226fdcae4432270107be3278469300824733` | `tests/service/research-holdout-concurrency-hardening.test.mjs` red regression committed | RED-by-design candidate; executable CI proof still required because local shell is unavailable |
-| audit branch | GitHub CI | PENDING; no green closure claim while `H-11.7-001` remains open |
+| audit branch | Local shell checkout | UNAVAILABLE in this executor environment because the temporary shell cannot resolve `github.com`; executable proof is therefore taken from GitHub CI, not fabricated locally |
+| `fdd8226fdcae4432270107be3278469300824733` | `tests/service/research-holdout-concurrency-hardening.test.mjs` regression committed before runtime fix | RED-by-design proof candidate preceding the fix |
+| `cee44fddd3e974a8b901475b00aff7415e29d772` | Fast CI `#965` / `38342962058` | GREEN — unit `301/301`, service `301/301`, Holdout single-flight regression explicitly PASS, order acceptance PASS |
+| `cee44fddd3e974a8b901475b00aff7415e29d772` | Planning/Contract CI `#1161` / `38342962022` | GREEN |
+| `cee44fddd3e974a8b901475b00aff7415e29d772` | Workload CI `#551` / `38342962074` | GREEN — all four jobs, including Research cancellation/restart resource probe |
+| PR `#108` | Audit integration PR | DRAFT; opened only to obtain executable CI while TREE `11.7` remains in progress; do not merge yet |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
-- Blocking defects discovered: `H-11.7-001` concurrent Holdout double execution.
+- Blocking defect `H-11.7-001`: fixed with smallest single-flight boundary and deterministic green regression.
 - Result Handle/cursor first-pass ownership review: no material cross-run defect found; broader phase/composition attacks remain.
-- Closure claim: none; existing green tests are not treated as proof that the composed adversarial matrix is complete.
-- Next audit slice: fix `H-11.7-001` with the smallest same-authority in-flight ownership mechanism, make the deterministic concurrency regression green, inspect analogous at-most-once expensive paths, and run affected verification before resuming the remaining matrix.
+- Exact analogous at-most-once Holdout bypass review: no second bypass found; managed-domain and MCP paths inherit the fixed Research Domain boundary.
+- Closure claim: none. The remaining cross-run/phase/SQL-host/fault/restart/MCP/diagnostic/source-immutability/resource matrix must still be attacked before TREE `11.7` can be marked done.
+- Next audit slice: resume the remaining composed adversarial matrix, starting with systematic cross-run/phase object substitution and MCP/domain authority parity; any new material finding stays with Chat 41 through RCA, fix, regression and green verification.
