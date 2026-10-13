@@ -9,6 +9,8 @@ on:
       - "shared/**"
       - "backtest-lab/**"
       - "research-server/**"
+      - "trading-server/targeted-quote-watch.js"
+      - "ibkr-order-service/cpgw-adapter.js"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -22,6 +24,8 @@ on:
       - "shared/**"
       - "backtest-lab/**"
       - "research-server/**"
+      - "trading-server/targeted-quote-watch.js"
+      - "ibkr-order-service/cpgw-adapter.js"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -214,3 +218,43 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
           path: test-results/workload/ci-research-resource.json
+
+  trading-quote-watch:
+    name: Trading targeted quote polling cadence/resource probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install pinned dependencies
+        run: npm ci
+
+      - name: Run targeted quote polling workload probe
+        env:
+          MARKET_FLOW_US_TRADING_QUOTE_WATCH_REPORT: test-results/workload/ci-trading-quote-watch.json
+        run: node --test tests/workload/trading-targeted-quote-watch-probe.test.mjs
+
+      - name: Print sanitized targeted quote report
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f test-results/workload/ci-trading-quote-watch.json ]]; then
+            cat test-results/workload/ci-trading-quote-watch.json
+          else
+            echo "Targeted quote-watch workload report was not produced."
+          fi
+
+      - name: Upload sanitized targeted quote report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: market-flow-us-workload-trading-quote-watch-${{ github.run_id }}-${{ github.run_attempt }}
+          if-no-files-found: warn
+          retention-days: 30
+          path: test-results/workload/ci-trading-quote-watch.json
