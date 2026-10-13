@@ -309,8 +309,8 @@ test("TREE 11.6 real stdio MCP process resumes durable research and loads schema
     assert.equal(resumed.data.action, "RESUMED");
     assert.equal(resumed.data.selection, "EXPLICIT_RESEARCH_RUN_ID");
     assert.equal(resumed.data.researchRunId, researchRunId);
-    assert.equal(resumed.data.resume.run.researchRunId, researchRunId);
-    assert.equal(resumed.data.resume.objective.objectiveVersionId, objective.objectiveVersionId);
+    assert.equal(resumed.data.resume.researchRunId, researchRunId);
+    assert.equal(resumed.data.resume.currentObjective.objectiveVersionId, objective.objectiveVersionId);
 
     const resumedInventory = await second.callTool("get_evidence_inventory", {
       researchRunId,
