@@ -11,6 +11,7 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
+import { openBacktestEvidenceSource } from "../backtest-lab/evidence-source.js";
 import { listBacktestEvidenceSources } from "../backtest-lab/source-catalog.js";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -108,6 +109,21 @@ export async function validateDesktopPluginRepositoryContract(projectRoot = PROJ
     mcpStdio: true,
     packageBin: true
   });
+}
+
+async function assertUsableMarketEvidence({ dataDir, evidenceSources }) {
+  for (const source of evidenceSources) {
+    let opened = null;
+    try {
+      opened = await openBacktestEvidenceSource({ dataDir, sourceId: source.sourceId });
+      return;
+    } catch {
+      // One unusable catalog entry must not hide another usable product-owned source.
+    } finally {
+      await opened?.close();
+    }
+  }
+  fail("RESEARCH_DESKTOP_PREFLIGHT_MARKET_EVIDENCE_UNUSABLE");
 }
 
 function timeoutPromise(ms, code) {
@@ -415,6 +431,7 @@ export async function runResearchDesktopPreflight() {
     }
     const evidenceSources = await listBacktestEvidenceSources({ dataDir: marketDataDir });
     if (evidenceSources.length < 1) fail("RESEARCH_DESKTOP_PREFLIGHT_NO_MARKET_EVIDENCE");
+    await assertUsableMarketEvidence({ dataDir: marketDataDir, evidenceSources });
     report.marketEvidence = {
       configuredOverride: Boolean(configuredDataDir),
       sourceCount: evidenceSources.length,
