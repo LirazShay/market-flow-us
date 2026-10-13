@@ -43,7 +43,7 @@ next_pointer:
   task: "11.6"
   owner: "Chat 40"
   status: in_progress
-  action: "Continue TREE 11.6 from the bootstrap/Skill checkpoint: add the thin MCP tool mappings over the stable Research Domain API, then reclose focused integration/security/resume evidence before completion and merge."
+  action: "Continue TREE 11.6 from the thin-tool-registry checkpoint: bind the 45-tool registry to the selected MCP v2 transport/package surface, then prove real-transport on-demand access and fresh-process resume before final reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
