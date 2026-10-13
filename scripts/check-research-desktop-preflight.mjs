@@ -3,7 +3,6 @@ import {
   mkdir,
   mkdtemp,
   readFile,
-  readdir,
   rm,
   writeFile
 } from "node:fs/promises";
@@ -11,6 +10,8 @@ import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+import { listBacktestEvidenceSources } from "../backtest-lab/source-catalog.js";
 
 const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const REPORT_PATH = process.env.MARKET_FLOW_US_RESEARCH_DESKTOP_PREFLIGHT_REPORT
@@ -90,33 +91,6 @@ export async function validateDesktopPluginRepositoryContract(projectRoot = PROJ
     mcpStdio: true,
     packageBin: true
   });
-}
-
-async function countDuckDbEvidence(directory, depth = 0) {
-  if (depth > 4) return 0;
-  let entries;
-  try {
-    entries = await readdir(directory, { withFileTypes: true });
-  } catch {
-    return 0;
-  }
-
-  let count = 0;
-  for (const entry of entries) {
-    const entryPath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      count += await countDuckDbEvidence(entryPath, depth + 1);
-      continue;
-    }
-    if (
-      entry.isFile()
-      && entry.name.endsWith(".duckdb")
-      && entry.name !== "research-ledger.duckdb"
-    ) {
-      count += 1;
-    }
-  }
-  return count;
 }
 
 function timeoutPromise(ms, code) {
@@ -308,11 +282,13 @@ export async function runResearchDesktopPreflight() {
     if (!path.isAbsolute(marketDataDir)) {
       fail("RESEARCH_DESKTOP_PREFLIGHT_MARKET_DATA_DIR_NOT_ABSOLUTE");
     }
-    const evidenceFiles = await countDuckDbEvidence(marketDataDir);
-    if (evidenceFiles < 1) fail("RESEARCH_DESKTOP_PREFLIGHT_NO_MARKET_EVIDENCE");
+    const evidenceSources = await listBacktestEvidenceSources({ dataDir: marketDataDir });
+    if (evidenceSources.length < 1) fail("RESEARCH_DESKTOP_PREFLIGHT_NO_MARKET_EVIDENCE");
     report.marketEvidence = {
       configuredOverride: Boolean(configuredDataDir),
-      duckDbFileCount: evidenceFiles,
+      sourceCount: evidenceSources.length,
+      hasActive: evidenceSources.some((source) => source.kind === "active"),
+      archiveCount: evidenceSources.filter((source) => source.kind === "archive").length,
       absolutePathRedacted: true
     };
 
