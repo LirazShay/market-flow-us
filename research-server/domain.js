@@ -9,6 +9,7 @@ import {
   committedPlanInputFromProposal,
   proposeDeterministicEvidencePlan
 } from "./evidence-plan-authority.js";
+import { publicEvidencePlanProposal } from "./evidence-plan-public-view.js";
 import { openResearchEvidenceDomain } from "./evidence-domain.js";
 import { openResearchExperimentLedger } from "./experiment-ledger.js";
 import { openResearchHoldoutLedger } from "./holdout-ledger.js";
@@ -642,12 +643,13 @@ export async function openResearchDomain(options = {}) {
         input.evidenceInventoryId
       ));
       if (!inventory) throw new Error("Evidence Inventory was not found in this Research Run");
-      return proposeDeterministicEvidencePlan({
+      const proposal = proposeDeterministicEvidencePlan({
         objectiveVersion: objective,
         evidenceInventory: inventory,
         evaluationProfile: input.evaluationProfile,
         timingToleranceMs: input.timingToleranceMs ?? 0
       });
+      return publicEvidencePlanProposal(proposal);
     },
 
     async commitEvidencePlan(input) {
@@ -669,10 +671,11 @@ export async function openResearchDomain(options = {}) {
         evaluationProfile: proposal?.evaluationProfile,
         timingToleranceMs: proposal?.timingToleranceMs ?? 0
       });
-      if (!sameJson(recomputed, proposal) || proposal?.status !== "PROPOSED") {
+      const publicRecomputed = publicEvidencePlanProposal(recomputed);
+      if (!sameJson(publicRecomputed, proposal) || proposal?.status !== "PROPOSED") {
         throw new Error("Evidence Plan proposal no longer matches immutable Objective/Evidence truth");
       }
-      const committed = committedPlanInputFromProposal(proposal);
+      const committed = committedPlanInputFromProposal(recomputed);
       return await useEvidence((evidence) => evidence.createEvidencePlan({
         researchRunId: input.researchRunId,
         objectiveVersionId: input.objectiveVersionId,
