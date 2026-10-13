@@ -43,7 +43,7 @@ next_pointer:
   task: "12.8"
   owner: "Chat 49"
   status: pending
-  action: "TREE 12.7 / Chat 48 is reclosed on PR #127 with pre-reclosure Planning #1369, Workload #696, Replay #237, Fast #1147 and Browser #723 green after STATUS-projection RCA. Start Chat 49 only through explicit numbered-chat activation, then implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
+  action: "TREE 12.7 / Chat 48 is complete: PR #127 squash-merged as 1eadb381, and post-merge main Planning #1372, Workload #699, Replay #240, Fast #1150 and Browser #726 are green after STATUS-projection RCA. Start Chat 49 only through explicit numbered-chat activation, then implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
