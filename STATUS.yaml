@@ -23,27 +23,27 @@ overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
   chat: null
-  node: "12.3"
-  title: "Targeted live quote watch"
+  node: "12.5"
+  title: "Independent Hard Risk Authority"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 59
-  pending: 7
+  done: 60
+  pending: 6
   in_progress: 0
   blocked: 1
   current_chat: null
-  current_node: "12.3"
+  current_node: "12.5"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.3"
-  owner: "Chat 45"
+  task: "12.5"
+  owner: "Chat 46"
   status: pending
-  action: "Activate Chat 45 only on an explicit numbered-chat request. TREE 12.2 / Chat 44 is complete: PR #118 squash-merged as b3821170 and post-merge main Planning #1328 plus Fast #1116 are green. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Activate Chat 46 only on an explicit numbered-chat request after TREE 12.3 / Chat 45 PR #120 is merged and post-merge main verification is green. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
