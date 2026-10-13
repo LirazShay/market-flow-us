@@ -18,15 +18,15 @@ source_of_truth:
   decisions: ".planning/DECISIONS.md"
   backlog: "backlog/README.md"
 
-phase: implementation_reclosure
-overall_status: ai_researcher_implementation_complete_merge_transition
+phase: backlog
+noverall_status: ai_researcher_implementation_complete
 
 current:
-  chat: 42
-  node: "11.8"
-  title: "Representative workload, acceptance readiness and deterministic reclosure"
+  chat: null
+  node: null
+  title: "Branch 11 Autonomous AI Researcher implementation complete"
   status: done
-  activation_required: false
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
@@ -40,10 +40,10 @@ execution_projection:
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "PR #110 merge transition"
-  owner: "Chat 42"
-  status: in_progress
-  action: "TREE 11.8 implementation is done. Require the completion-head PR CI green, update/review PR #110, squash merge it, require merged-main CI green and reconcile open PR state. Do not run or fabricate W2T/W3 during this transition; the user explicitly deferred those real target-machine/Desktop acceptance gates to non-blocking post-merge backlog B-US-009, where they remain PENDING until actually executed against fresh intended main."
+  task: "B-US-009"
+  owner: "future explicitly activated executor"
+  status: backlog_non_blocking
+  action: "No active implementation leaf remains. When the user wants to perform AI Researcher acceptance, activate B-US-009 against fresh intended main and run the preserved W2T target-machine actual-evidence workload, Desktop/MCP preflight, real ChatGPT Desktop mission and full restart/resume proof. W2T/W3 remain pending until actually executed; their post-merge deferral is not PASS. B-US-000 remains a separate non-blocking provider-acceptance backlog item."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -75,7 +75,7 @@ acceptance_projection:
   task: "B-US-009"
   status: backlog_non_blocking
   candidate_policy: "When explicitly activated, fetch fresh main and accept the latest intended AI Researcher candidate; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "W2T/W3 remain PENDING_POST_MERGE by explicit user decision. Their criteria are preserved in B-US-009 and the Desktop acceptance runbook; deferral is not PASS."
+  checkpoint_summary: "Branch 11 implementation/repository reclosure is complete. W2T/W3 remain PENDING_POST_MERGE by explicit user decision; their criteria are preserved in B-US-009 and the Desktop acceptance runbook, and deferral is not PASS."
   authority:
     backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
     runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
