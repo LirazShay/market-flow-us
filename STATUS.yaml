@@ -43,7 +43,7 @@ next_pointer:
   task: "11.6"
   owner: "Chat 40"
   status: in_progress
-  action: "Real stdio create/restart/resume plus on-demand schema/evidence/Analysis/Result Handle proof is green in PR #106 after lifecycle RCA/fix/regression; Fast #951, Planning #1145, Workload #537, Replay #121 and Browser #583 are green on code head ebb89c58. Continue with final 11.6 success-evidence/diff/security review, repair any smallest defect, then complete PR #106 merge/main-CI/open-PR reclosure before advancing to Chat 41."
+  action: "Final TREE 11.6 composed diff/security review is green: strict 46-tool MCP contracts, on-demand reuse of the TREE 11.3 field manifest, sanitized/idempotent stdio lifecycle and real two-process resume/evidence/Analysis/Result proof passed Fast #961, Planning #1155, Workload #547, Replay #131 and Browser #593 on reviewed head 02b6dd57. Complete PR #106 reclosure next: verify this truth-only head CI, mark the PR ready, squash-merge it, verify merged-main CI and open-PR state, then advance to Chat 41 / TREE 11.7 only if every completion gate is green."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
