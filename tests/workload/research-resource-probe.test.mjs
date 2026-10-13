@@ -249,7 +249,7 @@ test("TREE 11.8 representative managed workload proves bounded 4,096-security re
     profile,
     result: "running",
     gates: {
-      W1: mode === "ci" ? "PASS" : "SEPARATE_CI_PROOF_REQUIRED",
+      W1: mode === "ci" ? "PASS_ON_SUCCESS" : "SEPARATE_CI_PROOF_REQUIRED",
       W2: profile.targetAuthority ? "PASS_ON_SUCCESS" : "NOT_TARGET_PROFILE",
       W3: "REQUIRES_TARGET_MACHINE_DESKTOP_ACCEPTANCE"
     },
@@ -523,12 +523,14 @@ test("TREE 11.8 representative managed workload proves bounded 4,096-security re
       widenBudgets: false,
       reason: "The bounded serial heavy-job/reader policy completed the representative path without evidence justifying broader parallelism, timeouts or budgets."
     };
+    report.gates.W1 = mode === "ci" ? "PASS" : report.gates.W1;
     report.gates.W2 = profile.targetAuthority ? "PASS" : report.gates.W2;
     report.result = "pass";
   } catch (error) {
     failure = error;
     report.result = "fail";
     report.error = sanitizedFailure(error, tempDir);
+    assert.notEqual(report.gates.W1, "PASS", "failed workload report must not claim W1 PASS");
   } finally {
     try {
       await domain?.close();
