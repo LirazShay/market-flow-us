@@ -22,28 +22,28 @@ phase: implementation
 overall_status: ai_researcher_in_progress
 
 current:
-  chat: 39
-  node: "11.5"
-  title: "Validation, sealed holdout and final recommendation authority"
+  chat: 40
+  node: "11.6"
+  title: "ChatGPT Plugin / Skill + MCP operating integration"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 57
-  done: 53
-  pending: 4
+  done: 54
+  pending: 3
   in_progress: 0
   blocked: 0
-  current_chat: 39
-  current_node: "11.5"
+  current_chat: 40
+  current_node: "11.6"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "11.5"
-  owner: "Chat 39"
+  task: "11.6"
+  owner: "Chat 40"
   status: pending
-  action: "Chat 38 / 11.4 is complete: PR #102 squash-merged as d3c62afe90d1b9656ee7e47ca1d6fabcadde08ce; merged-main Fast #912, Planning/Contract #1104 and Workload #498 are green; the post-merge open-PR audit was empty. Start Chat 39 / 11.5 only through explicit numbered-chat activation; generic continuation in the completed Chat 38 conversation must not switch executor identity."
+  action: "Chat 39 / 11.5 success evidence is green and execution truth is complete. Start Chat 40 / 11.6 only through explicit numbered-chat activation after PR #105 is merged and main CI is green; generic continuation in completed Chat 39 must not switch executor identity."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:

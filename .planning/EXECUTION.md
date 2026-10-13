@@ -14,7 +14,7 @@ Status vocabulary: `pending | in_progress | done | blocked`.
 
 ## Current execution boundary
 
-Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed foundation task `11.1`, authoritative experiment task `11.2`, phase-aware research SQL task `11.3` and durable jobs/resource-governance task `11.4`. No numbered executor is currently active after Chat 38 completion.
+Branches 1–10 are complete. Branch 11 — Autonomous AI Researcher — has completed foundation task `11.1`, authoritative experiment task `11.2`, phase-aware research SQL task `11.3`, durable jobs/resource-governance task `11.4` and Validation/sealed-Holdout/final-recommendation authority task `11.5`. No numbered executor is currently active after Chat 39 completion.
 
 `11.3` / `Chat 37` completed its full success-evidence reclosure in PR #101 and is squash-merged on the current main baseline `a36e9b2c508a9c49ed528199c70aa63b247478fb`: isolated multi-source Development projection, bounded raw-data discovery, source-persisted universe lifecycle with explicit future-dependence caveats, controlled 11.2 decision/outcome/Experiment relations, Research Domain composition, run/partition-bound phase isolation, broad analytical SELECT support, Research-specific adversarial SQL admission and source-byte/fingerprint immutability are green. Main Fast and Planning/Contract CI are green on that baseline and no PR was open when Chat 38 activated.
 
@@ -81,7 +81,7 @@ Historical detailed result narratives for completed tasks remain preserved in Gi
 | `11.2` | Chat 36 | `done` | `11.1` | PR #100 final success-evidence reclosure is green: exact Backtest point/Sweep authority reuse; immutable Query Artifact/frozen schedule/source provenance; denominator-safe + robustness metrics; source-row-first Top-X duplicate semantics; typed returned/non-return diagnostics; bounded stable-ID drill-down surviving Domain restart through deterministic reconstruction; actual source SHA-256 verification before/after execution; no public fabricated-completion path; Fast CI #726 + Planning CI #916 green on pre-completion head `9dfc18d8`. |
 | `11.3` | Chat 37 | `done` | `11.1` | PR #101 final success-evidence reclosure is green: isolated Development projection across explicit `source_id` sources; typed/history/raw evidence and source-persisted universe lifecycle with future-dependence metadata; bounded raw key/type/coverage discovery; controlled 11.2 decision/outcome/Experiment relations and Domain composition; run/partition-bound Development-only SQL with no automatic strategy authority; joins/windows/aggregates/correlation/cross-security proof; Research-specific hardening/adversarial rejection for external/file/network/catalog/config/extension/secret/side-effect/dynamic-query attempts; source DB fingerprints/bytes unchanged. Fast CI #776 + Planning CI #966 are green on pre-completion head `6c9499ff`. |
 | `11.4` | Chat 38 | `done` | `11.2`, `11.3` | PR #102 squash-merged as `d3c62afe90d1b9656ee7e47ca1d6fabcadde08ce`. Final success-evidence/diff reclosure is green: durable jobs/idempotency/restart, stable paged Result Handles, atomic success ordering, restart-safe hierarchical budgets, bounded queue/readers/growth, real `11.2`/`11.3` composition, idempotent cancellation with native DuckDB interruption, finite SQL/queue/Development-experiment time ceilings, bounded Research-only DuckDB CPU/RAM/temp-disk settings, durable Run observability, frozen Research SQL provenance, immediate deterministic Experiment identity and durable Analysis retrieval satisfy the `11.4` contract. Blockers #1–#8 are closed; branch Fast #911 + Planning/Contract #1103 + Workload #497 and merged-main Fast #912 + Planning/Contract #1104 + Workload #498 are green; the post-merge open-PR audit is empty. |
-| `11.5` | Chat 39 | `pending` | `11.4` | — |
+| `11.5` | Chat 39 | `done` | `11.4` | PR #105 success-evidence/diff reclosure is green on pre-merge head: deterministic whole-day/block partition authority with horizon-aware purge/embargo; exact query-independent Validation schedule enforcement and durable exposure accounting; immutable Validation-supported Finalist Sets; public Holdout metadata/result sealing with cross-run fail-closed reads; one-shot server-owned Holdout execution; post-Holdout SQL lineage contamination; deterministic selected-query and `NO_RECOMMENDATION` artifacts, including first-class insufficient-independent-evidence finalization. Fast #946 + Planning/Contract #1140 + Workload #532 are green before completion transition. |
 | `11.6` | Chat 40 | `pending` | `11.5` | — |
 | `11.7` | Chat 41 | `pending` | `11.2`, `11.3`, `11.4`, `11.5`, `11.6` | — |
 | `11.8` | Chat 42 | `pending` | `11.7` | — |
@@ -105,14 +105,14 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - Completed execution rows from Branches 1–10: **49**.
 - New Branch-11 implementation rows: **8**.
 - Current execution rows: **57**.
-- Done: **53**.
-- Pending: **4**.
+- Done: **54**.
+- Pending: **3**.
 - In progress: **0**.
 - Blocked: **0**.
-- Active owner: **none**; Chat 38 is complete.
-- Current normal sequence pointer: `Chat 39`, task `11.5`, status `pending`; explicit numbered-chat activation is required before implementation begins.
+- Active owner: **none**; Chat 39 is complete.
+- Current normal sequence pointer: `Chat 40`, task `11.6`, status `pending`; explicit numbered-chat activation is required before implementation begins.
 - `11.2` and `11.3` are parallel siblings after `11.1`; chat numbering is not dependency truth.
 - Every Branch-11 dependency references a real prerequisite and no Branch-11 dependency cycle exists.
 - Former `7.4` target-machine/provider acceptance remains non-blocking backlog `B-US-000` at `backlog/B-US-000-final-target-machine-provider-acceptance.md` and is not invented as done.
 
-Chat 38 / `11.4` is complete. A generic continuation in this completed conversation must not activate Chat 39 or any later owner; start `Chat 39 / 11.5` only through explicit numbered-chat activation.
+Chat 39 / `11.5` is complete. A generic continuation in this completed conversation must not activate Chat 40 or any later owner; start `Chat 40 / 11.6` only through explicit numbered-chat activation.
