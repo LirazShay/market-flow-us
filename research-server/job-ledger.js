@@ -18,6 +18,9 @@ import {
 
 export { RESEARCH_JOB_SCHEMA_VERSION };
 
+const STABLE_ERROR_CODE = /^[A-Z][A-Z0-9_]{0,127}$/u;
+const FALLBACK_ERROR_CODE = "RESEARCH_JOB_FAILED";
+
 function requestKey(operation, clientRequestId) {
   return `${operation}\u0000${clientRequestId}`;
 }
@@ -32,6 +35,22 @@ function mergeDurableCounts(target, durable) {
     target.analysisSubmissions,
     durable.analysisSubmissions
   );
+}
+
+function publicSafeProgress(progress) {
+  if (!progress || typeof progress !== "object" || Array.isArray(progress)) return progress;
+  const failure = progress.failure;
+  if (!failure || typeof failure !== "object" || Array.isArray(failure) || !Object.hasOwn(failure, "code")) {
+    return progress;
+  }
+  if (typeof failure.code === "string" && STABLE_ERROR_CODE.test(failure.code)) return progress;
+  return {
+    ...progress,
+    failure: {
+      ...failure,
+      code: FALLBACK_ERROR_CODE
+    }
+  };
 }
 
 async function queryRows(connection, sql, values) {
@@ -235,6 +254,10 @@ export async function openResearchJobLedger(options = {}) {
     async createJob(input) {
       if (growthLimits === null) return await core.createJob(input);
       return await serializeCreate(() => createGrowthGovernedJob(input));
+    },
+
+    async updateJobProgress(researchRunId, jobId, progress) {
+      return await core.updateJobProgress(researchRunId, jobId, publicSafeProgress(progress));
     },
 
     async close() {
