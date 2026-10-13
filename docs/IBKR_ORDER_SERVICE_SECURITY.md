@@ -149,3 +149,13 @@ Synthetic/unit/service acceptance must prove at least:
 ## 10. Integration rule
 
 A future Market Flow US → order-service integration must consume this authenticated local API. It must not weaken the caller-authentication or origin boundary merely because both components run on the same machine.
+
+## 11. Autonomous trading hard-risk boundary
+
+Autonomous trading code must not treat possession of the local caller token as permission to mutate broker state. Every autonomous order intent must first pass the independent Hard Risk Authority before the downstream Order Bridge seam is invoked.
+
+The authority is composed with operator/project-owned hard limits and operator controls. Numeric hard limits have no guessed implementation defaults: the composition root must supply every required limit explicitly. A `PolicyVersion`, AI proposal, Trading MCP call or other strategy input may request a stricter effective limit or pause, but it cannot widen, disable or replace the operator-owned envelope.
+
+The initial hard-risk envelope covers per-order notional, concurrent positions, aggregate exposure, order-attempt rate, loss ceiling, failed-entry ceiling, quote staleness, new-entry pause and the global kill switch. Rejections occur before the downstream order seam and are written to the Trading Ledger as `HARD_RISK_REJECTED` decisions with stable public-safe reason codes. If that durable diagnostic write fails, the order remains blocked.
+
+Entry-only ceilings must not trap a risk-reducing `SELL`: new-entry pause, concurrent-position, aggregate-exposure, loss and failed-entry ceilings apply to entry-side `BUY` intent. Global kill switch, quote freshness, per-order notional and order-attempt rate remain hard gates for every autonomous order intent.
