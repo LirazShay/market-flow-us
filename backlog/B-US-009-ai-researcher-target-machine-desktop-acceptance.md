@@ -1,14 +1,16 @@
 # B-US-009 — AI Researcher target-machine + Desktop acceptance
 
-Status: Backlog  
-Priority: Unprioritized  
-Blocking: No
+Status: Promoted to active execution  
+Blocking: No  
+Current execution authority: `.planning/EXECUTION.md`
 
 ## Why this exists
 
 On 2026-10-13 the user explicitly decided that the remaining real target-machine and ChatGPT Desktop acceptance for Branch 11 must not block the implementation merge.
 
-This item preserves that acceptance work without fabricating evidence. `W2T` and `W3` remain **PENDING** until they are actually executed on the user's machine against a fresh intended `main` candidate.
+Later on 2026-10-13 the user explicitly continued the deferred acceptance work. This record is therefore no longer an active backlog authority: `B-US-009` is allocated in `.planning/EXECUTION.md`, while this file remains provenance/supporting acceptance context. The authoritative `.planning/PLAN.md` already defines this exact post-merge acceptance boundary.
+
+`W2T` and `W3` remain **NOT PASS** until they are actually executed on the user's machine against a fresh intended `main` candidate.
 
 ## Scope
 
@@ -23,7 +25,7 @@ Run the complete post-merge acceptance package already shipped by Branch 11:
 
 ## Candidate policy
 
-Do **not** freeze this item to PR #110's historical head. When this backlog item is activated, fetch fresh `main` and accept the latest intended runtime candidate unless repository truth explicitly says otherwise.
+Do **not** freeze this acceptance to PR #110's historical head. At every machine-local attempt, fetch fresh intended `main` and accept that current runtime candidate unless repository truth explicitly says otherwise.
 
 ## W2T — target-machine actual-evidence workload
 
@@ -91,4 +93,4 @@ Before W3 can pass:
 
 Record only public-safe facts. Never commit or paste credentials, cookies, authorization/session material, account identifiers, private browser state or authenticated dumps.
 
-This backlog item may be marked complete only from actual target-machine/Desktop evidence. Its post-merge deferral must never be rewritten as historical PASS.
+Completion/status truth now lives in `.planning/EXECUTION.md` and the public-safe evidence ledger. This supporting record must never be used to rewrite unexecuted W2T/W3 as historical PASS.
