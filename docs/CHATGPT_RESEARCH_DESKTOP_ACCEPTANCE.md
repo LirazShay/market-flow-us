@@ -6,14 +6,22 @@ Status: TREE `11.8` target-machine acceptance runbook.
 
 Current official OpenAI Plugin documentation supports repo/local plugin marketplaces in the ChatGPT desktop app and permits a plugin to bundle a local MCP app that runs on the user's computer. Local MCP apps are desktop-only; saving such a plugin to the account does not make the local tools available on web or mobile.
 
+The current OpenAI packaging documentation is more specific about repository discovery: repo/local marketplaces are exposed from a trusted repository in **Work mode or Codex inside the ChatGPT desktop app**. Use that Desktop surface to discover/install the local plugin. After installation, run the acceptance only in a Desktop conversation/surface where the installed plugin is actually available; do not treat ChatGPT web as an equivalent local-MCP client.
+
+Official product references checked for this reclosure:
+
+- `https://developers.openai.com/plugins/build/plugins`
+- `https://help.openai.com/en/articles/20001256-plugins-in-chatgpt`
+
 Therefore the preferred TREE `11.8` acceptance path is now:
 
 ```text
-ChatGPT Desktop
+ChatGPT Desktop Work mode or Codex with trusted repo
 → repo marketplace `.agents/plugins/marketplace.json`
-→ local `market-flow-us-researcher` Agent Plugin
+→ install local `market-flow-us-researcher` Agent Plugin
 → bundled `stdio` MCP declaration
 → `market-flow-us-research-mcp` executable on the target machine
+→ Desktop conversation with installed plugin available
 → Research Server / Research Ledger
 → immutable Market Flow US historical evidence
 ```
@@ -83,15 +91,16 @@ On the target machine and intended repository checkout:
 4. Confirm the intended Market Flow US historical evidence is present in the repository-owned/default data location, or set only the supported absolute-path overrides documented in `docs/CHATGPT_RESEARCH_PLUGIN.md`.
 5. Run `npm run research-desktop:preflight` and require a `pass` report with 46 tools. Fix any repository/machine prerequisite failure before blaming Desktop.
 6. Fully restart ChatGPT Desktop.
-7. Open the trusted Market Flow US repository in a Desktop surface that loads the repo marketplace.
+7. In ChatGPT Desktop, open the trusted Market Flow US repository in **Work mode or Codex**, the current documented local-marketplace discovery surfaces.
 8. Open the Plugins Directory, select the `Market Flow US Local` marketplace, and explicitly install `market-flow-us-researcher`.
-9. Verify the installed plugin exposes its Research skill and local MCP tools. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
+9. Move to a fresh Desktop conversation/surface where the installed plugin is available and verify that it exposes its Research skill and local MCP tools. Do not use ChatGPT web as a substitute for this local-MCP gate.
+10. Do not add credentials, provider sessions, browser data or broker/account data to the plugin.
 
-If repository preflight passes but the plugin does not appear or its local MCP app cannot launch, record the exact Desktop build, visible marketplace state and public-safe error code/text. That is a target-client acceptance failure. Do not work around it by exposing the Research Server to `0.0.0.0`, weakening localhost/source boundaries or copying private browser/auth data into diagnostics.
+If repository preflight passes but the plugin does not appear in the documented Desktop Work/Codex marketplace surface, the installed plugin is unavailable to a Desktop conversation, or its local MCP app cannot launch, record the exact Desktop build/surface, visible marketplace/install state and public-safe error code/text. That is a target-client acceptance failure. Do not work around it by exposing the Research Server to `0.0.0.0`, weakening localhost/source boundaries or copying private browser/auth data into diagnostics.
 
 ## W3 acceptance mission
 
-Run the acceptance in a **fresh Desktop conversation** with the installed plugin enabled.
+Run the acceptance in a **fresh Desktop conversation** where the installed plugin is available. If the product requires explicitly selecting or mentioning the installed plugin for that conversation, do so through the normal Desktop plugin UI; do not copy tool output or hidden state from an earlier conversation.
 
 The mission must demonstrate the actual shipped integration rather than direct Node scripts:
 
@@ -111,7 +120,7 @@ Before declaring W3 complete:
 
 1. Record the public-safe `researchRunId` and durable artifact/job/result references needed for verification.
 2. End the first conversation and fully restart ChatGPT Desktop so the local MCP process is also recreated.
-3. Start a second fresh conversation with the plugin enabled.
+3. Start a second fresh Desktop conversation where the installed plugin is available.
 4. Ask it to continue the exact run by `researchRunId`, with no copied chat transcript or hidden context.
 5. Verify the Resume Capsule reconstructs the current objective/phase/artifacts/jobs from the Research Ledger.
 6. Read at least one previously durable Analysis or Result Handle after restart.
