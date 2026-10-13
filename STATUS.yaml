@@ -43,7 +43,7 @@ next_pointer:
   task: "11.6"
   owner: "Chat 40"
   status: in_progress
-  action: "Continue TREE 11.6 from the thin-tool-registry checkpoint: bind the 45-tool registry to the selected MCP v2 transport/package surface, then prove real-transport on-demand access and fresh-process resume before final reclosure."
+  action: "Continue TREE 11.6 from the MCP v2 stdio binding checkpoint: execute the authored MCP protocol/binding proof through the normal runtime/CI path, then add a true fresh-process stdio create/restart/resume proof and prove required on-demand schema/evidence/result access; repair any discovered capability gap before final 11.6 reclosure."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
