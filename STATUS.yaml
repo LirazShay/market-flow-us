@@ -24,7 +24,7 @@ overall_status: ai_researcher_in_progress
 current:
   chat: 42
   node: "11.8"
-  title: "Representative workload, desktop acceptance and deterministic reclosure"
+  title: "Representative workload, acceptance readiness and deterministic reclosure"
   status: in_progress
   activation_required: false
   projected_from: ".planning/EXECUTION.md"
@@ -43,7 +43,7 @@ next_pointer:
   task: "11.8"
   owner: "Chat 42"
   status: in_progress
-  action: "Continue Chat 42 / TREE 11.8 only. W1 and W2 are green. On the exact target-machine candidate run `npm ci`, then `npm run research-target:workload` against the intended existing Market Flow US historical evidence and require a public-safe PASS report with wall-clock/RAM/disk/concurrency/result-size and source-immutability evidence. If it fails, perform RCA before any resource-policy change. After W2T passes, run `npm link` + `npm run research-desktop:preflight` and require PASS. Then fully restart ChatGPT Desktop, open the trusted Market Flow US repository in Work mode or Codex, install `Market Flow US Local` -> `market-flow-us-researcher`, execute the real Desktop W3 mission through the installed plugin, fully restart Desktop/MCP, and resume the exact durable Research Run from a second fresh Desktop conversation. ChatGPT web is not an equivalent local-MCP client and this GitHub/web executor cannot fabricate target-machine or Desktop evidence. After W3, finish durable-contract/user-doc synchronization and deterministic full reclosure."
+  action: "Continue Chat 42 / TREE 11.8 only. Finish final contract/evidence reconciliation and complete PR #110 diff/CI review, then close 11.8, squash merge, verify merged-main CI and reconcile open PR state. Do not run or fabricate W2T/W3 as part of this merge; the user explicitly deferred those real target-machine/Desktop acceptance gates to non-blocking post-merge backlog B-US-009, where they remain PENDING until actually executed against fresh intended main."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -66,6 +66,7 @@ navigation:
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
   post_backtest_ai_mcp_backlog_record: "backlog/B-US-008-post-backtest-autonomous-ai-researcher-mcp.md"
+  ai_researcher_target_acceptance_backlog: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
   final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
