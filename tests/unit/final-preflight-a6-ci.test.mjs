@@ -17,6 +17,7 @@ function count(text, fragment) {
 test("Fast CI reruns when files consumed by Fast tests change", async () => {
   const fast = await workflow("fast-ci.yml");
   for (const dependency of [
+    '- "trading-server/**"',
     '- "*.cmd"',
     '- "START_HERE.md"',
     '- "docs/SCANNER_SQL_GUIDE.md"',

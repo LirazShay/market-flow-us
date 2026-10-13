@@ -79,7 +79,7 @@ jobs:
             docs/IBKR_ORDER_SERVICE.md docs/IBKR_ORDER_SERVICE_SECURITY.md
             docs/MARKET_REPLAY.md docs/REPLAY_HARDENING.md docs/BASIC_BUY_INTEGRATION.md
             docs/AUTONOMOUS_AI_TRADING.md
-            scripts/validate-ci-hygiene.mjs
+            scripts/validate-ci-hygiene.mjs scripts/validate-status-projection.mjs
           )
 
           for file in "${required[@]}"; do
@@ -170,10 +170,7 @@ jobs:
           require_text 'execution: ".planning/EXECUTION.md"' STATUS.yaml
           require_text 'backlog: "backlog/README.md"' STATUS.yaml
           require_text 'backtest_contract: "docs/BACKTEST_LAB.md"' STATUS.yaml
-          require_text 'node: "12.1"' STATUS.yaml
-          require_text 'chat: null' STATUS.yaml
-          require_text 'activation_required: true' STATUS.yaml
-          require_text 'owner: "Chat 43"' STATUS.yaml
+          node scripts/validate-status-projection.mjs
 
           require_text '# Market Flow US Product Requirements' docs/PRODUCT_REQUIREMENTS.md
           require_text '# Market Flow US Product Spec' docs/PRODUCT_SPEC.md

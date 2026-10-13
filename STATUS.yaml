@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_ready_with_independent_acceptance_blocker
+overall_status: branch_12_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: null
+  chat: "Chat 43"
   node: "12.1"
   title: "Trading domain + durable Run / Policy / Episode authority"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
   done: 57
-  pending: 9
-  in_progress: 0
+  pending: 8
+  in_progress: 1
   blocked: 1
-  current_chat: null
+  current_chat: "Chat 43"
   current_node: "12.1"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "12.1"
   owner: "Chat 43"
-  status: pending
-  action: "Explicitly activate Chat 43 (for example: אני צאט 43 תתחיל). Bootstrap from fresh main, then implement PLAN leaf 12.1 and its routed durable Trading contract. B-US-009 remains independently blocked on target-machine evidence and is not a dependency of 12.1."
+  status: in_progress
+  action: "Reclosure is green on PR #116: the durable Trading Run / Policy / Episode ledger now includes bounded restart run discovery, explicit raw authenticated/provider dump rejection, seven focused authority proofs and Fast-CI trading-server path coverage; Fast, Planning, Chromium E2E and bounded Local Fake acceptance are green. Complete PR #116 merge, verify post-merge main CI and clean open-PR state, then mark 12.1 done before activating any dependent Branch-12 leaf. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
