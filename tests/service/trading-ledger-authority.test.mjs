@@ -92,11 +92,12 @@ test("TREE 12.1 trading run, immutable policy, episode and durable evidence surv
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-trading-ledger-"));
   const dbPath = path.join(tempDir, "trading-ledger.duckdb");
   let ledger = null;
+  let nowMs = NOW;
 
   try {
     ledger = await openTradingLedger({
       dbPath,
-      now: () => NOW,
+      now: () => nowMs,
       policyVersionIdFactory: () => POLICY_ID,
       tradingRunIdFactory: () => RUN_A_ID,
       tradeEpisodeIdFactory: () => EPISODE_A_ID,
@@ -117,6 +118,7 @@ test("TREE 12.1 trading run, immutable policy, episode and durable evidence surv
     const run = await createPolicyAndRun(ledger);
     assert.deepEqual(run, expectedRun());
 
+    nowMs = NOW + 10;
     const episode = await ledger.createTradeEpisode({
       tradingRunId: RUN_A_ID,
       policyVersionId: POLICY_ID,
