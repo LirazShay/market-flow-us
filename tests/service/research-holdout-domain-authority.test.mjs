@@ -9,6 +9,7 @@ import {
   durableAuthoritativeExperimentRequest,
   freezeAuthoritativeExperimentBatchRequest
 } from "../../research-server/experiment-authority.js";
+import { openResearchLedger } from "../../research-server/ledger.js";
 
 const RUN_ID = "run_11111111-1111-4111-8111-111111111111";
 const OBJECTIVE_ID = "obj_11111111-1111-4111-8111-111111111111";
@@ -75,11 +76,12 @@ function evaluationProfile() {
   };
 }
 
-test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists once and contaminates post-Holdout SQL lineage", async () => {
+test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists once and derives post-Holdout contamination after restart", async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), "market-flow-us-holdout-domain-"));
   const dbPath = path.join(tempDir, "research-ledger.duckdb");
   const executions = [];
   let domain = null;
+  let baseLedger = null;
 
   try {
     domain = await openResearchDomain({
@@ -91,7 +93,7 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
       })(),
       idFactory: () => RUN_ID,
       objectiveVersionIdFactory: () => OBJECTIVE_ID,
-      queryArtifactIdFactory: sequence([QUERY_FINALIST, QUERY_REVISED]),
+      queryArtifactIdFactory: () => QUERY_FINALIST,
       evidenceInventoryIdFactory: () => INVENTORY_ID,
       evidencePlanIdFactory: () => PLAN_ID,
       partitionIdFactory: sequence([PART_DEV, PART_VALIDATION, PART_HOLDOUT]),
@@ -230,7 +232,15 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     );
     assert.equal(executions.length, 2);
 
-    const revised = await domain.createQueryArtifact({
+    await domain.close();
+    domain = null;
+
+    baseLedger = await openResearchLedger({
+      dbPath,
+      now: () => holdout.exposedAtMs + 1,
+      queryArtifactIdFactory: () => QUERY_REVISED
+    });
+    const revised = await baseLedger.createQueryArtifact({
       researchRunId: RUN_ID,
       parentQueryArtifactId: QUERY_FINALIST,
       sqlText: "SELECT security_id FROM latest ORDER BY PriceChangePercent DESC LIMIT 3",
@@ -238,13 +248,8 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
       label: "post-holdout revision"
     });
     assert.equal(revised.queryArtifactId, QUERY_REVISED);
-
-    const contaminated = await domain.getHoldoutEvaluation(RUN_ID, HOLDOUT_ID);
-    assert.equal(contaminated.contaminationState, "CONTAMINATED");
-    assert.deepEqual(contaminated.contaminatedQueryArtifactIds, [QUERY_REVISED]);
-
-    await domain.close();
-    domain = null;
+    await baseLedger.close();
+    baseLedger = null;
 
     domain = await openResearchDomain({ dbPath, now: () => NOW + 10_000 });
     const afterRestart = await domain.getHoldoutEvaluation(RUN_ID, HOLDOUT_ID);
@@ -252,6 +257,7 @@ test("TREE 11.5 Research Domain keeps Holdout sealed, evaluates frozen finalists
     assert.deepEqual(afterRestart.contaminatedQueryArtifactIds, [QUERY_REVISED]);
     assert.equal(afterRestart.exposedAtMs, holdout.exposedAtMs);
   } finally {
+    if (baseLedger) await baseLedger.close();
     if (domain) await domain.close();
     await rm(tempDir, { recursive: true, force: true });
   }
