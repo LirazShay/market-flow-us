@@ -51,6 +51,37 @@ test("TREE 11.8 Desktop preflight terminates the full Windows launcher process t
   assert.equal(child.killCalls, 0, "successful taskkill tree cleanup must not fall back to shell-only kill");
 });
 
+test("TREE 11.8 Desktop preflight bounds a hung Windows taskkill and falls back without hanging", async () => {
+  const child = {
+    pid: 4321,
+    exitCode: null,
+    signalCode: null,
+    killCalls: 0,
+    kill() {
+      this.killCalls += 1;
+    }
+  };
+  const killer = Object.assign(new EventEmitter(), {
+    exitCode: null,
+    signalCode: null,
+    killCalls: 0,
+    kill() {
+      this.killCalls += 1;
+    }
+  });
+
+  await terminateProcessTree(child, {
+    platform: "win32",
+    timeoutMs: 5,
+    spawnProcess() {
+      return killer;
+    }
+  });
+
+  assert.equal(killer.killCalls, 1, "hung taskkill helper must be terminated at the cleanup deadline");
+  assert.equal(child.killCalls, 1, "cleanup timeout must fall back to best-effort direct child termination");
+});
+
 test("TREE 11.8 Desktop preflight keeps direct child cleanup on non-Windows platforms", async () => {
   const child = {
     pid: 4321,
