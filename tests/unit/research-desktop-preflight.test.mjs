@@ -6,7 +6,8 @@ import {
   finalizeResearchDesktopPreflightReport,
   researchDesktopPreflightErrorCode,
   terminateProcessTree,
-  validateDesktopPluginRepositoryContract
+  validateDesktopPluginRepositoryContract,
+  waitForMcpProcessClose
 } from "../../scripts/check-research-desktop-preflight.mjs";
 
 test("TREE 11.8 Desktop preflight validates repo marketplace, plugin and PATH executable contract", async () => {
@@ -34,6 +35,23 @@ test("TREE 11.8 Desktop preflight exports only owned stable public error codes",
     researchDesktopPreflightErrorCode({ code: "C:\\Users\\Private\\market-data.duckdb" }),
     "RESEARCH_DESKTOP_PREFLIGHT_FAILED"
   );
+});
+
+test("TREE 11.8 Desktop preflight waits for process close after exit before accepting shutdown", async () => {
+  const child = new EventEmitter();
+  const closed = waitForMcpProcessClose(child);
+  let settled = false;
+  void closed.then(() => {
+    settled = true;
+  });
+
+  child.emit("exit", 0, null);
+  await Promise.resolve();
+  assert.equal(settled, false, "exit alone must not certify that stdout/stderr have closed");
+
+  child.emit("close", 0, null);
+  assert.deepEqual(await closed, { code: 0, signal: null });
+  assert.equal(settled, true);
 });
 
 test("TREE 11.8 Desktop preflight terminates the full Windows launcher process tree", async () => {
