@@ -15,6 +15,18 @@
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"
+    },
+    {
+      "name": "market-flow-us-trader",
+      "source": {
+        "source": "local",
+        "path": "./plugins/market-flow-us-trader"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
     }
   ]
 }

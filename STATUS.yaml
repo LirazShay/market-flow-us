@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_in_progress_with_independent_acceptance_blocker
+overall_status: branch_12_ready_for_chat_49_with_independent_acceptance_blocker
 
 current:
   chat: null
-  node: "12.7"
-  title: "Separate Trading Skill + Trading MCP"
+  node: "12.8"
+  title: "Episode attribution + policy learning + deterministic distillation"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 63
-  pending: 3
+  done: 64
+  pending: 2
   in_progress: 0
   blocked: 1
   current_chat: null
-  current_node: "12.7"
+  current_node: "12.8"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.7"
-  owner: "Chat 48"
+  task: "12.8"
+  owner: "Chat 49"
   status: pending
-  action: "Activate Chat 48 only on an explicit numbered-chat request. TREE 12.4 / Chat 47 is reclosed on PR #126: deterministic continuous Supervisor, durable DecisionProposal/state/order evidence, authoritative same-request reconciliation, restart no-duplicate-order proof, AI unavailable/slow fallback and shutdown behavior are green. Pre-reclosure Planning #1364 and Fast #1142 are green; Fast ran 345 unit + 355 service tests and synthetic order-service acceptance PASS with realOrderSubmitted=false. B-US-009 remains independently blocked on target-machine evidence."
+  action: "TREE 12.7 / Chat 48 is reclosed on PR #127 with pre-reclosure Planning #1369, Workload #696, Replay #237, Fast #1147 and Browser #723 green after STATUS-projection RCA. Start Chat 49 only through explicit numbered-chat activation, then implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:

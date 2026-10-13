@@ -14,10 +14,10 @@ test("TREE 11.8 repo marketplace resolves the portable local Research plugin and
   const packageJson = await readJson("package.json");
 
   assert.equal(marketplace.name, "market-flow-us-local");
-  assert.equal(marketplace.plugins.length, 1);
+  const matchingEntries = marketplace.plugins.filter((candidate) => candidate.name === plugin.name);
+  assert.equal(matchingEntries.length, 1);
 
-  const entry = marketplace.plugins[0];
-  assert.equal(entry.name, plugin.name);
+  const entry = matchingEntries[0];
   assert.deepEqual(entry.source, {
     source: "local",
     path: "./plugins/market-flow-us-researcher"
