@@ -7,6 +7,9 @@ import {
 } from "../shared/demo-buy/limits.js";
 
 const UTF8 = new TextEncoder();
+// Candidate provenance is persisted unchanged through Trading ledger candidateProvenanceJson.
+// Keep this equal to or below ledger.js MAX_JSON_CHARS so every accepted handoff is persistable.
+export const TRADING_CANDIDATE_PROVENANCE_MAX_CHARS = 262_144;
 
 function deepFreeze(value) {
   if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value;
@@ -115,6 +118,15 @@ function selectedRowEvidence(result, resultRank) {
   };
 }
 
+function assertCandidateProvenanceWithinDurableBound(candidateProvenance) {
+  const serialized = JSON.stringify(candidateProvenance);
+  if (serialized.length > TRADING_CANDIDATE_PROVENANCE_MAX_CHARS) {
+    throw new TypeError(
+      `Scanner candidate provenance exceeds the durable Trading ledger bound of ${TRADING_CANDIDATE_PROVENANCE_MAX_CHARS} characters.`
+    );
+  }
+}
+
 export function createScannerCandidateHandoff({
   result,
   context,
@@ -127,28 +139,31 @@ export function createScannerCandidateHandoff({
 
   const { securityId, rowEvidence } = selectedRowEvidence(normalizedResult, resultRank);
   const sourceQuerySha256 = sqlSha256(normalizedContext.sql);
+  const candidateProvenance = {
+    version: 1,
+    securityId,
+    scannerGeneration: {
+      generation: normalizedContext.generation,
+      startedAtMs: normalizedContext.startedAtMs,
+      completedAtMs: normalizedContext.completedAtMs,
+      rowCount: normalizedResult.rowCount
+    },
+    sourceQuery: {
+      queryId: normalizedContext.queryId,
+      name: normalizedContext.queryName,
+      sql: normalizedContext.sql,
+      sqlSha256: sourceQuerySha256,
+      intervalMs: normalizedContext.intervalMs
+    },
+    resultRank,
+    rowEvidence,
+    admittedAtMs
+  };
+
+  assertCandidateProvenanceWithinDurableBound(candidateProvenance);
 
   return deepFreeze({
     candidateKey: securityId,
-    candidateProvenance: {
-      version: 1,
-      securityId,
-      scannerGeneration: {
-        generation: normalizedContext.generation,
-        startedAtMs: normalizedContext.startedAtMs,
-        completedAtMs: normalizedContext.completedAtMs,
-        rowCount: normalizedResult.rowCount
-      },
-      sourceQuery: {
-        queryId: normalizedContext.queryId,
-        name: normalizedContext.queryName,
-        sql: normalizedContext.sql,
-        sqlSha256: sourceQuerySha256,
-        intervalMs: normalizedContext.intervalMs
-      },
-      resultRank,
-      rowEvidence,
-      admittedAtMs
-    }
+    candidateProvenance
   });
 }
