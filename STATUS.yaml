@@ -43,7 +43,7 @@ next_pointer:
   task: "12.2"
   owner: "Chat 44"
   status: in_progress
-  action: "Continue Chat 44 on branch chat44-12-2-scanner-candidate-handoff. Core Scanner result/context -> immutable candidate provenance shaping and focused unit proofs are present; complete durable ledger integration and required verification before marking 12.2 done. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Continue Chat 44 on branch chat44-12-2-scanner-candidate-handoff. Scanner handoff and durable ledger admission are implemented with deterministic/immutability/fail-closed/bounded-evidence proofs; review found and fixed a provenance-size/ledger-persistence bound mismatch. Re-run required CI and complete review/reclosure before marking 12.2 done. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
