@@ -43,7 +43,7 @@ next_pointer:
   task: "12.3"
   owner: "Chat 45"
   status: in_progress
-  action: "Continue proof-first targeted live quote authority on chat-45-targeted-quote-watch. Reuse the existing CPGW exact-resolution/snapshot seam; keep the watch bounded and polling-first; quantify cadence/cost before considering streaming."
+  action: "Controlled CPGW-seam workload is green and supports keeping bounded polling; do not add streaming. Next prove restart/no-fabricated-continuity semantics, then perform final affected verification and reclosure for 12.3. Real provider latency remains for later live-shadow/target-machine acceptance and is not inferred from CI."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
