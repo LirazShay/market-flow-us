@@ -40,20 +40,20 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 
 | Area | Required hostile question | Current evidence / remaining work | Status |
 |---|---|---|---|
-| Source selection / attachment | Can caller-controlled IDs, paths, aliases, attachment syntax or projection failure reach/mutate original evidence? | Logical `sourceId`, read-only opener, source fingerprint verification and detached in-memory projection are baseline. Malformed/cross-run lineage, projection-fault and attachment/catalog escape corpus still required. | OPEN |
-| SQL statement admission | Can multi-statement, DDL/DML, `ATTACH`, `COPY`, config, extension or secret operations pass as analytical SQL? | Existing adversarial corpus covers direct forms. Obfuscation/equivalent catalog/function cases still required after full runtime composition. | OPEN |
-| SQL host access | Can file/network readers, dynamic SQL, environment/config/secret/catalog helpers or side-effecting functions access the host? | External access/extensions/secrets are disabled and dangerous helpers are denied. Qualified/quoted/comment/path-bearing equivalent attacks still required. | OPEN |
-| Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection and cross-phase diagnostics are green. Remaining side-channel/fault cases still required. | REVIEWED |
+| Source selection / attachment | Can caller-controlled IDs, paths, aliases, attachment syntax or projection failure reach/mutate original evidence? | Server-owned logical `sourceId`, read-only opening, fingerprint verification and detached in-memory projection are baseline. TREE 11.7 now runs a real Domain-composed hostile corpus containing implicit local/remote scans, detached `evidence.main.history`, export/maintenance statements and equivalent reader/catalog forms; original source bytes and fingerprint remain exact. No source escape or mutation survived. | REVIEWED |
+| SQL statement admission | Can multi-statement, DDL/DML, `ATTACH`, `COPY`, config, extension or secret operations pass as analytical SQL? | Direct adversarial admission plus composed Domain corpus cover multi-statement/non-SELECT, DDL/DML, `ATTACH/DETACH`, `COPY/EXPORT`, config/maintenance, extension/secret and quoted/comment-obfuscated helper forms. `H-11.7-006` closes the discovered relation-form settings-catalog gap. | REVIEWED |
+| SQL host access | Can file/network readers, dynamic SQL, environment/config/secret/catalog helpers or side-effecting functions access the host? | External access/extensions/secrets are disabled; dangerous functions are denied; composed local/remote replacement scans and reader aliases fail closed. `H-11.7-006` additionally blocks PostgreSQL-compatible `pg_settings` relation access in plain, qualified and quoted forms while preserving inert strings/comments and safe schema discovery. | REVIEWED |
+| Phase isolation | Can Development SQL or lower-phase APIs expose Validation/Holdout rows, outcomes, metadata or lineage? | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection and cross-phase diagnostics are green. Remaining side-channel/fault cases belong to later diagnostics/transport review. | REVIEWED |
 | Run/object ownership | Can IDs from another Research Run or Evidence Plan be replayed against reads/mutations? | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. No cross-run escape found. `H-11.7-003` additionally binds Finalist support to the exact current Evidence Plan Validation partition. | REVIEWED |
-| Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | Result metadata is run+handle scoped; source Job must be same-run; cursor is handle-bound; restart paging is green. `H-11.7-005` now purges provisional Results owned by interrupted `RUNNING` Jobs and clears their published progress handles while preserving `SUCCEEDED` Result authority. | REVIEWED |
-| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, request fingerprints, `clientRequestId`, queue/readers are baseline. Holdout concurrent duplicate execution is closed by `H-11.7-001`; interrupted Job restart reconciliation now owns provisional Result cleanup via `H-11.7-005`. Further expensive-operation conflict races remain review work. | REVIEWED |
-| Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Queue/running/compute cancellation and interrupt tests are green. `H-11.7-004` closes the same-process late-cancel race once durable Result publication begins; `H-11.7-005` closes the crash/restart split after provisional Result publication. Remaining late-callback/resource responsiveness cases still require review. | REVIEWED |
-| Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Holdout pre-execution claim closes restart uncertainty (`H-11.7-002`); Finalist lock revalidates current-plan Validation support (`H-11.7-003`); late cancellation cannot split Result/Job truth (`H-11.7-004`); restart transactionally removes provisional Results/handles before failing interrupted Jobs (`H-11.7-005`). Representative managed publication/restart composition is now reviewed; SQL/source and other matrix areas remain separate. | REVIEWED |
-| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Same-process duplicate consumption is closed by `H-11.7-001`; restart duplicate consumption by `H-11.7-002`; superseded-plan Validation support by `H-11.7-003`. Contamination/side-channel/publication-fault attacks remain. | REVIEWED |
+| Result handles / cursors | Can a handle/cursor be used cross-run, cross-result or after incompatible restart/phase state? | Result metadata is run+handle scoped; source Job must be same-run; cursor is handle-bound; restart paging is green. `H-11.7-005` purges provisional Results owned by interrupted `RUNNING` Jobs and clears their published progress handles while preserving `SUCCEEDED` Result authority. | REVIEWED |
+| Jobs / idempotency | Can duplicate/conflicting requests create duplicate work or inconsistent durable authority? | Durable jobs, request fingerprints, `clientRequestId`, queue/readers are baseline. Holdout concurrent duplicate execution is closed by `H-11.7-001`; interrupted Job restart reconciliation owns provisional Result cleanup via `H-11.7-005`. | REVIEWED |
+| Cancellation / timeout | Can cancelled/timed-out work later publish success/results or keep consuming authority/resources? | Queue/running/compute cancellation and interrupt tests are green. `H-11.7-004` closes the same-process late-cancel race once durable Result publication begins; `H-11.7-005` closes the crash/restart split after provisional Result publication. Remaining responsiveness/resource attacks belong to the resource matrix. | REVIEWED |
+| Ledger transactionality | Can crash/fault injection create half-created authoritative artifacts, exposures, finalists or recommendations? | Holdout pre-execution claim closes restart uncertainty (`H-11.7-002`); Finalist lock revalidates current-plan Validation support (`H-11.7-003`); late cancellation cannot split Result/Job truth (`H-11.7-004`); restart transactionally removes provisional Results/handles before failing interrupted Jobs (`H-11.7-005`). | REVIEWED |
+| Validation / Holdout | Can Holdout be evaluated twice, exposed early, reused after contamination or leaked through public views/errors? | Same-process duplicate consumption is closed by `H-11.7-001`; restart duplicate consumption by `H-11.7-002`; superseded-plan Validation support by `H-11.7-003`. Contamination/error-side-channel cases remain part of diagnostics review. | REVIEWED |
 | MCP tool boundary | Can tool name/schema/arguments bypass Domain validation or expose non-public internals? | Real MCP schema rejects missing/extra/wrong-type authority fields and preserves valid IDs exactly for Domain authorization. Oversized/error-mapping/lifecycle fuzz remains. | REVIEWED |
 | Local transport / process | Can transport accept unapproved network/origin/body/path exposure or leak lifecycle state? | Pinned MCP v2 stdio lifecycle is baseline. Actual stdio/process and absence/strictness of unintended local HTTP/browser research surfaces still require closure. | OPEN |
 | Public-safe diagnostics | Can SQL, provider values, paths, secrets/config, stack traces or unbounded rows leak via errors/logs/artifacts? | Stable bounded public errors are baseline. Representative invalid/security/internal failure surfaces still require inspection. | OPEN |
-| Source immutability | Can any hostile sequence mutate, repair, migrate or replace evidence? | Existing source-byte/fingerprint proofs are baseline. Full hostile corpus including failure/cancellation/restart still requires before/after proof. | OPEN |
+| Source immutability | Can any hostile sequence mutate, repair, migrate or replace evidence? | Existing source-byte/fingerprint proofs are joined by a real Domain-composed TREE 11.7 hostile SQL corpus. Exact source bytes and source fingerprint are unchanged after all accepted/rejected attacks, and no attempted export artifact is created. | REVIEWED |
 | Resource bounds | Can expensive SQL/results/concurrency escape configured CPU/RAM/temp/result/run budgets? | DuckDB limits, hierarchical budgets, result paging and bounded queue/readers are baseline. Adversarial growth/duplicate/cancellation responsiveness still required. | OPEN |
 
 ## Static/composed findings that remain valid
@@ -75,18 +75,18 @@ verify expected source fingerprint
 → execute AI-authored SQL
 ```
 
-The existing adversarial service proof already exercises broad analytical SELECTs plus direct file/network readers, `query/query_table`, environment/settings/catalog helpers, multi-statement input, DDL/DML, `ATTACH/DETACH`, `COPY`, `PRAGMA/SET/RESET`, extension and secret attempts, a discovered side-effecting function, hidden source/holdout relation names, and exact source-byte/fingerprint equality afterward. This remains baseline evidence, not TREE `11.7` closure.
+The baseline adversarial proof exercises broad analytical SELECTs plus direct file/network readers, `query/query_table`, environment/settings/catalog helpers, multi-statement input, DDL/DML, `ATTACH/DETACH`, `COPY`, `PRAGMA/SET/RESET`, extension and secret attempts, side-effecting functions and hidden source/Holdout relation names. TREE 11.7 adds the real `openResearchDomain()` composition, namespaced/quoted/commented equivalents, implicit local/remote replacement scans, reader aliases, detached-source references, PostgreSQL-compatible settings relations and maintenance/export statements. The composed proof verifies exact source bytes and fingerprint after the hostile sequence.
 
 ### Result Handle / cursor ownership
 
-The first composed ownership pass found no cross-run Result Handle escape:
+The composed ownership pass found no cross-run Result Handle escape:
 
 - Result lookup requires both `research_run_id` and `result_handle`.
 - Result creation requires the source Job under the same Research Run.
 - Paging resolves the scoped Result Handle before immutable rows.
 - Cursor payloads bind to the exact Result Handle and reject cross-handle/out-of-range use.
 - Existing proof resumes a cursor after reopening and rejects cross-run/cross-handle substitution.
-- Restart reconciliation now treats Results owned by still-`RUNNING` Jobs as provisional: `H-11.7-005` removes those rows and their progress handles before terminalizing the interrupted Job as `FAILED`, while a `SUCCEEDED` control Result remains unchanged.
+- Restart reconciliation treats Results owned by still-`RUNNING` Jobs as provisional: `H-11.7-005` removes those rows and their progress handles before terminalizing the interrupted Job as `FAILED`, while a `SUCCEEDED` control Result remains unchanged.
 
 ### Cross-run / phase / MCP authority parity
 
@@ -113,7 +113,7 @@ actual MCP transport JSON schema
 
 **Green evidence:** Fast `#965` / `38342962058`, Planning `#1161`, Workload `#551`.
 
-**Analogous review:** MCP and managed-domain Holdout routes delegate to the same Domain boundary. Development/Validation experiments are intentionally repeatable, while managed Development jobs already have durable idempotency authority. No second exact same-process one-shot sealed-evidence path was found.
+**Analogous review:** MCP and managed-domain Holdout routes delegate to the same Domain boundary. Development/Validation experiments are intentionally repeatable, while managed Development jobs already have durable idempotency authority.
 
 **Status:** FIXED / regression GREEN.
 
@@ -165,7 +165,7 @@ The Domain queue serializes each component call, not the entire outer `createFin
 
 **GREEN proof:** Fast `#974` / `38345355839` passed unit `301/301`, service `305/305`, the new regression, all prior hardening regressions and order acceptance. Planning `#1170` / `38345355825` and Workload `#560` / `38345355802` are green.
 
-**Analogous-area review:** a completed Validation Experiment is not Finalist support until a durable Validation exposure exists. Final Recommendation writes its terminal recommendation artifact and Run terminal transition transactionally. Post-Holdout contamination is recomputed from immutable Query lineage and the durable Holdout baseline. No second exact stale-precheck→durable-lock defect was found in this slice.
+**Analogous-area review:** a completed Validation Experiment is not Finalist support until a durable Validation exposure exists. Final Recommendation writes its terminal recommendation artifact and Run terminal transition transactionally. Post-Holdout contamination is recomputed from immutable Query lineage and the durable Holdout baseline.
 
 **Status:** FIXED / RED→GREEN regression.
 
@@ -213,25 +213,39 @@ The H-004 success-commit owner is intentionally process-local, so it cannot repa
 
 **Deterministic RED proof:** commit `245aa0b8edd05761b52df66d751ff17bed4a06cd` adds `tests/service/research-job-result-restart-hardening.test.mjs`. It creates an interrupted `RUNNING` Job and a `SUCCEEDED` negative-control Job, publishes one Result for each, restarts the Job ledger and requires the interrupted Result to disappear while the succeeded Result remains. Fast `#982` / `38347232239` passed unit `301/301`, failed service `306/307`, and the sole failure was the new H-005 assertion because the interrupted Result remained readable. Planning `#1178` and Workload `#568` were green.
 
-**Smallest sufficient fix:** commit `62152ccf835da6b00cc8d1f595527ab889d89e2a` moves default startup reconciliation into the composed Job-ledger wrapper where both Job and optional Result tables can be reconciled in one DuckDB transaction. For Jobs still `RUNNING`, restart reconciliation now:
-
-1. finds Results whose exact `(research_run_id, source_job_id)` belongs to an interrupted Job;
-2. deletes their Result rows and Result metadata when the Result schema exists;
-3. clears only `progress.resultHandles` for those interrupted Jobs while preserving the rest of progress/budget accounting;
-4. marks the same Jobs `FAILED` with `RESEARCH_JOB_INTERRUPTED`;
-5. commits the whole reconciliation atomically, or rolls it all back on failure.
-
-`reconcileInterrupted:false` remains the transient internal path during active managed work, so normal in-process Job access does not repeatedly run startup reconciliation. No schema or public API was added.
+**Smallest sufficient fix:** commit `62152ccf835da6b00cc8d1f595527ab889d89e2a` moves default startup reconciliation into the composed Job-ledger wrapper where both Job and optional Result tables can be reconciled in one DuckDB transaction. For Jobs still `RUNNING`, restart reconciliation finds and deletes their provisional Result rows/metadata, clears only `progress.resultHandles`, marks the same Jobs `FAILED / RESEARCH_JOB_INTERRUPTED`, and commits the whole reconciliation atomically. `reconcileInterrupted:false` remains the transient internal path during active managed work. No schema or public API was added.
 
 **Expanded regression:** commit `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` strengthens the same test by persisting `progress.resultHandles` for both Jobs before the simulated crash. After restart it proves the interrupted Job is `FAILED` with an empty handle list and no readable Result, while the `SUCCEEDED` Job retains both its handle and Result.
 
-**Why fail-closed cleanup is correct:** Result existence alone cannot prove every correctness-critical terminal step completed, so restart must not promote an interrupted Job to `SUCCEEDED`. Conversely, deleting only Results owned by Jobs still `RUNNING` prevents provisional artifacts from becoming authority while preserving already-terminal successful Results. Durable resource/budget consumption is intentionally not refunded because the work was actually consumed; the cleanup changes publication authority, not accounting history.
+**Why fail-closed cleanup is correct:** Result existence alone cannot prove every correctness-critical terminal step completed, so restart must not promote an interrupted Job to `SUCCEEDED`. Conversely, deleting only Results owned by Jobs still `RUNNING` prevents provisional artifacts from becoming authority while preserving already-terminal successful Results. Durable resource/budget consumption is intentionally not refunded because the work was actually consumed.
 
 **GREEN proof:** Fast `#984` / `38347610524` passed unit `301/301`, service `307/307`, H-005, H-004, all legacy Job cancellation/restart/idempotency proofs and order acceptance. Planning `#1180` / `38347610422` and Workload `#570` / `38347610525` are green.
 
-**Analogous-area review:** managed Development Experiment and managed Research SQL share this Job/Result lifecycle and are both covered. H-004 owns same-process cancel-vs-publication; H-005 owns crash/restart after provisional publication. Succeeded Result authority is explicitly preserved by the regression control. Holdout uses its separate durable pre-execution claim/completion protocol (`H-11.7-002`), and Final Recommendation already publishes artifact + terminal Run state transactionally. No second managed Result restart bypass was found in this slice.
+**Analogous-area review:** managed Development Experiment and managed Research SQL share this Job/Result lifecycle and are both covered. H-004 owns same-process cancel-vs-publication; H-005 owns crash/restart after provisional publication. Holdout uses its separate durable pre-execution claim/completion protocol (`H-11.7-002`), and Final Recommendation already publishes artifact + terminal Run state transactionally.
 
 **Status:** FIXED / deterministic RED→GREEN restart regression.
+
+## Fixed finding H-11.7-006 — PostgreSQL-compatible `pg_settings` relation exposed sandbox configuration
+
+**Severity:** blocking security/data-boundary defect — fixed.
+
+**Vulnerable sequence:** Research SQL correctly denied `duckdb_settings()` and `current_setting(...)`, but the same configuration family was also available through DuckDB's PostgreSQL-compatible `pg_settings` relation. Queries such as `SELECT name, setting FROM pg_settings`, `pg_catalog.pg_settings`, and the fully quoted equivalent were valid analytical `SELECT`s and did not invoke a function, so the function-call admission lexer never saw them.
+
+**Why this is material:** the Research security contract permits only safe system/schema introspection needed for authoring. Secret/config/file-reader/path-bearing metadata outside curated Research relations must remain inaccessible. A settings relation is configuration authority/metadata, not ordinary analytical evidence, even when external access itself is disabled.
+
+**Deterministic RED proof:** commit `43616e0a3ba677d2b506cab9fbf82e62244b4a91` adds `tests/service/research-sql-host-source-hardening.test.mjs` through the real `openResearchDomain()` composition. Fast `#986` / `38348341605` passed unit `301/301`, failed service `307/308`, and the only new failure reported exactly three unexpected successes: PostgreSQL-compatible settings catalog, unqualified settings catalog, and quoted settings catalog. Planning `#1182` and Workload `#572` were green. Every other hostile form in that corpus was rejected and the source bytes/fingerprint remained unchanged.
+
+**Root cause:** Research SQL admission was intentionally layered over the shared Scanner function lexer. That lexer identifies invoked functions while ignoring comments and strings, but relation/view references are outside its contract. The security policy blocked the function representations of settings but omitted the equivalent relation representation.
+
+**Smallest sufficient fix:** commit `1da53186a84d8675bfd51ef7ba7969c66c6ef10e` factors the existing Scanner lexical walk so it can expose normalized identifiers while preserving the exact function-call behavior. Commit `ada298fc3318b225d85edb59127a16dd64a1895f` adds one Research-only forbidden identifier, `pg_settings`, to `research-server/research-sql-admission.js`. It reuses the existing stable `SCANNER_FORBIDDEN_FUNCTION` rejection contract rather than adding a new public error or SQL parser. Commit `4a8132506900266506bd049bddb467c65720cc7a` adds unit proof for plain, qualified, quoted and comment-separated relation forms while proving string/comment occurrences remain inert.
+
+**Composed hostile corpus / immutability proof:** the TREE 11.7 service regression also attempts namespaced/quoted/comment-separated file readers, dynamic SQL, pragma/catalog helpers, metadata readers, implicit local and remote replacement scans, JSON reader aliases, detached `evidence.main.history`, `EXPORT DATABASE`, `CHECKPOINT`, and `VACUUM`. After all hostile queries, a normal `research_history` query still succeeds; exact source bytes and source fingerprint equal the pre-attack values; and no export artifact exists.
+
+**GREEN proof:** Fast `#989` / `38348633907` passed unit `302/302`, service `308/308`, the new `pg_settings` unit proof, the composed TREE 11.7 host/source regression, prior Research SQL admission/escape proofs and order acceptance. Because the shared Scanner lexer changed, affected verification also includes Planning `#1185`, Workload `#575`, Replay `#137`, and Browser `#599`; all are green.
+
+**Analogous-area review:** `information_schema` and safe schema introspection remain available; the fix does not blacklist system catalogs wholesale. Existing dangerous DuckDB catalog/config functions remain explicitly denied. Implicit local/remote replacement scans and `read_json_objects`/`read_ndjson_objects` fail closed under the locked `enable_external_access=false` sandbox even though they are not separately added to the admission blacklist, so no redundant policy subsystem was introduced. Source mutation was not observed anywhere in the composed corpus.
+
+**Status:** FIXED / deterministic RED→GREEN / Browser+Replay affected verification GREEN.
 
 ## Verification ledger
 
@@ -252,8 +266,10 @@ The H-004 success-commit owner is intentionally process-local, so it cannot repa
 | `45152a2da9841c14bec601bd19062a5134705d4e` | Fast `#978` | RED intermediate — generic controller boundary alone did not cover managed publishers |
 | `2e5496c90b05da5e2115fbaa47fddf5057f44e20` | Fast `#979`, Planning `#1175`, Workload `#565` | GREEN — unit `301/301`, service `306/306`, H-004 + legacy cancellation PASS, order acceptance PASS |
 | `245aa0b8edd05761b52df66d751ff17bed4a06cd` | Fast `#982` / `38347232239` | RED-by-design — unit `301/301`, service `306/307`; only H-005 restart Result regression failed; Planning `#1178` + Workload `#568` green |
-| `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Fast `#984` / `38347610524` | GREEN — unit `301/301`, service `307/307`, H-005 + H-004 + legacy cancellation/restart/idempotency PASS, order acceptance PASS |
-| `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Planning `#1180` + Workload `#570` | GREEN |
+| `9088c6cb92ba99c51c3c1c957b4e64aa62916cb3` | Fast `#984`, Planning `#1180`, Workload `#570` | GREEN — unit `301/301`, service `307/307`, H-005 + H-004 + legacy cancellation/restart/idempotency PASS, order acceptance PASS |
+| `43616e0a3ba677d2b506cab9fbf82e62244b4a91` | Fast `#986` / `38348341605` | RED-by-design — unit `301/301`, service `307/308`; only H-006 composed host/source regression failed and identified the three `pg_settings` relation forms; Planning `#1182` + Workload `#572` green |
+| `4a8132506900266506bd049bddb467c65720cc7a` | Fast `#989` / `38348633907` | GREEN — unit `302/302`, service `308/308`, H-006 unit + composed host/source/immutability proofs PASS, order acceptance PASS |
+| `4a8132506900266506bd049bddb467c65720cc7a` | Planning `#1185`, Workload `#575`, Replay `#137`, Browser `#599` | GREEN — shared Scanner lexer affected verification PASS |
 | PR `#108` | Audit integration PR | DRAFT; executable CI vehicle while TREE `11.7` remains in progress; do not merge yet |
 
 ## Current audit result
@@ -264,11 +280,13 @@ The H-004 success-commit owner is intentionally process-local, so it cannot repa
 - `H-11.7-003`: fixed — Finalist lock cannot inherit Validation support from a superseded Evidence Plan.
 - `H-11.7-004`: fixed — once managed durable Result publication begins, late cancellation cannot leave a readable Result under a `CANCELLED` Job.
 - `H-11.7-005`: fixed — restart cannot leave provisional Results/handles from an interrupted `RUNNING` Job authoritative; a `SUCCEEDED` control retains its Result authority.
+- `H-11.7-006`: fixed — PostgreSQL-compatible `pg_settings` relation access cannot bypass the Research configuration boundary; plain/qualified/quoted forms are denied without breaking inert text or safe schema introspection.
+- SQL statement admission, SQL host access, source selection/attachment and source immutability are now `REVIEWED` on a real Domain-composed hostile corpus with exact before/after source bytes/fingerprint proof.
 - Cross-run / phase / MCP parity: no material bypass found in reviewed slices.
-- Result Handle/cursor ownership remains `REVIEWED`: cross-run/cross-handle/restart ownership is green, including interrupted-Result cleanup; broader phase/state fuzz can be revisited only if later attacks expose a new path.
-- Cancellation/timeout remains `REVIEWED`, not closed: queued/running/compute/late-publication and crash-after-publication splits are green; remaining responsiveness/resource attacks belong to the open resource matrix.
-- Ledger transactionality is now `REVIEWED`: representative Holdout, Finalist, late-cancel and managed Result crash/restart publication splits have deterministic proofs and fail-closed fixes. No closure claim is made for unrelated SQL/source/transport/resource areas.
-- MCP boundary remains `REVIEWED`, not closed: oversized/error-mapping/lifecycle fuzz remains.
-- Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/side-channel cases remain.
-- Closure claim: none. SQL-host/source, source immutability, diagnostics/transport and resource attacks still remain before TREE `11.7` can be marked done.
-- Next audit slice: systematic SQL-host/source adversarial corpus plus before/after source-immutability proof; after that, diagnostics/transport and resource-bound attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
+- Result Handle/cursor ownership remains `REVIEWED`: cross-run/cross-handle/restart ownership is green, including interrupted-Result cleanup.
+- Cancellation/timeout remains `REVIEWED`: queued/running/compute/late-publication and crash-after-publication splits are green; remaining responsiveness/resource attacks belong to the resource matrix.
+- Ledger transactionality is `REVIEWED`: representative Holdout, Finalist, late-cancel and managed Result crash/restart publication splits have deterministic proofs and fail-closed fixes.
+- MCP boundary remains `REVIEWED`, not closed: oversized/error-mapping/lifecycle fuzz remains and is grouped with the remaining transport/diagnostic slice.
+- Validation/Holdout remains `REVIEWED`, not closed: duplicate consumption and stale-plan Finalist support are fail-closed; contamination/error-side-channel cases remain for diagnostics review.
+- Closure claim: none. Local transport/process, public-safe diagnostics and resource-bound attacks remain before TREE `11.7` can be marked done.
+- Next audit slice: composed diagnostics + local transport/process adversarial review, including MCP oversized/error/lifecycle behavior and public-safe failure surfaces; after that, resource-bound/growth/cancellation responsiveness attacks. Any material finding remains with Chat 41 through RCA, fix, regression and green verification.
