@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_in_progress_with_independent_acceptance_blocker
+overall_status: branch_12_ready_for_chat_49_with_independent_acceptance_blocker
 
 current:
-  chat: "Chat 48"
-  node: "12.7"
-  title: "Separate Trading Skill + Trading MCP"
-  status: in_progress
-  activation_required: false
+  chat: null
+  node: "12.8"
+  title: "Episode attribution + policy learning + deterministic distillation"
+  status: pending
+  activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 63
+  done: 64
   pending: 2
-  in_progress: 1
+  in_progress: 0
   blocked: 1
-  current_chat: "Chat 48"
-  current_node: "12.7"
+  current_chat: null
+  current_node: "12.8"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.7"
-  owner: "Chat 48"
-  status: in_progress
-  action: "Chat 48 explicitly activated TREE 12.7 on focused branch chat48-tree-12-7-trading-mcp. Proceed proof-first with separate Trading Skill/MCP packaging and bounded durable-ID operating integration over existing Trading Domain/Supervisor authority; do not add broker/risk bypass paths. TREE 12.4 and 12.6 are done; B-US-009 remains independently blocked on target-machine evidence."
+  task: "12.8"
+  owner: "Chat 49"
+  status: pending
+  action: "TREE 12.7 / Chat 48 is reclosed on PR #127 with pre-reclosure Planning #1369, Workload #696, Replay #237, Fast #1147 and Browser #723 green after STATUS-projection RCA. Start Chat 49 only through explicit numbered-chat activation, then implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
