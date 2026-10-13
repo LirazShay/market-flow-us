@@ -72,7 +72,7 @@ async function initializedServer() {
   return { server, transport };
 }
 
-test("TREE 11.6 MCP v2 server publishes the thin 45-tool registry and no unmanaged shortcuts", async () => {
+test("TREE 11.6 MCP v2 server publishes the thin 46-tool registry and no unmanaged shortcuts", async () => {
   const { server, transport } = await initializedServer();
   try {
     const response = await transport.request({
@@ -82,9 +82,10 @@ test("TREE 11.6 MCP v2 server publishes the thin 45-tool registry and no unmanag
       params: {}
     });
     assert.equal(response.error, undefined);
-    assert.equal(response.result.tools.length, 45);
+    assert.equal(response.result.tools.length, 46);
     const names = new Set(response.result.tools.map((tool) => tool.name));
     assert.ok(names.has("describe_research_environment"));
+    assert.ok(names.has("describe_research_schema"));
     assert.ok(names.has("submit_development_experiment"));
     assert.ok(names.has("submit_development_research_sql"));
     assert.ok(names.has("execute_holdout_evaluation"));
