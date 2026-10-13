@@ -46,15 +46,15 @@ No blocker is deferred to `11.8` merely because representative/target-machine ac
 | Phase isolation | Development-only SQL, typed Validation/Holdout authority, MCP phase-shape rejection, post-Holdout contamination checks and public-safe error surfaces are green. No material phase/error side-channel bypass was found in the reviewed corpus. | REVIEWED |
 | Run/object ownership | Objective/query/evidence/partition/result/finalist/Holdout boundaries are run-scoped. `H-11.7-003` additionally binds Finalist support to the exact current-plan Validation partition. | REVIEWED |
 | Result handles / cursors | Run+handle scoping, handle-bound cursors and restart paging are green. `H-11.7-005` removes provisional Results/handles from interrupted Jobs while preserving `SUCCEEDED` authority. | REVIEWED |
-| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005` closes interrupted Result publication; `H-11.7-008` closes unstable durable failure diagnostics. | REVIEWED |
-| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Remaining responsiveness pressure belongs to resource review. | REVIEWED |
+| Jobs / idempotency | Durable request fingerprints/idempotency are baseline; `H-11.7-001` closes concurrent Holdout duplication; `H-11.7-005` closes interrupted Result publication; `H-11.7-008` closes unstable durable failure diagnostics. Composed queue-pressure proof shows 32 concurrent exact retries reuse one queued Job and one queue slot. | REVIEWED |
+| Cancellation / timeout | Queue/running/compute cancellation is green; `H-11.7-004` closes late cancel once Result publication starts; `H-11.7-005` closes crash/restart after provisional publication. Composed duplicate-pressure proof cancels queued work before start and proves it never executes after capacity is released. | REVIEWED |
 | Ledger transactionality | `H-11.7-002` Holdout claim, `H-11.7-003` Finalist current-plan recheck, `H-11.7-004` success-commit boundary and `H-11.7-005` restart reconciliation cover representative composed publication/fault splits. | REVIEWED |
 | Validation / Holdout | Concurrent/restart duplicate consumption, superseded-plan Finalist support, post-Holdout contamination and finalization restart/source-drift paths are fail-closed. Public error surfaces are covered by the diagnostics slice. | REVIEWED |
 | MCP tool boundary | Real MCP schema rejects malformed/authority-shaping arguments, preserves exact logical IDs for Domain authorization, and applies transport-side SQL/Experiment-reference ceilings via `H-11.7-007`. Arbitrary tool exception text/invalid codes are sanitized. | REVIEWED |
 | Local transport / process | Real stdio restart is baseline. TREE 11.7 additionally proves malformed framing does not kill or poison the process, valid requests remain usable, EOF shuts down cleanly, SIGTERM is product-owned, and stdout/stderr do not echo private canaries/paths. | REVIEWED |
 | Public-safe diagnostics | Synchronous MCP failures, stdio diagnostics and durable Job failure progress are explicitly bounded. `H-11.7-008` normalizes invalid nested durable failure codes while preserving stable codes. | REVIEWED |
 | Source immutability | TREE 11.7 composed SQL-host corpus proves exact before/after source bytes + fingerprint and no export artifact. | REVIEWED |
-| Resource bounds | CPU/RAM/temp/result/run budgets, paging and bounded queue/readers are baseline; adversarial growth/duplicate/cancellation responsiveness remains. | OPEN |
+| Resource bounds | CPU/RAM/temp, hierarchical durable budgets, paging, queue/readers and growth ceilings are green. `H-11.7-009` adds pre-materialization row/byte bounds to Research SQL output; composed duplicate-pressure/cancellation proof closes amplification/responsiveness review. | REVIEWED |
 
 ## Composed architecture facts
 
@@ -95,6 +95,18 @@ actual MCP transport JSON schema
 ```
 
 `tests/service/research-mcp-adversarial-authority-boundary.test.mjs` proves real MCP rejects missing/extra/wrong-type authority fields before Domain and forwards valid IDs unchanged. `tests/service/research-mcp-transport-hardening.test.mjs` proves transport ceilings reject oversized Research SQL / Query Artifact SQL and over-wide Experiment references before Domain while arbitrary exception message/path/code material does not cross the MCP result boundary. `tests/service/research-mcp-stdio-adversarial.test.mjs` proves malformed framing, EOF and SIGTERM behavior against the real stdio process without private diagnostic leakage.
+
+### Resource/output boundary
+
+```text
+DuckDB CPU/RAM/temp-disk ceilings
+→ Research-only bounded Scanner streaming
+→ hard Result-Ledger row/byte ceilings before full JS materialization
+→ managed hierarchical request/job/run/server budget charge
+→ durable Result publication
+```
+
+Normal Scanner/Backtest execution keeps its existing `runAndReadAll()` behavior because bounded streaming is opt-in. Research SQL alone passes the existing Result Ledger hard caps into Scanner execution. Overflow fails closed with stable `RESEARCH_BUDGET_EXCEEDED`; durable managed budgets and Result Ledger validation remain independent backstops. Research SQL cancellation remains on the existing session `interrupt()` + active-execution drain path.
 
 ## Fixed findings
 
@@ -194,6 +206,28 @@ actual MCP transport JSON schema
 
 **Analogous review:** synchronous MCP failures, stdio diagnostics and top-level Job error codes already share the stable-code policy. H-008 closes the inconsistent nested durable progress surface while the legacy stable-code test proves legitimate codes are still retained.
 
+### H-11.7-009 — Research SQL output budget was enforced after full JS materialization
+
+**Severity:** blocking resource-boundary defect — fixed.
+
+**Root cause:** managed Research SQL executed through the shared Scanner with `prepared.runAndReadAll()` / `getRowsJson()`, then converted/serialized the complete result, and only afterward consumed `resultRows` / `resultBytes` managed budgets. DuckDB CPU/RAM/temp-disk ceilings bounded the engine, and Result Ledger limits prevented oversized publication, but a hostile analytical SELECT could still force an unnecessarily large JS-side materialization before denial.
+
+**RED:** `b81af194b15a1d035bfcb84cb0095828389d1dce` adds `tests/service/research-sql-materialization-hardening.test.mjs`. Fast `#1003` passed unit `302/302`, failed service `313/315` only on the two new row/byte materialization regressions. Both showed `runAndReadAll()` was used and streaming was not. Planning `#1199`, Workload `#589`, Replay `#151` stayed green.
+
+**Fix:** `20585971acecc14ae544c20df3e2600e0f664712` adds an opt-in bounded Scanner execution path using DuckDB streaming and fails closed with stable `RESEARCH_BUDGET_EXCEEDED` before accumulating beyond the configured row/serialized-byte ceiling. `5d27e6c79cf399cea8418e2ba3f1a2591098a240` hardens the regression around that fail-closed contract. `852812f42793a54362b672aa9bbf74b1942b177d` wires Research SQL only to the existing Result Ledger hard limits (`maxResultRows` / `maxResultBytes`). Normal Scanner/Backtest remains on its existing path.
+
+**Green:** candidate `852812f42793a54362b672aa9bbf74b1942b177d` passed Fast `#1007` unit `302/302`, service `315/315`, both H-009 tests and order acceptance; Planning `#1203`, Workload `#593`, Replay `#155`, Browser `#617` are green, including full Chromium + Local Fake acceptance.
+
+**Analogous review:** managed hierarchical budgets and Result Ledger validation remain independent durable/publication backstops; existing SQL timeout, direct DuckDB interrupt and `session.close()` interrupt+drain proofs remain green with streaming enabled. No generic result subsystem was added.
+
+## Composed duplicate / queue-pressure / cancellation proof
+
+`tests/service/research-managed-duplicate-pressure-hardening.test.mjs` saturates one active Job and a queue capacity of exactly one, then races 32 identical `clientRequestId` submissions for the queued request. The proof requires one durable duplicate Job identity, one queued slot, no additional execution, successful queued cancellation, no delayed execution after capacity is released, and exact retry reuse after terminal cancellation.
+
+Initial candidate `770380c6e98ed4c2f88a9691290e8f6e14de6782` / Fast `#1008` exposed a test-fixture race only: the Job legitimately becomes `RUNNING` before the injected execution seam is entered, so the fixture asserted `executionCount` too early. Existing resource/cancellation/idempotency tests stayed green and no product change was made.
+
+Corrected proof `b90aba9e4ad2b8903b9b8a197486182c1b505942` waits for actual execution-seam entry. Fast `#1009` passed unit `302/302`, service `316/316`, the concurrent duplicate-pressure proof and order acceptance; Planning `#1205`, Workload `#595`, Replay `#157`, Browser `#619` are green. No additional product defect was found.
+
 ## Real stdio adversarial process proof
 
 `2b701388fc224c027a40327ed6b65c3127bdb72b` adds `tests/service/research-mcp-stdio-adversarial.test.mjs` against the real `research-server/mcp-stdio.js` child process.
@@ -232,17 +266,20 @@ No additional production defect was found by the stdio process fuzz.
 | `2b701388fc224c027a40327ed6b65c3127bdb72b` | Fast `#998`, Planning `#1194`, Workload `#584`, Replay `#146`, Browser `#608` | GREEN — real stdio malformed/EOF/SIGTERM proof |
 | `d6b51676378c59b0c71df5153563b555a8323df2` | Fast `#999` | RED-by-design — unit `302/302`, service `312/313`, only H-008 failed; Planning `#1195`, Workload `#585`, Replay `#147`, Browser `#609` green |
 | `de34b2b6ab934593537a5178e7dce56ec2bdb7c7` | Fast `#1000`, Planning `#1196`, Workload `#586`, Replay `#148`, Browser `#610` | GREEN — unit `302/302`, service `313/313`, H-008 + stable-code compatibility + order acceptance PASS |
+| `b81af194b15a1d035bfcb84cb0095828389d1dce` | Fast `#1003` | RED-by-design — unit `302/302`, service `313/315`, only H-009 row/byte pre-materialization proofs failed; Planning `#1199`, Workload `#589`, Replay `#151` green |
+| `852812f42793a54362b672aa9bbf74b1942b177d` | Fast `#1007`, Planning `#1203`, Workload `#593`, Replay `#155`, Browser `#617` | GREEN — unit `302/302`, service `315/315`, H-009 + existing SQL resource/cancel proofs + order acceptance PASS |
+| `770380c6e98ed4c2f88a9691290e8f6e14de6782` | Fast `#1008` | INVALID RED fixture — Job `RUNNING` transition preceded execution-seam entry; no product finding |
+| `b90aba9e4ad2b8903b9b8a197486182c1b505942` | Fast `#1009`, Planning `#1205`, Workload `#595`, Replay `#157`, Browser `#619` | GREEN — unit `302/302`, service `316/316`, 32-way duplicate queue-pressure/cancellation proof + order acceptance PASS |
 | PR `#108` | integration PR | DRAFT; do not merge while TREE `11.7` remains in progress |
 
 ## Current audit result
 
 - Audit status: `IN PROGRESS`.
-- `H-11.7-001` through `H-11.7-008`: fixed with deterministic proof and affected green verification.
-- SQL statement admission, SQL host access, source selection/attachment and source immutability are `REVIEWED` on a real Domain-composed hostile corpus with exact before/after source proof.
-- Cross-run / phase / MCP authority parity is `REVIEWED`; no material bypass was found in the reviewed corpus.
-- Result Handle/cursor, cancellation/timeout and ledger transactionality are `REVIEWED` with the H-004/H-005 restart/publication proofs green.
-- MCP tool boundary and local stdio transport/process are `REVIEWED`: authority-shape rejection, H-007 transport ceilings, malformed-framing recovery, EOF/SIGTERM lifecycle ownership and public-safe process diagnostics are green.
-- Public-safe diagnostics is `REVIEWED`: synchronous MCP failures, stdio output and durable Job progress all have explicit non-leak/stable-code proof; H-008 closes the only material inconsistency found in this slice.
-- Validation/Holdout is `REVIEWED`: concurrent/restart duplicate consumption, stale-plan support, post-Holdout contamination and finalization restart/source-drift paths are fail-closed in the reviewed proofs.
-- Closure claim: none. Resource-bound/growth/duplicate/cancellation-responsiveness attacks remain before TREE `11.7` can be marked done.
-- Next audit slice: adversarial resource-bound/growth/duplicate/cancellation-responsiveness attacks over composed managed Research workloads. Any material finding remains with Chat 41 through RCA, smallest sufficient fix, deterministic regression, analogous review and affected green verification.
+- `H-11.7-001` through `H-11.7-009`: fixed with deterministic proof and affected green verification.
+- Every adversarial matrix area is now `REVIEWED`; no matrix row remains `OPEN`.
+- SQL/source/host admission and source immutability are reclosed on composed hostile execution with exact before/after source proof.
+- Cross-run/phase/MCP authority, Result Handle/cursor, transactionality, Validation/Holdout and local stdio lifecycle are reclosed with the dedicated TREE 11.7 proofs.
+- Public-safe diagnostics are reclosed across MCP, stdio and durable Job progress.
+- Resource bounds are `REVIEWED`: pre-materialization Research SQL output is hard-bounded, durable hierarchical budgets/growth limits remain green across restart, queue/readers remain bounded, exact retries are idempotent under 32-way concurrent queue pressure, queued cancellation remains responsive, and streaming preserves interrupt/drain behavior.
+- Closure claim: none yet. The next step is the final TREE `11.7` success-evidence / diff reclosure against `.planning/PLAN.md`, including final PR review and required green verification before any `done`/merge transition.
+- Next audit slice: none. Next work unit is final TREE `11.7` reclosure; do not advance to Chat 42 / `11.8` until that reclosure is green and merged according to execution truth.
