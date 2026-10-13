@@ -1,5 +1,8 @@
 import { DUCKDB_HARDENING } from "../local-service/database/database.js";
-import { extractScannerFunctionCalls } from "../local-service/scanner/scanner.js";
+import {
+  extractScannerFunctionCalls,
+  extractScannerIdentifiers
+} from "../local-service/scanner/scanner.js";
 import {
   ERROR_CODES,
   ProtocolValidationError
@@ -20,6 +23,10 @@ const EXPLICIT_FORBIDDEN_FUNCTIONS = new Set([
   "query_table",
   "sniff_csv",
   "which_secret"
+]);
+
+const FORBIDDEN_IDENTIFIERS = new Set([
+  "pg_settings"
 ]);
 
 const FORBIDDEN_FUNCTION_PATTERNS = Object.freeze([
@@ -56,6 +63,10 @@ export function isResearchSqlForbiddenFunction(name) {
 export function assertResearchSqlAdmission(sql) {
   const calls = extractScannerFunctionCalls(sql);
   if (calls.some((name) => isResearchSqlForbiddenFunction(name))) {
+    throw forbiddenFunctionError();
+  }
+  const identifiers = extractScannerIdentifiers(sql);
+  if (identifiers.some((name) => FORBIDDEN_IDENTIFIERS.has(name))) {
     throw forbiddenFunctionError();
   }
   return Object.freeze(calls);
