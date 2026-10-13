@@ -8,7 +8,7 @@ Authority:
 - `.planning/EXECUTION.md` owns task, owner, status, real execution dependency and result/evidence truth.
 - root `STATUS.yaml` is a non-authoritative projection/navigation compatibility file only.
 - Numbered executor identity changes only through explicit activation such as `אני צאט 35 תתחיל`; a generic `continue` must never silently switch owners.
-- `backlog/` is future work only. `B-US-008` is historical provenance for completed Branch 11; `B-US-009` is active blocked external acceptance execution; `B-US-010` is promoted to active Branch 12 planning/execution provenance; `B-US-000` remains non-blocking future provider acceptance work.
+- `backlog/` is future work only. `B-US-008` is historical provenance for completed Branch 11; `B-US-009` is active blocked external acceptance execution; `B-US-010` is promoted to active Branch 12 planning/execution provenance; `B-US-000` remains non-blocking future provider acceptance work at `backlog/B-US-000-final-target-machine-provider-acceptance.md`.
 
 Status vocabulary: `pending | in_progress | done | blocked`.
 
