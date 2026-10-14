@@ -9,8 +9,8 @@ on:
       - "shared/**"
       - "backtest-lab/**"
       - "research-server/**"
-      - "trading-server/targeted-quote-watch.js"
-      - "ibkr-order-service/cpgw-adapter.js"
+      - "trading-server/**"
+      - "ibkr-order-service/**"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -24,8 +24,8 @@ on:
       - "shared/**"
       - "backtest-lab/**"
       - "research-server/**"
-      - "trading-server/targeted-quote-watch.js"
-      - "ibkr-order-service/cpgw-adapter.js"
+      - "trading-server/**"
+      - "ibkr-order-service/**"
       - "tests/fake-market/**"
       - "tests/workload/**"
       - "scripts/run-workload-profile.mjs"
@@ -220,9 +220,9 @@ jobs:
           path: test-results/workload/ci-research-resource.json
 
   trading-quote-watch:
-    name: Trading targeted quote polling cadence/resource probe
+    name: Trading quote-watch and integrated Supervisor workload probes
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
 
     steps:
       - uses: actions/checkout@v7
@@ -235,12 +235,17 @@ jobs:
       - name: Install pinned dependencies
         run: npm ci
 
-      - name: Run targeted quote polling workload probe
+      - name: Run Trading workload probes
         env:
+          MARKET_FLOW_US_WORKLOAD_PROFILE: ci
           MARKET_FLOW_US_TRADING_QUOTE_WATCH_REPORT: test-results/workload/ci-trading-quote-watch.json
-        run: node --test tests/workload/trading-targeted-quote-watch-probe.test.mjs
+          MARKET_FLOW_US_TRADING_SUPERVISOR_REPORT: test-results/workload/ci-trading-supervisor.json
+        run: >-
+          node --test
+          tests/workload/trading-targeted-quote-watch-probe.test.mjs
+          tests/workload/trading-supervisor-reclosure-probe.test.mjs
 
-      - name: Print sanitized targeted quote report
+      - name: Print sanitized Trading reports
         if: always()
         shell: bash
         run: |
@@ -249,12 +254,19 @@ jobs:
           else
             echo "Targeted quote-watch workload report was not produced."
           fi
+          if [[ -f test-results/workload/ci-trading-supervisor.json ]]; then
+            cat test-results/workload/ci-trading-supervisor.json
+          else
+            echo "Integrated Trading Supervisor workload report was not produced."
+          fi
 
-      - name: Upload sanitized targeted quote report
+      - name: Upload sanitized Trading reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: market-flow-us-workload-trading-quote-watch-${{ github.run_id }}-${{ github.run_attempt }}
+          name: market-flow-us-workload-trading-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: warn
           retention-days: 30
-          path: test-results/workload/ci-trading-quote-watch.json
+          path: |
+            test-results/workload/ci-trading-quote-watch.json
+            test-results/workload/ci-trading-supervisor.json
