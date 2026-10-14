@@ -55,6 +55,7 @@ jobs:
             backlog/B-US-005-replay-pre-user-run-hardening-audit.md
             backlog/B-US-006-basic-in-product-buy.md
             backlog/B-US-007-prioritize-backlog.md
+            backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md
             backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md
             .planning/BASELINE_PROVENANCE.md
             .planning/FINAL_ACCEPTANCE_EXECUTION.md .planning/FINAL_ACCEPTANCE_RUNBOOK.md
@@ -153,15 +154,20 @@ jobs:
           require_execution_allocation '12.7' 'Chat 48' '`12.4`, `12.6`'
           require_execution_allocation '12.8' 'Chat 49' '`12.7`'
           require_execution_allocation '12.9' 'Chat 50' '`12.8`'
-          require_text '`B-US-000`' .planning/EXECUTION.md
-          require_text 'non-blocking future provider acceptance work' .planning/EXECUTION.md
-          require_text '| `B-US-009` | Target-machine acceptance executor | `blocked` | `11.8` |' .planning/EXECUTION.md
+          require_execution_allocation 'B-US-009' 'Target-machine acceptance executor' '`11.8`, `12.9`'
+          require_text '`B-US-000` is historical provider-acceptance provenance consolidated into `B-US-009`' .planning/EXECUTION.md
           require_text '# Market Flow US Backlog' backlog/README.md
           require_text 'Backlog items are **non-blocking by default**.' backlog/README.md
           require_text 'B-US-007' backlog/README.md
           require_text 'B-US-010' backlog/README.md
-          require_text 'Blocking: `No`' backlog/B-US-000-final-target-machine-provider-acceptance.md
-          require_text 'latest intended runtime candidate' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text '# B-US-000 — Historical final target-machine/provider acceptance provenance' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text 'Unified successor: active execution task `B-US-009`' backlog/B-US-000-final-target-machine-provider-acceptance.md
+          require_text '# B-US-009 — Unified final target-machine / Desktop / provider acceptance' backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md
+          require_text 'single final external acceptance identity' backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md
+          require_text '# Market Flow US — Unified Post-Merge Final Acceptance Runbook' .planning/FINAL_ACCEPTANCE_RUNBOOK.md
+          require_text 'single authoritative user/target-machine acceptance runbook' .planning/FINAL_ACCEPTANCE_RUNBOOK.md
+          require_text '# Market Flow US — Unified Final Acceptance Evidence Ledger' .planning/FINAL_ACCEPTANCE_EXECUTION.md
+          require_text '| `U6` final evidence/reclosure | `PENDING` |' .planning/FINAL_ACCEPTANCE_EXECUTION.md
           require_text '# B-US-010 — Autonomous AI Trading & Strategy Distillation' backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md
           require_text 'backlog/README.md' .planning/BACKLOG.md
           require_text 'role: projection' STATUS.yaml
