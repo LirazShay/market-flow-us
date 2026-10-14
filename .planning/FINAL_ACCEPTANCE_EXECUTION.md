@@ -1,18 +1,23 @@
 # Market Flow US — Unified Final Acceptance Evidence Ledger
 
-This file is the public-safe checkpoint ledger for the **single** post-merge user/target-machine acceptance task `B-US-009`.
+This file is the public-safe checkpoint ledger for the **single** user/target-machine acceptance task `B-US-009`.
 
 ## Current state
 
 - Execution task: `B-US-009`
-- Status before final Branch-12 merge: `blocked`
-- Current repository pointer remains `12.9 / Chat 50` until implementation/repository reclosure is merged.
+- Status: `blocked` on user target-machine/Desktop/provider prerequisites only
+- Current repository pointer: `B-US-009`
 - Unified runbook: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
-- Candidate: `NOT_SELECTED_UNTIL_POST_MERGE`
+- Candidate: `NOT_SELECTED_UNTIL_U0_START`
 - Blocking implementation merge: **No**
+- Development/repository completion: **Yes**
 - External PASS fabricated: **No**
 
-`B-US-009` now consolidates the still-relevant external scope from the former Research-only target-machine task, historical `B-US-000` final provider acceptance, and Branch-12 external Trading evidence. There must not be a second active final user-acceptance task.
+Branch-12 implementation/repository work is complete. PR #131 squash-merged as `348405a96ffb6ddf86ca7bb267eb124afc5bbb1f`; post-merge `main` Planning #1445, Fast #1219, Browser #760, Replay #277 and Workload #733 are green, and the open-PR audit is clean.
+
+`B-US-009` consolidates the still-relevant external scope from the former Research-only target-machine task, historical `B-US-000` final provider acceptance, and Branch-12 external Trading evidence. There must not be a second active final user-acceptance task.
+
+The exact acceptance candidate is intentionally selected only when the user starts `U0`. At that time fetch fresh intended `main`, record the exact SHA, and use a clean checkout of that SHA for all candidate-bound evidence. This avoids pinning a stale candidate while the user performs acceptance later at their convenience.
 
 ## Historical provenance — not current PASS
 
@@ -24,7 +29,7 @@ The old deferred `B-US-000` attempt selected:
 
 It historically recorded `FR-0` PASS and a then-current host preflight PASS before deferral. Those facts are provenance only and do not pin or prove a future target-machine run.
 
-Branch-11 `W2T/W3` remain **NOT PASS** until executed against the post-merge candidate on the user's target machine.
+Branch-11 `W2T/W3` remain **NOT PASS** until executed against the U0-selected candidate on the user's target machine.
 
 Branch-12 real live-market shadow remains **NOT PASS** until the clean candidate-bound runner and verifier pass against the user's authenticated CPGW session.
 
@@ -34,7 +39,7 @@ A real-money LIVE order remains **NOT RUN** unless external permission exists an
 
 | Gate | Current state | Required evidence |
 |---|---|---|
-| `U0` exact post-merge candidate | `BLOCKED_PRE_MERGE` | Final implementation PR merged; intended `main` CI green; no superseding implementation PR; exact clean target-machine checkout SHA recorded. |
+| `U0` exact post-merge candidate | `READY_FOR_USER_START` | User starts final acceptance; fetch fresh intended `main`; confirm no superseding implementation PR; record exact clean target-machine checkout SHA. |
 | `U1` host/setup/deterministic target sanity | `PENDING` | `FR-1..FR-5`: Node 24/tooling, setup, unit/service, Replay/order acceptance, browser/Replay build and Chromium E2E on the accepted candidate. |
 | `U2` local product/workload/daily lifecycle | `PENDING` | `FR-6..FR-10`: local UI/Demo Buy/AI, Local Fake dynamic/recovery/restart, representative `4096 × 180` target workload and daily schema-v4 rollover. |
 | `U3` Research + Desktop | `PENDING` | `W2T` actual-evidence workload PASS; repository Desktop/MCP preflight PASS; real Desktop plugin mission and full restart/fresh-conversation resume of exact durable `researchRunId`. |
