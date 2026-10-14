@@ -68,6 +68,12 @@ function assertPrice(value) {
   }
 }
 
+function assertStringOrNull(value) {
+  if (value !== null && typeof value !== "string") {
+    fail("LIVE_SHADOW_EVIDENCE_SCHEMA_MISMATCH");
+  }
+}
+
 function normalizeExpectedCommit(value) {
   if (typeof value !== "string" || !COMMIT_RE.test(value.toLowerCase())) {
     fail("LIVE_SHADOW_EVIDENCE_EXPECTED_COMMIT_INVALID");
@@ -125,7 +131,7 @@ export function validateTradingLiveShadowEvidence(report, { expectedCommit } = {
   if (!Number.isSafeInteger(report.quote.conid) || report.quote.conid <= 0) {
     fail("LIVE_SHADOW_EVIDENCE_SCHEMA_MISMATCH");
   }
-  assertNonEmptyString(report.quote.marketDataAvailability);
+  assertStringOrNull(report.quote.marketDataAvailability);
   assertPrice(report.quote.last);
   assertPrice(report.quote.bid);
   assertPrice(report.quote.ask);

@@ -27,7 +27,7 @@ function validReport() {
       availability: "AVAILABLE",
       staleness: "FRESH",
       usableForNewDecision: true,
-      marketDataAvailability: "RpB",
+      marketDataAvailability: null,
       last: 221.5,
       bid: 221.49,
       ask: 221.51,
@@ -55,7 +55,7 @@ function validReport() {
   };
 }
 
-test("TREE 12.9 shadow evidence verifier accepts only the exact safe read-only PASS contract", () => {
+test("TREE 12.9 shadow evidence verifier accepts the exact safe read-only PASS contract even when optional provider availability text is null", () => {
   const result = validateTradingLiveShadowEvidence(validReport(), { expectedCommit: COMMIT });
 
   assert.deepEqual(result, {
