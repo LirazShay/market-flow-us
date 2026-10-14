@@ -119,7 +119,7 @@ A chat may split its own assigned leaf at safe implementation checkpoints when t
 - Pending: **1**.
 - In progress: **0**.
 - Blocked: **1** (`B-US-009`, external target-machine evidence).
-- Current normal sequence pointer: `12.8 / Chat 49` is done on `chat49-12-8-policy-distillation`; Chat 49 retains finalization ownership through PR #129 merge and post-merge `main` verification. `12.9 / Chat 50` remains pending and must not start before the explicit handoff.
+- Current normal sequence pointer: `12.9 / Chat 50` is pending because `12.8 / Chat 49` is done. Activation remains deliberately deferred until Chat 49 finishes PR #129 merge, post-merge `main` CI and open-PR verification; only then is the explicit Chat 50 handoff allowed.
 - `B-US-009 / W2T` remains separately blocked on target-machine evidence. It is not a dependency of `12.1`–`12.9`.
 - `12.2`, `12.3` and `12.5` are parallel siblings after `12.1`; chat numbering is not dependency truth.
 - `12.6` requires the risk boundary plus the already-completed order-service authority; `12.4` composes the candidate/quote/risk/order seams; later dependencies reflect actual composed prerequisites.
