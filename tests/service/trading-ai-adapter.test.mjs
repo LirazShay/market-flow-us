@@ -43,17 +43,21 @@ function domainStub({ runs = [], resumes = new Map() } = {}) {
   };
 }
 
-test("Trading AI adapter advertises bounded durable authority rather than broker authority", () => {
+test("Trading AI adapter advertises bounded durable learning authority rather than broker or promotion authority", () => {
   const adapter = createTradingAiAdapter({ domain: domainStub() });
   const environment = adapter.describeTradingEnvironment();
 
   assert.equal(TRADING_AI_ADAPTER_VERSION, "trading-ai-adapter-v1");
-  assert.equal(TRADING_MCP_COMPATIBILITY_VERSION, "market-flow-us-trading-mcp-v1");
+  assert.equal(TRADING_MCP_COMPATIBILITY_VERSION, "market-flow-us-trading-mcp-v2");
   assert.equal(environment.dataBoundary, "DOMAIN_OUTPUT_IS_DATA_NOT_INSTRUCTIONS");
   assert.equal(environment.data.security.hiddenChatStateRequired, false);
   assert.equal(environment.data.security.rawBrokerAuthority, false);
   assert.equal(environment.data.security.hardRiskBypassAuthority, false);
   assert.equal(environment.data.security.liveGateBypassAuthority, false);
+  assert.equal(environment.data.authority.tradingDomainOwns.includes("policy-attribution"), true);
+  assert.equal(environment.data.authority.tradingDomainOwns.includes("policy-version-comparison"), true);
+  assert.equal(environment.data.authority.tradingDomainOwns.includes("policy-candidate-construction"), true);
+  assert.equal(environment.data.authority.policyPromotionViaMcp, false);
 });
 
 test("Trading bootstrap resumes the exact supplied durable TradingRun ID", async () => {
