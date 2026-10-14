@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_12_9_pending_ready_for_chat_50_with_independent_acceptance_blocker
+overall_status: branch_12_12_9_in_progress_with_independent_acceptance_blocker
 
 current:
-  chat: null
+  chat: "Chat 50"
   node: "12.9"
   title: "Shadow / synthetic / DRY_RUN / human-confirmed-LIVE acceptance and adversarial reclosure"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
   done: 65
-  pending: 1
-  in_progress: 0
+  pending: 0
+  in_progress: 1
   blocked: 1
-  current_chat: null
+  current_chat: "Chat 50"
   current_node: "12.9"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "12.9"
   owner: "Chat 50"
-  status: pending
-  action: "Activate Chat 50 on TREE 12.9. TREE 12.8 is complete and PR #129 was squash-merged as 3723573fe55f632b9e0d5a077685b3fa69551ee5; post-merge main Planning #1401 and Fast #1177 are green and open-PR state was clean before this handoff update. B-US-009 remains independently blocked on target-machine evidence."
+  status: in_progress
+  action: "Continue staged TREE 12.9 acceptance/reclosure on branch chat-50-tree-12-9-reclosure. First proof target composes existing Scanner admission, quote watch, Supervisor, Hard Risk and protected Order Bridge authorities end to end; do not invent a new execution subsystem. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
