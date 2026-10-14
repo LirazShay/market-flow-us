@@ -1,3 +1,5 @@
+import { resolveHistoricalBacktestValidation } from "./policy-historical-validation.js";
+
 export const POLICY_CANDIDATE_SCHEMA_VERSION = 1;
 export const DETERMINISTIC_POLICY_SCHEMA_VERSION = 1;
 
@@ -26,6 +28,8 @@ const MAX_EVIDENCE_REFS = 64;
 const MAX_POLICY_INTERVAL_MS = 86_400_000;
 const MAX_POLICY_THRESHOLD_BPS = 100_000;
 const POLICY_KIND = "DETERMINISTIC_TRADING_POLICY_V1";
+const RESEARCH_RUN_ID = /^run_[0-9a-f-]{36}$/u;
+const QUERY_ARTIFACT_ID = /^qry_[0-9a-f-]{36}$/u;
 
 const POLICY_FIELDS = new Set(["schemaVersion", "kind", "entry", "exit"]);
 const ENTRY_FIELDS = new Set(["enterOnUsableQuote", "maxWatchMs"]);
@@ -37,8 +41,10 @@ const CANDIDATE_FIELDS = new Set([
   "createdAtMs",
   "claimScope",
   "policy",
-  "learningEvidenceRefs"
+  "learningEvidenceRefs",
+  "strategyValidationTarget"
 ]);
+const STRATEGY_TARGET_FIELDS = new Set(["researchRunId", "queryArtifactId"]);
 const VALIDATION_FIELDS = new Set(["authority", "status", "evidenceRef"]);
 
 function isPlainObject(value) {
@@ -117,6 +123,25 @@ function deepFreeze(value) {
   return value;
 }
 
+function normalizeStrategyValidationTarget(value) {
+  assertExactFields(value, STRATEGY_TARGET_FIELDS, "policyCandidate.strategyValidationTarget");
+  for (const field of STRATEGY_TARGET_FIELDS) {
+    if (!Object.hasOwn(value, field)) {
+      throw new TypeError(`policyCandidate.strategyValidationTarget.${field} is required`);
+    }
+  }
+  if (typeof value.researchRunId !== "string" || !RESEARCH_RUN_ID.test(value.researchRunId)) {
+    throw new TypeError("policyCandidate.strategyValidationTarget.researchRunId is invalid");
+  }
+  if (typeof value.queryArtifactId !== "string" || !QUERY_ARTIFACT_ID.test(value.queryArtifactId)) {
+    throw new TypeError("policyCandidate.strategyValidationTarget.queryArtifactId is invalid");
+  }
+  return Object.freeze({
+    researchRunId: value.researchRunId,
+    queryArtifactId: value.queryArtifactId
+  });
+}
+
 export function normalizeDeterministicPolicy(input) {
   assertExactFields(input, POLICY_FIELDS, "policy");
   if (Object.hasOwn(input, "schemaVersion") && input.schemaVersion !== DETERMINISTIC_POLICY_SCHEMA_VERSION) {
@@ -182,6 +207,12 @@ export function createPolicyCandidate(input) {
   if (!CLAIM_SCOPE_SET.has(input.claimScope)) {
     throw new TypeError("policyCandidate.claimScope is unsupported");
   }
+  if (input.claimScope === "STRATEGY_LEVEL" && !Object.hasOwn(input, "strategyValidationTarget")) {
+    throw new TypeError("policyCandidate.strategyValidationTarget is required for STRATEGY_LEVEL claims");
+  }
+  if (input.claimScope === "EXECUTION_ONLY" && Object.hasOwn(input, "strategyValidationTarget")) {
+    throw new TypeError("policyCandidate.strategyValidationTarget is only valid for STRATEGY_LEVEL claims");
+  }
 
   return deepFreeze({
     schemaVersion: POLICY_CANDIDATE_SCHEMA_VERSION,
@@ -190,7 +221,10 @@ export function createPolicyCandidate(input) {
     createdAtMs: assertTimestamp(input.createdAtMs, "createdAtMs"),
     claimScope: input.claimScope,
     policy: normalizeDeterministicPolicy(input.policy),
-    learningEvidenceRefs: normalizeEvidenceRefs(input.learningEvidenceRefs, "learningEvidenceRefs")
+    learningEvidenceRefs: normalizeEvidenceRefs(input.learningEvidenceRefs, "learningEvidenceRefs"),
+    ...(input.claimScope === "STRATEGY_LEVEL"
+      ? { strategyValidationTarget: normalizeStrategyValidationTarget(input.strategyValidationTarget) }
+      : {})
   });
 }
 
@@ -299,31 +333,48 @@ export async function promotePolicyCandidate({
   ledger,
   candidate,
   validationEvidence = [],
+  researchDomain = null,
   explicitPromotion = false
 } = {}) {
   if (!ledger || typeof ledger.createPolicyVersion !== "function") {
     throw new TypeError("ledger.createPolicyVersion() is required");
   }
   if (typeof explicitPromotion !== "boolean") throw new TypeError("explicitPromotion must be boolean");
+  if (!Array.isArray(validationEvidence)) throw new TypeError("validationEvidence must be an array");
 
   const normalizedCandidate = createPolicyCandidate(candidate);
+  if (!explicitPromotion) {
+    return deepFreeze({
+      status: "NO_PROMOTION",
+      policyCandidateId: normalizedCandidate.policyCandidateId,
+      reasons: ["EXPLICIT_PROMOTION_REQUIRED"],
+      policyVersion: null
+    });
+  }
+
+  let effectiveValidationEvidence = [...validationEvidence];
+  if (normalizedCandidate.claimScope === "STRATEGY_LEVEL") {
+    if (validationEvidence.some((item) => item?.authority === "HISTORICAL_BACKTEST")) {
+      throw new TypeError("STRATEGY_LEVEL historical validation must be derived from Research Domain authority");
+    }
+    if (researchDomain !== null) {
+      const historical = await resolveHistoricalBacktestValidation({
+        researchDomain,
+        strategyValidationTarget: normalizedCandidate.strategyValidationTarget
+      });
+      effectiveValidationEvidence.push(historical.validationEvidence);
+    }
+  }
+
   const assessment = assessPolicyCandidatePromotion({
     candidate: normalizedCandidate,
-    validationEvidence
+    validationEvidence: effectiveValidationEvidence
   });
   if (assessment.status !== "READY_FOR_EXPLICIT_PROMOTION") {
     return deepFreeze({
       status: "NO_PROMOTION",
       policyCandidateId: normalizedCandidate.policyCandidateId,
       reasons: assessment.reasons,
-      policyVersion: null
-    });
-  }
-  if (!explicitPromotion) {
-    return deepFreeze({
-      status: "NO_PROMOTION",
-      policyCandidateId: normalizedCandidate.policyCandidateId,
-      reasons: ["EXPLICIT_PROMOTION_REQUIRED"],
       policyVersion: null
     });
   }
