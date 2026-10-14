@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { evaluateDeterministicSupervisorDecision } from "../../trading-server/policy-supervisor.js";
+import {
+  evaluateDeterministicSupervisorDecision,
+  isDeterministicPolicy,
+  resolveDeterministicPolicyEvidence
+} from "../../trading-server/policy-supervisor.js";
 import { createSupervisorState } from "../../trading-server/supervisor.js";
 
 const POLICY = Object.freeze({
@@ -29,9 +33,26 @@ function state(overrides = {}) {
   });
 }
 
+function supervisorRecord(observedAtMs, lifecycleState, stateVersion) {
+  return {
+    observedAtMs,
+    state: {
+      kind: "TRADING_SUPERVISOR_V1",
+      version: 1,
+      supervisorState: state({ lifecycleState, stateVersion })
+    }
+  };
+}
+
 const FRESH_QUOTE = Object.freeze({
   usableForNewDecision: true,
   last: 101
+});
+
+test("TREE 12.8 deterministic policy kind is explicit and narrow", () => {
+  assert.equal(isDeterministicPolicy(POLICY), true);
+  assert.equal(isDeterministicPolicy({ kind: "OTHER" }), false);
+  assert.equal(isDeterministicPolicy(null), false);
 });
 
 test("TREE 12.8 deterministic policy can enter through existing Supervisor transition authority without AI", () => {
@@ -70,6 +91,21 @@ test("TREE 12.8 deterministic policy remains fail-closed when entry quote is not
   assert.equal(result.decision.reasonCode, "POLICY_WAIT_FOR_ENTRY");
 });
 
+test("TREE 12.8 missing durable watch evidence fails closed instead of fabricating a timer", () => {
+  const current = state();
+  const result = evaluateDeterministicSupervisorDecision({
+    policy: POLICY,
+    state: current,
+    quote: FRESH_QUOTE,
+    nowMs: 10_000
+  });
+
+  assert.deepEqual(result.state, current);
+  assert.deepEqual(result.action, { type: "NONE" });
+  assert.equal(result.decision.decisionType, null);
+  assert.equal(result.decision.reasonCode, "POLICY_WATCH_EVIDENCE_MISSING");
+});
+
 test("TREE 12.8 deterministic entry timeout closes the episode through Supervisor SKIP transition", () => {
   const result = evaluateDeterministicSupervisorDecision({
     policy: POLICY,
@@ -104,6 +140,44 @@ test("TREE 12.8 deterministic take-profit exits through existing Supervisor tran
     source: "DETERMINISTIC_POLICY",
     proposalStatus: "NOT_APPLICABLE",
     reasonCode: "POLICY_TAKE_PROFIT"
+  });
+});
+
+test("TREE 12.8 missing durable position evidence fails closed instead of inventing entry price", () => {
+  const current = state({ lifecycleState: "POSITION_OPEN", stateVersion: 8 });
+  const result = evaluateDeterministicSupervisorDecision({
+    policy: POLICY,
+    state: current,
+    quote: FRESH_QUOTE,
+    nowMs: 20_000,
+    positionOpenedAtMs: 1_000
+  });
+
+  assert.deepEqual(result.state, current);
+  assert.deepEqual(result.action, { type: "NONE" });
+  assert.equal(result.decision.decisionType, "HOLD");
+  assert.equal(result.decision.reasonCode, "POLICY_POSITION_EVIDENCE_MISSING");
+});
+
+test("TREE 12.8 durable policy evidence is derived only from episode records", () => {
+  const current = state({ lifecycleState: "POSITION_OPEN", stateVersion: 8 });
+  const evidence = resolveDeterministicPolicyEvidence({
+    state: current,
+    bundle: {
+      positionStates: [
+        supervisorRecord(1_000, "WATCHING", 1),
+        supervisorRecord(2_000, "POSITION_OPEN", 7),
+        { observedAtMs: 2_100, state: { side: "LONG", quantity: 1, averagePrice: 100.25 } },
+        { observedAtMs: 2_200, state: { side: "LONG", quantity: 1, averagePrice: 100.5 } }
+      ]
+    }
+  });
+
+  assert.deepEqual(evidence, {
+    watchStartedAtMs: 1_000,
+    positionOpenedAtMs: 2_000,
+    entryPrice: 100.5,
+    lifecycleState: "POSITION_OPEN"
   });
 });
 
