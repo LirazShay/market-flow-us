@@ -23,6 +23,7 @@ const REQUIRED_TABLES = Object.freeze([
 const TRADING_MODES = new Set(["SHADOW", "SYNTHETIC", "DRY_RUN", "LIVE"]);
 const RUN_STATES = new Set(["ACTIVE", "PAUSED", "COMPLETED", "FAILED"]);
 const EPISODE_STATES = new Set(["ACTIVE", "COMPLETED", "FAILED"]);
+const DETERMINISTIC_POLICY_KIND = "DETERMINISTIC_TRADING_POLICY_V1";
 const MAX_JSON_CHARS = 262_144;
 const SENSITIVE_KEY = /(account|authorization|cookie|credential|password|secret|session|token|chain.?of.?thought|reasoning|raw.?authenticated|authenticated.?dump|authenticated.?provider.?dump|raw.?provider.?dump)/iu;
 
@@ -596,7 +597,11 @@ export async function openTradingLedger({
     async replacePolicyVersion(policyVersionId, policy) {
       const id = assertPolicyVersionId(policyVersionId);
       const policyJson = serializePublicSafeObject(policy, "policy");
-      if (!(await getPolicy(id))) throw new Error("PolicyVersion was not found");
+      const existing = await getPolicy(id);
+      if (!existing) throw new Error("PolicyVersion was not found");
+      if (existing.policy.kind === DETERMINISTIC_POLICY_KIND) {
+        throw new Error("Deterministic PolicyVersion is immutable from creation");
+      }
       const used = await queryRows(
         connection,
         "SELECT COUNT(*) AS count FROM trading_runs WHERE policy_version_id = $policyVersionId",
