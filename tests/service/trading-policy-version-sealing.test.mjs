@@ -5,6 +5,7 @@ import path from "node:path";
 import { test } from "node:test";
 
 import { openTradingLedger } from "../../trading-server/ledger.js";
+import { promotePolicyCandidate } from "../../trading-server/policy-promotion.js";
 
 const DETERMINISTIC_POLICY_ID = "pol_11111111-1111-4111-8111-111111111111";
 const LEGACY_POLICY_ID = "pol_22222222-2222-4222-8222-222222222222";
@@ -50,9 +51,28 @@ test("TREE 12.8 promoted deterministic PolicyVersion is immutable from creation 
       tradingRunIdFactory: () => RUN_ID
     });
 
-    const deterministic = await ledger.createPolicyVersion({ policy: DETERMINISTIC_POLICY });
+    const promotion = await promotePolicyCandidate({
+      ledger,
+      candidate: {
+        policyCandidateId: "pcand-durable-seal-1",
+        baselinePolicyVersionId: "baseline-policy-v1",
+        createdAtMs: NOW,
+        claimScope: "EXECUTION_ONLY",
+        policy: DETERMINISTIC_POLICY,
+        learningEvidenceRefs: ["episode-attribution:comparison-1"]
+      },
+      validationEvidence: [{
+        authority: "EPISODE_ATTRIBUTION",
+        status: "PASS",
+        evidenceRef: "episode-attribution:comparison-1"
+      }],
+      explicitPromotion: true
+    });
+    assert.equal(promotion.status, "PROMOTED");
+    assert.equal(promotion.policyVersion.policyVersionId, DETERMINISTIC_POLICY_ID);
+    assert.deepEqual(promotion.policyVersion.policy, DETERMINISTIC_POLICY);
+
     const legacy = await ledger.createPolicyVersion({ policy: LEGACY_POLICY });
-    assert.deepEqual(deterministic.policy, DETERMINISTIC_POLICY);
     assert.deepEqual(legacy.policy, LEGACY_POLICY);
 
     await assert.rejects(
