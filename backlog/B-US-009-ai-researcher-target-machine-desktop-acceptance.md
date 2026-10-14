@@ -10,7 +10,7 @@ Evidence ledger: `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
 
 `B-US-009` originally preserved only the Branch-11 AI Researcher target-machine + ChatGPT Desktop checks. Final Branch-12 reclosure later required all still-pending user/target-machine checks to be consolidated into exactly one post-merge acceptance task rather than leaving multiple active/deferred blockers.
 
-Therefore `B-US-009` is now the **single** final external acceptance identity. It incorporates the still-relevant scope from:
+Therefore `B-US-009` is now the **single** final external acceptance identity. In durable-validation wording: `B-US-009` is the single final external acceptance identity. It incorporates the still-relevant scope from:
 
 - the original Research `W2T/W3` target-machine/Desktop acceptance;
 - historical backlog `B-US-000` final target-machine/provider acceptance;
