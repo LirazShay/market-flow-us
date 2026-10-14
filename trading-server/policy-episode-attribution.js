@@ -59,6 +59,10 @@ function refsForOrders(orderReferences) {
   return orderReferences.map((order) => evidenceRef("order-reference", order.orderReferenceId));
 }
 
+function refsForObservations(observations) {
+  return observations.map((observation) => evidenceRef("candidate-observation", observation.candidateObservationId));
+}
+
 function normalizeCompletedBundle(bundle) {
   if (bundle === null || typeof bundle !== "object" || Array.isArray(bundle)) {
     invalid("Trade Episode bundle is required");
@@ -70,22 +74,44 @@ function normalizeCompletedBundle(bundle) {
   if (!bundle.outcome || typeof bundle.outcome !== "object") {
     throw new Error("Completed Trade Episode requires a durable outcome");
   }
-  for (const field of ["decisions", "orderReferences", "positionStates"]) {
+  for (const field of ["observations", "decisions", "orderReferences", "positionStates"]) {
     if (!Array.isArray(bundle[field])) invalid(`Trade Episode bundle ${field} must be an array`);
   }
   return bundle;
 }
 
+function durableQuoteMovement(bundle) {
+  const priced = bundle.observations.filter((entry) => {
+    const last = entry?.observation?.last;
+    return typeof last === "number" && Number.isFinite(last) && last > 0;
+  });
+  if (priced.length < 2) return null;
+
+  const baseline = priced[0].observation.last;
+  const later = priced.slice(1);
+  const maxLater = Math.max(...later.map((entry) => entry.observation.last));
+  return Object.freeze({
+    favorable: maxLater > baseline,
+    evidenceRefs: Object.freeze(refsForObservations(priced))
+  });
+}
+
 function scannerAttribution(bundle) {
-  const refs = [
-    episodeProvenanceRef(bundle.episode.tradeEpisodeId),
-    evidenceRef("episode-outcome", bundle.outcome.episodeOutcomeId)
-  ];
-  const favorableMovePct = bundle.outcome?.outcome?.favorableMovePct;
-  if (typeof favorableMovePct !== "number" || !Number.isFinite(favorableMovePct)) {
-    return layer("INCONCLUSIVE", refs);
+  const provenanceRef = episodeProvenanceRef(bundle.episode.tradeEpisodeId);
+  const rawMovement = durableQuoteMovement(bundle);
+  if (rawMovement !== null) {
+    return layer(
+      rawMovement.favorable ? "SUCCESS" : "FAILURE",
+      [provenanceRef, ...rawMovement.evidenceRefs]
+    );
   }
-  return layer(favorableMovePct > 0 ? "SUCCESS" : "FAILURE", refs);
+
+  const outcomeRef = evidenceRef("episode-outcome", bundle.outcome.episodeOutcomeId);
+  const favorableMovePct = bundle.outcome?.outcome?.favorableMovePct;
+  if (typeof favorableMovePct === "number" && Number.isFinite(favorableMovePct)) {
+    return layer(favorableMovePct > 0 ? "SUCCESS" : "FAILURE", [provenanceRef, outcomeRef]);
+  }
+  return layer("INCONCLUSIVE", [provenanceRef, outcomeRef]);
 }
 
 function entryAttribution(bundle, scanner) {
@@ -94,7 +120,9 @@ function entryAttribution(bundle, scanner) {
     ...scanner.evidenceRefs,
     ...refsForDecisions(entryDecisions)
   ];
-  if (entryDecisions.length !== 1) return layer("INCONCLUSIVE", refs.length > 0 ? refs : [episodeProvenanceRef(bundle.episode.tradeEpisodeId)]);
+  if (entryDecisions.length !== 1) {
+    return layer("INCONCLUSIVE", refs.length > 0 ? refs : [episodeProvenanceRef(bundle.episode.tradeEpisodeId)]);
+  }
   if (scanner.outcome !== "SUCCESS" && scanner.outcome !== "FAILURE") return layer("INCONCLUSIVE", refs);
 
   const tookCandidate = entryDecisions[0].decisionType === "ENTER";
@@ -106,10 +134,7 @@ function fillAttribution(bundle) {
   const entryDecisions = bundle.decisions.filter((decision) => decision.decisionType === "ENTER");
   if (entryDecisions.length === 0) return layer("NOT_APPLICABLE");
 
-  const positionStates = bundle.positionStates.filter((position) => {
-    const lifecycleState = supervisorLifecycle(position);
-    return lifecycleState !== null;
-  });
+  const positionStates = bundle.positionStates.filter((position) => supervisorLifecycle(position) !== null);
   const positionOpened = positionStates.some((position) => POSITION_OPEN_STATES.has(supervisorLifecycle(position)));
   const refs = [
     ...refsForDecisions(entryDecisions),
