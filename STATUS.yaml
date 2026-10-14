@@ -19,21 +19,21 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_chat_49_in_progress_with_independent_acceptance_blocker
+overall_status: branch_12_chat_49_finalizing_done_12_8_with_independent_acceptance_blocker
 
 current:
   chat: "Chat 49"
   node: "12.8"
   title: "Episode attribution + policy learning + deterministic distillation"
-  status: in_progress
+  status: done
   activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 64
+  done: 65
   pending: 1
-  in_progress: 1
+  in_progress: 0
   blocked: 1
   current_chat: "Chat 49"
   current_node: "12.8"
@@ -42,8 +42,8 @@ execution_projection:
 next_pointer:
   task: "12.8"
   owner: "Chat 49"
-  status: in_progress
-  action: "Continue Chat 49 on TREE 12.8: implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
+  status: done
+  action: "Finalize PR #129 for TREE 12.8: require final pre-merge CI and diff review, squash-merge only when green, verify post-merge main CI/open-PR state, then advance explicitly to pending 12.9 / Chat 50. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
