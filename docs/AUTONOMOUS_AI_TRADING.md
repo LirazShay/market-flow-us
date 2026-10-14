@@ -54,6 +54,8 @@ Immutable after first use. It contains typed server-controlled configuration and
 
 Potential policy categories include entry predicates, entry timeout, candidate switching, profit/exit targets, adverse-move handling, trailing behavior, maximum hold duration, quote staleness and deterministic fallback behavior. Exact values are not architecture constants.
 
+A promoted `DETERMINISTIC_TRADING_POLICY_V1` is sealed from creation, before any TradingRun uses it. The initial typed schema contains only server-known primitives: `enterOnUsableQuote`, `maxWatchMs`, `takeProfitBps`, `stopLossBps` and `maxHoldMs`. Arbitrary executable fields are rejected. Legacy pre-Branch-12 policy objects retain the existing replace-before-first-use behavior, but become immutable once referenced by a TradingRun.
+
 ### TradeEpisode
 
 One candidate/trade attempt with complete provenance:
@@ -112,6 +114,8 @@ Same inputs + same PolicyVersion + same authoritative broker outcomes should pro
 
 When AI is unavailable, a deterministic fallback policy and Hard Risk Authority remain active. The Supervisor must never depend on an LLM response for immediate safety behavior.
 
+When the active PolicyVersion is `DETERMINISTIC_TRADING_POLICY_V1`, its server-known primitives are evaluated directly by the Supervisor runtime. The resulting decision is recorded as `DETERMINISTIC_POLICY`; an AI proposal cannot override that deterministic policy decision. Entry timeout, usable-quote entry, take-profit, stop-loss and maximum-hold decisions therefore remain executable without an AI session.
+
 ## Hard Risk Authority
 
 Hard Risk Authority is a separate enforcement boundary evaluated before order intent may reach the Order Bridge. It is operator/project-owned, not AI-owned.
@@ -140,6 +144,14 @@ Provide a separate Trading Skill/MCP over stable Trading Domain APIs. Candidate 
 
 The tool surface must not expose raw CPGW requests, arbitrary provider orders, account-ID configuration, credential/session material, risk bypasses or arbitrary executable policy code.
 
+TREE 12.8 adds three bounded learning operations to the existing Trading Domain/MCP path:
+
+- `get_trade_episode_attribution` derives attribution from one durable episode; the client cannot submit its own attribution result;
+- `compare_policy_versions` accepts exact episode IDs for two durable TradingRuns, bounded to 25 episode IDs per run, and returns a reproducible compact comparison;
+- `build_policy_candidate` constructs a typed Policy Candidate from server-derived comparison evidence and server-owned creation time/evidence references.
+
+There is intentionally no MCP promotion operation. Policy promotion remains a separate explicit server-side action after required validation. The loopback HTTP transport remains the existing authenticated `/domain` boundary; the learning operations do not create a second transport or expose direct ledger access.
+
 ## Attribution and learning
 
 Episode analytics must preserve separate attribution for:
@@ -152,7 +164,11 @@ Episode analytics must preserve separate attribution for:
 
 Do not infer that a poor realized outcome automatically proves the Scanner SQL was poor. Conversely, a good candidate does not prove execution policy was good.
 
-AI may compare PolicyVersions and propose a Policy Candidate. Strategy-level claims that require historical proof should reuse Branch-10/11 Backtest/Research authorities rather than create a second research engine.
+TREE 12.8 fixes the attribution vocabulary to `SUCCESS`, `FAILURE`, `INCONCLUSIVE` and `NOT_APPLICABLE`. Every applicable layer must carry durable evidence references. Policy summaries expose explicit totals, applicable/conclusive/success/failure/inconclusive/not-applicable counts plus success-rate and evidence-coverage numerator/denominator pairs. Duplicate TradeEpisode evidence is rejected so denominators cannot be silently inflated.
+
+Policy comparison is layer-specific and deterministic under input reordering. It never invents an aggregate score or winner. A layer is `COMPARABLE` only when both policies satisfy the configured conclusive-evidence threshold with complete evidence coverage; otherwise the layer and overall comparison may remain `INSUFFICIENT_EVIDENCE` with a null delta. Exact selected episode IDs are part of the reproducible comparison identity.
+
+AI may compare PolicyVersions and propose a Policy Candidate. Strategy-level claims that require historical proof reuse Branch-10/11 Backtest/Research authority rather than create a second research engine. The historical validation target is bound to an exact Research Run and Query Artifact. A strategy-level promotion requires both `EPISODE_ATTRIBUTION` PASS and `HISTORICAL_BACKTEST` PASS; historical PASS is derived server-side from the Research recommendation artifact and requires the bound query to be independently Holdout-supported. Caller-forged historical PASS is rejected. An execution-only candidate requires episode-attribution validation only and does not invent a strategy-level historical requirement.
 
 ## Strategy distillation
 
@@ -169,6 +185,8 @@ AI explores bounded decisions
 ```
 
 Do not generate or execute arbitrary AI-authored production code as the policy mechanism.
+
+A Policy Candidate is a typed immutable proposal, not a runtime mutation. `NO_PROMOTION` is a first-class valid result when evidence is missing, insufficient, failed or when explicit promotion was not requested; that result must not create or replace a PolicyVersion. Strategy-level promotion resolves required historical evidence through the Research Domain authority. Only after all required authorities PASS and explicit promotion is requested may the Trading Ledger create the new deterministic PolicyVersion, which is then sealed from creation.
 
 ## Acceptance progression
 
