@@ -19,7 +19,7 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_12_9_pending_waiting_chat_49_merge_with_independent_acceptance_blocker
+overall_status: branch_12_12_9_pending_ready_for_chat_50_with_independent_acceptance_blocker
 
 current:
   chat: null
@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: pending
-  action: "Do not activate Chat 50 yet. Chat 49 must first finalize PR #129 for completed TREE 12.8: require final pre-merge CI/diff review, squash-merge only when green, then verify post-merge main CI and open-PR state. After that explicit handoff, activate Chat 50 on TREE 12.9. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Activate Chat 50 on TREE 12.9. TREE 12.8 is complete and PR #129 was squash-merged as 3723573fe55f632b9e0d5a077685b3fa69551ee5; post-merge main Planning #1401 and Fast #1177 are green and open-PR state was clean before this handoff update. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
