@@ -1,7 +1,8 @@
 # B-US-009 — Unified final target-machine / Desktop / provider acceptance
 
-Status: Active execution, currently blocked until final implementation merge + target-machine execution  
+Status: Active execution pointer, blocked on user target-machine/Desktop/provider execution only  
 Blocking Branch-12 implementation merge: No  
+Development/repository completion: Yes  
 Current execution authority: `.planning/EXECUTION.md`  
 Unified runbook: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`  
 Evidence ledger: `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
@@ -20,17 +21,17 @@ Therefore `B-US-009` is now the **single** final external acceptance identity. I
 
 ## Activation boundary
 
-This task must not become the current execution pointer until the final Branch-12 implementation/reclosure PR is merged, required `main` CI is green and no open implementation PR supersedes the accepted candidate.
+The implementation/repository prerequisite is satisfied. PR #131 is merged, required post-merge `main` CI is green, and the open-PR audit is clean.
 
-Until then the missing external evidence remains truthful NOT PASS/PENDING and does not block the implementation merge.
+`B-US-009` is therefore the current execution pointer, but it remains `blocked` with no chat owner and no activation request while the user has chosen to defer target-machine/Desktop/provider acceptance. This blocked state does not reopen or hold development work.
 
-After implementation reclosure, select a fresh intended `main` candidate exactly as defined by `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and execute the unified gates `U0` through `U6` serially.
+When the user chooses to run final acceptance, start at `U0`: fetch fresh intended `main`, select and record the exact candidate SHA, use one clean checkout, then execute unified gates `U0` through `U6` serially.
 
 ## Scope
 
 The unified acceptance includes:
 
-1. exact clean post-merge candidate selection and target-machine setup;
+1. exact clean candidate selection and target-machine setup;
 2. maintained deterministic target-machine sanity, local UI, workload and daily-lifecycle checks;
 3. Research actual-evidence workload (`W2T`), repository Desktop/MCP preflight and real ChatGPT Desktop mission + restart/fresh-context resume (`W3`);
 4. real market-data deployment, static/pre-market and market-open movement acceptance;
