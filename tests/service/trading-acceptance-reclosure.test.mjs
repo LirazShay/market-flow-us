@@ -234,8 +234,17 @@ test("TREE 12.9 composed synthetic DRY_RUN path preserves Scanner provenance, ri
       admittedAtMs: NOW
     });
 
+    const riskPermits = [];
+    const actualRiskAuthority = riskAuthority(ledger);
     const bridge = createProtectedOrderBridge({
-      hardRiskAuthority: riskAuthority(ledger),
+      hardRiskAuthority: {
+        async gateOrderIntent(input, forwardAuthorizedIntent) {
+          return actualRiskAuthority.gateOrderIntent(input, async (authorization) => {
+            riskPermits.push(authorization.riskPermit);
+            return forwardAuthorizedIntent(authorization);
+          });
+        }
+      },
       orderServiceClient: orderApi.client
     });
     const supervisor = createTradingSupervisorRuntime({
@@ -264,6 +273,11 @@ test("TREE 12.9 composed synthetic DRY_RUN path preserves Scanner provenance, ri
 
     assert.equal(result.status, "ORDER_SUBMITTED");
     assert.equal(result.state.lifecycleState, "ENTRY_WORKING");
+    assert.equal(riskPermits.length, 1);
+    assert.equal(riskPermits[0].reasonCode, "HARD_RISK_AUTHORIZED");
+    assert.equal(riskPermits[0].evaluatedAtMs, NOW + 100);
+    assert.equal(riskPermits[0].orderNotionalUsd, 100);
+    assert.deepEqual(riskPermits[0].effectiveLimits, HARD_LIMITS);
     assert.equal(orderApi.accepted.length, 1);
     assert.equal(orderApi.accepted[0].executionMode, "DRY_RUN");
     assert.equal(orderApi.accepted[0].side, "BUY");
@@ -276,7 +290,6 @@ test("TREE 12.9 composed synthetic DRY_RUN path preserves Scanner provenance, ri
     assert.equal(beforeRestart.orderReferences.length, 1);
     assert.equal(beforeRestart.orderReferences[0].requestId, orderApi.accepted[0].requestId);
     assert.equal(beforeRestart.positionStates.at(-1).state.supervisorState.lifecycleState, "ENTRY_WORKING");
-    assert.ok(beforeRestart.decisions.some((decision) => decision.reasonCode === "HARD_RISK_AUTHORIZED"));
 
     await ledger.close();
     ledger = await openLedger(dbPath, { start: 100, now: clock(NOW + 1_000) });
