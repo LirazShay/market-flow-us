@@ -1,4 +1,5 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   CpgwAdapter,
@@ -6,7 +7,9 @@ import {
 } from "../ibkr-order-service/cpgw-adapter.js";
 import { openTradingLedger } from "../trading-server/ledger.js";
 import { runLiveMarketShadowObservation } from "../trading-server/live-shadow-acceptance.js";
+import { readCleanCheckoutCommit } from "./clean-checkout-commit.mjs";
 
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_DB_PATH = "data/trading-live-shadow-acceptance.duckdb";
 const DEFAULT_CPGW_URL = "https://localhost:5000/v1/api";
 
@@ -84,6 +87,7 @@ function usage() {
     "  --timeout-ms=10000",
     `  --db=${DEFAULT_DB_PATH}`,
     "",
+    "Acceptance evidence requires a clean Git checkout and records the exact candidateCommit.",
     "This runner performs market-data observation only. It never enables synthetic, DRY_RUN or LIVE order execution."
   ].join("\n");
 }
@@ -100,6 +104,7 @@ try {
   if (config.help) {
     console.log(usage());
   } else {
+    const candidateCommit = await readCleanCheckoutCommit({ root: ROOT });
     const dbPath = path.resolve(config.dbPath);
     const requestJson = createCpgwTransport({
       baseUrl: config.cpgwUrl,
@@ -120,8 +125,13 @@ try {
       },
       maxQuoteAgeMs: config.maxQuoteAgeMs
     });
-    console.log(JSON.stringify(report, null, 2));
-    if (report.status !== "PASS") process.exitCode = 1;
+    const evidenceReport = Object.freeze({
+      ...report,
+      candidateCommit,
+      checkoutClean: true
+    });
+    console.log(JSON.stringify(evidenceReport, null, 2));
+    if (evidenceReport.status !== "PASS") process.exitCode = 1;
   }
 } catch (error) {
   console.log(JSON.stringify({
@@ -129,6 +139,8 @@ try {
     check: "LIVE_MARKET_SHADOW_OBSERVATION",
     status: "ERROR",
     reasonCode: boundedErrorCode(error),
+    candidateCommit: null,
+    checkoutClean: false,
     nextStageEnabled: false
   }, null, 2));
   process.exitCode = 1;

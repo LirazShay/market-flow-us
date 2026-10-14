@@ -1,40 +1,15 @@
-import { execFile } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { packageBookmarklet } from "./build-browser.mjs";
+import {
+  readCleanCheckoutCommit,
+  validateCandidateCommit
+} from "./clean-checkout-commit.mjs";
 
-const execFileAsync = promisify(execFile);
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ENTRY_POINT = path.join(ROOT, "browser", "live-verification", "index.js");
-
-function validateCandidateCommit(value) {
-  if (typeof value !== "string" || !/^[0-9a-f]{7,40}$/i.test(value)) {
-    throw new Error("candidateCommit must be a 7-40 character hexadecimal Git commit.");
-  }
-  return value.toLowerCase();
-}
-
-async function readCheckoutCommit() {
-  const { stdout: status } = await execFileAsync(
-    "git",
-    ["status", "--porcelain", "--untracked-files=normal"],
-    { cwd: ROOT, windowsHide: true }
-  );
-  if (status.trim().length > 0) {
-    throw new Error(
-      "Live verification build requires a clean Git checkout so candidateCommit identifies the exact built source."
-    );
-  }
-
-  const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-    cwd: ROOT,
-    windowsHide: true
-  });
-  return validateCandidateCommit(stdout.trim());
-}
 
 async function bundle({ minify, candidateCommit }) {
   const result = await build({
@@ -64,7 +39,7 @@ export async function buildLiveVerification({
   candidateCommit
 } = {}) {
   const resolvedCommit = candidateCommit === undefined
-    ? await readCheckoutCommit()
+    ? await readCleanCheckoutCommit({ root: ROOT })
     : validateCandidateCommit(candidateCommit);
 
   const [readableRuntime, compactRuntime] = await Promise.all([
