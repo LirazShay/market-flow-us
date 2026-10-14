@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: in_progress
-  action: "Continue staged TREE 12.9 acceptance/reclosure on branch chat-50-tree-12-9-reclosure. Historical/replay acceptance is green in PR #131 with Planning #1409, Replay #241 and Fast #1183. The next staged boundary is live-market shadow observation; do not advance to synthetic/DRY_RUN/LIVE automatically. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Continue the live-market shadow observation boundary on branch chat-50-tree-12-9-reclosure. The read-only CPGW/TargetedQuoteWatch SHADOW runner and controlled fresh/stale/restart/input proofs are green in PR #131 with Planning #1412, Fast #1186, Browser #727, Replay #244 and Workload #700. Actual provider shadow observation is still pending on an authenticated target-machine CPGW session and must not be fabricated; run npm run trading-live-shadow -- --symbol=<SYMBOL> [--allow-insecure-loopback-tls] there and retain only the public-safe report. Do not advance to synthetic/DRY_RUN/LIVE automatically. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
