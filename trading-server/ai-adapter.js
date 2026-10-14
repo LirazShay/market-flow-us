@@ -2,7 +2,7 @@ const RESUMABLE_TRADING_RUN_STATES = new Set(["ACTIVE", "PAUSED"]);
 const MAX_DISCOVERY_RUNS = 200;
 
 export const TRADING_AI_ADAPTER_VERSION = "trading-ai-adapter-v1";
-export const TRADING_MCP_COMPATIBILITY_VERSION = "market-flow-us-trading-mcp-v1";
+export const TRADING_MCP_COMPATIBILITY_VERSION = "market-flow-us-trading-mcp-v2";
 
 function assertDomain(domain) {
   if (domain === null || typeof domain !== "object") {
@@ -73,6 +73,9 @@ export function createTradingAiAdapter({
           tradingDomainOwns: Object.freeze([
             "trading-run-ledger",
             "trade-episode-evidence",
+            "policy-attribution",
+            "policy-version-comparison",
+            "policy-candidate-construction",
             "decision-proposal-validation",
             "supervisor-state",
             "hard-risk-authority",
@@ -82,7 +85,8 @@ export function createTradingAiAdapter({
             "tool-shape",
             "compact-bootstrap",
             "deterministic-resume-selection"
-          ])
+          ]),
+          policyPromotionViaMcp: false
         }),
         bootstrap: Object.freeze({
           explicitRunId: "RESUME_EXACT_RUN",
