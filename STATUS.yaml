@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_12_9_in_progress_external_acceptance_non_blocking
+overall_status: branch_12_complete_external_acceptance_blocked
 
 current:
-  chat: "Chat 50"
-  node: "12.9"
-  title: "Shadow / synthetic / DRY_RUN / human-confirmed-LIVE acceptance and adversarial reclosure"
-  status: in_progress
+  chat: null
+  node: "B-US-009"
+  title: "Unified final target-machine / Desktop / provider acceptance"
+  status: blocked
   activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 65
+  done: 66
   pending: 0
-  in_progress: 1
+  in_progress: 0
   blocked: 1
-  current_chat: "Chat 50"
-  current_node: "12.9"
+  current_chat: null
+  current_node: "B-US-009"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.9"
-  owner: "Chat 50"
-  status: in_progress
-  action: "Final diff/repository reclosure for PR #131 is complete. Full review against fresh main found one latent blocked-current STATUS projection defect; RCA fixed it in cfeaefb9 with direct regression proof, and current-head Planning #1443, Fast #1217, Browser #758, Replay #275 and Workload #731 are green. Continue only with PR/CI/merge and post-merge main verification. After the accepted merge and green/open-PR-clean main, mark 12.9 done and project B-US-009 as the current blocked task with chat=null and activation_required=false; execute unified U0..U6 only when the user's target-machine/Desktop/provider prerequisites are available. No external provider/Desktop/LIVE PASS has been fabricated."
+  task: "B-US-009"
+  owner: "Target-machine acceptance executor"
+  status: blocked
+  action: "Development and repository reclosure are complete through TREE 12.9. PR #131 squash-merged as 348405a96ffb6ddf86ca7bb267eb124afc5bbb1f; post-merge main Planning #1445, Fast #1219, Browser #760, Replay #277 and Workload #733 are green and the open-PR audit is clean. The only remaining task is the user's unified U0..U6 target-machine/Desktop/provider acceptance. It is intentionally blocked until the user chooses to run it; no additional executor-owned implementation work is pending and no external provider/Desktop/LIVE PASS has been fabricated."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -75,9 +75,9 @@ navigation:
 
 acceptance_projection:
   task: "B-US-009"
-  status: blocked_until_12_9_merge_then_target_machine
-  candidate_policy: "After final Branch-12 implementation merge/main-green/open-PR-clean, select the fresh intended main SHA and use one clean checkout for unified U0..U6. Never substitute historical PR/candidate evidence."
-  checkpoint_summary: "Exactly one post-merge user acceptance task remains. B-US-009 now consolidates original Research W2T/W3, still-relevant B-US-000 FR/provider checks and Branch-12 external Trading evidence. Current candidate is NOT_SELECTED_UNTIL_POST_MERGE; W2T/W3, real live-market shadow and all other external gates remain NOT PASS/PENDING. Real-money LIVE may be exactly PENDING_EXTERNAL_PERMISSION when permission and/or explicit user initiation is absent."
+  status: blocked_target_machine
+  candidate_policy: "When the user starts U0, fetch fresh intended main, select and record the exact candidate SHA, then use one clean checkout for unified U0..U6. Never substitute historical PR/candidate evidence."
+  checkpoint_summary: "Exactly one user acceptance task remains. B-US-009 consolidates original Research W2T/W3, still-relevant B-US-000 FR/provider checks and Branch-12 external Trading evidence. Development/repository work is complete; the acceptance candidate is selected only when U0 starts so the user's later run uses fresh main. W2T/W3, real live-market shadow and all other external gates remain NOT PASS/PENDING. Real-money LIVE may be exactly PENDING_EXTERNAL_PERMISSION when permission and/or explicit user initiation is absent."
   authority:
     execution: ".planning/EXECUTION.md"
     runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
@@ -90,7 +90,7 @@ acceptance_projection:
 
 blockers_projection:
   - task: "B-US-009 / unified U0..U6"
-    type: execution_environment_and_predecessor
-    reason: "Unified final acceptance intentionally starts only after TREE 12.9 is merged/main-green/open-PR-clean and then requires the user's target machine, Desktop/provider sessions and market evidence."
+    type: execution_environment
+    reason: "All development/repository prerequisites are complete. The only remaining work requires the user's target machine, Desktop/provider sessions and market evidence, and is intentionally deferred until the user chooses to run it."
     blocks: []
-    resume_when: "TREE 12.9 is done and merged, required main CI is green/open-PR-clean, then the user target machine is available for the exact post-merge candidate."
+    resume_when: "The user chooses to run final acceptance on the target machine; start at U0 by selecting fresh intended main and recording the exact clean candidate SHA."
