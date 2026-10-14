@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,10 +9,12 @@ import {
 import { openTradingLedger } from "../trading-server/ledger.js";
 import { runLiveMarketShadowObservation } from "../trading-server/live-shadow-acceptance.js";
 import { readCleanCheckoutCommit } from "./clean-checkout-commit.mjs";
+import { validateTradingLiveShadowEvidence } from "./trading-live-shadow-evidence.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DEFAULT_DB_PATH = "data/trading-live-shadow-acceptance.duckdb";
 const DEFAULT_CPGW_URL = "https://localhost:5000/v1/api";
+const EVIDENCE_PATH = path.join(ROOT, "tmp", "trading-live-shadow-evidence.json");
 
 function parsePositiveInteger(value, name) {
   const parsed = Number(value);
@@ -88,6 +91,7 @@ function usage() {
     `  --db=${DEFAULT_DB_PATH}`,
     "",
     "Acceptance evidence requires a clean Git checkout and records the exact candidateCommit.",
+    "The public-safe report is also written to tmp/trading-live-shadow-evidence.json.",
     "This runner performs market-data observation only. It never enables synthetic, DRY_RUN or LIVE order execution."
   ].join("\n");
 }
@@ -96,6 +100,11 @@ function boundedErrorCode(error) {
   return typeof error?.code === "string" && /^[A-Z0-9_]{1,128}$/u.test(error.code)
     ? error.code
     : "LIVE_SHADOW_RUNNER_FAILED";
+}
+
+async function writeEvidenceFile(report) {
+  await mkdir(path.dirname(EVIDENCE_PATH), { recursive: true });
+  await writeFile(EVIDENCE_PATH, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
 let ledger = null;
@@ -130,11 +139,15 @@ try {
       candidateCommit,
       checkoutClean: true
     });
+    if (evidenceReport.status === "PASS") {
+      validateTradingLiveShadowEvidence(evidenceReport, { expectedCommit: candidateCommit });
+    }
+    await writeEvidenceFile(evidenceReport);
     console.log(JSON.stringify(evidenceReport, null, 2));
     if (evidenceReport.status !== "PASS") process.exitCode = 1;
   }
 } catch (error) {
-  console.log(JSON.stringify({
+  const errorReport = Object.freeze({
     schemaVersion: 1,
     check: "LIVE_MARKET_SHADOW_OBSERVATION",
     status: "ERROR",
@@ -142,7 +155,13 @@ try {
     candidateCommit: null,
     checkoutClean: false,
     nextStageEnabled: false
-  }, null, 2));
+  });
+  try {
+    await writeEvidenceFile(errorReport);
+  } catch {
+    // Best-effort diagnostics only; the original failure remains authoritative.
+  }
+  console.log(JSON.stringify(errorReport, null, 2));
   process.exitCode = 1;
 } finally {
   if (ledger) await ledger.close();
