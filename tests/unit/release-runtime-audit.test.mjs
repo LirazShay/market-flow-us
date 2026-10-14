@@ -82,7 +82,7 @@ test("Scanner authoring guide is reclosed against the complete schema-v4 contrac
   );
 });
 
-test("first-run procedure stays deferred/non-blocking while independently allocated development progresses", async () => {
+test("unified final acceptance remains post-merge and preserves every maintained target-machine gate", async () => {
   const [
     startHere,
     historicalPlan,
@@ -92,6 +92,7 @@ test("first-run procedure stays deferred/non-blocking while independently alloca
     execution,
     backlogIndex,
     backlogAcceptance,
+    unifiedAcceptance,
     liveVerification
   ] = await Promise.all([
     rootFile("START_HERE.md"),
@@ -102,6 +103,7 @@ test("first-run procedure stays deferred/non-blocking while independently alloca
     rootFile(".planning/EXECUTION.md"),
     rootFile("backlog/README.md"),
     rootFile("backlog/B-US-000-final-target-machine-provider-acceptance.md"),
+    rootFile("backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"),
     rootFile("docs/LIVE_VERIFICATION.md")
   ]);
 
@@ -118,8 +120,8 @@ test("first-run procedure stays deferred/non-blocking while independently alloca
     assert.match(runbook, new RegExp(`## FR-${checkpoint}\\b`));
   }
   assert.match(runbook, /## FR-11C\b/);
-  assert.match(finalRunbook, /FR-11C integrated Detail BUY DRY_RUN/);
-  assert.match(finalExecution, /FR-11C integrated Detail BUY DRY_RUN/);
+  assert.match(finalRunbook, /FR-11C.*current-Detail BUY.*DRY_RUN/s);
+  assert.match(finalExecution, /U5\.3.*real-session DRY_RUN/s);
 
   for (const subCheckpoint of ["8A", "8B", "8C", "8D", "8E", "8F", "8G", "8H"]) {
     assert.match(historicalPlan, new RegExp(`FR-${subCheckpoint}\\b`));
@@ -147,22 +149,33 @@ test("first-run procedure stays deferred/non-blocking while independently alloca
   assert.match(runbook, /detached checkout תקין ומועדף ל־acceptance/);
   assert.doesNotMatch(runbook, /accepted-post-branch-9-SHA|\.planning\/EXECUTOR_HANDOFF\.md|\.planning\/STATUS\.yaml/);
 
-  // Final acceptance stays backlog-only and must not block independently allocated development.
-  assert.match(backlogIndex, /B-US-000/);
+  // Exactly one post-merge acceptance task remains; B-US-000 is provenance only.
+  assert.match(backlogIndex, /B-US-000.*Superseded/s);
+  assert.match(backlogIndex, /B-US-009.*single.*post-merge/s);
   assert.match(backlogIndex, /non-blocking by default/i);
-  assert.match(backlogAcceptance, /Blocking: `No`/);
-  assert.match(backlogAcceptance, /latest intended runtime candidate/i);
-  assert.match(backlogAcceptance, /fresh `main`/);
-  assert.match(finalRunbook, /not an active execution boundary/i);
-  assert.match(finalRunbook, /latest intended runtime candidate/i);
-  assert.match(finalRunbook, /not.*future mandatory FR-2 target/is);
+  assert.match(backlogAcceptance, /Superseded \/ provenance only/);
+  assert.match(backlogAcceptance, /Unified successor: active execution task `B-US-009`/);
+  assert.match(unifiedAcceptance, /single final external acceptance identity/);
+  assert.match(unifiedAcceptance, /\.planning\/FINAL_ACCEPTANCE_RUNBOOK\.md/);
+  assert.match(unifiedAcceptance, /\.planning\/FINAL_ACCEPTANCE_EXECUTION\.md/);
+
+  assert.match(finalRunbook, /single authoritative user\/target-machine acceptance runbook/i);
+  assert.match(finalRunbook, /Do \*\*not\*\* start this user acceptance before the final Branch-12 implementation\/reclosure PR has been merged/);
+  assert.match(finalRunbook, /U0 exact post-merge candidate/);
+  assert.match(finalRunbook, /U3 Research actual-evidence \+ ChatGPT Desktop restart\/resume/);
+  assert.match(finalRunbook, /U5 IBKR\/Trading real-session \+ live-shadow \+ DRY_RUN \+ LIVE-boundary evidence/);
+  assert.match(finalRunbook, /PENDING_EXTERNAL_PERMISSION/);
+  assert.match(finalRunbook, /trading-live-shadow:verify/);
   assert.match(finalRunbook, new RegExp(historicalDeferredCandidate));
-  assert.match(finalExecution, /Active execution status: \*\*not allocated\*\*/);
-  assert.match(finalExecution, /Blocking development: \*\*No\*\*/);
-  assert.match(finalExecution, /FR-2 exact selected-SHA checkout \| DEFERRED/);
+
+  assert.match(finalExecution, /Candidate: `NOT_SELECTED_UNTIL_POST_MERGE`/);
+  assert.match(finalExecution, /`U0` exact post-merge candidate \| `BLOCKED_PRE_MERGE`/);
+  assert.match(finalExecution, /`U3` Research \+ Desktop \| `PENDING`/);
+  assert.match(finalExecution, /`U5\.4` human-confirmed LIVE boundary \| `PENDING`/);
+  assert.match(finalExecution, /PENDING_EXTERNAL_PERMISSION/);
   assert.match(finalExecution, new RegExp(historicalDeferredCandidate));
 
-  // Stable historical allocation and backlog separation must not depend on whichever branch is currently active.
+  // Stable historical allocation plus the unified downstream dependency must not depend on chat memory.
   for (const allocation of [
     /\| `10\.1` \| Chat 29 \| `(pending|in_progress|done|blocked)` \| `7\.6\.5` \|/,
     /\| `10\.2` \| Chat 30 \| `(pending|in_progress|done|blocked)` \| `10\.1` \|/,
@@ -173,7 +186,8 @@ test("first-run procedure stays deferred/non-blocking while independently alloca
   ]) {
     assert.match(execution, allocation);
   }
-  assert.match(execution, /backlog\/B-US-000-final-target-machine-provider-acceptance\.md/);
+  assert.match(execution, /\| `B-US-009` \| Target-machine acceptance executor \| `blocked` \| `11\.8`, `12\.9` \|/);
+  assert.match(execution, /`B-US-000` is historical provider-acceptance provenance consolidated into `B-US-009`/);
   assert.doesNotMatch(execution, /\| `7\.4` \| Chat 28 \| `pending`/);
 
   assert.match(runbook, /test:acceptance:replay/);
