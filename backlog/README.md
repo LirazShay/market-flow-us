@@ -1,22 +1,21 @@
 # Market Flow US Backlog
 
-This folder records future product/development work that is intentionally **not allocated in the active ST Planner execution map**.
+This folder records future product/development work that is intentionally **not allocated in the active ST Planner execution map**, plus promoted/superseded records retained for provenance.
 
-Backlog items do not authorize implementation. Before implementation, each item must be reviewed against fresh `main`, planned into the smallest coherent PLAN leaves/contracts, dependency-reviewed, and explicitly allocated in `.planning/EXECUTION.md`.
+Backlog items do not authorize implementation. Before implementation, each live backlog item must be reviewed against fresh `main`, planned into the smallest coherent PLAN leaves/contracts, dependency-reviewed, and explicitly allocated in `.planning/EXECUTION.md`.
 
 Backlog items are **non-blocking by default**. A backlog item must not prevent unrelated planning, development, PRs, CI, or execution unless a later approved PLAN/EXECUTION dependency explicitly makes it blocking.
 
 ## Priority
 
-There is currently **no approved backlog priority order**. Every remaining backlog item is `Unprioritized` until `B-US-007` is completed.
+There is currently **no approved backlog priority order**. Every remaining live backlog item is `Unprioritized` until `B-US-007` is completed.
 
-`B-US-000` is listed first only because the user explicitly requested the deferred final target-machine/provider acceptance to be the first backlog item. Its first position is **not** a dependency and does **not** block other work.
+`B-US-000` is no longer a live backlog task. Its still-relevant target-machine/provider acceptance scope is consolidated into the single active blocked post-merge acceptance task `B-US-009`; the file remains historical provenance only.
 
 ## Items
 
 | Item | Summary | Status | Priority | Blocking |
 |---|---|---|---|---|
-| [B-US-000](B-US-000-final-target-machine-provider-acceptance.md) | Deferred target-machine/provider acceptance. When resumed, validate the latest intended runtime candidate from fresh `main`; do not freeze development behind an old SHA. | Backlog | Unprioritized | No |
 | [B-US-001](B-US-001-file-backed-sql-authoring-library.md) | Make Scanner/query artifacts file-backed and AI-authorable instead of DuckDB-only. | Backlog | Unprioritized | No |
 | [B-US-002](B-US-002-query-correctness-contract-tests.md) | Add executable correctness contracts for every checked-in production/example query. | Backlog | Unprioritized | No |
 | [B-US-003](B-US-003-static-sql-performance-gate.md) | Add machine-enforced static SQL performance checks before first execution. | Backlog | Unprioritized | No |
@@ -29,14 +28,15 @@ There is currently **no approved backlog priority order**. Every remaining backl
 
 | Item | Current disposition |
 |---|---|
+| [B-US-000](B-US-000-final-target-machine-provider-acceptance.md) | Superseded as an independent backlog task. Its still-relevant FR/provider scope is incorporated into the unified post-merge `B-US-009` runbook; retained only as historical provenance. |
 | [B-US-008](B-US-008-post-backtest-autonomous-ai-researcher-mcp.md) | Promoted to active **Branch 11 — Autonomous AI Researcher** and completed. Current planning/execution authority is `.planning/PLAN.md` + `.planning/EXECUTION.md`; the backlog file is provenance/supporting context only. |
-| [B-US-009](B-US-009-ai-researcher-target-machine-desktop-acceptance.md) | Promoted on 2026-10-13 into active post-merge acceptance execution. The existing PLAN defines this exact acceptance boundary; live owner/status/result truth lives in `.planning/EXECUTION.md`. The backlog file is provenance/supporting acceptance context only. |
+| [B-US-009](B-US-009-ai-researcher-target-machine-desktop-acceptance.md) | Promoted on 2026-10-13 into active external acceptance execution and later consolidated as the **single** post-merge target-machine/Desktop/provider acceptance task. Live owner/status/dependency/result truth is `.planning/EXECUTION.md`; `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` owns unified `U0..U6`. |
 | [B-US-010](B-US-010-autonomous-ai-trading-strategy-distillation.md) | Promoted to active **Branch 12 — Autonomous AI Trading & Strategy Distillation**. PLAN/EXECUTION are authority; `docs/AUTONOMOUS_AI_TRADING.md` is the durable domain contract and this backlog file is provenance/supporting context only. |
 
 ## Backlog rules
 
 - Keep one Markdown file per backlog item or promoted historical record when provenance remains useful.
 - Keep this README as the short index only; detailed scope belongs in the item/authority files.
-- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth. Once promoted, PLAN/EXECUTION become authority and the old backlog file becomes historical/supporting context only.
+- Do not duplicate one backlog task across `.planning/` and `backlog/` as two live sources of truth. Once promoted or superseded, PLAN/EXECUTION become authority and the old backlog file becomes historical/supporting context only.
 - Moving an item into active execution requires explicit PLAN/EXECUTION work; its presence or ordering here never activates it.
-- If fresh `main` proves an item already completed, mark/remove/supersede it during backlog review rather than re-implementing it.
+- If fresh `main` proves an item already completed or consolidated elsewhere, mark/remove/supersede it during backlog review rather than re-implementing it.

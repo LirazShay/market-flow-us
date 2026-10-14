@@ -1,61 +1,73 @@
-# Market Flow US — Deferred Final Acceptance Evidence Ledger
+# Market Flow US — Unified Final Acceptance Evidence Ledger
 
-This file preserves checkpoint/evidence history for backlog item `B-US-000`.
+This file is the public-safe checkpoint ledger for the **single** post-merge user/target-machine acceptance task `B-US-009`.
 
 ## Current state
 
-- Active execution status: **not allocated**
-- Backlog item: `backlog/B-US-000-final-target-machine-provider-acceptance.md`
-- Blocking development: **No**
-- Candidate policy: choose the latest intended runtime candidate from fresh `main` when the backlog item is explicitly activated.
-- Detailed procedure: `docs/FIRST_RUN_ACCEPTANCE.md`
-- Run wrapper: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
+- Execution task: `B-US-009`
+- Status before final Branch-12 merge: `blocked`
+- Current repository pointer remains `12.9 / Chat 50` until implementation/repository reclosure is merged.
+- Unified runbook: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
+- Candidate: `NOT_SELECTED_UNTIL_POST_MERGE`
+- Blocking implementation merge: **No**
+- External PASS fabricated: **No**
 
-The former Chat 28 / task `7.4` allocation has been removed from `.planning/EXECUTION.md`. No checkpoint below is a current development gate while this work remains in backlog.
+`B-US-009` now consolidates the still-relevant external scope from the former Research-only target-machine task, historical `B-US-000` final provider acceptance, and Branch-12 external Trading evidence. There must not be a second active final user-acceptance task.
 
-## Historical candidate/evidence
+## Historical provenance — not current PASS
 
-The last runtime candidate selected before deferral was:
+The old deferred `B-US-000` attempt selected:
 
 ```text
 682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
-Historical evidence recorded on that path:
+It historically recorded `FR-0` PASS and a then-current host preflight PASS before deferral. Those facts are provenance only and do not pin or prove a future target-machine run.
 
-- FR-0 candidate selection — PASS for that historical acceptance attempt.
-- FR-1 host prerequisite preflight — PASS at that time.
-- FR-2 onward — not completed before deferral.
+Branch-11 `W2T/W3` remain **NOT PASS** until executed against the post-merge candidate on the user's target machine.
 
-This history must not be interpreted as pinning a future run to the historical SHA or proving that host state remains unchanged indefinitely.
+Branch-12 real live-market shadow remains **NOT PASS** until the clean candidate-bound runner and verifier pass against the user's authenticated CPGW session.
 
-## Deferred checkpoint ledger
+A real-money LIVE order remains **NOT RUN** unless external permission exists and the user explicitly initiates a bounded verification. If permission and/or explicit initiation is absent during the final run, record exactly `PENDING_EXTERNAL_PERMISSION` rather than fabricating PASS.
 
-| Checkpoint | State | Evidence / future rule |
+## Unified checkpoint ledger
+
+| Gate | Current state | Required evidence |
 |---|---|---|
-| FR-0 select exact candidate | DEFERRED | On activation, fetch fresh `main` and select the latest intended runtime candidate for that run. Historical candidate: `682f8c8b01e9f68c7f8e159de8b0f233221f1878`. |
-| FR-1 host prerequisite preflight | DEFERRED | Historical PASS exists, but revalidate machine prerequisites when the backlog task is activated if freshness matters. |
-| FR-2 exact selected-SHA checkout | DEFERRED | Target machine must be clean and pinned to the SHA selected by the new FR-0 run, not automatically to the historical candidate. |
-| FR-3 deterministic dependency install | DEFERRED | user target machine |
-| FR-4 unit/service/Replay/order deterministic acceptance | DEFERRED | user target machine |
-| FR-5 normal + Replay build / Chromium E2E | DEFERRED | user target machine |
-| FR-6 local UI smoke | DEFERRED | user target machine |
-| FR-7 Local Fake static | DEFERRED | user target machine |
-| FR-8A..H Local Fake / Demo Buy / AI closure | DEFERRED | user target machine |
-| FR-9 isolated + 4096x180 target workload | DEFERRED | user target machine |
-| FR-10 daily DB lifecycle | DEFERRED | user target machine |
-| FR-11A authenticated market-data deployment smoke | DEFERRED | user target machine/provider |
-| FR-11B standalone order service + real CPGW session compatibility | DEFERRED | user target machine/IBKR CPGW |
-| FR-11C integrated Detail BUY DRY_RUN | DEFERRED | current Detail → immutable ticket → trusted confirmation → order-service DRY_RUN |
-| Real IBKR LIVE order | PENDING_EXTERNAL_PERMISSION | PASS only if actually permissioned and explicitly user-initiated |
-| FR-12 authenticated static/pre-market | DEFERRED | user target machine/provider |
-| FR-13 authenticated market-open movement | DEFERRED | real market movement required |
-| FR-14 final evidence / handoff | DEFERRED | only after the re-activated run completes its required evidence |
+| `U0` exact post-merge candidate | `BLOCKED_PRE_MERGE` | Final implementation PR merged; intended `main` CI green; no superseding implementation PR; exact clean target-machine checkout SHA recorded. |
+| `U1` host/setup/deterministic target sanity | `PENDING` | `FR-1..FR-5`: Node 24/tooling, setup, unit/service, Replay/order acceptance, browser/Replay build and Chromium E2E on the accepted candidate. |
+| `U2` local product/workload/daily lifecycle | `PENDING` | `FR-6..FR-10`: local UI/Demo Buy/AI, Local Fake dynamic/recovery/restart, representative `4096 × 180` target workload and daily schema-v4 rollover. |
+| `U3` Research + Desktop | `PENDING` | `W2T` actual-evidence workload PASS; repository Desktop/MCP preflight PASS; real Desktop plugin mission and full restart/fresh-conversation resume of exact durable `researchRunId`. |
+| `U4` real market-data provider | `PENDING` | `FR-11A`, `FR-12`, `FR-13`: real provider deployment path, static/pre-market SHA-bound proof and real market-movement + Current/History reflection. |
+| `U5.1` standalone order + real CPGW | `PENDING` | Deterministic standalone order acceptance plus sanitized real CPGW session compatibility. |
+| `U5.2` Branch-12 live SHADOW | `PENDING` | `trading-live-shadow` + verifier PASS bound to exact clean candidate; exact/fresh/usable quote; zero order build/mutation/order-reference; `nextStageEnabled=false`. |
+| `U5.3` real-session DRY_RUN | `PENDING` | Current-Detail immutable ticket → trusted local confirmation → existing order-service DRY_RUN with no provider LIVE submit. |
+| `U5.4` human-confirmed LIVE boundary | `PENDING` | Real-order PASS only if permission exists and user explicitly initiates protected bounded verification; otherwise exactly `PENDING_EXTERNAL_PERMISSION`. No raw provider shortcut. |
+| `U6` final evidence/reclosure | `PENDING` | U0–U5 complete under runbook rules; no blocking defect; accepted SHA and sanitized evidence indexed; required `main` CI green after any acceptance-driven fix. |
 
-## Non-blocking rule
+## Evidence discipline
 
-A `DEFERRED` checkpoint here does not block unrelated development. This ledger becomes active evidence only after `B-US-000` is re-planned and explicitly allocated in `.planning/EXECUTION.md`.
+For every executed gate record only:
 
-If the later acceptance run discovers a deterministic defect, the executing work unit owns it through root cause, fix, regression proof and affected verification.
+- candidate commit;
+- gate/sub-check state;
+- bounded public-safe measurements/reason codes;
+- sanitized report name or local relative path where useful;
+- durable public-safe IDs required for restart/resume proof;
+- exact external blocker when a gate cannot execute.
 
-Reports/evidence must remain sanitized: no credentials, cookies, tokens, account identifiers, authenticated raw dumps or private browser state.
+Never record credentials, cookies, tokens, authorization/session data, account identifiers, raw authenticated responses/dumps, private browser state, sensitive filesystem paths or environment dumps.
+
+## Failure rule
+
+On the first deterministic `FAIL`:
+
+1. stop the acceptance sequence;
+2. perform RCA;
+3. fix the root cause;
+4. add regression proof;
+5. run affected verification;
+6. merge with required CI green;
+7. select/reconfirm the candidate and resume from the earliest invalidated gate.
+
+Do not skip around a known failure and do not preserve stale candidate-bound PASS after an invalidating runtime fix.

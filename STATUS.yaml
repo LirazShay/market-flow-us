@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_12_9_pending_ready_for_chat_50_with_independent_acceptance_blocker
+overall_status: branch_12_12_9_in_progress_external_acceptance_non_blocking
 
 current:
-  chat: null
+  chat: "Chat 50"
   node: "12.9"
   title: "Shadow / synthetic / DRY_RUN / human-confirmed-LIVE acceptance and adversarial reclosure"
-  status: pending
-  activation_required: true
+  status: in_progress
+  activation_required: false
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
   done: 65
-  pending: 1
-  in_progress: 0
+  pending: 0
+  in_progress: 1
   blocked: 1
-  current_chat: null
+  current_chat: "Chat 50"
   current_node: "12.9"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
   task: "12.9"
   owner: "Chat 50"
-  status: pending
-  action: "Activate Chat 50 on TREE 12.9. TREE 12.8 is complete and PR #129 was squash-merged as 3723573fe55f632b9e0d5a077685b3fa69551ee5; post-merge main Planning #1401 and Fast #1177 are green and open-PR state was clean before this handoff update. B-US-009 remains independently blocked on target-machine evidence."
+  status: in_progress
+  action: "Final diff/repository reclosure for PR #131 is complete. Full review against fresh main found one latent blocked-current STATUS projection defect; RCA fixed it in cfeaefb9 with direct regression proof, and current-head Planning #1443, Fast #1217, Browser #758, Replay #275 and Workload #731 are green. Continue only with PR/CI/merge and post-merge main verification. After the accepted merge and green/open-PR-clean main, mark 12.9 done and project B-US-009 as the current blocked task with chat=null and activation_required=false; execute unified U0..U6 only when the user's target-machine/Desktop/provider prerequisites are available. No external provider/Desktop/LIVE PASS has been fabricated."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -68,25 +68,29 @@ navigation:
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
   autonomous_ai_trading_backlog_record: "backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md"
-  ai_researcher_target_acceptance_record: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
-  final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
+  unified_final_acceptance_provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+  historical_final_acceptance_provenance: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
 acceptance_projection:
   task: "B-US-009"
-  status: blocked_target_machine_evidence
-  candidate_policy: "Use fresh intended main at each machine-local acceptance attempt; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "B-US-009 remains blocked on real target-machine W2T evidence. W2T/W3 remain NOT PASS, but this external blocker does not freeze independent Branch-12 work."
+  status: blocked_until_12_9_merge_then_target_machine
+  candidate_policy: "After final Branch-12 implementation merge/main-green/open-PR-clean, select the fresh intended main SHA and use one clean checkout for unified U0..U6. Never substitute historical PR/candidate evidence."
+  checkpoint_summary: "Exactly one post-merge user acceptance task remains. B-US-009 now consolidates original Research W2T/W3, still-relevant B-US-000 FR/provider checks and Branch-12 external Trading evidence. Current candidate is NOT_SELECTED_UNTIL_POST_MERGE; W2T/W3, real live-market shadow and all other external gates remain NOT PASS/PENDING. Real-money LIVE may be exactly PENDING_EXTERNAL_PERMISSION when permission and/or explicit user initiation is absent."
   authority:
     execution: ".planning/EXECUTION.md"
-    runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
-    evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
+    runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
+    evidence_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
+    research_detail: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
+    first_run_detail: "docs/FIRST_RUN_ACCEPTANCE.md"
+    trading_contract: "docs/AUTONOMOUS_AI_TRADING.md"
     provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+    historical_provider_provenance: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
 
 blockers_projection:
-  - task: "B-US-009 / W2T"
-    type: execution_environment
-    reason: "Actual W2T must run on the user's target machine against its local historical evidence; the connected executor cannot produce that evidence."
+  - task: "B-US-009 / unified U0..U6"
+    type: execution_environment_and_predecessor
+    reason: "Unified final acceptance intentionally starts only after TREE 12.9 is merged/main-green/open-PR-clean and then requires the user's target machine, Desktop/provider sessions and market evidence."
     blocks: []
-    resume_when: "A public-safe research-target-evidence.json result from a fresh intended main target-machine run is provided."
+    resume_when: "TREE 12.9 is done and merged, required main CI is green/open-PR-clean, then the user target machine is available for the exact post-merge candidate."
