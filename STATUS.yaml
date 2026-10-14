@@ -19,7 +19,7 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_12_9_in_progress_with_independent_acceptance_blocker
+overall_status: branch_12_12_9_in_progress_external_acceptance_non_blocking
 
 current:
   chat: "Chat 50"
@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: in_progress
-  action: "Continue the live-market shadow observation boundary on branch chat-50-tree-12-9-reclosure. The read-only CPGW/TargetedQuoteWatch SHADOW runner and controlled fresh/stale/restart/input proofs are green in PR #131 with Planning #1412, Fast #1186, Browser #727, Replay #244 and Workload #700. Actual provider shadow observation is still pending on an authenticated target-machine CPGW session and must not be fabricated; run npm run trading-live-shadow -- --symbol=<SYMBOL> [--allow-insecure-loopback-tls] there and retain only the public-safe report. Do not advance to synthetic/DRY_RUN/LIVE automatically. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Continue executor-owned TREE 12.9 reclosure on branch chat-50-tree-12-9-reclosure. Historical/replay proof and the clean-checkout-bound live-shadow runner/verifier are green through HEAD 3aa1a022baa7e8533283a62fd337f98e0656504c with Planning #1418, Fast #1192, Browser #733, Replay #250 and Workload #706. Actual provider shadow observation remains NOT PASS but is external user/target-machine evidence and no longer blocks independent implementation. Next: synthetic-broker reclosure, then DRY_RUN/provider-what-if, adversarial/fault/security/workload/reclosure, final diff review, PR/CI/merge and post-merge main verification. Before implementation completion, prepare a durable final user-acceptance runbook and reconcile all remaining user/target-machine checks into exactly one post-merge acceptance task; never fabricate external PASS."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -77,7 +77,7 @@ acceptance_projection:
   task: "B-US-009"
   status: blocked_target_machine_evidence
   candidate_policy: "Use fresh intended main at each machine-local acceptance attempt; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "B-US-009 remains blocked on real target-machine W2T evidence. W2T/W3 remain NOT PASS, but this external blocker does not freeze independent Branch-12 work."
+  checkpoint_summary: "B-US-009 W2T/W3 remain NOT PASS because real target-machine evidence is absent. This external evidence does not block TREE 12.9. Before final implementation closure, reconcile B-US-009, still-relevant B-US-000 scope and Branch-12 user checks into one final post-merge user acceptance task/runbook."
   authority:
     execution: ".planning/EXECUTION.md"
     runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
@@ -89,4 +89,4 @@ blockers_projection:
     type: execution_environment
     reason: "Actual W2T must run on the user's target machine against its local historical evidence; the connected executor cannot produce that evidence."
     blocks: []
-    resume_when: "A public-safe research-target-evidence.json result from a fresh intended main target-machine run is provided."
+    resume_when: "The final post-merge user acceptance task is executed on the user's target machine using its durable runbook and public-safe evidence."
