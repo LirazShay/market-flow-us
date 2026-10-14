@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 const EXECUTION_PATH = ".planning/EXECUTION.md";
 const STATUS_PATH = "STATUS.yaml";
 const VALID_STATUSES = new Set(["pending", "in_progress", "done", "blocked"]);
+const VALID_CURRENT_STATUSES = new Set(["pending", "in_progress", "blocked"]);
 
 function fail(message) {
   throw new Error(`STATUS projection validation failed: ${message}`);
@@ -93,8 +94,8 @@ if (typeof current.node !== "string" || current.node.length === 0) {
 }
 const currentRow = rows.find((row) => row.task === current.node);
 if (!currentRow) fail(`current.node ${JSON.stringify(current.node)} has no execution row`);
-if (!new Set(["pending", "in_progress"]).has(currentRow.status)) {
-  fail(`current.node ${current.node} must be pending or in_progress, got ${currentRow.status}`);
+if (!VALID_CURRENT_STATUSES.has(currentRow.status)) {
+  fail(`current.node ${current.node} must be pending, in_progress or blocked, got ${currentRow.status}`);
 }
 
 assertEqual(current.status, currentRow.status, "current.status");
@@ -107,9 +108,13 @@ if (currentRow.status === "in_progress") {
   assertEqual(current.chat, currentRow.owner, "current.chat");
   assertEqual(current.activation_required, false, "current.activation_required");
   assertEqual(projection.current_chat, currentRow.owner, "execution_projection.current_chat");
-} else {
+} else if (currentRow.status === "pending") {
   assertEqual(current.chat, null, "current.chat");
   assertEqual(current.activation_required, true, "current.activation_required");
+  assertEqual(projection.current_chat, null, "execution_projection.current_chat");
+} else {
+  assertEqual(current.chat, null, "current.chat");
+  assertEqual(current.activation_required, false, "current.activation_required");
   assertEqual(projection.current_chat, null, "execution_projection.current_chat");
 }
 
