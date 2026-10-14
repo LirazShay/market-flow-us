@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: in_progress
-  action: "Continue staged TREE 12.9 acceptance/reclosure on branch chat-50-tree-12-9-reclosure. The first composed synthetic/DRY_RUN proof is green in PR #131 with Planning #1405 and Fast #1179; continue to the next staged acceptance/reclosure boundary from the 12.9 contract. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Continue staged TREE 12.9 acceptance/reclosure on branch chat-50-tree-12-9-reclosure. Historical/replay acceptance is green in PR #131 with Planning #1409, Replay #241 and Fast #1183. The next staged boundary is live-market shadow observation; do not advance to synthetic/DRY_RUN/LIVE automatically. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
