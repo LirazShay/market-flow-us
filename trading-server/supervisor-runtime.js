@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 
 import { normalizeOrderIntent } from "../ibkr-order-service/intent.js";
 import { HardRiskRejectionError } from "./hard-risk-authority.js";
+import {
+  evaluateDeterministicSupervisorDecision,
+  isDeterministicPolicy,
+  resolveDeterministicPolicyEvidence
+} from "./policy-supervisor.js";
 import { ProtectedOrderBridgeError } from "./protected-order-bridge.js";
 import {
   applySupervisorBrokerEvent,
@@ -93,7 +98,7 @@ function safePreMutationRejection(error) {
     || error?.code === "ORDER_SERVICE_REJECTED";
 }
 
-function decisionEvidence({ before, result, quote }) {
+function decisionEvidence({ before, result, quote, deterministicPolicyEvidence = null }) {
   return {
     version: 1,
     policyVersionId: before.policyVersionId,
@@ -104,7 +109,10 @@ function decisionEvidence({ before, result, quote }) {
     source: result.decision.source,
     proposalStatus: result.decision.proposalStatus,
     actionType: result.action.type,
-    quote: compactQuote(quote)
+    quote: compactQuote(quote),
+    ...(deterministicPolicyEvidence === null
+      ? {}
+      : { deterministicPolicyEvidence })
   };
 }
 
@@ -314,19 +322,39 @@ export function createTradingSupervisorRuntime({
 
     const quote = await pollQuote({ tradingRunId, tradeEpisodeId, instrument });
     const before = current.supervisorState;
-    const result = evaluateSupervisorDecision({
-      state: before,
-      proposal,
-      quote,
-      authorizedSwitchTargetKeys
-    });
+    const deterministic = isDeterministicPolicy(restored.policyVersion.policy);
+    const deterministicPolicyEvidence = deterministic
+      ? resolveDeterministicPolicyEvidence({ bundle: restored.bundle, state: before })
+      : null;
+    const deterministicDecisionAtMs = deterministic ? readNow(now) : null;
+    const result = deterministic
+      ? evaluateDeterministicSupervisorDecision({
+          policy: restored.policyVersion.policy,
+          state: before,
+          quote,
+          nowMs: deterministicDecisionAtMs,
+          watchStartedAtMs: deterministicPolicyEvidence.watchStartedAtMs,
+          positionOpenedAtMs: deterministicPolicyEvidence.positionOpenedAtMs,
+          entryPrice: deterministicPolicyEvidence.entryPrice
+        })
+      : evaluateSupervisorDecision({
+          state: before,
+          proposal,
+          quote,
+          authorizedSwitchTargetKeys
+        });
     const decisionRecord = await ledger.appendDecisionRecord({
       tradingRunId,
       tradeEpisodeId,
-      decidedAtMs: readNow(now),
+      decidedAtMs: deterministicDecisionAtMs ?? readNow(now),
       decisionType: result.decision.decisionType ?? "NONE",
       reasonCode: result.decision.reasonCode,
-      evidence: decisionEvidence({ before, result, quote })
+      evidence: decisionEvidence({
+        before,
+        result,
+        quote,
+        deterministicPolicyEvidence
+      })
     });
 
     if (result.action.type !== "REQUEST_ENTRY" && result.action.type !== "REQUEST_EXIT") {
