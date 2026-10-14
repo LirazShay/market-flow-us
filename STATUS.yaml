@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: in_progress
-  action: "Continue executor-owned TREE 12.9 reclosure on branch chat-50-tree-12-9-reclosure. Historical/replay and live-shadow tooling are green; actual provider shadow observation remains NOT PASS but is external non-blocking evidence. Synthetic-broker reclosure is independently green in commit 5125e94fb1bae65b6c817d0812f48f5dbfcd63cb with Planning #1421, Fast #1195, Browser #736, Replay #253 and Workload #709. DRY_RUN/provider-what-if reclosure is independently green in commit 06e2ba902755f61da38ef55fe68eb0f9d28373f4 with Planning #1432, Fast #1206, Browser #747, Replay #264 and Workload #720. Adversarial/fault/security/workload reclosure is independently green through HEAD c85487d83a03afcfb7b6cfd2b8bedf628e77ac1e with Planning #1436, Fast #1210, Browser #751, Replay #268 and Workload #724: stale quote and Hard Risk denial fail before broker mutation, duplicate fills are idempotent, reordered fills fail closed without duplicate orders, existing Trading Domain/Order Service security suites remain green, and the integrated controlled workload completed 12 Scanner→Supervisor→Hard Risk→Bridge→entry/exit episodes with 24 observations, decisions, order references, broker calls and unique request IDs, durable reopen, and 1259.7 ms elapsed CI time. Next: durable final user-acceptance guide/consolidation only, then final diff/repository reclosure, PR/CI/merge and post-merge main verification. Before implementation completion, reconcile all remaining user/target-machine checks into exactly one post-merge acceptance task; never fabricate external PASS."
+  action: "Continue executor-owned TREE 12.9 on branch chat-50-tree-12-9-reclosure with final diff/repository reclosure only, then PR/CI/merge and post-merge main verification. Historical/replay, synthetic broker, DRY_RUN/provider-what-if and adversarial/fault/security/workload reclosure are green. The durable unified post-merge user-acceptance guide is now consolidated under the single blocked task B-US-009 via .planning/FINAL_ACCEPTANCE_RUNBOOK.md and .planning/FINAL_ACCEPTANCE_EXECUTION.md; historical B-US-000 is provenance only. No external provider/Desktop/LIVE PASS has been fabricated. After 12.9 is merged and main is green/open-PR-clean, advance the execution pointer to B-US-009 and execute unified U0..U6 on the user's target machine."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
@@ -68,25 +68,29 @@ navigation:
   scanner_sql_guide: "docs/SCANNER_SQL_GUIDE.md"
   data_contract: "docs/DATA_CONTRACT.md"
   autonomous_ai_trading_backlog_record: "backlog/B-US-010-autonomous-ai-trading-strategy-distillation.md"
-  ai_researcher_target_acceptance_record: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
-  final_acceptance_backlog: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
+  unified_final_acceptance_provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+  historical_final_acceptance_provenance: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
   final_acceptance_runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
   final_acceptance_execution: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
 
 acceptance_projection:
   task: "B-US-009"
-  status: blocked_target_machine_evidence
-  candidate_policy: "Use fresh intended main at each machine-local acceptance attempt; never substitute historical PR #110 acceptance evidence."
-  checkpoint_summary: "B-US-009 W2T/W3 remain NOT PASS because real target-machine evidence is absent. This external evidence does not block TREE 12.9. Before final implementation closure, reconcile B-US-009, still-relevant B-US-000 scope and Branch-12 user checks into one final post-merge user acceptance task/runbook."
+  status: blocked_until_12_9_merge_then_target_machine
+  candidate_policy: "After final Branch-12 implementation merge/main-green/open-PR-clean, select the fresh intended main SHA and use one clean checkout for unified U0..U6. Never substitute historical PR/candidate evidence."
+  checkpoint_summary: "Exactly one post-merge user acceptance task remains. B-US-009 now consolidates original Research W2T/W3, still-relevant B-US-000 FR/provider checks and Branch-12 external Trading evidence. Current candidate is NOT_SELECTED_UNTIL_POST_MERGE; W2T/W3, real live-market shadow and all other external gates remain NOT PASS/PENDING. Real-money LIVE may be exactly PENDING_EXTERNAL_PERMISSION when permission and/or explicit user initiation is absent."
   authority:
     execution: ".planning/EXECUTION.md"
-    runbook: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
-    evidence_ledger: ".planning/AI_RESEARCHER_ACCEPTANCE_EVIDENCE.md"
+    runbook: ".planning/FINAL_ACCEPTANCE_RUNBOOK.md"
+    evidence_ledger: ".planning/FINAL_ACCEPTANCE_EXECUTION.md"
+    research_detail: "docs/CHATGPT_RESEARCH_DESKTOP_ACCEPTANCE.md"
+    first_run_detail: "docs/FIRST_RUN_ACCEPTANCE.md"
+    trading_contract: "docs/AUTONOMOUS_AI_TRADING.md"
     provenance: "backlog/B-US-009-ai-researcher-target-machine-desktop-acceptance.md"
+    historical_provider_provenance: "backlog/B-US-000-final-target-machine-provider-acceptance.md"
 
 blockers_projection:
-  - task: "B-US-009 / W2T"
-    type: execution_environment
-    reason: "Actual W2T must run on the user's target machine against its local historical evidence; the connected executor cannot produce that evidence."
+  - task: "B-US-009 / unified U0..U6"
+    type: execution_environment_and_predecessor
+    reason: "Unified final acceptance intentionally starts only after TREE 12.9 is merged/main-green/open-PR-clean and then requires the user's target machine, Desktop/provider sessions and market evidence."
     blocks: []
-    resume_when: "The final post-merge user acceptance task is executed on the user's target machine using its durable runbook and public-safe evidence."
+    resume_when: "TREE 12.9 is done and merged, required main CI is green/open-PR-clean, then the user target machine is available for the exact post-merge candidate."

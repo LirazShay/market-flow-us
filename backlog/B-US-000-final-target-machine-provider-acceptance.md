@@ -1,47 +1,28 @@
-# B-US-000 — Deferred final target-machine/provider acceptance
+# B-US-000 — Historical final target-machine/provider acceptance provenance
 
 ## Backlog metadata
 
-- Status: `Backlog`
-- Priority: `Unprioritized`
+- Status: `Superseded / provenance only`
 - Blocking: `No`
 - Origin: former active PLAN/EXECUTION task `7.4`
-- Historical evidence: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`, `.planning/FINAL_ACCEPTANCE_EXECUTION.md`, `docs/FIRST_RUN_ACCEPTANCE.md`
+- Unified successor: active execution task `B-US-009`
+- Unified runbook: `.planning/FINAL_ACCEPTANCE_RUNBOOK.md`
+- Unified evidence ledger: `.planning/FINAL_ACCEPTANCE_EXECUTION.md`
 
-## Non-blocking rule
+## Current rule
 
-This task must **not** block unrelated planning, development, pull requests, CI, or future execution.
+This file no longer represents an independently activatable final acceptance task.
 
-Its position as the first item in `backlog/README.md` is an organizational preference only. It creates no dependency edge and gives the task no authority over other work.
+Its still-relevant scope has been consolidated into the single post-merge target-machine/Desktop/provider acceptance task `B-US-009` together with Branch-11 Research/Desktop evidence and Branch-12 Trading external evidence.
 
-If new product/runtime development is merged before this task is executed, development continues normally. The acceptance candidate is selected again when this backlog item is explicitly planned and allocated.
+Do **not** create or activate a second acceptance blocker from `B-US-000`. Use `.planning/FINAL_ACCEPTANCE_RUNBOOK.md` and the `B-US-009` row in `.planning/EXECUTION.md`.
 
-## Candidate policy
+## Historical scope retained as provenance
 
-Do not keep an old runtime SHA permanently pinned while development moves forward.
-
-When this task is activated in the future:
-
-1. fetch fresh `main`;
-2. review merged product/runtime changes since the last acceptance evidence;
-3. select the **latest intended runtime candidate** that includes the development meant to be accepted;
-4. record that exact SHA for that acceptance run;
-5. invalidate/rerun candidate-bound evidence affected by later runtime changes;
-6. reuse older evidence only where the current contract explicitly proves it cannot have been invalidated.
-
-A later metadata/docs-only commit does not need to become the runtime candidate merely because it is newer, but a newer merged product/runtime change must not be silently ignored in favor of a stale acceptance SHA.
-
-## Goal
-
-Accept the then-current intended Market Flow US runtime on the user's target machine through local day-bounded market proof, Replay usability/isolation, AI Investigation usability, Basic Detail BUY compatibility, standalone IBKR compatibility, authenticated static compatibility and market-open movement.
-
-## Required scope
-
-When explicitly activated and planned, cover the maintained FR acceptance procedure, including:
+This item originally covered the maintained `FR-*` target-machine/provider path:
 
 - target-machine repository/candidate verification;
-- deterministic dependency install;
-- unit/service/Replay/order deterministic acceptance;
+- deterministic dependency install and unit/service/Replay/order acceptance;
 - browser + Replay build and Chromium E2E;
 - local UI smoke;
 - Local Fake static/dynamic/recovery/restart proof;
@@ -50,29 +31,33 @@ When explicitly activated and planned, cover the maintained FR acceptance proced
 - daily DB lifecycle;
 - authenticated market-data deployment smoke;
 - standalone order-service + real CPGW session compatibility;
-- integrated Detail BUY `DRY_RUN`;
+- integrated current-Detail `DRY_RUN`;
 - authenticated static/pre-market and market-open movement proof.
 
-Real IBKR LIVE submission is required only if real external trading permission exists **and** the user explicitly initiates it. Otherwise record exactly `PENDING_EXTERNAL_PERMISSION`; synthetic/DRY_RUN proof must never be relabeled as LIVE success.
+All still-relevant items above are now consumed by the unified `U0..U6` runbook under `B-US-009` rather than by this backlog record.
 
-## Defect rule
+## Historical candidate policy
 
-If this acceptance work discovers a deterministic defect, the executing work unit owns it through:
+An earlier deferred attempt selected:
 
 ```text
-root cause
-→ smallest correct fix
-→ regression proof
-→ affected verification
-→ green
+682f8c8b01e9f68c7f8e159de8b0f233221f1878
 ```
 
-That defect may block the acceptance run itself, but the backlog task does not automatically become a global blocker for unrelated development.
+That SHA is historical provenance only. The unified acceptance selects a fresh intended post-merge `main` candidate when `B-US-009` becomes the current execution pointer.
 
-## Security
+## LIVE rule carried forward
 
-Preserve only sanitized evidence. Never commit credentials, cookies, tokens, auth/session data, account identifiers, raw authenticated dumps or private browser state.
+Real IBKR LIVE submission is PASS only if real external trading permission exists and the user explicitly initiates it through the protected existing operator/order-service path. Otherwise the unified ledger records exactly:
 
-## Activation requirement
+```text
+PENDING_EXTERNAL_PERMISSION
+```
 
-This file is backlog intent only. Before execution, re-plan from fresh `main`, reconcile the maintained acceptance procedure with current product contracts, create/repair the necessary PLAN leaf(s), and explicitly allocate the work in `.planning/EXECUTION.md`.
+Synthetic/DRY_RUN evidence must never be relabeled as real LIVE success.
+
+## Defect and security rules carried forward
+
+Any deterministic defect discovered during the unified acceptance stays with that acceptance executor through root cause → smallest correct fix → regression proof → affected verification → merge/main-green → resume from the earliest invalidated gate.
+
+Preserve only sanitized evidence. Never commit credentials, cookies, tokens, authorization/session material, caller tokens, account identifiers, private browser state or raw authenticated responses/dumps.
