@@ -45,6 +45,7 @@
     "trading-mcp": "node trading-server/mcp-stdio.js",
     "research-desktop:preflight": "node scripts/check-research-desktop-preflight.mjs",
     "order-service:session-check": "node scripts/check-ibkr-cpgw-session.mjs",
+    "trading-live-shadow": "node scripts/run-trading-live-shadow.mjs",
     "demo:fake-market": "node scripts/demo-fake-market.mjs",
     "demo:reset": "node scripts/demo-reset.mjs",
     "db:new-day": "node scripts/new-trading-day.mjs",
