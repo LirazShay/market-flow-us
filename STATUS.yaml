@@ -43,7 +43,7 @@ next_pointer:
   task: "12.9"
   owner: "Chat 50"
   status: in_progress
-  action: "Continue executor-owned TREE 12.9 on branch chat-50-tree-12-9-reclosure with final diff/repository reclosure only, then PR/CI/merge and post-merge main verification. Historical/replay, synthetic broker, DRY_RUN/provider-what-if and adversarial/fault/security/workload reclosure are green. The durable unified post-merge user-acceptance guide is now consolidated under the single blocked task B-US-009 via .planning/FINAL_ACCEPTANCE_RUNBOOK.md and .planning/FINAL_ACCEPTANCE_EXECUTION.md; historical B-US-000 is provenance only. No external provider/Desktop/LIVE PASS has been fabricated. After 12.9 is merged and main is green/open-PR-clean, advance the execution pointer to B-US-009 and execute unified U0..U6 on the user's target machine."
+  action: "Final diff/repository reclosure for PR #131 is complete. Full review against fresh main found one latent blocked-current STATUS projection defect; RCA fixed it in cfeaefb9 with direct regression proof, and current-head Planning #1443, Fast #1217, Browser #758, Replay #275 and Workload #731 are green. Continue only with PR/CI/merge and post-merge main verification. After the accepted merge and green/open-PR-clean main, mark 12.9 done and project B-US-009 as the current blocked task with chat=null and activation_required=false; execute unified U0..U6 only when the user's target-machine/Desktop/provider prerequisites are available. No external provider/Desktop/LIVE PASS has been fabricated."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
