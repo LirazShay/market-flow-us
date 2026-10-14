@@ -103,6 +103,15 @@ export function createTradingDomainHttpClient({
     async getTradeEpisodeBundle(tradingRunId, tradeEpisodeId) {
       return call("get_trade_episode_bundle", { tradingRunId, tradeEpisodeId });
     },
+    async getTradeEpisodeAttribution(tradingRunId, tradeEpisodeId) {
+      return call("get_trade_episode_attribution", { tradingRunId, tradeEpisodeId });
+    },
+    async comparePolicyVersions(input) {
+      return call("compare_policy_versions", input);
+    },
+    async buildPolicyCandidate(input) {
+      return call("build_policy_candidate", input);
+    },
     async submitDecisionProposal(input) {
       return call("submit_decision_proposal", input);
     }

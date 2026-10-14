@@ -9,7 +9,10 @@ function fakeDomain({ includeProposal = true } = {}) {
     async getTradingRun() { return null; },
     async listTradingRuns() { return []; },
     async resumeTradingRun() { return null; },
-    async getTradeEpisodeBundle() { return null; }
+    async getTradeEpisodeBundle() { return null; },
+    async getTradeEpisodeAttribution() { return null; },
+    async comparePolicyVersions() { return null; },
+    async buildPolicyCandidate() { return null; }
   };
   if (includeProposal) {
     domain.submitDecisionProposal = async (input) => Object.freeze({ accepted: true, proposal: input });
@@ -69,7 +72,7 @@ async function initializedServer(domain = fakeDomain()) {
   return { server, transport };
 }
 
-test("TREE 12.7 Trading MCP server publishes only the six bounded Trading Domain tools", async () => {
+test("TREE 12.8 Trading MCP server publishes bounded Trading Domain and policy-learning tools", async () => {
   const { server, transport } = await initializedServer();
   try {
     const response = await transport.request({
@@ -88,11 +91,14 @@ test("TREE 12.7 Trading MCP server publishes only the six bounded Trading Domain
         "get_trading_run",
         "resume_trading_run",
         "get_trade_episode_bundle",
+        "get_trade_episode_attribution",
+        "compare_policy_versions",
+        "build_policy_candidate",
         "submit_decision_proposal"
       ]
     );
     const names = response.result.tools.map((tool) => tool.name).join("\n");
-    assert.equal(/broker|credential|session|submit_order|hard_risk|live_gate/u.test(names), false);
+    assert.equal(/broker|credential|session|submit_order|hard_risk|live_gate|promote_policy/u.test(names), false);
   } finally {
     await server.close();
   }

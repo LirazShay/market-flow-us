@@ -21,6 +21,12 @@ const OPERATIONS = Object.freeze({
     input.tradingRunId,
     input.tradeEpisodeId
   ),
+  get_trade_episode_attribution: async (domain, input) => domain.getTradeEpisodeAttribution(
+    input.tradingRunId,
+    input.tradeEpisodeId
+  ),
+  compare_policy_versions: async (domain, input) => domain.comparePolicyVersions(input),
+  build_policy_candidate: async (domain, input) => domain.buildPolicyCandidate(input),
   submit_decision_proposal: async (domain, input) => domain.submitDecisionProposal(input)
 });
 
@@ -120,6 +126,9 @@ function assertDomain(domain) {
     "listTradingRuns",
     "resumeTradingRun",
     "getTradeEpisodeBundle",
+    "getTradeEpisodeAttribution",
+    "comparePolicyVersions",
+    "buildPolicyCandidate",
     "submitDecisionProposal"
   ]) {
     if (typeof domain[method] !== "function") {

@@ -32,6 +32,18 @@ function fakeDomain() {
       calls.push(["getTradeEpisodeBundle", tradingRunId, tradeEpisodeId]);
       return { episode: { tradingRunId, tradeEpisodeId } };
     },
+    async getTradeEpisodeAttribution(tradingRunId, tradeEpisodeId) {
+      calls.push(["getTradeEpisodeAttribution", tradingRunId, tradeEpisodeId]);
+      return { tradeEpisodeId, policyVersionId: POLICY_ID, layers: {} };
+    },
+    async comparePolicyVersions(input) {
+      calls.push(["comparePolicyVersions", input]);
+      return { evidenceRef: "policy-attribution-comparison:sha256:test" };
+    },
+    async buildPolicyCandidate(input) {
+      calls.push(["buildPolicyCandidate", input]);
+      return { candidate: { policyCandidateId: input.policyCandidateId } };
+    },
     async submitDecisionProposal(input) {
       calls.push(["submitDecisionProposal", input]);
       return {
@@ -53,6 +65,14 @@ function proposal() {
   };
 }
 
+function comparison() {
+  return {
+    baseline: { tradingRunId: "trun-a", tradeEpisodeIds: ["tep-a"] },
+    candidate: { tradingRunId: "trun-b", tradeEpisodeIds: ["tep-b"] },
+    minimumConclusiveEpisodes: 1
+  };
+}
+
 async function withRuntime(fn) {
   const domain = fakeDomain();
   const runtime = await startTradingDomainTransport({ domain, port: 0 });
@@ -64,12 +84,23 @@ async function withRuntime(fn) {
   }
 }
 
-test("TREE 12.7 loopback client exposes only bounded Trading Domain methods", async () => {
+test("TREE 12.8 loopback client exposes bounded Trading Domain and policy-learning methods", async () => {
   await withRuntime(async ({ domain, runtime }) => {
     const client = createTradingDomainHttpClient({
       baseUrl: runtime.baseUrl,
       callerToken: runtime.callerToken
     });
+    const comparisonInput = comparison();
+    const candidateInput = {
+      ...comparisonInput,
+      policyCandidateId: "pcand-1",
+      claimScope: "EXECUTION_ONLY",
+      policy: {
+        kind: "DETERMINISTIC_TRADING_POLICY_V1",
+        entry: { enterOnUsableQuote: true, maxWatchMs: 30_000 },
+        exit: { takeProfitBps: 100, stopLossBps: 50, maxHoldMs: 120_000 }
+      }
+    };
 
     assert.deepEqual(await client.listTradingRuns({ limit: 20 }), [{ tradingRunId: RUN_ID }]);
     assert.equal((await client.getTradingRun(RUN_ID)).tradingRunId, RUN_ID);
@@ -77,6 +108,18 @@ test("TREE 12.7 loopback client exposes only bounded Trading Domain methods", as
     assert.equal(
       (await client.getTradeEpisodeBundle(RUN_ID, EPISODE_ID)).episode.tradeEpisodeId,
       EPISODE_ID
+    );
+    assert.equal(
+      (await client.getTradeEpisodeAttribution(RUN_ID, EPISODE_ID)).tradeEpisodeId,
+      EPISODE_ID
+    );
+    assert.match(
+      (await client.comparePolicyVersions(comparisonInput)).evidenceRef,
+      /^policy-attribution-comparison:/u
+    );
+    assert.equal(
+      (await client.buildPolicyCandidate(candidateInput)).candidate.policyCandidateId,
+      "pcand-1"
     );
     assert.equal(
       (await client.submitDecisionProposal(proposal())).submissionStatus,
@@ -88,6 +131,9 @@ test("TREE 12.7 loopback client exposes only bounded Trading Domain methods", as
       ["getTradingRun", RUN_ID],
       ["resumeTradingRun", RUN_ID],
       ["getTradeEpisodeBundle", RUN_ID, EPISODE_ID],
+      ["getTradeEpisodeAttribution", RUN_ID, EPISODE_ID],
+      ["comparePolicyVersions", comparisonInput],
+      ["buildPolicyCandidate", candidateInput],
       ["submitDecisionProposal", proposal()]
     ]);
   });

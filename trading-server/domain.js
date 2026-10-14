@@ -1,3 +1,11 @@
+import { createHash } from "node:crypto";
+
+import {
+  assessPolicyCandidatePromotion,
+  createPolicyCandidate
+} from "./policy-promotion.js";
+import { comparePolicyVersions as comparePolicyAttributionVersions } from "./policy-distillation.js";
+import { deriveEpisodeAttributionFromLedger } from "./policy-episode-attribution.js";
 import { DECISION_PROPOSAL_TYPES } from "./supervisor.js";
 
 export const TRADING_DOMAIN_SCHEMA_VERSION = 1;
@@ -6,6 +14,7 @@ export const TRADING_PROPOSAL_INBOX_VERSION = 1;
 const DEFAULT_MAX_PENDING_EPISODES = 100;
 const MAX_PENDING_EPISODES = 1_000;
 const MAX_RESUME_EPISODES = 50;
+const MAX_POLICY_COMPARISON_EPISODES_PER_RUN = 25;
 const MAX_IDENTIFIER_LENGTH = 256;
 const MAX_CANDIDATE_KEY_LENGTH = 512;
 const PROPOSAL_FIELDS = new Set([
@@ -23,6 +32,19 @@ const PROPOSAL_REQUIRED_FIELDS = Object.freeze([
   "policyVersionId",
   "observedStateVersion"
 ]);
+const POLICY_SELECTION_FIELDS = new Set(["tradingRunId", "tradeEpisodeIds"]);
+const POLICY_COMPARISON_FIELDS = new Set([
+  "baseline",
+  "candidate",
+  "minimumConclusiveEpisodes"
+]);
+const POLICY_CANDIDATE_BUILD_FIELDS = new Set([
+  ...POLICY_COMPARISON_FIELDS,
+  "policyCandidateId",
+  "claimScope",
+  "policy",
+  "strategyValidationTarget"
+]);
 
 function codedError(code, message) {
   const error = new Error(message);
@@ -34,6 +56,13 @@ function isPlainObject(value) {
   if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
   const prototype = Object.getPrototypeOf(value);
   return prototype === Object.prototype || prototype === null;
+}
+
+function assertExactFields(value, allowed, label) {
+  if (!isPlainObject(value)) throw new TypeError(`${label} must be an object`);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) throw new TypeError(`${label}.${key} is not supported`);
+  }
 }
 
 function assertDependency(value, method, label) {
@@ -53,6 +82,19 @@ function assertIdentifier(value, label) {
   return value;
 }
 
+function assertLearningIdentifier(value, label) {
+  if (
+    typeof value !== "string"
+    || value.trim() !== value
+    || value.length === 0
+    || value.length > MAX_IDENTIFIER_LENGTH
+    || /[\u0000-\u001f\u007f]/u.test(value)
+  ) {
+    throw new TypeError(`${label} is invalid`);
+  }
+  return value;
+}
+
 function assertCandidateKey(value) {
   if (
     typeof value !== "string"
@@ -60,6 +102,14 @@ function assertCandidateKey(value) {
     || value.length > MAX_CANDIDATE_KEY_LENGTH
   ) {
     throw codedError("TRADING_PROPOSAL_MALFORMED", "targetCandidateKey is invalid");
+  }
+  return value;
+}
+
+function readNow(now) {
+  const value = now();
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new TypeError("now() must return a non-negative safe integer millisecond timestamp");
   }
   return value;
 }
@@ -102,6 +152,87 @@ function normalizeDecisionProposal(value) {
       ? { targetCandidateKey: assertCandidateKey(value.targetCandidateKey) }
       : {})
   });
+}
+
+function normalizePolicySelection(value, label) {
+  assertExactFields(value, POLICY_SELECTION_FIELDS, label);
+  for (const field of POLICY_SELECTION_FIELDS) {
+    if (!Object.hasOwn(value, field)) throw new TypeError(`${label}.${field} is required`);
+  }
+  const tradingRunId = assertLearningIdentifier(value.tradingRunId, `${label}.tradingRunId`);
+  if (
+    !Array.isArray(value.tradeEpisodeIds)
+    || value.tradeEpisodeIds.length < 1
+    || value.tradeEpisodeIds.length > MAX_POLICY_COMPARISON_EPISODES_PER_RUN
+  ) {
+    throw new TypeError(
+      `${label}.tradeEpisodeIds must contain between 1 and ${MAX_POLICY_COMPARISON_EPISODES_PER_RUN} IDs`
+    );
+  }
+  const tradeEpisodeIds = value.tradeEpisodeIds.map((item, index) => (
+    assertLearningIdentifier(item, `${label}.tradeEpisodeIds[${index}]`)
+  ));
+  if (new Set(tradeEpisodeIds).size !== tradeEpisodeIds.length) {
+    throw new TypeError(`${label}.tradeEpisodeIds must be unique`);
+  }
+  return Object.freeze({
+    tradingRunId,
+    tradeEpisodeIds: Object.freeze([...tradeEpisodeIds].sort())
+  });
+}
+
+function normalizeMinimumConclusiveEpisodes(value) {
+  const normalized = value ?? 1;
+  if (!Number.isSafeInteger(normalized) || normalized < 1 || normalized > 10_000) {
+    throw new TypeError("minimumConclusiveEpisodes must be an integer between 1 and 10000");
+  }
+  return normalized;
+}
+
+function normalizePolicyComparisonRequest(value) {
+  assertExactFields(value, POLICY_COMPARISON_FIELDS, "policyComparison");
+  if (!Object.hasOwn(value, "baseline") || !Object.hasOwn(value, "candidate")) {
+    throw new TypeError("policyComparison baseline and candidate are required");
+  }
+  return Object.freeze({
+    baseline: normalizePolicySelection(value.baseline, "policyComparison.baseline"),
+    candidate: normalizePolicySelection(value.candidate, "policyComparison.candidate"),
+    minimumConclusiveEpisodes: normalizeMinimumConclusiveEpisodes(value.minimumConclusiveEpisodes)
+  });
+}
+
+function compactLayerSummary(value) {
+  return Object.freeze({
+    totalEpisodes: value.totalEpisodes,
+    applicableEpisodes: value.applicableEpisodes,
+    conclusiveEpisodes: value.conclusiveEpisodes,
+    successEpisodes: value.successEpisodes,
+    failureEpisodes: value.failureEpisodes,
+    inconclusiveEpisodes: value.inconclusiveEpisodes,
+    notApplicableEpisodes: value.notApplicableEpisodes,
+    successRate: value.successRate,
+    evidenceCoverage: value.evidenceCoverage,
+    evidenceRefCount: value.evidenceRefs.length
+  });
+}
+
+function compactAttributionSummary(value) {
+  return Object.freeze({
+    schemaVersion: value.schemaVersion,
+    policyVersionId: value.policyVersionId,
+    episodeCount: value.episodeCount,
+    episodeIds: value.episodeIds,
+    layers: Object.freeze(Object.fromEntries(
+      Object.entries(value.layers).map(([name, layer]) => [name, compactLayerSummary(layer)])
+    ))
+  });
+}
+
+function comparisonEvidenceRef(value) {
+  const digest = createHash("sha256")
+    .update(JSON.stringify(value), "utf8")
+    .digest("hex");
+  return `policy-attribution-comparison:sha256:${digest}`;
 }
 
 function scopeKey(tradingRunId, tradeEpisodeId) {
@@ -178,7 +309,8 @@ function episodeSummary(episode, bundle) {
 
 export function createTradingDomain({
   ledger,
-  proposalInbox = createTradingProposalInbox()
+  proposalInbox = createTradingProposalInbox(),
+  now = Date.now
 } = {}) {
   for (const method of [
     "getTradingRun",
@@ -190,10 +322,77 @@ export function createTradingDomain({
   }
   assertDependency(proposalInbox, "submit", "proposalInbox");
   assertDependency(proposalInbox, "take", "proposalInbox");
+  if (typeof now !== "function") throw new TypeError("now must be a function");
 
   const ledgerSchemaVersion = Number.isSafeInteger(ledger.schemaVersion)
     ? ledger.schemaVersion
     : null;
+
+  async function deriveSelection(selection) {
+    const tradingRun = await ledger.getTradingRun(selection.tradingRunId);
+    if (!tradingRun) throw new Error(`Trading Run was not found: ${selection.tradingRunId}`);
+    const episodes = [];
+    for (const tradeEpisodeId of selection.tradeEpisodeIds) {
+      const attribution = await deriveEpisodeAttributionFromLedger({
+        ledger,
+        tradingRunId: selection.tradingRunId,
+        tradeEpisodeId
+      });
+      if (attribution.policyVersionId !== tradingRun.policyVersionId) {
+        throw new Error("Trade Episode PolicyVersion does not match its Trading Run");
+      }
+      episodes.push(attribution);
+    }
+    return Object.freeze({ tradingRun, episodes: Object.freeze(episodes) });
+  }
+
+  async function compareDurablePolicyVersions(input) {
+    const request = normalizePolicyComparisonRequest(input);
+    const [baselineSelection, candidateSelection] = await Promise.all([
+      deriveSelection(request.baseline),
+      deriveSelection(request.candidate)
+    ]);
+    if (baselineSelection.tradingRun.policyVersionId === candidateSelection.tradingRun.policyVersionId) {
+      throw new TypeError("Policy comparison requires two different PolicyVersions");
+    }
+
+    const full = comparePolicyAttributionVersions({
+      baselinePolicyVersionId: baselineSelection.tradingRun.policyVersionId,
+      candidatePolicyVersionId: candidateSelection.tradingRun.policyVersionId,
+      episodes: [...baselineSelection.episodes, ...candidateSelection.episodes],
+      minimumConclusiveEpisodes: request.minimumConclusiveEpisodes
+    });
+    const evidenceRef = comparisonEvidenceRef({
+      baseline: {
+        tradingRunId: request.baseline.tradingRunId,
+        policyVersionId: baselineSelection.tradingRun.policyVersionId,
+        tradeEpisodeIds: request.baseline.tradeEpisodeIds
+      },
+      candidate: {
+        tradingRunId: request.candidate.tradingRunId,
+        policyVersionId: candidateSelection.tradingRun.policyVersionId,
+        tradeEpisodeIds: request.candidate.tradeEpisodeIds
+      },
+      minimumConclusiveEpisodes: request.minimumConclusiveEpisodes
+    });
+
+    return Object.freeze({
+      evidenceRef,
+      baseline: Object.freeze({
+        tradingRunId: request.baseline.tradingRunId,
+        policyVersionId: baselineSelection.tradingRun.policyVersionId,
+        episodeIds: request.baseline.tradeEpisodeIds,
+        summary: compactAttributionSummary(full.baseline)
+      }),
+      candidate: Object.freeze({
+        tradingRunId: request.candidate.tradingRunId,
+        policyVersionId: candidateSelection.tradingRun.policyVersionId,
+        episodeIds: request.candidate.tradeEpisodeIds,
+        summary: compactAttributionSummary(full.candidate)
+      }),
+      comparison: full.comparison
+    });
+  }
 
   return Object.freeze({
     schemaVersions: Object.freeze({
@@ -228,6 +427,43 @@ export function createTradingDomain({
 
     async getTradeEpisodeBundle(tradingRunId, tradeEpisodeId) {
       return ledger.getTradeEpisodeBundle(tradingRunId, tradeEpisodeId);
+    },
+
+    async getTradeEpisodeAttribution(tradingRunId, tradeEpisodeId) {
+      return deriveEpisodeAttributionFromLedger({ ledger, tradingRunId, tradeEpisodeId });
+    },
+
+    async comparePolicyVersions(input) {
+      return compareDurablePolicyVersions(input);
+    },
+
+    async buildPolicyCandidate(input) {
+      assertExactFields(input, POLICY_CANDIDATE_BUILD_FIELDS, "policyCandidateBuild");
+      for (const field of ["baseline", "candidate", "policyCandidateId", "claimScope", "policy"]) {
+        if (!Object.hasOwn(input, field)) throw new TypeError(`policyCandidateBuild.${field} is required`);
+      }
+      const comparison = await compareDurablePolicyVersions({
+        baseline: input.baseline,
+        candidate: input.candidate,
+        minimumConclusiveEpisodes: input.minimumConclusiveEpisodes
+      });
+      const candidate = createPolicyCandidate({
+        policyCandidateId: assertLearningIdentifier(input.policyCandidateId, "policyCandidateId"),
+        baselinePolicyVersionId: comparison.baseline.policyVersionId,
+        createdAtMs: readNow(now),
+        claimScope: input.claimScope,
+        policy: input.policy,
+        learningEvidenceRefs: [comparison.evidenceRef],
+        ...(Object.hasOwn(input, "strategyValidationTarget")
+          ? { strategyValidationTarget: input.strategyValidationTarget }
+          : {})
+      });
+      const assessment = assessPolicyCandidatePromotion({ candidate, validationEvidence: [] });
+      return Object.freeze({
+        candidate,
+        learningComparison: comparison,
+        assessment
+      });
     },
 
     async submitDecisionProposal(input) {

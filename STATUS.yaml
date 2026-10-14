@@ -19,31 +19,31 @@ source_of_truth:
   backlog: "backlog/README.md"
 
 phase: execution
-overall_status: branch_12_ready_for_chat_49_with_independent_acceptance_blocker
+overall_status: branch_12_12_9_pending_waiting_chat_49_merge_with_independent_acceptance_blocker
 
 current:
   chat: null
-  node: "12.8"
-  title: "Episode attribution + policy learning + deterministic distillation"
+  node: "12.9"
+  title: "Shadow / synthetic / DRY_RUN / human-confirmed-LIVE acceptance and adversarial reclosure"
   status: pending
   activation_required: true
   projected_from: ".planning/EXECUTION.md"
 
 execution_projection:
   active_execution_rows: 67
-  done: 64
-  pending: 2
+  done: 65
+  pending: 1
   in_progress: 0
   blocked: 1
   current_chat: null
-  current_node: "12.8"
+  current_node: "12.9"
   projected_from: ".planning/EXECUTION.md"
 
 next_pointer:
-  task: "12.8"
-  owner: "Chat 49"
+  task: "12.9"
+  owner: "Chat 50"
   status: pending
-  action: "TREE 12.7 / Chat 48 is complete: PR #127 squash-merged as 1eadb381, and post-merge main Planning #1372, Workload #699, Replay #240, Fast #1150 and Browser #726 are green after STATUS-projection RCA. Start Chat 49 only through explicit numbered-chat activation, then implement episode attribution, policy learning/comparison and deterministic distillation while reusing existing Branch-10/11 Research/Backtest authority rather than duplicating it. B-US-009 remains independently blocked on target-machine evidence."
+  action: "Do not activate Chat 50 yet. Chat 49 must first finalize PR #129 for completed TREE 12.8: require final pre-merge CI/diff review, squash-merge only when green, then verify post-merge main CI and open-PR state. After that explicit handoff, activate Chat 50 on TREE 12.9. B-US-009 remains independently blocked on target-machine evidence."
   projected_from: ".planning/EXECUTION.md"
 
 navigation:
